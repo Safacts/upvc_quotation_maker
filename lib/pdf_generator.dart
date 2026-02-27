@@ -7,9 +7,10 @@ import 'models.dart';
 
 Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context) async {
   final pdf = pw.Document();
-  final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: '? ');
+  final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
   
-  final watermarkImage = await networkImage('https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg');
+  final watermarkUrl = 'https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg';
+  final watermarkImage = await networkImage(watermarkUrl);
   final fontRegular = await PdfGoogleFonts.robotoRegular();
   final fontBold = await PdfGoogleFonts.robotoBold();
 
@@ -173,7 +174,7 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
   return pw.Container(
     color: PdfColor.fromHex('#f1f5fa'),
     child: pw.Table(
-      border: pw.TableBorder.all(color: PdfColor(0,0,0,0)), // Transparent fix applied
+      border: pw.TableBorder.all(color: PdfColor(0,0,0,0)),
       children: [
         pw.TableRow(children: [
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Total SFT', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
@@ -195,7 +196,7 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
             padding: pw.EdgeInsets.all(8), 
             child: pw.Text(data.amountInWords, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11))
           ),
-          pw.SizedBox(), pw.SizedBox() // Fill remaining columns
+          pw.SizedBox(), pw.SizedBox()
         ]),
       ]
     )
@@ -225,7 +226,19 @@ pw.Widget _buildTermsAndBankDetails() {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-            pw.Text('1. Glass mentioned is of any reputed make.\n2. 50% advance, 35% after dispatch, 15% after installation.\n3. Delivery minimum 15 days from advance.\n4. Quotation valid for 15 days.', style: pw.TextStyle(fontSize: 8)),
+            pw.Text(
+              '1. Glass mentioned is of any reputed make.\n'
+              '2. 50% advance, 35% after dispatch, 15% after installation.\n'
+              '3. Delivery minimum 15 days from advance.\n'
+              '4. All payments in favor of M/s Niksha Industries Pvt Ltd.\n'
+              '5. Client responsible for site safety & electricity.\n'
+              '6. Material can be taken back if payment not received.\n'
+              '7. Final wall-to-wall measurement includes silicone sealant.\n'
+              '8. Rates may alter if size changes above 1 foot.\n'
+              '9. Quotation valid for 15 days.\n'
+              '10. Above rates inclusive of installation.', 
+              style: pw.TextStyle(fontSize: 7.5)
+            ),
           ]
         )
       )
