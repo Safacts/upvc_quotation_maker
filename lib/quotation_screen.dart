@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'models.dart';
 import 'pdf_generator.dart';
 
@@ -31,6 +32,13 @@ class _QuotationScreenState extends State<QuotationScreen> {
     );
   }
 
+  Future<void> _launchLinkedIn() async {
+    final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,7 +53,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Bar Card
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -213,7 +220,26 @@ class _QuotationScreenState extends State<QuotationScreen> {
                 onPressed: () => generateAndPreviewPdf(data, context),
               ),
             ),
-            SizedBox(height: 30),
+            
+            SizedBox(height: 20),
+            Center(
+              child: InkWell(
+                onTap: _launchLinkedIn,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Crafted with ', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                      Icon(Icons.favorite, color: Colors.redAccent, size: 16),
+                      Text(' by Aadi', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 20),
           ],
         ),
       ),
