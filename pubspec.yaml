@@ -38,6 +38,7 @@ dependencies:
   printing: ^5.14.2
   intl: ^0.20.2
   url_launcher: ^6.3.2
+  shared_preferences: ^2.3.5 # Add this line
 
 dev_dependencies:
   flutter_test:
@@ -92,3 +93,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+# Add this at the very end of the file, after everything else
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "logo.png"
+  min_sdk_android: 21

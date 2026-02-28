@@ -13,6 +13,27 @@ class _QuotationScreenState extends State<QuotationScreen> {
   final QuotationData data = QuotationData();
   final Color primaryColor = Color(0xFF1E3A5F);
 
+  @override
+  void initState() {
+    super.initState();
+    _initQuoteNumber();
+  }
+
+  // Fetch the sequence number from storage
+  Future<void> _initQuoteNumber() async {
+    String nextNo = await QuotationData.generateNextQuoteNumber();
+    setState(() {
+      data.quotationNo = nextNo;
+    });
+  }
+
+  Future<void> _launchLinkedIn() async {
+    final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      debugPrint('Could not launch $url');
+    }
+  }
+
   Widget _buildSectionTitle(String title) {
     return Container(
       width: double.infinity,
@@ -30,13 +51,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       isDense: true,
     );
-  }
-
-  Future<void> _launchLinkedIn() async {
-    final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      debugPrint('Could not launch $url');
-    }
   }
 
   @override
