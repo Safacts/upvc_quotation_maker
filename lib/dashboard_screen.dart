@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'supabase_config.dart';
+import 'package:intl/intl.dart';
 import 'models.dart';
 import 'quotation_screen.dart';
+import 'supabase_config.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
+import 'crafted_widget.dart';
+import 'email_portal_screen.dart';
+import 'analytics_screen.dart';
+import 'theme.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -14,10 +19,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  List<QuotationData> allQuotations = [];
-  List<QuotationData> filteredQuotations = [];
-  bool isLoading = true;
-  String searchQuery = '';
+  List<QuotationData> _quotations = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -26,69 +30,114 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchQuotations() async {
-    setState(() => isLoading = true);
+    setState(() => _isLoading = true);
     try {
       final response = await SupabaseConfig.client
           .from('quotations')
           .select()
-          .order('created_at', ascending: false);
-
-      final List<QuotationData> fetchedData = (response as List).map((e) => QuotationData.fromMap(e)).toList();
-
+          .order('date', ascending: false);
+      
       setState(() {
-        allQuotations = fetchedData;
-        filteredQuotations = fetchedData;
-        isLoading = false;
+        _quotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+        _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching quotations: $e');
-      setState(() => isLoading = false);
+      setState(() => _isLoading = false);
+      debugPrint('Fetch error: $e');
     }
   }
 
-  void _filterQuotations(String query) {
-    setState(() {
-      searchQuery = query;
-      filteredQuotations = allQuotations.where((quote) {
-        return quote.customerName.toLowerCase().contains(query.toLowerCase()) ||
-               quote.quotationNo.toLowerCase().contains(query.toLowerCase()) ||
-               quote.contactNo.contains(query);
-      }).toList();
-    });
+  void _logout() async {
+    const storage = FlutterSecureStorage();
+    await storage.delete(key: 'session_active');
+    if (!mounted) return;
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
   }
 
-  void _logout() {
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+  Widget _buildTopTile({required String title, required IconData icon, required VoidCallback onTap, required LinearGradient gradient, required int delay}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: gradient.colors.first.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: Colors.white),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+      ),
+    ).animate().scale(delay: Duration(milliseconds: delay));
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final filteredQuotations = _quotations.where((q) {
+      final query = _searchQuery.toLowerCase();
+      return q.customerName.toLowerCase().contains(query) || q.quotationNo.toLowerCase().contains(query);
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Quotations Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchQuotations),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: theme.primaryColor,
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+              decoration: BoxDecoration(color: theme.primaryColor),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.dashboard, color: Colors.white, size: 40),
-                  SizedBox(height: 10),
-                  Text('Venkateshwara UPVC', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('jvenkateshupvc@gmail.com', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: Image.asset('assets/logo.png', width: 60, height: 60),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text('Venkateshwara UPVC', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline, color: Colors.indigo),
+              title: const Text('New Quotation'),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
+                _fetchQuotations();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.email_outlined, color: Colors.pink),
+              title: const Text('Send Email'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => EmailPortalScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.analytics_outlined, color: Colors.green),
+              title: const Text('Analytics'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen()));
+              },
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
@@ -98,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.info_outline),
+              leading: const Icon(Icons.info),
               title: const Text('About'),
               onTap: () {
                 Navigator.pop(context);
@@ -107,8 +156,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: _logout,
             ),
           ],
@@ -117,26 +166,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Column(
         children: [
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(
+                  width: (MediaQuery.of(context).size.width / 2) - 24,
+                  child: _buildTopTile(
+                    title: 'New Quotation',
+                    icon: Icons.add_circle_outline,
+                    gradient: AppTheme.primaryGradient,
+                    delay: 100,
+                    onTap: () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
+                      _fetchQuotations();
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: (MediaQuery.of(context).size.width / 2) - 24,
+                  child: _buildTopTile(
+                    title: 'Send Email',
+                    icon: Icons.email_outlined,
+                    gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFFF43F5E)]),
+                    delay: 200,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => EmailPortalScreen()));
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search by name, quote no, or phone...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _filterQuotations('');
-                          FocusScope.of(context).unfocus();
-                        },
-                      )
-                    : null,
+              decoration: const InputDecoration(
+                labelText: 'Search Quotations',
+                prefixIcon: Icon(Icons.search),
               ),
-              onChanged: _filterQuotations,
-            ).animate().fade().slideY(begin: -0.2),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
           ),
           Expanded(
-            child: isLoading
+            child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : filteredQuotations.isEmpty
                     ? Center(
@@ -145,7 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Icon(Icons.inbox, size: 60, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
-                            Text('No quotations found', style: TextStyle(color: Colors.grey.shade600, fontSize: 16)),
+                            Text('No quotations found', style: TextStyle(color: Colors.grey.shade500, fontSize: 18)),
                           ],
                         ),
                       ).animate().fade()
@@ -155,40 +229,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           itemCount: filteredQuotations.length,
                           itemBuilder: (context, index) {
-                            final quote = filteredQuotations[index];
+                            final q = filteredQuotations[index];
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(20),
                                 onTap: () async {
-                                  await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen(existingData: quote)));
+                                  await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen(existingData: q)));
                                   _fetchQuotations();
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Row(
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.secondary.withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(Icons.receipt_long, color: theme.colorScheme.secondary),
+                                      CircleAvatar(
+                                        backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                        child: Icon(Icons.description, color: theme.colorScheme.primary),
                                       ),
                                       const SizedBox(width: 16),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(quote.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                            Text(q.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                             const SizedBox(height: 4),
-                                            Text('Quote: ${quote.quotationNo}', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
-                                            Text('Date: ${DateFormat('dd-MMM-yyyy').format(quote.date)}', style: TextStyle(color: theme.textTheme.bodySmall?.color)),
+                                            Text(q.quotationNo, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                                           ],
                                         ),
                                       ),
-                                      const Icon(Icons.chevron_right, color: Colors.grey),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Text('₹${q.grandTotal.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary, fontSize: 16)),
+                                          const SizedBox(height: 4),
+                                          Text(DateFormat('MMM dd, yyyy').format(q.date), style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -198,16 +274,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
           ),
+          CraftedWithLoveWidget(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
-        label: const Text('New Quotation'),
         onPressed: () async {
           await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
           _fetchQuotations();
         },
-      ).animate().scale(delay: const Duration(milliseconds: 300)),
+        icon: const Icon(Icons.add),
+        label: const Text('New Quotation'),
+      ).animate().scale(delay: 500.ms),
     );
   }
 }

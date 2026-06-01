@@ -154,70 +154,37 @@ class UnmeasuredItem {
   }
 }
 
-class MeasuredItem {
+class SentEmail {
   String? id;
-  String code = '';
-  String description = '';
-  double width = 0;
-  double height = 0;
-  int units = 1;
-  String glass = '';
-  double rate = 0;
-  double get sft => (width / 304.8) * (height / 304.8);
-  double get totalSft => sft * units;
-  double get total => totalSft * rate;
+  DateTime createdAt;
+  String recipient;
+  String subject;
+  String body;
 
-  Map<String, dynamic> toMap(String quotationId) {
+  SentEmail({
+    this.id,
+    required this.createdAt,
+    required this.recipient,
+    required this.subject,
+    required this.body,
+  });
+
+  static SentEmail fromMap(Map<String, dynamic> map) {
+    return SentEmail(
+      id: map['id'],
+      createdAt: DateTime.parse(map['created_at']),
+      recipient: map['recipient'],
+      subject: map['subject'],
+      body: map['body'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
-      'quotation_id': quotationId,
-      'code': code,
-      'description': description,
-      'width': width,
-      'height': height,
-      'units': units,
-      'glass': glass,
-      'rate': rate,
+      'recipient': recipient,
+      'subject': subject,
+      'body': body,
     };
-  }
-
-  static MeasuredItem fromMap(Map<String, dynamic> map) {
-    var item = MeasuredItem();
-    item.id = map['id'];
-    item.code = map['code'] ?? '';
-    item.description = map['description'] ?? '';
-    item.width = (map['width'] ?? 0).toDouble();
-    item.height = (map['height'] ?? 0).toDouble();
-    item.units = map['units'] ?? 1;
-    item.glass = map['glass'] ?? '';
-    item.rate = (map['rate'] ?? 0).toDouble();
-    return item;
-  }
-}
-
-class UnmeasuredItem {
-  String? id;
-  String description = '';
-  int units = 1;
-  double rate = 0;
-  double get total => units * rate;
-
-  Map<String, dynamic> toMap(String quotationId) {
-    return {
-      if (id != null) 'id': id,
-      'quotation_id': quotationId,
-      'description': description,
-      'units': units,
-      'rate': rate,
-    };
-  }
-
-  static UnmeasuredItem fromMap(Map<String, dynamic> map) {
-    var item = UnmeasuredItem();
-    item.id = map['id'];
-    item.description = map['description'] ?? '';
-    item.units = map['units'] ?? 1;
-    item.rate = (map['rate'] ?? 0).toDouble();
-    return item;
   }
 }

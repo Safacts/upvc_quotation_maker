@@ -6,6 +6,7 @@ import 'package:mailer/smtp_server.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dashboard_screen.dart';
+import 'crafted_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -168,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline, size: 80, color: theme.primaryColor).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
+              Image.asset('assets/logo.png', width: 120, height: 120).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
               const SizedBox(height: 20),
               Text('Welcome Back', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor)).animate().fade(delay: 300.ms).slideY(begin: 0.2),
               const SizedBox(height: 8),
@@ -215,6 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+              
+              const SizedBox(height: 40),
+              CraftedWithLoveWidget(),
             ],
           ),
         ),

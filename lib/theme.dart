@@ -2,58 +2,73 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // Vibrant Gradient Base Colors
+  static const Color primaryGradientStart = Color(0xFF6366F1); // Indigo
+  static const Color primaryGradientEnd = Color(0xFFA855F7); // Purple
+  
+  static const Color accentLight = Color(0xFFEC4899); // Pink
+  static const Color accentDark = Color(0xFFF472B6);
+
+  static LinearGradient get primaryGradient => const LinearGradient(
+        colors: [primaryGradientStart, primaryGradientEnd],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+
   static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: const Color(0xFF1E3A5F),
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-      colorScheme: ColorScheme.light(
-        primary: const Color(0xFF1E3A5F),
-        secondary: const Color(0xFF38BDF8),
+      primaryColor: primaryGradientStart,
+      scaffoldBackgroundColor: const Color(0xFFF8FAFC), 
+      colorScheme: const ColorScheme.light(
+        primary: primaryGradientStart,
+        secondary: accentLight,
         surface: Colors.white,
         error: Colors.redAccent,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
       cardTheme: CardTheme(
-        elevation: 0,
+        elevation: 12,
+        shadowColor: primaryGradientStart.withOpacity(0.15),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: Colors.white.withOpacity(0.8), width: 1.5),
         ),
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.8), // Glass effect
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF1F5F9),
+        fillColor: const Color(0xFFF1F5F9).withOpacity(0.7),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1E3A5F), width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: primaryGradientEnd, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 0,
-          backgroundColor: const Color(0xFF1E3A5F),
+          elevation: 10,
+          shadowColor: primaryGradientStart.withOpacity(0.5),
+          backgroundColor: Colors.transparent, // Uses Ink container for gradient
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: EdgeInsets.zero,
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFF1E3A5F),
+        foregroundColor: primaryGradientStart,
       ),
     );
   }
@@ -61,48 +76,50 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
-      primaryColor: const Color(0xFF38BDF8),
-      scaffoldBackgroundColor: const Color(0xFF0F172A),
-      colorScheme: ColorScheme.dark(
-        primary: const Color(0xFF38BDF8),
-        secondary: const Color(0xFF818CF8),
-        surface: const Color(0xFF1E293B),
+      primaryColor: primaryGradientStart,
+      scaffoldBackgroundColor: const Color(0xFF0F172A), 
+      colorScheme: const ColorScheme.dark(
+        primary: primaryGradientStart,
+        secondary: accentDark,
+        surface: Color(0xFF1E293B),
         error: Colors.redAccent,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       cardTheme: CardTheme(
-        elevation: 0,
+        elevation: 16,
+        shadowColor: Colors.black.withOpacity(0.6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
         ),
-        color: const Color(0xFF1E293B),
+        color: const Color(0xFF1E293B).withOpacity(0.7), // Glass effect
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF334155),
+        fillColor: const Color(0xFF0F172A).withOpacity(0.6),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: primaryGradientEnd, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 0,
-          backgroundColor: const Color(0xFF38BDF8),
-          foregroundColor: const Color(0xFF0F172A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16),
+          elevation: 12,
+          shadowColor: primaryGradientStart.withOpacity(0.5),
+          backgroundColor: Colors.transparent, // Uses Ink container for gradient
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: EdgeInsets.zero,
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: const AppBarTheme(

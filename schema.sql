@@ -50,3 +50,11 @@ BEGIN
     RETURN 'JVUPVC-' || date_part || '-' || lpad(next_val::text, 4, '0');
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TABLE public.sent_emails (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    recipient TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL
+);

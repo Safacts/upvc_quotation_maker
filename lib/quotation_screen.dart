@@ -11,6 +11,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'models.dart';
 import 'pdf_generator.dart';
 import 'supabase_config.dart';
+import 'crafted_widget.dart';
+import 'theme.dart';
+import 'package:toastification/toastification.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -375,12 +378,30 @@ class _QuotationScreenState extends State<QuotationScreen> {
             SizedBox(
               width: double.infinity,
               height: 60,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('GENERATE PDF', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              child: ElevatedButton(
                 onPressed: _generateAndProcessPdf,
+                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Container(
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.picture_as_pdf, color: Colors.white),
+                        SizedBox(width: 12),
+                        Text('GENERATE PDF', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ).animate().scale(delay: 800.ms),
+            const SizedBox(height: 20),
+            CraftedWithLoveWidget(),
             const SizedBox(height: 40),
           ],
         ),
