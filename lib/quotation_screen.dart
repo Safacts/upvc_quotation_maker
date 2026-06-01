@@ -120,9 +120,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
       final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
 
+      final ByteData logoData = await rootBundle.load('assets/logo.png');
+      final File logoTempFile = File('${dir.path}/logo.png');
+      await logoTempFile.writeAsBytes(logoData.buffer.asUint8List(), flush: true);
+
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
-        <h2 style="color: #1E3A5F; text-align: center;">Quotation from Venkateshwara UPVC</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="cid:logo" alt="Venkateshwara UPVC" style="max-height: 100px; margin-bottom: 10px;" />
+        </div>
+        <h2 style="color: #1E3A5F; text-align: center; margin-top: 0;">Quotation from Venkateshwara UPVC</h2>
         <p style="color: #334155; font-size: 16px;">Dear <b>${data.customerName}</b>,</p>
         <p style="color: #475569; font-size: 15px; line-height: 1.6;">Please find attached the quotation <b>${data.quotationNo}</b> for your requested UPVC windows and doors.</p>
         <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
