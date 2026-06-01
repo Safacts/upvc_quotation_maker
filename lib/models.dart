@@ -9,6 +9,7 @@ class QuotationData {
   String reference = '';
   String address = '';
   String contactNo = '';
+  String email = ''; // Added email field
   
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
@@ -65,6 +66,7 @@ class QuotationData {
       'reference': reference,
       'address': address,
       'contact_no': contactNo,
+      'email': email,
       'transport_cost': transport,
     };
   }
@@ -78,8 +80,77 @@ class QuotationData {
     q.reference = map['reference'] ?? '';
     q.address = map['address'] ?? '';
     q.contactNo = map['contact_no'] ?? '';
+    q.email = map['email'] ?? '';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
     return q;
+  }
+}
+
+class MeasuredItem {
+  String? id;
+  String code = '';
+  String description = '';
+  double width = 0;
+  double height = 0;
+  int units = 1;
+  String glass = '';
+  double rate = 0;
+  double get sft => (width / 304.8) * (height / 304.8);
+  double get totalSft => sft * units;
+  double get total => totalSft * rate;
+
+  Map<String, dynamic> toMap(String quotationId) {
+    return {
+      if (id != null) 'id': id,
+      'quotation_id': quotationId,
+      'code': code,
+      'description': description,
+      'width': width,
+      'height': height,
+      'units': units,
+      'glass': glass,
+      'rate': rate,
+    };
+  }
+
+  static MeasuredItem fromMap(Map<String, dynamic> map) {
+    var item = MeasuredItem();
+    item.id = map['id'];
+    item.code = map['code'] ?? '';
+    item.description = map['description'] ?? '';
+    item.width = (map['width'] ?? 0).toDouble();
+    item.height = (map['height'] ?? 0).toDouble();
+    item.units = map['units'] ?? 1;
+    item.glass = map['glass'] ?? '';
+    item.rate = (map['rate'] ?? 0).toDouble();
+    return item;
+  }
+}
+
+class UnmeasuredItem {
+  String? id;
+  String description = '';
+  int units = 1;
+  double rate = 0;
+  double get total => units * rate;
+
+  Map<String, dynamic> toMap(String quotationId) {
+    return {
+      if (id != null) 'id': id,
+      'quotation_id': quotationId,
+      'description': description,
+      'units': units,
+      'rate': rate,
+    };
+  }
+
+  static UnmeasuredItem fromMap(Map<String, dynamic> map) {
+    var item = UnmeasuredItem();
+    item.id = map['id'];
+    item.description = map['description'] ?? '';
+    item.units = map['units'] ?? 1;
+    item.rate = (map['rate'] ?? 0).toDouble();
+    return item;
   }
 }
 
