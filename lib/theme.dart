@@ -27,14 +27,14 @@ class AppTheme {
         error: Colors.redAccent,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 12,
-        shadowColor: primaryGradientStart.withOpacity(0.15),
+        shadowColor: Color(0x266366F1), // primaryGradientStart with 0.15 opacity
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.white.withOpacity(0.8), width: 1.5),
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          side: BorderSide(color: Color(0xCCFFFFFF), width: 1.5),
         ),
-        color: Colors.white.withOpacity(0.8), // Glass effect
+        color: Color(0xCCFFFFFF), // Glass effect
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -85,14 +85,14 @@ class AppTheme {
         error: Colors.redAccent,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 16,
-        shadowColor: Colors.black.withOpacity(0.6),
+        shadowColor: Color(0x99000000), // Colors.black.withOpacity(0.6)
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+          borderRadius: BorderRadius.all(Radius.circular(24)),
+          side: BorderSide(color: Color(0x1AFFFFFF), width: 1),
         ),
-        color: const Color(0xFF1E293B).withOpacity(0.7), // Glass effect
+        color: Color(0xB31E293B), // Glass effect
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
