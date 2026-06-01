@@ -66,7 +66,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       ''';
 
       final message = Message()
-        ..from = Address(dotenv.env['BREVO_SMTP_EMAIL']!, 'Venkateshwara UPVC')
+        ..from = Address(dotenv.env['BREVO_SMTP_EMAIL'] ?? 'jvenkateshupvc@gmail.com', 'Venkateshwara UPVC')
         ..recipients.add(_toController.text.trim())
         ..subject = _subjectController.text
         ..html = htmlBody;
