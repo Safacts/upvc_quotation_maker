@@ -1,8 +1,9 @@
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'supabase_config.dart';
 
 class QuotationData {
-  String quotationNo = ''; // Initialized as empty, will be set in UI
+  String? id; // UUID from Supabase
+  String quotationNo = ''; 
   DateTime date = DateTime.now();
   String customerName = '';
   String reference = '';
@@ -13,18 +14,16 @@ class QuotationData {
   List<UnmeasuredItem> unmeasuredItems = [];
   double transport = 0.0;
 
-  // Logic to handle continuous numbering
+  // Logic to handle continuous numbering via Supabase RPC
   static Future<String> generateNextQuoteNumber() async {
-    final prefs = await SharedPreferences.getInstance();
-    int lastCount = prefs.getInt('quote_count') ?? 0;
-    int nextCount = lastCount + 1;
-    
-    // Save the new count back to the phone memory
-    await prefs.setInt('quote_count', nextCount);
-    
-    String datePart = DateFormat('ddMMyyyy').format(DateTime.now());
-    // .padLeft(4, '0') ensures it looks like 0001, 0002, etc.
-    return 'JVUPVC-$datePart-${nextCount.toString().padLeft(4, '0')}';
+    try {
+      final result = await SupabaseConfig.client.rpc('get_next_quote_number');
+      return result.toString();
+    } catch (e) {
+      // Fallback for offline/error
+      String datePart = DateFormat('ddMMyyyy').format(DateTime.now());
+      return 'JVUPVC-$datePart-ERR';
+    }
   }
 
   double get totalMeasuredAmount => measuredItems.fold(0, (sum, item) => sum + item.total);
@@ -56,9 +55,36 @@ class QuotationData {
     if (paise > 0) words += " and " + convertChunk(paise) + " Paise";
     return (words + " Only").toUpperCase();
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (id != null) 'id': id,
+      'quote_no': quotationNo,
+      'date': DateFormat('yyyy-MM-dd').format(date),
+      'customer_name': customerName,
+      'reference': reference,
+      'address': address,
+      'contact_no': contactNo,
+      'transport_cost': transport,
+    };
+  }
+
+  static QuotationData fromMap(Map<String, dynamic> map) {
+    var q = QuotationData();
+    q.id = map['id'];
+    q.quotationNo = map['quote_no'] ?? '';
+    q.date = map['date'] != null ? DateTime.parse(map['date']) : DateTime.now();
+    q.customerName = map['customer_name'] ?? '';
+    q.reference = map['reference'] ?? '';
+    q.address = map['address'] ?? '';
+    q.contactNo = map['contact_no'] ?? '';
+    q.transport = (map['transport_cost'] ?? 0).toDouble();
+    return q;
+  }
 }
 
 class MeasuredItem {
+  String? id;
   String code = '';
   String description = '';
   double width = 0;
@@ -69,11 +95,58 @@ class MeasuredItem {
   double get sft => (width / 304.8) * (height / 304.8);
   double get totalSft => sft * units;
   double get total => totalSft * rate;
+
+  Map<String, dynamic> toMap(String quotationId) {
+    return {
+      if (id != null) 'id': id,
+      'quotation_id': quotationId,
+      'code': code,
+      'description': description,
+      'width': width,
+      'height': height,
+      'units': units,
+      'glass': glass,
+      'rate': rate,
+    };
+  }
+
+  static MeasuredItem fromMap(Map<String, dynamic> map) {
+    var item = MeasuredItem();
+    item.id = map['id'];
+    item.code = map['code'] ?? '';
+    item.description = map['description'] ?? '';
+    item.width = (map['width'] ?? 0).toDouble();
+    item.height = (map['height'] ?? 0).toDouble();
+    item.units = map['units'] ?? 1;
+    item.glass = map['glass'] ?? '';
+    item.rate = (map['rate'] ?? 0).toDouble();
+    return item;
+  }
 }
 
 class UnmeasuredItem {
+  String? id;
   String description = '';
   int units = 1;
   double rate = 0;
   double get total => units * rate;
+
+  Map<String, dynamic> toMap(String quotationId) {
+    return {
+      if (id != null) 'id': id,
+      'quotation_id': quotationId,
+      'description': description,
+      'units': units,
+      'rate': rate,
+    };
+  }
+
+  static UnmeasuredItem fromMap(Map<String, dynamic> map) {
+    var item = UnmeasuredItem();
+    item.id = map['id'];
+    item.description = map['description'] ?? '';
+    item.units = map['units'] ?? 1;
+    item.rate = (map['rate'] ?? 0).toDouble();
+    return item;
+  }
 }

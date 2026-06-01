@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'quotation_screen.dart';
+import 'login_screen.dart';
+import 'supabase_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.initialize();
+
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'UPVC Quotation Maker',
     theme: ThemeData(primarySwatch: Colors.blue),
-    home: QuotationScreen(),
+    home: LoginScreen(),
   ));
 }

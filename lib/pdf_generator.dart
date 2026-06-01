@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart' show BuildContext;
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'models.dart';
 
-Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context) async {
+Future<Uint8List> generatePdfBytes(QuotationData data) async {
   final pdf = pw.Document();
   final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
   
@@ -67,7 +68,12 @@ Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context) asy
     ),
   );
 
-  await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  return pdf.save();
+}
+
+Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context) async {
+  final bytes = await generatePdfBytes(data);
+  await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => bytes);
 }
 
 pw.Widget _buildHeader(pw.ImageProvider logo) {
