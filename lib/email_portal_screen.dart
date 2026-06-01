@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'supabase_config.dart';
@@ -49,9 +52,15 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
       final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
 
+      final ByteData data = await rootBundle.load('assets/logo.png');
+      final Directory tempDir = await getTemporaryDirectory();
+      final File tempFile = File('${tempDir.path}/logo.png');
+      await tempFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+
       String htmlBody = '''
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
           <div style="text-align: center; margin-bottom: 30px;">
+            <img src="cid:logo" alt="Venkateshwara UPVC" style="max-height: 100px; margin-bottom: 10px;" />
             <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">Venkateshwara UPVC</h1>
             <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Premium Windows & Doors</p>
           </div>
@@ -69,7 +78,8 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
         ..from = Address(dotenv.env['BREVO_SMTP_EMAIL'] ?? 'jvenkateshupvc@gmail.com', 'Venkateshwara UPVC')
         ..recipients.add(_toController.text.trim())
         ..subject = _subjectController.text
-        ..html = htmlBody;
+        ..html = htmlBody
+        ..attachments.add(FileAttachment(tempFile)..location = Location.inline..cid = '<logo>');
 
       await send(message, smtpServer);
 

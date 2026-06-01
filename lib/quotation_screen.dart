@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -140,6 +141,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
         ..recipients.add(targetEmail.trim())
         ..subject = 'Quotation ${data.quotationNo} from Venkateshwara UPVC'
         ..html = htmlBody
+        ..attachments.add(FileAttachment(logoTempFile)..location = Location.inline..cid = '<logo>')
         ..attachments.add(FileAttachment(file));
 
       await send(message, smtpServer);
