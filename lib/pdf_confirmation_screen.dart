@@ -7,7 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'models.dart';
 import 'theme.dart';
 
@@ -235,8 +234,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
                   _buildActionButton('Save', Icons.download, Colors.indigo, _savePdfToDevice, 300),
                   _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 400),
                   _buildActionButton('Share', Icons.share, Colors.blue, _sharePdf, 500),
-                  _buildActionButton('WhatsApp', FontAwesomeIcons.whatsapp, Colors.green, _shareToWhatsApp, 600),
-                  _buildActionButton('Telegram', FontAwesomeIcons.telegram, Colors.lightBlue, _shareToTelegram, 700),
+                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, _shareToWhatsApp, 600),
+                  _buildActionButton('Telegram', Icons.send, Colors.lightBlue, _shareToTelegram, 700),
                 ],
               ),
               
