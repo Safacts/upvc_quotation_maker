@@ -5,8 +5,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'models.dart';
+import 'app_state.dart';
 
-Future<Uint8List> generatePdfBytes(QuotationData data) async {
+Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async {
   final pdf = pw.Document();
   final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
   
@@ -47,7 +48,7 @@ Future<Uint8List> generatePdfBytes(QuotationData data) async {
       },
       build: (pw.Context context) {
         return [
-          _buildHeader(watermarkImage),
+          _buildHeader(watermarkImage, appState),
           _buildTopBar(data),
           _buildSectionTitle('Customer Details'),
           _buildCustomerDetails(data),
@@ -60,7 +61,7 @@ Future<Uint8List> generatePdfBytes(QuotationData data) async {
           pw.SizedBox(height: 10),
           _buildTotalsTable(data, currency),
           _buildSectionTitle('Bank Details'),
-          _buildTermsAndBankDetails(),
+          _buildTermsAndBankDetails(appState),
           pw.SizedBox(height: 40),
           _buildSignatures(),
         ];
@@ -71,12 +72,12 @@ Future<Uint8List> generatePdfBytes(QuotationData data) async {
   return pdf.save();
 }
 
-Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context) async {
-  final bytes = await generatePdfBytes(data);
+Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context, AppState appState) async {
+  final bytes = await generatePdfBytes(data, appState);
   await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => bytes);
 }
 
-pw.Widget _buildHeader(pw.ImageProvider logo) {
+pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
   return pw.Column(
     children: [
       pw.Center(child: pw.Image(logo, width: 80)),
@@ -88,10 +89,9 @@ pw.Widget _buildHeader(pw.ImageProvider logo) {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text('Venkateshwara UPVC Windows & Doors', style: pw.TextStyle(color: PdfColors.white, fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.Text('Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD - 500074', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-            pw.Text('Prop: J.Venkateshwarlu    Contact: 9246588692, 9441888131', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-            pw.Text('GST No: 36AKDPJ7245B2ZF', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+            pw.Text(appState.companyName, style: pw.TextStyle(color: PdfColors.white, fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text(appState.companyAddress, style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+            pw.Text('Contact: ${appState.companyContact}    Email: ${appState.companyEmail}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
           ],
         ),
       ),
@@ -209,7 +209,7 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
   );
 }
 
-pw.Widget _buildTermsAndBankDetails() {
+pw.Widget _buildTermsAndBankDetails(AppState appState) {
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
@@ -218,10 +218,10 @@ pw.Widget _buildTermsAndBankDetails() {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Company Name : VENKATESHWARA WELDING WORKS', style: pw.TextStyle(fontSize: 9)),
-            pw.Text('Bank Name & Branch : Union Bank, Hastinapuram', style: pw.TextStyle(fontSize: 9)),
-            pw.Text('A/C No : 178511100000061', style: pw.TextStyle(fontSize: 9)),
-            pw.Text('IFSC Code : UBIN0817856', style: pw.TextStyle(fontSize: 9)),
+            pw.Text('Company Name : ${appState.companyName}', style: pw.TextStyle(fontSize: 9)),
+            pw.Text('Bank Name & Branch : ${appState.bankName} - ${appState.bankBranch}', style: pw.TextStyle(fontSize: 9)),
+            pw.Text(appState.bankAccountNo, style: pw.TextStyle(fontSize: 9)),
+            pw.Text(appState.bankIfsc, style: pw.TextStyle(fontSize: 9)),
           ]
         )
       ),
@@ -233,16 +233,7 @@ pw.Widget _buildTermsAndBankDetails() {
           children: [
             pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
             pw.Text(
-              '1. Glass mentioned is of any reputed make.\n'
-              '2. 50% advance, 35% after dispatch, 15% after installation.\n'
-              '3. Delivery minimum 15 days from advance.\n'
-              '4. All payments in favor of M/s Niksha Industries Pvt Ltd.\n'
-              '5. Client responsible for site safety & electricity.\n'
-              '6. Material can be taken back if payment not received.\n'
-              '7. Final wall-to-wall measurement includes silicone sealant.\n'
-              '8. Rates may alter if size changes above 1 foot.\n'
-              '9. Quotation valid for 15 days.\n'
-              '10. Above rates inclusive of installation.', 
+              appState.termsAndConditions, 
               style: pw.TextStyle(fontSize: 7.5)
             ),
           ]

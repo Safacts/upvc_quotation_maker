@@ -10,6 +10,7 @@ class QuotationData {
   String address = '';
   String contactNo = '';
   String email = ''; // Added email field
+  String status = 'Draft'; // Status field (Draft, Sent, Accepted, Rejected)
   
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
@@ -67,6 +68,7 @@ class QuotationData {
       'address': address,
       'contact_no': contactNo,
       'email': email,
+      'status': status,
       'transport_cost': transport,
     };
   }
@@ -81,6 +83,7 @@ class QuotationData {
     q.address = map['address'] ?? '';
     q.contactNo = map['contact_no'] ?? '';
     q.email = map['email'] ?? '';
+    q.status = map['status'] ?? 'Draft';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
     return q;
   }

@@ -10,7 +10,9 @@ import 'package:mailer/smtp_server.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'models.dart';
+import 'app_state.dart';
 import 'pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
@@ -32,6 +34,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   bool _isLoading = false;
   bool _isSaving = false;
   Timer? _debounce;
+  List<QuotationData> _pastQuotations = [];
 
   @override
   void initState() {
@@ -42,6 +45,20 @@ class _QuotationScreenState extends State<QuotationScreen> {
     } else {
       data = QuotationData();
       _initQuoteNumber();
+    }
+    _fetchPastQuotations();
+  }
+
+  Future<void> _fetchPastQuotations() async {
+    try {
+      final response = await SupabaseConfig.client.from('quotations').select();
+      if (mounted) {
+        setState(() {
+          _pastQuotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load past quotes: $e');
     }
   }
 
@@ -112,7 +129,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
   Future<void> _sendEmail(String targetEmail) async {
     try {
-      final pdfBytes = await generatePdfBytes(data);
+      final appState = Provider.of<AppState>(context, listen: false);
+      final pdfBytes = await generatePdfBytes(data, appState);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/${data.quotationNo}.pdf');
       await file.writeAsBytes(pdfBytes);
@@ -205,7 +223,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
     await _autoSaveToDatabase();
     
     // Generate PDF bytes
-    final pdfBytes = await generatePdfBytes(data);
+    final appState = Provider.of<AppState>(context, listen: false);
+    final pdfBytes = await generatePdfBytes(data, appState);
     
     // 2. If email exists, send automatically in background
     Future<void>? emailTask;
@@ -277,6 +296,20 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: data.status,
+                  decoration: const InputDecoration(labelText: 'Quotation Status'),
+                  items: ['Draft', 'Sent', 'Accepted', 'Rejected']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => data.status = val);
+                      _onDataChanged();
+                    }
+                  },
+                ),
               ),
             ).animate().fade().slideY(begin: -0.1),
             
@@ -286,17 +319,47 @@ class _QuotationScreenState extends State<QuotationScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    TextFormField(initialValue: data.customerName, decoration: const InputDecoration(labelText: 'Name'), onChanged: (val) { data.customerName = val; _onDataChanged(); }),
+                    Autocomplete<QuotationData>(
+                      initialValue: TextEditingValue(text: data.customerName),
+                      displayStringForOption: (option) => option.customerName,
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return const Iterable<QuotationData>.empty();
+                        final uniqueCustomers = <String, QuotationData>{};
+                        for (var q in _pastQuotations) {
+                          if (q.customerName.toLowerCase().contains(textEditingValue.text.toLowerCase())) {
+                            uniqueCustomers.putIfAbsent(q.customerName, () => q);
+                          }
+                        }
+                        return uniqueCustomers.values;
+                      },
+                      onSelected: (QuotationData selection) {
+                        setState(() {
+                          data.customerName = selection.customerName;
+                          data.address = selection.address;
+                          data.contactNo = selection.contactNo;
+                          data.email = selection.email;
+                        });
+                        _onDataChanged();
+                      },
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(labelText: 'Name'),
+                          onChanged: (val) { data.customerName = val; _onDataChanged(); },
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
-                    TextFormField(initialValue: data.reference, decoration: const InputDecoration(labelText: 'Reference'), onChanged: (val) { data.reference = val; _onDataChanged(); }),
+                    TextFormField(key: ValueKey('ref_${data.reference}'), initialValue: data.reference, decoration: const InputDecoration(labelText: 'Reference'), onChanged: (val) { data.reference = val; _onDataChanged(); }),
                     const SizedBox(height: 12),
-                    TextFormField(initialValue: data.address, decoration: const InputDecoration(labelText: 'Address'), onChanged: (val) { data.address = val; _onDataChanged(); }),
+                    TextFormField(key: ValueKey('addr_${data.address}'), initialValue: data.address, decoration: const InputDecoration(labelText: 'Address'), onChanged: (val) { data.address = val; _onDataChanged(); }),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: TextFormField(initialValue: data.contactNo, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact No'), onChanged: (val) { data.contactNo = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(key: ValueKey('cont_${data.contactNo}'), initialValue: data.contactNo, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact No'), onChanged: (val) { data.contactNo = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: data.email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email (Optional)'), onChanged: (val) { data.email = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(key: ValueKey('email_${data.email}'), initialValue: data.email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email (Optional)'), onChanged: (val) { data.email = val; _onDataChanged(); })),
                       ],
                     ),
                   ],

@@ -56,6 +56,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Draft': return Colors.grey;
+      case 'Sent': return Colors.blue;
+      case 'Accepted': return Colors.green;
+      case 'Rejected': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
   Widget _buildTopTile({required String title, required IconData icon, required VoidCallback onTap, required LinearGradient gradient, required int delay}) {
     return InkWell(
       onTap: onTap,
@@ -283,7 +293,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           children: [
                                             Text(q.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                             const SizedBox(height: 4),
-                                            Text(q.quotationNo, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                            Row(
+                                              children: [
+                                                Text(q.quotationNo, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: _getStatusColor(q.status).withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    q.status,
+                                                    style: TextStyle(color: _getStatusColor(q.status), fontSize: 10, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),

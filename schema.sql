@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.quotations (
     reference TEXT,
     address TEXT,
     contact_no TEXT,
+    email TEXT,
+    status TEXT DEFAULT 'Draft',
     transport_cost NUMERIC DEFAULT 0.0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
