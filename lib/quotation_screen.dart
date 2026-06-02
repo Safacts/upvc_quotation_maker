@@ -16,6 +16,7 @@ import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
 import 'package:toastification/toastification.dart';
+import 'pdf_confirmation_screen.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -203,18 +204,27 @@ class _QuotationScreenState extends State<QuotationScreen> {
     // 1. Force Save
     await _autoSaveToDatabase();
     
+    // Generate PDF bytes
+    final pdfBytes = await generatePdfBytes(data);
+    
     // 2. If email exists, send automatically in background
+    Future<void>? emailTask;
     if (data.email.isNotEmpty && data.email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispatching email in background...')));
-      _sendEmail(data.email).then((_) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email sent automatically to ${data.email}')));
-      }).catchError((e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Auto-email failed: $e')));
-      });
+      emailTask = _sendEmail(data.email);
     }
 
-    // 3. Preview PDF
-    await generateAndPreviewPdf(data, context);
+    // 3. Navigate to Confirmation Screen
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PdfConfirmationScreen(
+          data: data,
+          pdfBytes: pdfBytes,
+          emailTask: emailTask,
+        ),
+      ),
+    );
   }
 
   Widget _buildSectionTitle(String title) {

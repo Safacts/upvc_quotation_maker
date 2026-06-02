@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 class AboutScreen extends StatelessWidget {
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+    if (!await launchUrl(url)) {
       debugPrint('Could not launch $url');
     }
   }

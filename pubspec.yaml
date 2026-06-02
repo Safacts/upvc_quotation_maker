@@ -47,6 +47,9 @@ dependencies:
   flutter_animate: ^4.5.0
   provider: ^6.1.2
   toastification: ^3.0.3
+  share_plus: ^12.0.2
+  permission_handler: ^12.0.3
+  font_awesome_flutter: ^10.9.1
 
 dev_dependencies:
   flutter_test:

@@ -23,6 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
 
+  String _filterType = 'Newest';
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +86,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final query = _searchQuery.toLowerCase();
       return q.customerName.toLowerCase().contains(query) || q.quotationNo.toLowerCase().contains(query);
     }).toList();
+
+    if (_filterType == 'Oldest') {
+      filteredQuotations.sort((a, b) => a.date.compareTo(b.date));
+    } else if (_filterType == 'Highest Amount') {
+      filteredQuotations.sort((a, b) => b.grandTotal.compareTo(a.grandTotal));
+    } else if (_filterType == 'Lowest Amount') {
+      filteredQuotations.sort((a, b) => a.grandTotal.compareTo(b.grandTotal));
+    } else {
+      filteredQuotations.sort((a, b) => b.date.compareTo(a.date));
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -201,12 +213,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Search Quotations',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (value) => setState(() => _searchQuery = value),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Search Quotations',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.filter_list, size: 28),
+                  tooltip: 'Filter',
+                  onSelected: (value) => setState(() => _filterType = value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'Newest', child: Text('Newest First')),
+                    const PopupMenuItem(value: 'Oldest', child: Text('Oldest First')),
+                    const PopupMenuItem(value: 'Highest Amount', child: Text('Highest Amount')),
+                    const PopupMenuItem(value: 'Lowest Amount', child: Text('Lowest Amount')),
+                  ],
+                ),
+              ],
             ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
           ),
           Expanded(
@@ -275,6 +305,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
           ),
           CraftedWithLoveWidget(),
+          const SizedBox(height: 80),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
