@@ -331,17 +331,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
           ),
           CraftedWithLoveWidget(),
-          const SizedBox(height: 80),
+          const SizedBox(height: 16),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
-          _fetchQuotations();
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('New Quotation'),
-      ).animate().scale(delay: 500.ms),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: FloatingActionButton.extended(
+          onPressed: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
+            _fetchQuotations();
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('New Quotation'),
+        ).animate().scale(delay: 500.ms),
+      ),
     );
   }
 }

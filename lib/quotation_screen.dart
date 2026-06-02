@@ -277,9 +277,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -310,8 +312,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     }
                   },
                 ),
-              ),
-            ).animate().fade().slideY(begin: -0.1),
+              ],
+            ),
+          ),
+        ).animate().fade().slideY(begin: -0.1),
             
             _buildSectionTitle('Customer Details').animate().fade(delay: 100.ms),
             Card(
