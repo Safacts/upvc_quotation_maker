@@ -140,6 +140,72 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* Superuser panel styles */
+    .superuser-panel {
+      display: none;
+      margin-bottom: 30px;
+      padding: 24px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      border: 1px solid #e2e8f0;
+    }
+    
+    .superuser-panel h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #6366f1;
+    }
+
+    .superuser-panel p {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    .upload-zone:hover {
+      border-color: #6366f1;
+    }
+
+    .upload-btn {
+      background: var(--primary-gradient);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 15px;
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
+      transition: transform 0.2s;
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status-msg {
+      margin-top: 15px;
+      font-size: 14px;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -153,6 +219,17 @@
   </div>
 
   <div class="container">
+    <div class="superuser-panel" id="superuserPanel">
+      <h2>App Release Manager</h2>
+      <p>Upload a new Android Application release package (APK). It will automatically overwrite the older release in the Supabase Storage bucket.</p>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <span id="uploadZoneText">Select or drop a new .apk file here</span>
+        <input type="file" id="fileInput" accept=".apk" style="display: none;" onchange="handleFileSelected(event)">
+      </div>
+      <button class="upload-btn" id="uploadBtn" onclick="uploadReleaseApk()" disabled>Upload APK</button>
+      <div class="status-msg" id="uploadStatus"></div>
+    </div>
+
     <h1>Quotation Database Logs</h1>
     
     <div class="card">
@@ -191,6 +268,60 @@
     const SUPABASE_KEY = 'sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Show release manager panel if logged in as superuser
+    const userEmail = localStorage.getItem('portal_email');
+    if (userEmail === 'kongaaadisheshu@gmail.com') {
+      document.getElementById('superuserPanel').style.display = 'block';
+    }
+
+    let selectedApkFile = null;
+
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (file && file.name.endsWith('.apk')) {
+        selectedApkFile = file;
+        document.getElementById('uploadZoneText').innerText = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+        document.getElementById('uploadBtn').disabled = false;
+      } else {
+        alert('Please select a valid .apk file.');
+        selectedApkFile = null;
+        document.getElementById('uploadBtn').disabled = true;
+      }
+    }
+
+    async function uploadReleaseApk() {
+      if (!selectedApkFile) return;
+
+      const uploadBtn = document.getElementById('uploadBtn');
+      const status = document.getElementById('uploadStatus');
+
+      uploadBtn.disabled = true;
+      status.style.color = '#6366f1';
+      status.innerText = 'Uploading release APK to Supabase Storage...';
+
+      try {
+        // Upload APK to public 'app-releases' bucket as 'Venkateshwara_UPVC.apk' with upsert option
+        const { data, error } = await supabaseClient.storage
+          .from('app-releases')
+          .upload('Venkateshwara_UPVC.apk', selectedApkFile, {
+            upsert: true,
+            contentType: 'application/vnd.android.package-archive'
+          });
+
+        if (error) throw error;
+
+        status.style.color = '#10b981';
+        status.innerText = 'Successfully uploaded and updated the latest release APK!';
+        document.getElementById('uploadZoneText').innerText = 'Select or drop a new .apk file here';
+        selectedApkFile = null;
+      } catch (err) {
+        console.error('Storage Upload Error:', err);
+        status.style.color = '#ef4444';
+        status.innerText = 'Upload failed: ' + err.message;
+        uploadBtn.disabled = false;
+      }
+    }
 
     async function loadQuotations() {
       try {

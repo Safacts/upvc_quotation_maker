@@ -26,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   
   // Default credentials
   final String _adminEmail = 'jvenkateshupvc@gmail.com';
+  final String _superuserEmail = 'kongaaadisheshu@gmail.com';
 
   @override
   void initState() {
@@ -50,8 +51,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email != _adminEmail) {
-      setState(() { _isLoading = false; _errorMessage = 'Login restricted strictly to $_adminEmail'; });
+    if (email != _adminEmail && email != _superuserEmail) {
+      setState(() { _isLoading = false; _errorMessage = 'Access Denied'; });
       return;
     }
 

@@ -280,12 +280,14 @@
   </div>
 
   <script>
-    const TARGET_EMAIL = 'jvenkateshupvc@gmail.com';
+    const ADMIN_EMAIL = 'jvenkateshupvc@gmail.com';
+    const SUPERUSER_EMAIL = 'kongaaadisheshu@gmail.com';
     const SUPABASE_URL = 'https://effxrwrbsjduvhmorvrq.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let generatedOtp = '';
+    let forgotPasswordTargetEmail = '';
 
     // Async SHA-256 Hashing helper using Web Crypto API
     async function sha256(message) {
@@ -305,8 +307,8 @@
 
       errorBox.style.display = 'none';
 
-      if (email !== TARGET_EMAIL) {
-        errorBox.innerText = 'Login restricted strictly to ' + TARGET_EMAIL;
+      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL) {
+        errorBox.innerText = 'Login restricted strictly to authorized admins.';
         errorBox.style.display = 'block';
         return;
       }
@@ -330,6 +332,7 @@
         const inputHash = await sha256(password);
         if (admin.password_hash === inputHash) {
           localStorage.setItem('portal_session', 'active');
+          localStorage.setItem('portal_email', email);
           window.location.href = 'dashboard.html';
         } else {
           errorBox.innerText = 'Invalid email or password.';
@@ -349,12 +352,13 @@
       const email = document.getElementById('email').value.trim();
       const errorBox = document.getElementById('errorBox');
 
-      if (email !== TARGET_EMAIL) {
-        errorBox.innerText = 'Please input the correct admin email to request OTP.';
+      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL) {
+        errorBox.innerText = 'Please input a correct admin email to request OTP.';
         errorBox.style.display = 'block';
         return;
       }
 
+      forgotPasswordTargetEmail = email;
       generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
       document.getElementById('hintOtp').innerText = generatedOtp;
       document.getElementById('otpModal').style.display = 'flex';
@@ -388,7 +392,7 @@
         const { error } = await supabaseClient
           .from('admins')
           .update({ password_hash: newHash })
-          .eq('email', TARGET_EMAIL);
+          .eq('email', forgotPasswordTargetEmail);
 
         if (error) throw error;
 
