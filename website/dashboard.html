@@ -320,7 +320,11 @@
       } catch (err) {
         console.error('Storage Upload Error:', err);
         status.style.color = '#ef4444';
-        status.innerText = 'Upload failed: ' + err.message;
+        if (err.message && err.message.includes('not_found') || err.error === 'not_found' || (err.status && err.status == 404)) {
+          status.innerText = 'Upload failed: The target storage bucket "app-releases" is missing or disabled in Supabase. Please verify storage is active.';
+        } else {
+          status.innerText = 'Upload failed: ' + (err.message || 'Unknown network error.');
+        }
         uploadBtn.disabled = false;
       }
     }

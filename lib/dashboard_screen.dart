@@ -308,7 +308,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
+        padding: const EdgeInsets.only(bottom: 48.0),
         child: FloatingActionButton.extended(
           onPressed: () async {
             await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));

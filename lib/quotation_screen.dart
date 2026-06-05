@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -336,21 +336,55 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         return TextFormField(
                           controller: textEditingController,
                           focusNode: focusNode,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(labelText: 'Name'),
                           onChanged: (val) { data.customerName = val; _onDataChanged(); },
                         );
                       },
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(key: ValueKey('ref_${data.reference}'), initialValue: data.reference, decoration: const InputDecoration(labelText: 'Reference'), onChanged: (val) { data.reference = val; _onDataChanged(); }),
+                    TextFormField(
+                      key: ValueKey('ref_${data.reference}'),
+                      initialValue: data.reference,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Reference'),
+                      onChanged: (val) { data.reference = val; _onDataChanged(); }
+                    ),
                     const SizedBox(height: 12),
-                    TextFormField(key: ValueKey('addr_${data.address}'), initialValue: data.address, decoration: const InputDecoration(labelText: 'Address'), onChanged: (val) { data.address = val; _onDataChanged(); }),
+                    TextFormField(
+                      key: ValueKey('addr_${data.address}'),
+                      initialValue: data.address,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(labelText: 'Address'),
+                      onChanged: (val) { data.address = val; _onDataChanged(); }
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: TextFormField(key: ValueKey('cont_${data.contactNo}'), initialValue: data.contactNo, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact No'), onChanged: (val) { data.contactNo = val; _onDataChanged(); })),
+                        Expanded(
+                          child: TextFormField(
+                            key: ValueKey('cont_${data.contactNo}'),
+                            initialValue: data.contactNo,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(10)
+                            ],
+                            decoration: const InputDecoration(labelText: 'Contact No'),
+                            onChanged: (val) { data.contactNo = val; _onDataChanged(); }
+                          )
+                        ),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(key: ValueKey('email_${data.email}'), initialValue: data.email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email (Optional)'), onChanged: (val) { data.email = val; _onDataChanged(); })),
+                        Expanded(
+                          child: TextFormField(
+                            key: ValueKey('email_${data.email}'),
+                            initialValue: data.email,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(labelText: 'Email (Optional)'),
+                            onChanged: (val) { data.email = val; _onDataChanged(); }
+                          )
+                        ),
                       ],
                     ),
                   ],
