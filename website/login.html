@@ -341,7 +341,7 @@
           errorBox.style.display = 'block';
         }
       } catch (err) {
-        errorBox.innerText = 'Connection error: ' + err.message;
+        errorBox.innerText = 'Unable to connect to the login portal. Please check your network connection and try again.';
         errorBox.style.display = 'block';
       } finally {
         loginBtn.disabled = false;
@@ -404,7 +404,7 @@
         document.getElementById('otpModal').style.display = 'flex';
       } catch (err) {
         errorBox.style.color = '#ef4444';
-        errorBox.innerText = 'Failed to dispatch email: ' + err.message;
+        errorBox.innerText = 'Unable to send OTP. Please check your network connection and try again.';
         errorBox.style.display = 'block';
       }
     }
@@ -444,7 +444,7 @@
         alert('Password updated successfully in database!');
         closeModal('resetModal');
       } catch (err) {
-        alert('Failed to update password: ' + err.message);
+        alert('Unable to save password. Please check your connection and try again.');
       } finally {
         resetBtn.disabled = false;
         resetSpinner.style.display = 'none';
