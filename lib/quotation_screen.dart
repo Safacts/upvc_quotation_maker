@@ -282,40 +282,27 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Quote No', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(data.quotationNo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text('Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(DateFormat('dd-MMM-yyyy').format(data.date), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Quote No', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(data.quotationNo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text('Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(DateFormat('dd-MMM-yyyy').format(data.date), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ],
+                        ),
                       ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: data.status,
-                  decoration: const InputDecoration(labelText: 'Quotation Status'),
-                  items: ['Draft', 'Sent', 'Accepted', 'Rejected']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => data.status = val);
-                      _onDataChanged();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ).animate().fade().slideY(begin: -0.1),
+              ),
+            ).animate().fade().slideY(begin: -0.1),
+
             
             _buildSectionTitle('Customer Details').animate().fade(delay: 100.ms),
             Card(
@@ -457,7 +444,38 @@ class _QuotationScreenState extends State<QuotationScreen> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: TextFormField(initialValue: data.transport == 0 ? '' : data.transport.toString(), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Transport Cost (Rs)'), onChanged: (val) { data.transport = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); }),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      initialValue: data.transport == 0 ? '' : data.transport.toString(),
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Transport Cost (Rs)'),
+                      onChanged: (val) {
+                        data.transport = double.tryParse(val) ?? 0;
+                        setState(() {});
+                        _onDataChanged();
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    _buildComputationRow('Subtotal (Actual Amount)', data.actualAmount),
+                    _buildComputationRow('Transport Cost', data.transport),
+                    _buildComputationRow('IGST (18%)', data.igst),
+                    const Divider(thickness: 1.5),
+                    _buildComputationRow('Grand Total', data.grandTotal, isBold: true),
+                    const SizedBox(height: 8),
+                    Text(
+                      data.amountInWords,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ).animate().fade(delay: 700.ms),
             
@@ -492,6 +510,25 @@ class _QuotationScreenState extends State<QuotationScreen> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildComputationRow(String label, double amount, {bool isBold = false}) {
+    final theme = Theme.of(context);
+    final style = TextStyle(
+      fontSize: isBold ? 16 : 14,
+      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+      color: isBold ? theme.colorScheme.primary : theme.textTheme.bodyLarge?.color,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text('₹${amount.toStringAsFixed(2)}', style: style),
+        ],
       ),
     );
   }

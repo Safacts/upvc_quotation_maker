@@ -185,25 +185,33 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
         pw.TableRow(children: [
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Total SFT', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(data.totalSft.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Actual Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Subtotal', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.actualAmount), style: pw.TextStyle(fontSize: 10))),
         ]),
         pw.TableRow(children: [
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Transport', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.transport), style: pw.TextStyle(fontSize: 10))),
+          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('IGST @ 18%', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.igst), style: pw.TextStyle(fontSize: 10))),
+        ]),
+        pw.TableRow(children: [
+          pw.SizedBox(),
+          pw.SizedBox(),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Grand Total', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.grandTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
         ]),
         pw.TableRow(
           decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#1e3a5f'), width: 2))),
           children: [
-          pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Amount in Words', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(
-            padding: pw.EdgeInsets.all(8), 
-            child: pw.Text(data.amountInWords, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11))
-          ),
-          pw.SizedBox(), pw.SizedBox()
-        ]),
+            pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Amount in Words', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(8), 
+              child: pw.Text(data.amountInWords, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))
+            ),
+            pw.SizedBox(), 
+            pw.SizedBox()
+          ]
+        ),
       ]
     )
   );

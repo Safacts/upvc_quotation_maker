@@ -37,7 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final response = await SupabaseConfig.client
           .from('quotations')
           .select()
-          .order('date', ascending: false);
+          .order('created_at', ascending: false);
       
       setState(() {
         _quotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
@@ -54,16 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await storage.delete(key: 'session_active');
     if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Draft': return Colors.grey;
-      case 'Sent': return Colors.blue;
-      case 'Accepted': return Colors.green;
-      case 'Rejected': return Colors.red;
-      default: return Colors.grey;
-    }
   }
 
   Widget _buildTopTile({required String title, required IconData icon, required VoidCallback onTap, required LinearGradient gradient, required int delay}) {
@@ -98,13 +88,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
 
     if (_filterType == 'Oldest') {
-      filteredQuotations.sort((a, b) => a.date.compareTo(b.date));
+      filteredQuotations.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     } else if (_filterType == 'Highest Amount') {
       filteredQuotations.sort((a, b) => b.grandTotal.compareTo(a.grandTotal));
     } else if (_filterType == 'Lowest Amount') {
       filteredQuotations.sort((a, b) => a.grandTotal.compareTo(b.grandTotal));
     } else {
-      filteredQuotations.sort((a, b) => b.date.compareTo(a.date));
+      filteredQuotations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
 
     return Scaffold(
@@ -126,7 +116,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: Image.asset('assets/logo.png', width: 60, height: 60),
+                    child: Image.asset('assets/logo.png', width: 60, height: 60, fit: BoxFit.contain),
                   ),
                   const SizedBox(height: 10),
                   const Text('Venkateshwara UPVC', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -293,23 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           children: [
                                             Text(q.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                             const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Text(q.quotationNo, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                                                const SizedBox(width: 8),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: _getStatusColor(q.status).withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    q.status,
-                                                    style: TextStyle(color: _getStatusColor(q.status), fontSize: 10, fontWeight: FontWeight.bold),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                            Text(q.quotationNo, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
                                           ],
                                         ),
                                       ),
@@ -331,11 +305,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
           ),
           CraftedWithLoveWidget(),
-          const SizedBox(height: 16),
         ],
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
+        padding: const EdgeInsets.only(bottom: 16.0),
         child: FloatingActionButton.extended(
           onPressed: () async {
             await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));

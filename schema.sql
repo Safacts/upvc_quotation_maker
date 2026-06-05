@@ -60,3 +60,12 @@ CREATE TABLE public.sent_emails (
     subject TEXT NOT NULL,
     body TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS public.admins (
+    email TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL
+);
+
+INSERT INTO public.admins (email, password_hash)
+VALUES ('jvenkateshupvc@gmail.com', '7553830073163f0955b6d8a9671f0375c69ae7d12b6f73a3a23dffd1e1b522ed')
+ON CONFLICT (email) DO NOTHING;

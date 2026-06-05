@@ -10,7 +10,7 @@ class QuotationData {
   String address = '';
   String contactNo = '';
   String email = ''; // Added email field
-  String status = 'Draft'; // Status field (Draft, Sent, Accepted, Rejected)
+  DateTime createdAt = DateTime.now(); // Added createdAt timestamp
   
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
@@ -22,9 +22,10 @@ class QuotationData {
       final result = await SupabaseConfig.client.rpc('get_next_quote_number');
       return result.toString();
     } catch (e) {
-      // Fallback for offline/error
+      // Fallback for offline/error: add milliseconds since epoch modulo 10000 to prevent collisions
       String datePart = DateFormat('ddMMyyyy').format(DateTime.now());
-      return 'JVUPVC-$datePart-ERR';
+      int rand = DateTime.now().millisecondsSinceEpoch % 10000;
+      return 'JVUPVC-$datePart-ERR-$rand';
     }
   }
 
@@ -32,7 +33,8 @@ class QuotationData {
   double get totalUnmeasuredAmount => unmeasuredItems.fold(0, (sum, item) => sum + item.total);
   double get actualAmount => totalMeasuredAmount + totalUnmeasuredAmount;
   double get totalSft => measuredItems.fold(0, (sum, item) => sum + item.totalSft);
-  double get grandTotal => actualAmount + transport;
+  double get igst => (actualAmount + transport) * 0.18; // 18% IGST
+  double get grandTotal => actualAmount + transport + igst; // Grand Total includes IGST
 
   String get amountInWords {
     if (grandTotal == 0) return "RUPEES ZERO ONLY";
@@ -68,7 +70,6 @@ class QuotationData {
       'address': address,
       'contact_no': contactNo,
       'email': email,
-      'status': status,
       'transport_cost': transport,
     };
   }
@@ -83,8 +84,8 @@ class QuotationData {
     q.address = map['address'] ?? '';
     q.contactNo = map['contact_no'] ?? '';
     q.email = map['email'] ?? '';
-    q.status = map['status'] ?? 'Draft';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
+    q.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();
     return q;
   }
 }

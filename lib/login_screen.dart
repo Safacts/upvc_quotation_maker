@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mailer/mailer.dart';
@@ -7,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
+import 'supabase_config.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -37,25 +40,45 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<String> _getStoredPassword() async {
-    String? p = await _storage.read(key: 'admin_password');
-    if (p == null || p.isEmpty) {
-      // Set default password if not set
-      await _storage.write(key: 'admin_password', value: 'Jvenkatesh@1234');
-      return 'Jvenkatesh@1234';
-    }
-    return p;
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    return sha256.convert(bytes).toString();
   }
 
   void _login() async {
     setState(() { _isLoading = true; _errorMessage = ''; });
-    final storedPassword = await _getStoredPassword();
-    
-    if (_emailController.text.trim() == _adminEmail && _passwordController.text == storedPassword) {
-      await _storage.write(key: 'session_active', value: 'true');
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-    } else {
-      setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email != _adminEmail) {
+      setState(() { _isLoading = false; _errorMessage = 'Login restricted strictly to $_adminEmail'; });
+      return;
+    }
+
+    try {
+      final response = await SupabaseConfig.client
+          .from('admins')
+          .select('password_hash')
+          .eq('email', email)
+          .maybeSingle();
+
+      if (response == null) {
+        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+        return;
+      }
+
+      final dbHash = response['password_hash'] as String;
+      final inputHash = _hashPassword(password);
+
+      if (dbHash == inputHash) {
+        await _storage.write(key: 'session_active', value: 'true');
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+      } else {
+        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; _errorMessage = 'Database connection error: $e'; });
     }
   }
 
@@ -143,9 +166,20 @@ class _LoginScreenState extends State<LoginScreen> {
             ElevatedButton(
               onPressed: () async {
                 if (passController.text.length >= 6) {
-                  await _storage.write(key: 'admin_password', value: passController.text);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!')));
+                  final newHash = _hashPassword(passController.text);
+                  setState(() => _isLoading = true);
+                  try {
+                    await SupabaseConfig.client.from('admins').update({'password_hash': newHash}).eq('email', _adminEmail);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully in database!')));
+                  } catch (e) {
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update password: $e')));
+                  } finally {
+                    setState(() => _isLoading = false);
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password too short')));
                 }
@@ -169,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/logo.png', width: 120, height: 120).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
+              Image.asset('assets/logo.png', width: 120, height: 120, fit: BoxFit.contain).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
               const SizedBox(height: 20),
               Text('Welcome Back', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor)).animate().fade(delay: 300.ms).slideY(begin: 0.2),
               const SizedBox(height: 8),

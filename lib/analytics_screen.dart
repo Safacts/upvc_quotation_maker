@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'models.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 
@@ -14,6 +15,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   int _totalQuotations = 0;
   int _totalEmails = 0;
   double _totalRevenue = 0.0;
+  double _totalSubtotal = 0.0;
+  double _totalIgst = 0.0;
+  double _totalTransport = 0.0;
 
   @override
   void initState() {
@@ -24,39 +28,60 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _fetchAnalytics() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Fetch total quotations
-      final quotesResp = await SupabaseConfig.client.from('quotations').select('id, transport_cost');
-      _totalQuotations = (quotesResp as List).length;
+      // 1. Fetch all quotations
+      final quotesResp = await SupabaseConfig.client.from('quotations').select();
+      final quotations = (quotesResp as List).map((e) => QuotationData.fromMap(e)).toList();
+      _totalQuotations = quotations.length;
 
       // 2. Fetch total emails
       final emailsResp = await SupabaseConfig.client.from('sent_emails').select('id');
       _totalEmails = (emailsResp as List).length;
 
-      // 3. Calculate total revenue
-      double total = 0.0;
-      for (var q in quotesResp) {
-        total += (q['transport_cost'] ?? 0).toDouble();
-      }
-      
-      // Also get all items to sum up the actual amount
-      final mItemsResp = await SupabaseConfig.client.from('measured_items').select('width, height, units, rate');
-      for (var item in mItemsResp as List) {
-        double w = (item['width'] ?? 0).toDouble();
-        double h = (item['height'] ?? 0).toDouble();
-        int u = item['units'] ?? 1;
-        double r = (item['rate'] ?? 0).toDouble();
-        double sft = (w / 304.8) * (h / 304.8);
-        total += (sft * u * r);
+      // 3. Fetch all items
+      final mItemsResp = await SupabaseConfig.client.from('measured_items').select();
+      final umItemsResp = await SupabaseConfig.client.from('unmeasured_items').select();
+
+      // Group items by quotation_id
+      final mItemsMap = <String, List<MeasuredItem>>{};
+      for (var map in mItemsResp as List) {
+        final qId = map['quotation_id'] as String?;
+        if (qId != null) {
+          mItemsMap.putIfAbsent(qId, () => []).add(MeasuredItem.fromMap(map));
+        }
       }
 
-      final umItemsResp = await SupabaseConfig.client.from('unmeasured_items').select('units, rate');
-      for (var item in umItemsResp as List) {
-        int u = item['units'] ?? 1;
-        double r = (item['rate'] ?? 0).toDouble();
-        total += (u * r);
+      final umItemsMap = <String, List<UnmeasuredItem>>{};
+      for (var map in umItemsResp as List) {
+        final qId = map['quotation_id'] as String?;
+        if (qId != null) {
+          umItemsMap.putIfAbsent(qId, () => []).add(UnmeasuredItem.fromMap(map));
+        }
       }
 
-      _totalRevenue = total;
+      // Assign items to quotations & calculate sums
+      double subtotal = 0.0;
+      double transport = 0.0;
+      double igst = 0.0;
+      double grandTotal = 0.0;
+
+      for (var q in quotations) {
+        if (q.id != null) {
+          q.measuredItems = mItemsMap[q.id!] ?? [];
+          q.unmeasuredItems = umItemsMap[q.id!] ?? [];
+          
+          subtotal += q.actualAmount;
+          transport += q.transport;
+          igst += q.igst;
+          grandTotal += q.grandTotal;
+        }
+      }
+
+      setState(() {
+        _totalRevenue = grandTotal;
+        _totalSubtotal = subtotal;
+        _totalIgst = igst;
+        _totalTransport = transport;
+      });
 
     } catch (e) {
       debugPrint('Analytics Fetch error: $e');
@@ -107,6 +132,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     ).animate().fade(delay: Duration(milliseconds: delay)).slideX(begin: 0.2);
   }
 
+  Widget _buildBreakdownRow(String label, String value, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 15, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+          Text(value, style: TextStyle(fontSize: 15, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? Colors.green.shade700 : null)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final NumberFormat currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
@@ -124,9 +162,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   const SizedBox(height: 20),
                   _buildStatCard('Total Revenue Quoted', currencyFormat.format(_totalRevenue), Icons.currency_rupee, Colors.green, 100),
                   const SizedBox(height: 16),
-                  _buildStatCard('Quotations Generated', _totalQuotations.toString(), Icons.request_quote, Colors.blue, 200),
+                  
+                  // Detailed Financial Breakdown Card
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Financial Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          _buildBreakdownRow('Items Subtotal', currencyFormat.format(_totalSubtotal)),
+                          _buildBreakdownRow('Transport Charges', currencyFormat.format(_totalTransport)),
+                          _buildBreakdownRow('IGST (18%)', currencyFormat.format(_totalIgst)),
+                          const Divider(thickness: 1.5),
+                          _buildBreakdownRow('Total Quoted Value', currencyFormat.format(_totalRevenue), isBold: true),
+                        ],
+                      ),
+                    ),
+                  ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
                   const SizedBox(height: 16),
-                  _buildStatCard('Total Emails Sent', _totalEmails.toString(), Icons.mark_email_read, Colors.purple, 300),
+
+                  _buildStatCard('Quotations Generated', _totalQuotations.toString(), Icons.request_quote, Colors.blue, 300),
+                  const SizedBox(height: 16),
+                  _buildStatCard('Total Emails Sent', _totalEmails.toString(), Icons.mark_email_read, Colors.purple, 400),
                 ],
               ),
             ),

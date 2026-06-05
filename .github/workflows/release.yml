@@ -52,11 +52,16 @@ jobs:
     - name: Build Release APK
       run: flutter build apk --release
 
+    - name: Rename APK
+      run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.${{ github.run_number }}
         name: UPVC Quotation Maker v1.0.${{ github.run_number }}
-        files: build/app/outputs/flutter-apk/app-release.apk
+        files: build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

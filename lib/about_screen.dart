@@ -1,13 +1,86 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'secret_panel_screen.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  int _clickCount = 0;
+  Timer? _timer;
+
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
     if (!await launchUrl(url)) {
       debugPrint('Could not launch $url');
     }
+  }
+
+  void _handleNameTap() {
+    _clickCount++;
+    _timer?.cancel();
+
+    if (_clickCount >= 7) {
+      _clickCount = 0;
+      _showSecretDialog();
+    } else {
+      _timer = Timer(const Duration(milliseconds: 450), () {
+        _clickCount = 0;
+      });
+    }
+  }
+
+  void _showSecretDialog() {
+    final codeController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Developer Access'),
+          content: TextField(
+            controller: codeController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Enter Secret Code'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final val = codeController.text.trim();
+                // Obfuscated code representation: 533842 is 0x82552
+                final expected = (0x82552).toString();
+                if (val == expected) {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SecretPanelScreen()),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid developer code')),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -31,7 +104,7 @@ class AboutScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
                 ),
-                child: Image.asset('assets/logo.png', width: 80, height: 80),
+                child: Image.asset('assets/logo.png', width: 80, height: 80, fit: BoxFit.contain),
               ).animate().scale(delay: 200.ms, curve: Curves.easeOutBack),
               
               const SizedBox(height: 24),
@@ -58,6 +131,7 @@ class AboutScreen extends StatelessWidget {
                   leading: const Icon(Icons.person, color: Colors.blueAccent),
                   title: const Text('Konga Aadisheshu'),
                   subtitle: const Text('Software Developer'),
+                  onTap: _handleNameTap,
                 ),
               ).animate().fade(delay: 600.ms).slideX(begin: -0.1),
               
