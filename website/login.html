@@ -368,20 +368,20 @@
       errorBox.innerText = 'Sending OTP code to your registered email...';
       errorBox.style.display = 'block';
 
-      try {
-        // Log transaction in Supabase 'sent_emails' table.
-        // A database trigger automatically forwards this entry to Brevo's SMTP relay.
-        const htmlBody = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-            <h2 style="color: #1E3A5F;">Password Reset Request</h2>
-            <p style="color: #475569; font-size: 16px;">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>
-            <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;">
-              ${generatedOtp}
-            </div>
-            <p style="color: #64748b; font-size: 14px;">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>
+      let success = false;
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+          <h2 style="color: #1E3A5F;">Password Reset Request</h2>
+          <p style="color: #475569; font-size: 16px;">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>
+          <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;">
+            ${generatedOtp}
           </div>
-        `;
+          <p style="color: #64748b; font-size: 14px;">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `;
 
+      // Path 1: Direct insert into sent_emails table (which stores the record)
+      try {
         const { error } = await supabaseClient
           .from('sent_emails')
           .insert({
@@ -389,14 +389,42 @@
             subject: 'Your Password Reset OTP',
             body: htmlBody
           });
+        if (!error) {
+          success = true;
+        }
+      } catch (dbErr) {
+        console.warn('Database logging bypass:', dbErr);
+      }
 
-        if (error) throw error;
+      // Path 2: Direct HTTP fetch dispatch to Brevo (Fallback/Primary for instant email delivery when ad-blocker is absent)
+      try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': 'xsmtpsib-c7da6236a6bac47309267b245813ccb7675d526c02236bcdf8666d5adff1c2f8-8p8el8xB45QYLXOw',
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            sender: { name: 'System Security', email: 'jvenkateshupvc@gmail.com' },
+            to: [{ email: email }],
+            subject: 'Your Password Reset OTP',
+            htmlContent: htmlBody
+          })
+        });
+        if (response.ok) {
+          success = true;
+        }
+      } catch (netErr) {
+        console.warn('Network mailing blocked/failed:', netErr);
+      }
 
+      if (success) {
         errorBox.style.display = 'none';
         document.getElementById('otpInput').value = '';
         // Open verification modal
         document.getElementById('otpModal').style.display = 'flex';
-      } catch (err) {
+      } else {
         errorBox.style.color = '#ef4444';
         errorBox.innerText = 'Unable to send OTP. Please check your network connection and try again.';
         errorBox.style.display = 'block';
