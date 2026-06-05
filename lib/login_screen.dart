@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email != _adminEmail && email != _superuserEmail) {
+    if (email != _adminEmail && email != _superuserEmail && email != 'kongaadisheshu@gmail.com') {
       setState(() { _isLoading = false; _errorMessage = 'Access Denied'; });
       return;
     }

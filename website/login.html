@@ -309,7 +309,7 @@
 
       errorBox.style.display = 'none';
 
-      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL) {
+      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL && email !== 'kongaadisheshu@gmail.com') {
         errorBox.innerText = 'Login restricted strictly to authorized admins.';
         errorBox.style.display = 'block';
         return;
@@ -354,7 +354,7 @@
       const email = document.getElementById('email').value.trim();
       const errorBox = document.getElementById('errorBox');
 
-      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL) {
+      if (email !== ADMIN_EMAIL && email !== SUPERUSER_EMAIL && email !== 'kongaadisheshu@gmail.com') {
         errorBox.innerText = 'Please input a correct admin email to request OTP.';
         errorBox.style.display = 'block';
         return;
