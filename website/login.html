@@ -396,27 +396,23 @@
         console.warn('Database logging bypass:', dbErr);
       }
 
-      // Path 2: Direct HTTP fetch dispatch to Brevo (Fallback/Primary for instant email delivery when ad-blocker is absent)
+      // Path 2: Vercel Serverless Function Proxy (Bypasses browser adblock blockages)
       try {
-        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        const response = await fetch('/api/send_otp', {
           method: 'POST',
           headers: {
-            'accept': 'application/json',
-            'api-key': 'xsmtpsib-c7da6236a6bac47309267b245813ccb7675d526c02236bcdf8666d5adff1c2f8-8p8el8xB45QYLXOw',
             'content-type': 'application/json'
           },
           body: JSON.stringify({
-            sender: { name: 'System Security', email: 'jvenkateshupvc@gmail.com' },
-            to: [{ email: email }],
-            subject: 'Your Password Reset OTP',
-            htmlContent: htmlBody
+            email: email,
+            otp: generatedOtp
           })
         });
         if (response.ok) {
           success = true;
         }
       } catch (netErr) {
-        console.warn('Network mailing blocked/failed:', netErr);
+        console.warn('Vercel relay mailing failed:', netErr);
       }
 
       if (success) {

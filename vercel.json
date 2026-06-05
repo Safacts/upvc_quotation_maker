@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/api/send_otp", "destination": "/api/send_otp.py" },
     { "source": "/(.*)", "destination": "/website/$1" }
   ]
 }
