@@ -64,4 +64,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
+    - name: Upload APK to Supabase
+      run: |
+        curl -X POST "${{ secrets.SUPABASE_URL }}/storage/v1/object/app-releases/Venkateshwara_UPVC.apk" \
+        -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+        -H "Content-Type: application/vnd.android.package-archive" \
+        -H "x-upsert: true" \
+        --data-binary "@build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk"

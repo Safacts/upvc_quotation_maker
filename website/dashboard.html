@@ -209,6 +209,27 @@
       font-weight: 600;
     }
 
+    .btn-download {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      transition: transform 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .btn-download:hover {
+      transform: translateY(-1px);
+    }
+    
     /* Mobile Responsive Optimizations */
     @media (max-width: 480px) {
       .nav-bar {
@@ -218,7 +239,7 @@
         font-size: 16px;
         display: none; /* Hide text on very small screens to fit logout button */
       }
-      .btn-logout {
+      .btn-logout, .btn-download {
         padding: 8px 16px;
         font-size: 14px;
       }
@@ -260,7 +281,10 @@
       <img src="https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/assets/logo.png" onerror="this.src='https://placehold.co/100'" alt="Venkateshwara UPVC">
       <span class="logo-text">Venkateshwara UPVC</span>
     </div>
-    <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <a href="https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk" class="btn-download" download>Download App</a>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
   </div>
 
   <div class="container">
