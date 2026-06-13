@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Venkateshwara UPVC Quotation</title>
+
+<style>
+@page{
+  size:A4;
+  margin:10mm;
+}
+
+body{
+  margin:0;
+  background:#e9eef3;
+  font-family:Arial, sans-serif;
+  font-size:13px;
+}
+
+.page{
+  width:210mm;
+  min-height:297mm;
+  margin:auto;
+  background:#fff;
+  border:2px solid #1e3a5f;
+  padding:12mm;
+  box-sizing:border-box;
+  position:relative;
+}
+
+/* WATERMARK PRINT ONLY */
+.page::before{
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0; bottom:0;
+  background-image:url('https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg');
+  background-size:120px 120px;
+  background-repeat:repeat;
+  opacity:0;
+  z-index:-1;
+}
+
+/* HEADER */
+.header{
+  text-align:center;
+  background:#1e3a5f;
+  color:#fff;
+  padding:10px;
+}
+.header h2{margin:5px 0}
+
+/* TOP BAR */
+.top-bar{
+  display:flex;
+  justify-content:space-between;
+  margin:8px 0;
+  font-weight:bold;
+}
+
+/* SECTION TITLE */
+.section-title{
+  background:#1e3a5f;
+  color:#fff;
+  padding:5px;
+  margin-top:10px;
+  font-size:14px;
+}
+
+/* TABLES */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:6px;
+}
+th,td{
+  border:1px solid #333;
+  padding:6px;
+  text-align:center;
+  vertical-align:top;
+}
+th{background:#dce6f1;}
+
+.field-table td{
+  border:none;
+  padding:6px;
+}
+.label{
+  width:20%;
+  font-weight:bold;
+}
+.input-box, textarea{
+  width:100%;
+  padding:6px;
+  border:1px solid #333;
+  border-radius:3px;
+  box-sizing:border-box;
+  resize:none;
+  font-family:Arial;
+  font-size:13px;
+}
+textarea{
+  overflow:hidden;
+  min-height:32px;
+}
+
+/* TOTALS */
+.right{text-align:right}
+.highlight{
+  background:#f1f5fa;
+  font-weight:bold;
+}
+.amount{font-family:monospace}
+
+/* BUTTONS */
+button{
+  padding:8px 15px;
+  margin:10px 5px;
+  cursor:pointer;
+}
+.delete-btn{
+  color:red;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+/* FOOTER */
+.footer{
+  text-align:center;
+  font-size:11px;
+  color:#666;
+  margin-top:15px;
+  border-top:1px solid #ccc;
+  padding-top:5px;
+}
+
+/* PRINT */
+@media print{
+
+  body{
+    background:#fffaf0 !important;   /* Your print background color */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  button{
+    display:none;
+  }
+
+  textarea,input{
+    border:none;
+  }
+
+  .page{
+    margin:0;
+    border:2px solid #000;
+    padding:15px;
+    
+    /* THIS FIXES MULTI-PAGE BORDER */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* Watermark print visibility */
+  .page::before{
+    opacity:0.06;
+  }
+
+  .footer{
+    position:fixed;
+    bottom:5mm;
+    left:0;
+    right:0;
+  }
+
+  .footer::after{
+    content:" | Page " counter(page);
+  }
+}
+
+@media screen{
+  .page{border:2px solid #1e3a5f;}
+}
+</style>
+</head>
+
+<body>
+<div class="page" id="quotation">
+
+<center>
+<img src="https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg" 
+style="width:150px;">
+</center>
+
+<div class="header">
+<h2>Venkateshwara UPVC Windows & Doors</h2>
+<div>Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074</div>
+<div>Prop: J.Venkateshwarlu &nbsp;&nbsp;&nbsp; Contact: 9246588692, 9441888131</div>
+<p>GST No: 36AKDPJ7245B2ZF</p>
+</div>
+
+<div class="top-bar">
+<div>Quotation No: <span id="qno"></span></div>
+<div>Date: <input type="date" class="input-box" style="width:140px"></div>
+</div>
+
+<div class="section-title">Customer Details</div>
+<table class="field-table">
+<tr>
+<td class="label">Name</td>
+<td><input class="input-box"></td>
+<td class="label">Reference</td>
+<td><input class="input-box"></td>
+</tr>
+<tr>
+<td class="label">Address</td>
+<td><input class="input-box"></td>
+<td class="label">Contact No</td>
+<td><input class="input-box"></td>
+</tr>
+</table>
+
+<div class="section-title">Quotation Details</div>
+<table id="items">
+<thead>
+<tr>
+<th>S.No</th>
+<th>Code</th>
+<th>Description</th>
+<th>Width (MM)</th>
+<th>Height (MM)</th>
+<th>Units</th>
+<th>Glass</th>
+<th>SFT</th>
+<th>Total SFT</th>
+<th>Rate</th>
+<th>Total</th>
+<th> </th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<button type="button" onclick="addRow()">&#8330; Add Item</button>
+
+<div class="section-title">Add Items without Measurements (Only Quantity)</div>
+
+<table id="itemsNoMeasure">
+<thead>
+<tr>
+<th>S.No</th>
+<th>Description</th>
+<th>Units</th>
+<th>Rate Per Unit</th>
+<th>Total</th>
+<th></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<button type="button" onclick="addRowNoMeasure()">+ Add Item (No Measurement)</button>
+
+<table class="field-table">
+<tr class="highlight">
+<td class="right">Total SFT</td>
+<td id="totalsft">0.00</td>
+<td class="right">Actual Amount</td>
+<td> &#8377; <span id="actual" class="amount">0.00</span></td>
+</tr>
+<tr class="highlight">
+<td class="right">Transport</td>
+<td><input id="transport" class="input-box" value="0" oninput="calc()"></td>
+<td class="right">Grand Total</td>
+<td>&#8377; <span id="grand" class="amount">0.00</span></td>
+</tr>
+<tr class="highlight">
+<td class="right">Amount in Words</td>
+<td colspan="3" style="text-align:left;font-size:14px;padding:12px;border-top:2px solid #1e3a5f;">
+<span id="words"><b>RUPEES ZERO ONLY</b></span>
+</td>
+</tr>
+</table>
+
+<!-- BANK DETAILS -->
+<div class="section-title">Bank Details</div>
+<table class="field-table">
+<tr>
+<td>Company Name :</td>
+<td>VENKATESHWARA WELDING WORKS</td>
+</tr>
+<tr><td>Bank Name & Branch :</td><td>Union Bank, Hastinapuram</td></tr>
+<tr><td>A/C No :</td><td>178511100000061</td></tr>
+<tr><td>IFSC Code :</td><td>UBIN0817856</td></tr>
+</table>
+
+<!-- TERMS -->
+<div class="section-title">Terms & Conditions</div>
+<ol>
+<li>Glass mentioned is of any reputed make.</li>
+<li>50% advance, 35% after dispatch, 15% after installation.</li>
+<li>Delivery minimum 15 days from advance.</li>
+<li>All payments in favor of M/s Niksha Industries Pvt Ltd.</li>
+<li>Client responsible for site safety & electricity.</li>
+<li>Material can be taken back if payment not received.</li>
+<li>Final wall-to-wall measurement includes silicone sealant.</li>
+<li>Rates may alter if size changes above 1 foot.</li>
+<li>Quotation valid for 15 days.</li>
+<li>Above rates inclusive of installation.</li>
+</ol>
+
+<br>
+<table class="field-table">
+<tr>
+<td><b>Authorised Signature</b></td>
+<td style="text-align:right"><b>Customer Signature</b></td>
+</tr>
+</table>
+
+<div class="footer" id="footerText"></div>
+
+</div>
+
+<button onclick="window.print()">Print</button>
+
+<script>
+
+/* Footer Date Time */
+function updateFooter(){
+  const now = new Date();
+  document.getElementById("footerText").innerText =
+  "Generated on " + now.toLocaleString('en-IN') +
+  " | This is a computer-generated quotation";
+}
+updateFooter();
+
+/* INDIAN NUMBER FORMATTING */
+function formatIndianCurrency(num) {
+  if (isNaN(num) || num === 0) return "0.00";
+  let n = parseFloat(num).toFixed(2);
+  let [integer, decimal] = n.split('.');
+
+  let lastThree = integer.slice(-3);
+  let other = integer.slice(0, -3);
+  if (other !== '') lastThree = ',' + lastThree;
+
+  return other.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree + '.' + decimal;
+}
+
+/* NUMBER TO WORDS */
+function numberToWords(num) {
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+  "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen",
+  "Eighteen","Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty",
+  "Seventy", "Eighty", "Ninety"];
+
+  function convertChunk(n) {
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n/10)] + (n%10 ? "-" + ones[n%10] : "");
+    if (n < 1000)
+      return ones[Math.floor(n/100)] + " Hundred" +
+        (n%100 ? " " + convertChunk(n%100) : "");
+    return "";
+  }
+
+  let rupees = Math.floor(num);
+  let paise = Math.round((num - rupees) * 100);
+  let words = "";
+
+  if (rupees >= 10000000) {
+    words += convertChunk(Math.floor(rupees/10000000)) + " Crore ";
+    rupees %= 10000000;
+  }
+  if (rupees >= 100000) {
+    words += convertChunk(Math.floor(rupees/100000)) + " Lakh ";
+    rupees %= 100000;
+  }
+  if (rupees >= 1000) {
+    words += convertChunk(Math.floor(rupees/1000)) + " Thousand ";
+    rupees %= 1000;
+  }
+  if (rupees > 0) words += convertChunk(rupees) + " ";
+
+  words += "Rupees";
+  if (paise > 0) words += " and " + convertChunk(paise) + " Paise";
+
+  return words + " Only";
+}
+
+/* AUTO GROW */
+function autoGrow(el){
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+/* QUOTATION NUMBER */
+let qc = localStorage.getItem('qcount') || 0;
+qc++;
+localStorage.setItem('qcount', qc);
+
+const d = new Date();
+document.getElementById('qno').innerText =
+`JVUPVC-${String(d.getDate()).padStart(2,'0')}${String(d.getMonth()+1).padStart(2,'0')}${d.getFullYear()}-${String(qc).padStart(3,'0')}`;
+
+/* ADD ROW */
+function addRow(){
+  const tb = document.querySelector('#items tbody');
+  const r = tb.insertRow();
+  r.innerHTML = `
+    <td></td>
+    <td><textarea oninput="autoGrow(this)"></textarea></td>
+    <td><textarea oninput="autoGrow(this)"></textarea></td>
+    <td><input type="number" class="input-box" oninput="calc()"></td>
+    <td><input type="number" class="input-box" oninput="calc()"></td>
+    <td><input type="number" class="input-box" value="1" oninput="calc()"></td>
+    <td><input class="input-box"></td>
+    <td class="sft">0</td>
+    <td class="tsft">0</td>
+    <td><input type="number" class="input-box" oninput="calc()"></td>
+    <td class="total">0</td>
+    <td class="delete-btn" onclick="delRow(this)">X</td>`;
+  updateSerial();
+}
+
+/* ADD ROW WITHOUT MEASUREMENT */
+function addRowNoMeasure(){
+  const tb = document.querySelector('#itemsNoMeasure tbody');
+  const r = tb.insertRow();
+  r.innerHTML = `
+    <td></td>
+    <td><textarea oninput="autoGrow(this)"></textarea></td>
+    <td><input type="number" class="input-box" value="1" oninput="calc()"></td>
+    <td><input type="number" class="input-box" oninput="calc()"></td>
+    <td class="totalNoMeasure">0</td>
+    <td class="delete-btn" onclick="delRowNoMeasure(this)">X</td>`;
+  updateSerialNoMeasure();
+}
+
+/* DELETE ROW WITHOUT MEASUREMENT */
+function delRowNoMeasure(el){
+  el.closest('tr').remove();
+  updateSerialNoMeasure();
+  calc();
+}
+
+/* SERIAL UPDATE */
+function updateSerialNoMeasure(){
+  document.querySelectorAll('#itemsNoMeasure tbody tr')
+  .forEach((r,i)=>r.cells[0].innerText=i+1);
+}
+
+/* DELETE */
+function delRow(el){
+  el.closest('tr').remove();
+  updateSerial();
+  calc();
+}
+
+/* SERIAL */
+function updateSerial(){
+  document.querySelectorAll('#items tbody tr')
+  .forEach((r,i)=>r.cells[0].innerText=i+1);
+}
+
+/* CALC */
+function calc(){
+  let totalMeasured = 0, tsft = 0;
+  let totalNoMeasure = 0;
+
+  /* MEASURED ITEMS */
+  document.querySelectorAll('#items tbody tr').forEach(r=>{
+    const w=r.cells[3].querySelector('input').value;
+    const h=r.cells[4].querySelector('input').value;
+    const u=r.cells[5].querySelector('input').value;
+    const rate=r.cells[9].querySelector('input').value;
+
+    if(w && h && u && rate){
+      const s=(w/304.8)*(h/304.8);
+      const t=s*u;
+      const v=t*rate;
+
+      r.querySelector('.sft').innerText=s.toFixed(2);
+      r.querySelector('.tsft').innerText=t.toFixed(2);
+      r.querySelector('.total').innerText=formatIndianCurrency(v);
+
+      totalMeasured+=v;
+      tsft+=t;
+    }
+  });
+
+  /* NON-MEASURED ITEMS */
+  document.querySelectorAll('#itemsNoMeasure tbody tr').forEach(r=>{
+    const units=r.cells[2].querySelector('input').value;
+    const rate=r.cells[3].querySelector('input').value;
+
+    if(units && rate){
+      const v=units*rate;
+      r.querySelector('.totalNoMeasure').innerText=formatIndianCurrency(v);
+      totalNoMeasure+=v;
+    }
+  });
+
+  const transport=document.getElementById('transport').value || 0;
+  const grandTotal=totalMeasured + totalNoMeasure + Number(transport);
+
+  document.getElementById('totalsft').innerText=tsft.toFixed(2);
+  document.getElementById('actual').innerText=formatIndianCurrency(totalMeasured + totalNoMeasure);
+  document.getElementById('grand').innerText=formatIndianCurrency(grandTotal);
+  document.getElementById('words').innerHTML=`<b>${numberToWords(grandTotal)}</b>`;
+}
+
+calc();
+
+</script>
+</body>
+</html>

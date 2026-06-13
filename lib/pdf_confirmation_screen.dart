@@ -10,6 +10,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'models.dart';
 import 'theme.dart';
 
+import 'notification_service.dart';
+
 class PdfConfirmationScreen extends StatefulWidget {
   final QuotationData data;
   final Uint8List pdfBytes;
@@ -62,6 +64,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
           _emailColor = Colors.green;
         });
       }
+      NotificationService().showImportantNotification(title: "Email Sent", body: "Quotation ${widget.data.quotationNo} email has been sent successfully.");
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -70,6 +73,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
           _emailColor = Colors.red;
         });
       }
+      NotificationService().showImportantNotification(title: "Email Failed", body: "Failed to send email for quotation ${widget.data.quotationNo}.");
     }
   }
 

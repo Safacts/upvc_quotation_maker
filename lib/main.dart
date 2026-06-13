@@ -5,6 +5,7 @@ import 'login_screen.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 import 'app_state.dart';
+import 'notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,11 @@ void main() async {
 
   // Initialize Supabase
   await SupabaseConfig.initialize();
+
+  // Initialize Notifications
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
 
   runApp(
     ChangeNotifierProvider(

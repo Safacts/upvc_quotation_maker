@@ -105,13 +105,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Company Name')),
+                  TextField(controller: _nameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Company Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _addressController, decoration: const InputDecoration(labelText: 'Address')),
+                  TextField(controller: _addressController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Address')),
                   const SizedBox(height: 12),
-                  TextField(controller: _contactController, decoration: const InputDecoration(labelText: 'Contact Numbers')),
+                  TextField(controller: _contactController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Contact Numbers')),
                   const SizedBox(height: 12),
-                  TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email Address')),
+                  TextField(controller: _emailController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Email Address')),
                 ],
               ),
             ),
@@ -123,13 +123,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _bankNameController, decoration: const InputDecoration(labelText: 'Bank Name')),
+                  TextField(controller: _bankNameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Bank Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankBranchController, decoration: const InputDecoration(labelText: 'Branch Name')),
+                  TextField(controller: _bankBranchController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Branch Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankAccountController, decoration: const InputDecoration(labelText: 'Account Number (e.g. A/C.NO: 123)')),
+                  TextField(controller: _bankAccountController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Account Number (e.g. A/C.NO: 123)')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankIfscController, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
+                  TextField(controller: _bankIfscController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
                 ],
               ),
             ),
@@ -142,6 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: TextField(
                 controller: _gstPercentageController,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(labelText: 'Default GST Percentage (%)'),
               ),
             ),
