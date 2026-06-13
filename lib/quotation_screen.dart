@@ -499,6 +499,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
                           onChanged: (val) {
                             setState(() {
                               data.includeGst = val ?? false;
+                              if (data.includeGst && data.gstPercentage == 0.0) {
+                                final appState = Provider.of<AppState>(context, listen: false);
+                                data.gstPercentage = appState.defaultGstPercentage;
+                              }
                             });
                             _onDataChanged();
                           },

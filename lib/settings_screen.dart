@@ -17,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _bankAccountController;
   late TextEditingController _bankIfscController;
   late TextEditingController _termsController;
+  late TextEditingController _gstPercentageController;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bankAccountController = TextEditingController(text: appState.bankAccountNo);
     _bankIfscController = TextEditingController(text: appState.bankIfsc);
     _termsController = TextEditingController(text: appState.termsAndConditions);
+    _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
   }
 
   @override
@@ -44,6 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bankAccountController.dispose();
     _bankIfscController.dispose();
     _termsController.dispose();
+    _gstPercentageController.dispose();
     super.dispose();
   }
 
@@ -59,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       accountNo: _bankAccountController.text,
       ifsc: _bankIfscController.text,
       terms: _termsController.text,
+      gstPercentage: double.tryParse(_gstPercentageController.text) ?? 18.0,
     );
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved successfully')));
   }
@@ -127,6 +131,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   TextField(controller: _bankIfscController, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
                 ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Tax Settings'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _gstPercentageController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Default GST Percentage (%)'),
               ),
             ),
           ),
