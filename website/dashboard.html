@@ -231,17 +231,19 @@
     }
     
     /* Mobile Responsive Optimizations */
+    .mobile-text { display: none; }
     @media (max-width: 480px) {
+      .desktop-text { display: none; }
+      .mobile-text { display: inline; }
       .nav-bar {
-        padding: 15px 20px;
+        padding: 10px 12px;
       }
       .logo-text {
-        font-size: 16px;
-        display: none; /* Hide text on very small screens to fit logout button */
+        display: none; /* Hide text on very small screens to fit buttons */
       }
       .btn-logout, .btn-download {
-        padding: 8px 16px;
-        font-size: 14px;
+        padding: 8px 12px;
+        font-size: 13px;
       }
       .container {
         padding: 0 15px;
@@ -281,8 +283,11 @@
       <img src="https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/assets/logo.png" onerror="this.src='https://placehold.co/100'" alt="Venkateshwara UPVC">
       <span class="logo-text">Venkateshwara UPVC</span>
     </div>
-    <div style="display: flex; gap: 12px; align-items: center;">
-      <a href="https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk" class="btn-download" download>Download App</a>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <a href="https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk" class="btn-download" download>
+        <span class="desktop-text">Download App</span>
+        <span class="mobile-text">Download</span>
+      </a>
       <button class="btn-logout" onclick="handleLogout()">Logout</button>
     </div>
   </div>
