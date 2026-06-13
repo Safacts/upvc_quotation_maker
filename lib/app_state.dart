@@ -56,11 +56,11 @@ class AppState extends ChangeNotifier {
         ? 'Union Bank, Hastinapuram' : savedBankBranch;
 
     String savedAccount = prefs.getString('bankAccountNo') ?? '';
-    _bankAccountNo = (savedAccount.isEmpty || savedAccount == 'A/C.NO: 000000000000') 
+    _bankAccountNo = (savedAccount.isEmpty || savedAccount.contains('0000000') || savedAccount == '00000' || savedAccount == 'A/C.NO: 000000000000') 
         ? 'A/C No : 178511100000061' : savedAccount;
 
     String savedIfsc = prefs.getString('bankIfsc') ?? '';
-    _bankIfsc = (savedIfsc.isEmpty || savedIfsc == 'IFSC CODE: UBIN0000000') 
+    _bankIfsc = (savedIfsc.isEmpty || savedIfsc.contains('0000') || savedIfsc == 'IFSC CODE: UBIN0000000') 
         ? 'IFSC Code : UBIN0817856' : savedIfsc;
 
     String savedTerms = prefs.getString('termsAndConditions') ?? '';
