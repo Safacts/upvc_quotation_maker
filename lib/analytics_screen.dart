@@ -176,7 +176,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           const Divider(),
                           _buildBreakdownRow('Items Subtotal', currencyFormat.format(_totalSubtotal)),
                           _buildBreakdownRow('Transport Charges', currencyFormat.format(_totalTransport)),
-                          _buildBreakdownRow('IGST (18%)', currencyFormat.format(_totalIgst)),
+                          _buildBreakdownRow('Total IGST', currencyFormat.format(_totalIgst)),
                           const Divider(thickness: 1.5),
                           _buildBreakdownRow('Total Quoted Value', currencyFormat.format(_totalRevenue), isBold: true),
                         ],

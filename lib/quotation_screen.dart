@@ -492,11 +492,40 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: data.includeGst,
+                          onChanged: (val) {
+                            setState(() {
+                              data.includeGst = val ?? false;
+                            });
+                            _onDataChanged();
+                          },
+                        ),
+                        const Expanded(child: Text('Do you want to add GST to the invoice?')),
+                      ],
+                    ),
+                    if (data.includeGst)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48.0, top: 8.0, bottom: 8.0),
+                        child: TextFormField(
+                          initialValue: data.gstPercentage == 0.0 ? '' : data.gstPercentage.toString(),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'GST Percentage (%)'),
+                          onChanged: (val) {
+                            data.gstPercentage = double.tryParse(val) ?? 0.0;
+                            setState(() {});
+                            _onDataChanged();
+                          },
+                        ),
+                      ),
                     const Divider(),
                     const SizedBox(height: 8),
                     _buildComputationRow('Subtotal (Actual Amount)', data.actualAmount),
                     _buildComputationRow('Transport Cost', data.transport),
-                    _buildComputationRow('IGST (18%)', data.igst),
+                    if (data.includeGst)
+                      _buildComputationRow('IGST (${data.gstPercentage}%)', data.igst),
                     const Divider(thickness: 1.5),
                     _buildComputationRow('Grand Total', data.grandTotal, isBold: true),
                     const SizedBox(height: 8),

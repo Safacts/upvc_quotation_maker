@@ -208,6 +208,49 @@
       font-size: 14px;
       font-weight: 600;
     }
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 480px) {
+      .nav-bar {
+        padding: 15px 20px;
+      }
+      .logo-text {
+        font-size: 16px;
+        display: none; /* Hide text on very small screens to fit logout button */
+      }
+      .btn-logout {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      .container {
+        padding: 0 15px;
+        margin: 20px auto;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 16px;
+      }
+      .card, .superuser-panel {
+        padding: 15px;
+        border-radius: 16px;
+      }
+      th, td {
+        padding: 12px 10px;
+        font-size: 14px;
+      }
+      .upload-zone {
+        padding: 20px 10px;
+      }
+      .upload-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 16px;
+      }
+      .logo-container img {
+        width: 35px;
+        height: 35px;
+      }
+    }
   </style>
 </head>
 <body>

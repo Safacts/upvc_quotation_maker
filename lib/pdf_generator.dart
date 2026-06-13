@@ -191,8 +191,8 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
         pw.TableRow(children: [
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Transport', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.transport), style: pw.TextStyle(fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('IGST @ 18%', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.igst), style: pw.TextStyle(fontSize: 10))),
+          data.includeGst ? pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('IGST @ ${data.gstPercentage}%', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))) : pw.SizedBox(),
+          data.includeGst ? pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.igst), style: pw.TextStyle(fontSize: 10))) : pw.SizedBox(),
         ]),
         pw.TableRow(children: [
           pw.SizedBox(),

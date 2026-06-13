@@ -16,6 +16,9 @@ class QuotationData {
   List<UnmeasuredItem> unmeasuredItems = [];
   double transport = 0.0;
 
+  bool includeGst = false;
+  double gstPercentage = 0.0;
+
   // Logic to handle continuous numbering via Supabase RPC
   static Future<String> generateNextQuoteNumber() async {
     try {
@@ -33,7 +36,7 @@ class QuotationData {
   double get totalUnmeasuredAmount => unmeasuredItems.fold(0, (sum, item) => sum + item.total);
   double get actualAmount => totalMeasuredAmount + totalUnmeasuredAmount;
   double get totalSft => measuredItems.fold(0, (sum, item) => sum + item.totalSft);
-  double get igst => (actualAmount + transport) * 0.18; // 18% IGST
+  double get igst => includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
   double get grandTotal => actualAmount + transport + igst; // Grand Total includes IGST
 
   String get amountInWords {
@@ -71,6 +74,8 @@ class QuotationData {
       'contact_no': contactNo,
       'email': email,
       'transport_cost': transport,
+      'include_gst': includeGst,
+      'gst_percentage': gstPercentage,
     };
   }
 
@@ -86,6 +91,8 @@ class QuotationData {
     q.email = map['email'] ?? '';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
     q.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();
+    q.includeGst = map['include_gst'] ?? false;
+    q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     return q;
   }
 }
