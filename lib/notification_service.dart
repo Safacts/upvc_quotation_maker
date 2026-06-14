@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -9,7 +11,9 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    const AndroidInitializationSettings initSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
+    const AndroidInitializationSettings initSettingsAndroid = AndroidInitializationSettings('@mipmap/launcher_icon');
     const DarwinInitializationSettings initSettingsDarwin = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -25,6 +29,8 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
     // Request permission using permission_handler
     if (await Permission.notification.isDenied) {
       await Permission.notification.request();
@@ -45,6 +51,8 @@ class NotificationService {
   }
 
   Future<void> showImportantNotification({required String title, required String body}) async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'important_notifications',
       'Important Notifications',
