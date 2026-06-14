@@ -749,19 +749,19 @@
 
     function viewQuotation(index) {
       const q = displayedQuotations[index];
-      document.getElementById('modalTitle').innerText = \`Quotation \${q.quote_no || '-'}\`;
+      document.getElementById('modalTitle').innerText = `Quotation ${q.quote_no || '-'}`;
       
-      let html = \`
+      let html = `
         <div style="margin-bottom: 20px; font-size: 14px;">
-          <p><strong>Customer:</strong> \${q.customer_name || '-'}</p>
-          <p><strong>Reference:</strong> \${q.reference || '-'}</p>
-          <p><strong>Date:</strong> \${q.dateStr}</p>
-          <p><strong>Grand Total:</strong> ₹\${q.grandTotal.toFixed(2)}</p>
+          <p><strong>Customer:</strong> ${q.customer_name || '-'}</p>
+          <p><strong>Reference:</strong> ${q.reference || '-'}</p>
+          <p><strong>Date:</strong> ${q.dateStr}</p>
+          <p><strong>Grand Total:</strong> ₹${q.grandTotal.toFixed(2)}</p>
         </div>
-      \`;
+      `;
 
       if (q.qMItems.length > 0) {
-        html += \`<div class="item-section"><h4>Measured Items (\${q.qMItems.length})</h4>\`;
+        html += `<div class="item-section"><h4>Measured Items (${q.qMItems.length})</h4>`;
         q.qMItems.forEach(item => {
           const w = Number(item.width || 0);
           const h = Number(item.height || 0);
@@ -770,34 +770,34 @@
           const sft = (w / 304.8) * (h / 304.8);
           const total = sft * u * r;
 
-          html += \`
+          html += `
             <div class="item-grid">
-              <div class="item-detail"><strong>Code/Desc</strong>\${item.code || '-'} / \${item.description || '-'}</div>
-              <div class="item-detail"><strong>Dimensions (mm)</strong>\${w}W x \${h}H</div>
-              <div class="item-detail"><strong>Units / Rate</strong>\${u} / ₹\${r}</div>
-              <div class="item-detail"><strong>Total</strong>₹\${total.toFixed(2)}</div>
+              <div class="item-detail"><strong>Code/Desc</strong>${item.code || '-'} / ${item.description || '-'}</div>
+              <div class="item-detail"><strong>Dimensions (mm)</strong>${w}W x ${h}H</div>
+              <div class="item-detail"><strong>Units / Rate</strong>${u} / ₹${r}</div>
+              <div class="item-detail"><strong>Total</strong>₹${total.toFixed(2)}</div>
             </div>
-          \`;
+          `;
         });
-        html += \`</div>\`;
+        html += `</div>`;
       }
 
       if (q.qUmItems.length > 0) {
-        html += \`<div class="item-section"><h4>Unmeasured Items (\${q.qUmItems.length})</h4>\`;
+        html += `<div class="item-section"><h4>Unmeasured Items (${q.qUmItems.length})</h4>`;
         q.qUmItems.forEach(item => {
           const u = Number(item.units || 1);
           const r = Number(item.rate || 0);
           const total = u * r;
 
-          html += \`
+          html += `
             <div class="item-grid">
-              <div class="item-detail" style="grid-column: span 2;"><strong>Description</strong>\${item.description || '-'}</div>
-              <div class="item-detail"><strong>Units / Rate</strong>\${u} / ₹\${r}</div>
-              <div class="item-detail"><strong>Total</strong>₹\${total.toFixed(2)}</div>
+              <div class="item-detail" style="grid-column: span 2;"><strong>Description</strong>${item.description || '-'}</div>
+              <div class="item-detail"><strong>Units / Rate</strong>${u} / ₹${r}</div>
+              <div class="item-detail"><strong>Total</strong>₹${total.toFixed(2)}</div>
             </div>
-          \`;
+          `;
         });
-        html += \`</div>\`;
+        html += `</div>`;
       }
 
       document.getElementById('modalBody').innerHTML = html;
@@ -815,9 +815,9 @@
       
       displayedQuotations.forEach(q => {
         const row = [
-          \`"\${q.quote_no || ''}"\`,
-          \`"\${q.customer_name || ''}"\`,
-          \`"\${q.dateStr}"\`,
+          `"${q.quote_no || ''}"`,
+          `"${q.customer_name || ''}"`,
+          `"${q.dateStr}"`,
           q.subtotal.toFixed(2),
           q.transport.toFixed(2),
           q.igst.toFixed(2),
@@ -826,7 +826,7 @@
         csv.push(row.join(','));
       });
       
-      const csvFile = new Blob([csv.join('\\n')], {type: 'text/csv'});
+      const csvFile = new Blob([csv.join('\n')], {type: 'text/csv'});
       const downloadLink = document.createElement('a');
       downloadLink.download = filename;
       downloadLink.href = window.URL.createObjectURL(csvFile);
