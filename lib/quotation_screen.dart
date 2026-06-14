@@ -337,6 +337,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                           controller: textEditingController,
                           focusNode: focusNode,
                           textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                           decoration: const InputDecoration(labelText: 'Name'),
                           onChanged: (val) { data.customerName = val; _onDataChanged(); },
                         );
@@ -347,6 +348,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       key: ValueKey('ref_${data.reference}'),
                       initialValue: data.reference,
                       textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: const InputDecoration(labelText: 'Reference'),
                       onChanged: (val) { data.reference = val; _onDataChanged(); }
                     ),
@@ -355,6 +357,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       key: ValueKey('addr_${data.address}'),
                       initialValue: data.address,
                       textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: const InputDecoration(labelText: 'Address'),
                       onChanged: (val) { data.address = val; _onDataChanged(); }
                     ),
@@ -367,6 +370,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                             initialValue: data.contactNo,
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                             inputFormatters: [
                               LengthLimitingTextInputFormatter(10)
                             ],
@@ -381,6 +385,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                             initialValue: data.email,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                             decoration: const InputDecoration(labelText: 'Email (Optional)'),
                             onChanged: (val) { data.email = val; _onDataChanged(); }
                           )
@@ -411,23 +416,23 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       ),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.code, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(flex: 2, child: TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); })),
+                        Expanded(flex: 2, child: TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); })),
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.glass, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Glass'), onChanged: (val) { item.glass = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.glass, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Glass'), onChanged: (val) { item.glass = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                       ]),
                     ],
                   ),
@@ -457,12 +462,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
+                      TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                       ]),
                     ],
                   ),
@@ -485,6 +490,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       initialValue: data.transport == 0 ? '' : data.transport.toString(),
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
                       decoration: const InputDecoration(labelText: 'Transport Cost (Rs)'),
                       onChanged: (val) {
                         data.transport = double.tryParse(val) ?? 0;
