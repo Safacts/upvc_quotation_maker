@@ -230,6 +230,191 @@
       transform: translateY(-1px);
     }
     
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #6366f1;
+    }
+    
+    .stat-card h3 {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-card p {
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .search-input {
+      flex: 1;
+      min-width: 250px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    
+    .search-input:focus {
+      border-color: #6366f1;
+    }
+    
+    .btn-export {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      transition: transform 0.2s;
+    }
+    
+    .btn-export:hover {
+      transform: translateY(-1px);
+    }
+    
+    .btn-view {
+      background: #f1f5f9;
+      color: #6366f1;
+      border: 1px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-view:hover {
+      background: #e0e7ff;
+      border-color: #6366f1;
+    }
+    
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h3 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    
+    .close-btn {
+      background: transparent;
+      border: none;
+      font-size: 28px;
+      color: #94a3b8;
+      cursor: pointer;
+      line-height: 1;
+    }
+    
+    .close-btn:hover {
+      color: #ef4444;
+    }
+    
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+    }
+    
+    .item-section {
+      margin-bottom: 24px;
+    }
+    
+    .item-section h4 {
+      font-size: 16px;
+      color: #6366f1;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .item-detail {
+      font-size: 14px;
+    }
+    
+    .item-detail strong {
+      display: block;
+      color: #64748b;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    
     /* Mobile Responsive Optimizations */
     .mobile-text { display: none; }
     @media (max-width: 480px) {
@@ -307,6 +492,26 @@
 
     <h1>Quotation Database Logs</h1>
     
+    <div class="analytics-grid">
+      <div class="stat-card">
+        <h3>Total Quotations</h3>
+        <p id="statTotalQuotes">-</p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Revenue</h3>
+        <p id="statTotalRevenue">-</p>
+      </div>
+      <div class="stat-card">
+        <h3>Avg. Quote Value</h3>
+        <p id="statAvgValue">-</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by name, quote no, or reference..." onkeyup="filterTable()">
+      <button class="btn-export" onclick="exportTableToCSV('quotations.csv')">Export CSV</button>
+    </div>
+    
     <div class="card">
       <div id="loader" class="loading-container">
         <div class="spinner"></div>
@@ -323,12 +528,26 @@
               <th>Transport</th>
               <th>IGST (18%)</th>
               <th>Grand Total</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="quotationRows">
             <!-- Dynamic rows -->
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quotation Details Modal -->
+  <div class="modal" id="detailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Quotation Details</h3>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Dynamic content -->
       </div>
     </div>
   </div>
@@ -402,6 +621,9 @@
       }
     }
 
+    let allQuotations = [];
+    let displayedQuotations = [];
+
     async function loadQuotations() {
       try {
         const { data: quotes, error: qErr } = await supabaseClient
@@ -432,10 +654,7 @@
           umItemsMap[qId].push(item);
         });
 
-        const tbody = document.getElementById('quotationRows');
-        tbody.innerHTML = '';
-
-        quotes.forEach(q => {
+        allQuotations = quotes.map(q => {
           const qMItems = mItemsMap[q.id] || [];
           const qUmItems = umItemsMap[q.id] || [];
 
@@ -459,23 +678,24 @@
 
           const subtotal = totalMeasured + totalUnmeasured;
           const transport = Number(q.transport_cost || 0);
-          const igst = (subtotal + transport) * 0.18;
+          const igst = (subtotal + transport) * 0.18; // Currently hardcoded logic in app is user-selectable, but roughly
           const grandTotal = subtotal + transport + igst;
 
-          const dateStr = q.date ? new Date(q.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
-
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><strong>${q.quote_no || '-'}</strong></td>
-            <td>${q.customer_name || '-'}</td>
-            <td>${dateStr}</td>
-            <td>₹${subtotal.toFixed(2)}</td>
-            <td>₹${transport.toFixed(2)}</td>
-            <td>₹${igst.toFixed(2)}</td>
-            <td><strong>₹${grandTotal.toFixed(2)}</strong></td>
-          `;
-          tbody.appendChild(row);
+          return {
+            ...q,
+            qMItems,
+            qUmItems,
+            subtotal,
+            transport,
+            igst,
+            grandTotal,
+            dateStr: q.date ? new Date(q.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+          };
         });
+
+        displayedQuotations = [...allQuotations];
+        updateAnalytics();
+        renderTable();
 
         document.getElementById('loader').style.display = 'none';
         document.getElementById('tableWrapper').style.display = 'block';
@@ -484,6 +704,136 @@
         console.error('Error fetching data:', err);
         alert('Unable to load quotation records. Please check your network connection.');
       }
+    }
+
+    function updateAnalytics() {
+      const totalQuotes = displayedQuotations.length;
+      const totalRevenue = displayedQuotations.reduce((sum, q) => sum + q.grandTotal, 0);
+      const avgValue = totalQuotes > 0 ? totalRevenue / totalQuotes : 0;
+
+      document.getElementById('statTotalQuotes').innerText = totalQuotes.toLocaleString();
+      document.getElementById('statTotalRevenue').innerText = `₹${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      document.getElementById('statAvgValue').innerText = `₹${avgValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('quotationRows');
+      tbody.innerHTML = '';
+
+      displayedQuotations.forEach((q, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${q.quote_no || '-'}</strong></td>
+          <td>${q.customer_name || '-'}</td>
+          <td>${q.dateStr}</td>
+          <td>₹${q.subtotal.toFixed(2)}</td>
+          <td>₹${q.transport.toFixed(2)}</td>
+          <td>₹${q.igst.toFixed(2)}</td>
+          <td><strong>₹${q.grandTotal.toFixed(2)}</strong></td>
+          <td><button class="btn-view" onclick="viewQuotation(${index})">View</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function filterTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      displayedQuotations = allQuotations.filter(q => {
+        return (q.customer_name || '').toLowerCase().includes(query) ||
+               (q.quote_no || '').toLowerCase().includes(query) ||
+               (q.reference || '').toLowerCase().includes(query);
+      });
+      updateAnalytics();
+      renderTable();
+    }
+
+    function viewQuotation(index) {
+      const q = displayedQuotations[index];
+      document.getElementById('modalTitle').innerText = \`Quotation \${q.quote_no || '-'}\`;
+      
+      let html = \`
+        <div style="margin-bottom: 20px; font-size: 14px;">
+          <p><strong>Customer:</strong> \${q.customer_name || '-'}</p>
+          <p><strong>Reference:</strong> \${q.reference || '-'}</p>
+          <p><strong>Date:</strong> \${q.dateStr}</p>
+          <p><strong>Grand Total:</strong> ₹\${q.grandTotal.toFixed(2)}</p>
+        </div>
+      \`;
+
+      if (q.qMItems.length > 0) {
+        html += \`<div class="item-section"><h4>Measured Items (\${q.qMItems.length})</h4>\`;
+        q.qMItems.forEach(item => {
+          const w = Number(item.width || 0);
+          const h = Number(item.height || 0);
+          const u = Number(item.units || 1);
+          const r = Number(item.rate || 0);
+          const sft = (w / 304.8) * (h / 304.8);
+          const total = sft * u * r;
+
+          html += \`
+            <div class="item-grid">
+              <div class="item-detail"><strong>Code/Desc</strong>\${item.code || '-'} / \${item.description || '-'}</div>
+              <div class="item-detail"><strong>Dimensions (mm)</strong>\${w}W x \${h}H</div>
+              <div class="item-detail"><strong>Units / Rate</strong>\${u} / ₹\${r}</div>
+              <div class="item-detail"><strong>Total</strong>₹\${total.toFixed(2)}</div>
+            </div>
+          \`;
+        });
+        html += \`</div>\`;
+      }
+
+      if (q.qUmItems.length > 0) {
+        html += \`<div class="item-section"><h4>Unmeasured Items (\${q.qUmItems.length})</h4>\`;
+        q.qUmItems.forEach(item => {
+          const u = Number(item.units || 1);
+          const r = Number(item.rate || 0);
+          const total = u * r;
+
+          html += \`
+            <div class="item-grid">
+              <div class="item-detail" style="grid-column: span 2;"><strong>Description</strong>\${item.description || '-'}</div>
+              <div class="item-detail"><strong>Units / Rate</strong>\${u} / ₹\${r}</div>
+              <div class="item-detail"><strong>Total</strong>₹\${total.toFixed(2)}</div>
+            </div>
+          \`;
+        });
+        html += \`</div>\`;
+      }
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('detailsModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('detailsModal').style.display = 'none';
+    }
+
+    function exportTableToCSV(filename) {
+      const csv = [];
+      const headers = ['Quotation No', 'Customer Name', 'Date', 'Subtotal', 'Transport', 'IGST', 'Grand Total'];
+      csv.push(headers.join(','));
+      
+      displayedQuotations.forEach(q => {
+        const row = [
+          \`"\${q.quote_no || ''}"\`,
+          \`"\${q.customer_name || ''}"\`,
+          \`"\${q.dateStr}"\`,
+          q.subtotal.toFixed(2),
+          q.transport.toFixed(2),
+          q.igst.toFixed(2),
+          q.grandTotal.toFixed(2)
+        ];
+        csv.push(row.join(','));
+      });
+      
+      const csvFile = new Blob([csv.join('\\n')], {type: 'text/csv'});
+      const downloadLink = document.createElement('a');
+      downloadLink.download = filename;
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      downloadLink.style.display = 'none';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
     }
 
     function handleLogout() {
