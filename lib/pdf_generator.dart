@@ -91,7 +91,8 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
           children: [
             pw.Text(appState.companyName, style: pw.TextStyle(color: PdfColors.white, fontSize: 16, fontWeight: pw.FontWeight.bold)),
             pw.Text(appState.companyAddress, style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-            pw.Text('Contact: ${appState.companyContact}    Email: ${appState.companyEmail}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+            pw.Text('Prop: ${appState.companyProprietor}   Contact: ${appState.companyContact}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+            pw.Text('GST No: ${appState.gstNumber}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
           ],
         ),
       ),

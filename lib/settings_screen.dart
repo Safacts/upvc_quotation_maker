@@ -18,6 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _bankIfscController;
   late TextEditingController _termsController;
   late TextEditingController _gstPercentageController;
+  late TextEditingController _proprietorController;
+  late TextEditingController _gstNoController;
 
   @override
   void initState() {
@@ -33,6 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bankIfscController = TextEditingController(text: appState.bankIfsc);
     _termsController = TextEditingController(text: appState.termsAndConditions);
     _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
+    _proprietorController = TextEditingController(text: appState.companyProprietor);
+    _gstNoController = TextEditingController(text: appState.gstNumber);
   }
 
   @override
@@ -47,6 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _bankIfscController.dispose();
     _termsController.dispose();
     _gstPercentageController.dispose();
+    _proprietorController.dispose();
+    _gstNoController.dispose();
     super.dispose();
   }
 
@@ -63,6 +69,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ifsc: _bankIfscController.text,
       terms: _termsController.text,
       gstPercentage: double.tryParse(_gstPercentageController.text) ?? 18.0,
+      proprietor: _proprietorController.text,
+      gstNumber: _gstNoController.text,
     );
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved successfully')));
   }
@@ -105,13 +113,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _nameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Company Name')),
+                  TextField(textAlign: TextAlign.center, controller: _nameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Company Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _addressController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Address')),
+                  TextField(textAlign: TextAlign.center, controller: _addressController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Address')),
                   const SizedBox(height: 12),
-                  TextField(controller: _contactController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Contact Numbers')),
+                  TextField(textAlign: TextAlign.center, controller: _contactController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Contact Numbers')),
                   const SizedBox(height: 12),
-                  TextField(controller: _emailController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Email Address')),
+                  TextField(textAlign: TextAlign.center, controller: _emailController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Email Address')),
+                  const SizedBox(height: 12),
+                  TextField(textAlign: TextAlign.center, controller: _proprietorController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Proprietor Name')),
+                  const SizedBox(height: 12),
+                  TextField(textAlign: TextAlign.center, controller: _gstNoController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'GST Number')),
                 ],
               ),
             ),
@@ -123,13 +135,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _bankNameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Bank Name')),
+                  TextField(textAlign: TextAlign.center, controller: _bankNameController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Bank Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankBranchController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Branch Name')),
+                  TextField(textAlign: TextAlign.center, controller: _bankBranchController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Branch Name')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankAccountController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Account Number (e.g. A/C.NO: 123)')),
+                  TextField(textAlign: TextAlign.center, controller: _bankAccountController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'Account Number (e.g. A/C.NO: 123)')),
                   const SizedBox(height: 12),
-                  TextField(controller: _bankIfscController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
+                  TextField(textAlign: TextAlign.center, controller: _bankIfscController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
                 ],
               ),
             ),
@@ -140,6 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
+                textAlign: TextAlign.center,
                 controller: _gstPercentageController,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
@@ -153,6 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
+                textAlign: TextAlign.center,
                 controller: _termsController,
                 decoration: const InputDecoration(labelText: 'Terms (Enter each on a new line)', border: OutlineInputBorder()),
                 maxLines: 6,

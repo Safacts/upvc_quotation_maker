@@ -79,37 +79,20 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _savePdfToDevice() async {
     try {
+      Directory? directory;
       if (Platform.isAndroid) {
-        var status = await Permission.storage.status;
-        if (!status.isGranted) {
-          status = await Permission.storage.request();
-          if (!status.isGranted) {
-            status = await Permission.manageExternalStorage.request();
-          }
-        }
-        
-        if (status.isGranted) {
-          Directory? directory = Directory('/storage/emulated/0/Download');
-          if (!await directory.exists()) {
-            directory = await getExternalStorageDirectory();
-          }
-          
-          if (directory != null) {
-            final file = File('${directory.path}/Quotation_${widget.data.quotationNo}.pdf');
-            await file.writeAsBytes(widget.pdfBytes);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to Downloads: Quotation_${widget.data.quotationNo}.pdf')));
-            return;
-          }
-        } else {
-           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Storage permission denied.')));
-           return;
-        }
+        directory = await getDownloadsDirectory();
+        directory ??= await getExternalStorageDirectory();
       } else {
-        // Fallback for other platforms
-        final directory = await getApplicationDocumentsDirectory();
+        directory = await getApplicationDocumentsDirectory();
+      }
+      
+      if (directory != null) {
         final file = File('${directory.path}/Quotation_${widget.data.quotationNo}.pdf');
         await file.writeAsBytes(widget.pdfBytes);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to Documents: Quotation_${widget.data.quotationNo}.pdf')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to ${Platform.isAndroid ? "Downloads" : "Documents"}: Quotation_${widget.data.quotationNo}.pdf')));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not access storage directory.')));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));

@@ -13,6 +13,8 @@ class AppState extends ChangeNotifier {
   String _bankIfsc = 'IFSC Code : UBIN0817856';
   String _termsAndConditions = '1. 50% advance, 35% after dispatch, 15% after installation.\n2. Delivery minimum 15 days from advance.\n3. All payments in favor of M/s Niksha Industries Pvt Ltd.\n4. Client responsible for site safety & electricity.\n5. Material can be taken back if payment not received.\n6. Final wall-to-wall measurement includes silicone sealant.\n7. Rates may alter if size changes above 1 foot.\n8. Quotation valid for 15 days.\n9. Above rates inclusive of installation.';
   double _defaultGstPercentage = 18.0;
+  String _companyProprietor = 'J.Venkateshwarlu';
+  String _gstNumber = '36AKDPJ7245B2ZF';
 
   bool get isDarkMode => _isDarkMode;
   String get companyName => _companyName;
@@ -25,6 +27,8 @@ class AppState extends ChangeNotifier {
   String get bankIfsc => _bankIfsc;
   String get termsAndConditions => _termsAndConditions;
   double get defaultGstPercentage => _defaultGstPercentage;
+  String get companyProprietor => _companyProprietor;
+  String get gstNumber => _gstNumber;
 
   AppState() {
     _loadSettings();
@@ -69,6 +73,10 @@ class AppState extends ChangeNotifier {
         : savedTerms;
 
     _defaultGstPercentage = prefs.getDouble('defaultGstPercentage') ?? 18.0;
+    
+    _companyProprietor = prefs.getString('companyProprietor') ?? 'J.Venkateshwarlu';
+    _gstNumber = prefs.getString('gstNumber') ?? '36AKDPJ7245B2ZF';
+
     notifyListeners();
   }
 
@@ -82,7 +90,7 @@ class AppState extends ChangeNotifier {
   Future<void> updateSettings({
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
-    required String terms, required double gstPercentage,
+    required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
   }) async {
     _companyName = name;
     _companyAddress = address;
@@ -94,6 +102,8 @@ class AppState extends ChangeNotifier {
     _bankIfsc = ifsc;
     _termsAndConditions = terms;
     _defaultGstPercentage = gstPercentage;
+    _companyProprietor = proprietor;
+    _gstNumber = gstNumber;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('companyName', name);
@@ -106,6 +116,8 @@ class AppState extends ChangeNotifier {
     await prefs.setString('bankIfsc', ifsc);
     await prefs.setString('termsAndConditions', terms);
     await prefs.setDouble('defaultGstPercentage', gstPercentage);
+    await prefs.setString('companyProprietor', proprietor);
+    await prefs.setString('gstNumber', gstNumber);
     
     notifyListeners();
   }
