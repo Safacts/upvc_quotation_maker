@@ -23,7 +23,6 @@ void main() async {
   // Initialize Notifications
   final notificationService = NotificationService();
   await notificationService.init();
-  await notificationService.requestPermissions();
 
   runApp(
     ChangeNotifierProvider(
@@ -31,6 +30,11 @@ void main() async {
       child: const QuotationApp(),
     ),
   );
+
+  // Request permissions after the UI is rendered to avoid freezing the splash screen
+  Future.delayed(const Duration(seconds: 1), () {
+    notificationService.requestPermissions();
+  });
 }
 
 class QuotationApp extends StatelessWidget {
