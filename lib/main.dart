@@ -20,9 +20,7 @@ void main() async {
   // Initialize Supabase
   await SupabaseConfig.initialize();
 
-  // Initialize Notifications
-  final notificationService = NotificationService();
-  await notificationService.init();
+
 
   runApp(
     ChangeNotifierProvider(
@@ -31,9 +29,15 @@ void main() async {
     ),
   );
 
-  // Request permissions after the UI is rendered to avoid freezing the splash screen
-  Future.delayed(const Duration(seconds: 1), () {
-    notificationService.requestPermissions();
+  // Initialize Notifications and Request permissions after the UI is rendered to avoid freezing the splash screen
+  Future.delayed(const Duration(seconds: 1), () async {
+    try {
+      final notificationService = NotificationService();
+      await notificationService.init();
+      await notificationService.requestPermissions();
+    } catch (e) {
+      debugPrint('Error initializing notifications: $e');
+    }
   });
 }
 

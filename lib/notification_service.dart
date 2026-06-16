@@ -13,7 +13,7 @@ class NotificationService {
   Future<void> init() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
 
-    const AndroidInitializationSettings initSettingsAndroid = AndroidInitializationSettings('launcher_icon');
+    const AndroidInitializationSettings initSettingsAndroid = AndroidInitializationSettings('@mipmap/launcher_icon');
     const DarwinInitializationSettings initSettingsDarwin = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
