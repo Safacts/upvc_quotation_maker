@@ -15,6 +15,22 @@ class AppTheme {
         end: Alignment.bottomRight,
       );
 
+  static TextTheme _safeTextTheme(TextTheme base) {
+    try {
+      return GoogleFonts.outfitTextTheme(base);
+    } catch (_) {
+      return base;
+    }
+  }
+
+  static TextStyle _safeOutfit({double? fontSize, FontWeight? fontWeight, double? letterSpacing}) {
+    try {
+      return GoogleFonts.outfit(fontSize: fontSize, fontWeight: fontWeight, letterSpacing: letterSpacing);
+    } catch (_) {
+      return TextStyle(fontSize: fontSize, fontWeight: fontWeight, letterSpacing: letterSpacing);
+    }
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
@@ -26,7 +42,7 @@ class AppTheme {
         surface: Colors.white,
         error: Colors.redAccent,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
+      textTheme: _safeTextTheme(ThemeData.light().textTheme),
       cardTheme: const CardThemeData(
         elevation: 12,
         shadowColor: Color(0x266366F1), // primaryGradientStart with 0.15 opacity
@@ -61,7 +77,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: EdgeInsets.zero,
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
+          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -84,7 +100,7 @@ class AppTheme {
         surface: Color(0xFF1E293B),
         error: Colors.redAccent,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+      textTheme: _safeTextTheme(ThemeData.dark().textTheme),
       cardTheme: const CardThemeData(
         elevation: 16,
         shadowColor: Color(0x99000000), // Colors.black.withOpacity(0.6)
@@ -119,7 +135,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: EdgeInsets.zero,
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
+          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: const AppBarTheme(

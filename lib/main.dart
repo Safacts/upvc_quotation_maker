@@ -18,9 +18,11 @@ void main() async {
   }
 
   // Initialize Supabase
-  await SupabaseConfig.initialize();
-
-
+  try {
+    await SupabaseConfig.initialize();
+  } catch (e) {
+    debugPrint("Could not initialize Supabase: $e");
+  }
 
   runApp(
     ChangeNotifierProvider(
