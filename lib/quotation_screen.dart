@@ -36,6 +36,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
 
+  final _nameFocus = FocusNode();
+  final _referenceFocus = FocusNode();
+  final _addressFocus = FocusNode();
+  final _contactFocus = FocusNode();
+  final _emailFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +71,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _nameFocus.dispose();
+    _referenceFocus.dispose();
+    _addressFocus.dispose();
+    _contactFocus.dispose();
+    _emailFocus.dispose();
     super.dispose();
   }
 
@@ -337,7 +348,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
                           controller: textEditingController,
                           focusNode: focusNode,
                           textInputAction: TextInputAction.next,
-                          onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                          onFieldSubmitted: (_) {
+                            onFieldSubmitted();
+                            _referenceFocus.requestFocus();
+                          },
                           decoration: const InputDecoration(labelText: 'Name'),
                           onChanged: (val) { data.customerName = val; _onDataChanged(); },
                         );
@@ -345,53 +359,52 @@ class _QuotationScreenState extends State<QuotationScreen> {
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
-                      key: ValueKey('ref_${data.reference}'),
+                      focusNode: _referenceFocus,
                       initialValue: data.reference,
                       textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                      onFieldSubmitted: (_) => _addressFocus.requestFocus(),
                       decoration: const InputDecoration(labelText: 'Reference'),
                       onChanged: (val) { data.reference = val; _onDataChanged(); }
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
-                      key: ValueKey('addr_${data.address}'),
+                      focusNode: _addressFocus,
                       initialValue: data.address,
                       textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                      onFieldSubmitted: (_) => _contactFocus.requestFocus(),
                       decoration: const InputDecoration(labelText: 'Address'),
                       onChanged: (val) { data.address = val; _onDataChanged(); }
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            key: ValueKey('cont_${data.contactNo}'),
-                            initialValue: data.contactNo,
-                            keyboardType: TextInputType.phone,
-                            textInputAction: TextInputAction.next,
-                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(10)
-                            ],
-                            decoration: const InputDecoration(labelText: 'Contact No'),
-                            onChanged: (val) { data.contactNo = val; _onDataChanged(); }
-                          )
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            key: ValueKey('email_${data.email}'),
-                            initialValue: data.email,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                            decoration: const InputDecoration(labelText: 'Email (Optional)'),
-                            onChanged: (val) { data.email = val; _onDataChanged(); }
-                          )
-                        ),
-                      ],
-                    ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _contactFocus,
+                              initialValue: data.contactNo,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted: (_) => _emailFocus.requestFocus(),
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(10)
+                              ],
+                              decoration: const InputDecoration(labelText: 'Contact No'),
+                              onChanged: (val) { data.contactNo = val; _onDataChanged(); }
+                            )
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _emailFocus,
+                              initialValue: data.email,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(labelText: 'Email (Optional)'),
+                              onChanged: (val) { data.email = val; _onDataChanged(); }
+                            )
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
