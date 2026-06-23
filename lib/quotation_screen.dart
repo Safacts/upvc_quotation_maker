@@ -41,6 +41,45 @@ class _QuotationScreenState extends State<QuotationScreen> {
   final _addressFocus = FocusNode();
   final _contactFocus = FocusNode();
   final _emailFocus = FocusNode();
+  final _transportFocus = FocusNode();
+  final _gstFocus = FocusNode();
+
+  final Map<String, FocusNode> _itemFocusNodes = {};
+
+  FocusNode _node(String key) {
+    return _itemFocusNodes.putIfAbsent(key, () => FocusNode());
+  }
+
+  void _nextField(String currentKey) {
+    if (currentKey.startsWith('m_')) {
+      final parts = currentKey.split('_');
+      final idx = int.parse(parts[1]);
+      final field = int.parse(parts[2]);
+      if (field < 6) {
+        _node('m_${idx}_${field + 1}').requestFocus();
+      } else if (idx < data.measuredItems.length - 1) {
+        _node('m_${idx + 1}_0').requestFocus();
+      } else if (data.unmeasuredItems.isNotEmpty) {
+        _node('u_0_0').requestFocus();
+      } else {
+        _transportFocus.requestFocus();
+      }
+      return;
+    }
+    if (currentKey.startsWith('u_')) {
+      final parts = currentKey.split('_');
+      final idx = int.parse(parts[1]);
+      final field = int.parse(parts[2]);
+      if (field < 2) {
+        _node('u_${idx}_${field + 1}').requestFocus();
+      } else if (idx < data.unmeasuredItems.length - 1) {
+        _node('u_${idx + 1}_0').requestFocus();
+      } else {
+        _transportFocus.requestFocus();
+      }
+      return;
+    }
+  }
 
   @override
   void initState() {
@@ -76,6 +115,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
     _addressFocus.dispose();
     _contactFocus.dispose();
     _emailFocus.dispose();
+    _transportFocus.dispose();
+    _gstFocus.dispose();
+    for (final n in _itemFocusNodes.values) {
+      n.dispose();
+    }
     super.dispose();
   }
 
@@ -429,23 +473,23 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       ),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(flex: 2, child: TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); })),
+                        Expanded(flex: 2, child: TextFormField(focusNode: _node('m_${index}_1'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_1'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); })),
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_2'), initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_2'), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_3'), initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_3'), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_4'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_4'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.glass, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Glass'), onChanged: (val) { item.glass = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_5'), initialValue: item.glass, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_5'), decoration: const InputDecoration(labelText: 'Glass'), onChanged: (val) { item.glass = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_6'), initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_6'), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                       ]),
                     ],
                   ),
@@ -475,12 +519,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
+                      TextFormField(focusNode: _node('u_${index}_0'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_0'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('u_${index}_1'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_1'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('u_${index}_2'), initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_2'), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
                       ]),
                     ],
                   ),
@@ -500,10 +544,15 @@ class _QuotationScreenState extends State<QuotationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextFormField(
+                      focusNode: _transportFocus,
                       initialValue: data.transport == 0 ? '' : data.transport.toString(),
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
-                      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                      onFieldSubmitted: (_) {
+                        if (data.includeGst) {
+                          _gstFocus.requestFocus();
+                        }
+                      },
                       decoration: const InputDecoration(labelText: 'Transport Cost (Rs)'),
                       onChanged: (val) {
                         data.transport = double.tryParse(val) ?? 0;
@@ -534,6 +583,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       Padding(
                         padding: const EdgeInsets.only(left: 48.0, top: 8.0, bottom: 8.0),
                         child: TextFormField(
+                          focusNode: _gstFocus,
                           initialValue: data.gstPercentage == 0.0 ? '' : data.gstPercentage.toString(),
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.done,
