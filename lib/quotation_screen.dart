@@ -499,7 +499,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
             SwitchListTile(
               title: const Text('Enable Presets (Autofill from Catalog)', style: TextStyle(fontWeight: FontWeight.bold)),
               value: _usePresets,
-              activeColor: theme.colorScheme.primary,
+              activeColor: Theme.of(context).colorScheme.primary,
               onChanged: (val) => setState(() => _usePresets = val),
             ).animate().fade(delay: 250.ms),
 

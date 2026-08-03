@@ -20,6 +20,9 @@ import 'client_logo.dart';
 import 'umami_tracker.dart';
 
 class DashboardScreen extends StatefulWidget {
+  final String? initialOpenQuote;
+  const DashboardScreen({Key? key, this.initialOpenQuote}) : super(key: key);
+
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
@@ -52,11 +55,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _isLoading = false;
       });
 
-      if (!_hasHandledOpenQuote && kIsWeb) {
+      if (!_hasHandledOpenQuote && widget.initialOpenQuote != null) {
         _hasHandledOpenQuote = true;
         try {
-          final uri = Uri.base;
-          final openQuoteId = uri.queryParameters['open_quote'];
+          final openQuoteId = widget.initialOpenQuote;
           if (openQuoteId != null && openQuoteId.isNotEmpty) {
             final qIndex = _quotations.indexWhere((q) => q.id == openQuoteId);
             if (qIndex != -1) {
