@@ -47,6 +47,9 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
 
+      - name: Create dummy .env
+        run: touch .env
+
       - name: Install dependencies
         run: flutter pub get
 
