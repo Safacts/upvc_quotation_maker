@@ -1,0 +1,23 @@
+{
+  "clientId": "default",
+  "appName": "UPVC Quotation Maker",
+  "companyName": "Your Company Name",
+  "companyAddress": "Your Address",
+  "companyContact": "Your Phone Number",
+  "companyEmail": "your@email.com",
+  "companyProprietor": "Proprietor Name",
+  "gstNumber": "GSTIN",
+  "bankName": "Bank Name",
+  "bankBranch": "Branch Name",
+  "bankAccountNo": "A/C No : XXXXXX",
+  "bankIfsc": "IFSC Code : XXXXXX",
+  "termsAndConditions": ["Term 1", "Term 2", "Term 3"],
+  "defaultGstPercentage": 18.0,
+  "quotePrefix": "QUOTE",
+  "logoUrl": "",
+  "primaryColor": 6513505,
+  "accentColor": 15508377,
+  "isActive": true,
+  "trialExpiresAt": null,
+  "adminEmails": ["admin@example.com"]
+}

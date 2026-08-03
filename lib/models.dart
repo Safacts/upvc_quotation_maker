@@ -20,7 +20,7 @@ class QuotationData {
   double gstPercentage = 0.0;
 
   // Logic to handle continuous numbering via Supabase RPC
-  static Future<String> generateNextQuoteNumber() async {
+  static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC'}) async {
     try {
       final result = await SupabaseConfig.client.rpc('get_next_quote_number');
       return result.toString();
@@ -28,7 +28,7 @@ class QuotationData {
       // Fallback for offline/error: add milliseconds since epoch modulo 10000 to prevent collisions
       String datePart = DateFormat('ddMMyyyy').format(DateTime.now());
       int rand = DateTime.now().millisecondsSinceEpoch % 10000;
-      return 'JVUPVC-$datePart-ERR-$rand';
+      return '$prefix-$datePart-ERR-$rand';
     }
   }
 
@@ -63,7 +63,7 @@ class QuotationData {
     return (words + " Only").toUpperCase();
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({String? clientId}) {
     return {
       if (id != null) 'id': id,
       'quote_no': quotationNo,
@@ -76,6 +76,7 @@ class QuotationData {
       'transport_cost': transport,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
+      if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
 
@@ -110,7 +111,7 @@ class MeasuredItem {
   double get totalSft => sft * units;
   double get total => totalSft * rate;
 
-  Map<String, dynamic> toMap(String quotationId) {
+  Map<String, dynamic> toMap(String quotationId, {String? clientId}) {
     return {
       if (id != null) 'id': id,
       'quotation_id': quotationId,
@@ -121,6 +122,7 @@ class MeasuredItem {
       'units': units,
       'glass': glass,
       'rate': rate,
+      if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
 
@@ -145,13 +147,14 @@ class UnmeasuredItem {
   double rate = 0;
   double get total => units * rate;
 
-  Map<String, dynamic> toMap(String quotationId) {
+  Map<String, dynamic> toMap(String quotationId, {String? clientId}) {
     return {
       if (id != null) 'id': id,
       'quotation_id': quotationId,
       'description': description,
       'units': units,
       'rate': rate,
+      if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
 
@@ -190,12 +193,13 @@ class SentEmail {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap({String? clientId}) {
     return {
       if (id != null) 'id': id,
       'recipient': recipient,
       'subject': subject,
       'body': body,
+      if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
 }

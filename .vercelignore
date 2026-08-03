@@ -1,3 +1,4 @@
+# Flutter project files (not part of the web deploy)
 .dart_tool/
 .idea/
 .github/
@@ -7,25 +8,31 @@ linux/
 macos/
 windows/
 test/
-lib/
+/lib/
 web/
-assets/
 build/
-node_modules/
-package.json
-package-lock.json
+sources/
+assets/
+backups/
+docs/
 pubspec.yaml
 pubspec.lock
-schema.sql
 analysis_options.yaml
-README.md
 upvc_quotation_maker.iml
-keystore_base64.txt
-scratch_check.js
-scratch_migrate.js
-scratch_storage.js
-scratch_seed.js
-.env
+.metadata
 .flutter-plugins
 .flutter-plugins-dependencies
-.metadata
+
+# Old static/python deployment (replaced by Next.js)
+website/
+/api/
+vercel.json.bak
+
+# Secrets / local
+.env
+.env.local
+keystore_base64.txt
+schema.sql
+schema_clients.sql
+insert_admin.py
+scratch_check_emails.js

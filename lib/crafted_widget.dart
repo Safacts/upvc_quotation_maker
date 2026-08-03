@@ -15,7 +15,7 @@ class _CraftedWithLoveWidgetState extends State<CraftedWithLoveWidget> {
 
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+    if (!await launchUrl(url, mode: LaunchMode.platformDefault)) {
       debugPrint('Could not launch $url');
     }
   }
@@ -99,7 +99,7 @@ class _CraftedWithLoveWidgetState extends State<CraftedWithLoveWidget> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Crafted with ', style: TextStyle(color: theme.textTheme.bodySmall?.color, fontSize: 12)),
+                Text('Crafted with ', style: TextStyle(color: theme.textTheme.bodySmall?.color ?? Colors.grey, fontSize: 12)),
                 const Icon(Icons.favorite, color: Colors.redAccent, size: 14)
                     .animate(onPlay: (controller) => controller.repeat(reverse: true))
                     .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 800.ms),

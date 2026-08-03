@@ -1,15 +1,16 @@
-import 'dart:math';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
-import 'supabase_config.dart';
+import 'client_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -19,13 +20,37 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _storage = const FlutterSecureStorage();
-  
   bool _isLoading = false;
   String _errorMessage = '';
-  
-  // Default credentials
-  final String _adminEmail = 'jvenkateshupvc@gmail.com';
+
+  Future<String?> _readSession() async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('session_active');
+    }
+    try {
+      final storage = FlutterSecureStorage();
+      return await storage.read(key: 'session_active');
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('session_active');
+    }
+  }
+
+  Future<void> _writeSession(String value) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_active', value);
+      return;
+    }
+    try {
+      final storage = const FlutterSecureStorage();
+      await storage.write(key: 'session_active', value: value);
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_active', value);
+    }
+  }
 
   @override
   void initState() {
@@ -34,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkExistingSession() async {
-    String? session = await _storage.read(key: 'session_active');
+    String? session = await _readSession();
     if (session == 'true') {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
     }
@@ -50,75 +75,49 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (email != _adminEmail) {
-      setState(() { _isLoading = false; _errorMessage = 'Access Denied: Mobile app is restricted to primary admin.'; });
-      return;
-    }
-
     try {
-      final response = await SupabaseConfig.client
-          .from('admins')
-          .select('password_hash')
-          .eq('email', email)
-          .maybeSingle();
-
-      if (response == null) {
-        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
-        return;
-      }
-
-      final dbHash = response['password_hash'] as String;
-      final inputHash = _hashPassword(password);
-
-      if (dbHash == inputHash) {
-        await _storage.write(key: 'session_active', value: 'true');
+      final res = await http.post(
+        Uri.parse('/api/portal_auth'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mode': 'login', 'email': email, 'password': password}),
+      );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
+        await _writeSession('true');
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
       } else {
-        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });
       }
     } catch (e) {
-      setState(() { _isLoading = false; _errorMessage = 'Database connection error: $e'; });
+      setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
     }
   }
 
   Future<void> _forgotPassword() async {
-    final String otp = (Random().nextInt(900000) + 100000).toString(); // 6 digit OTP
+    final appState = Provider.of<AppState>(context, listen: false);
     setState(() => _isLoading = true);
 
     try {
-      final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
-      if (smtpKey.isEmpty) throw Exception("SMTP Key missing");
-
-      final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
-      
-      final htmlBody = '''
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-        <h2 style="color: #1E3A5F;">Password Reset Request</h2>
-        <p style="color: #475569; font-size: 16px;">We received a request to reset your password for the Venkateshwara UPVC app.</p>
-        <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;">
-          $otp
-        </div>
-        <p style="color: #64748b; font-size: 14px;">Enter this code in the app to reset your password. If you didn't request this, you can safely ignore this email.</p>
-      </div>
-      ''';
-
-      final message = Message()
-        ..from = Address('jvenkateshupvc@gmail.com', 'System Security')
-        ..recipients.add(_adminEmail)
-        ..subject = 'Your Password Reset OTP'
-        ..html = htmlBody;
-
-      await send(message, smtpServer);
+      final res = await http.post(
+        Uri.parse('/api/reset_client_password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': appState.companyEmail}),
+      );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode != 200) {
+        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Failed to send OTP.'; });
+        return;
+      }
       setState(() => _isLoading = false);
-
-      _showOtpDialog(otp);
+      _showOtpDialog();
     } catch (e) {
       setState(() { _isLoading = false; _errorMessage = 'Failed to send OTP: $e'; });
     }
   }
 
-  void _showOtpDialog(String realOtp) {
+  void _showOtpDialog() {
+    final appState = Provider.of<AppState>(context, listen: false);
     final otpController = TextEditingController();
     showDialog(
       context: context,
@@ -129,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('An OTP has been sent to jvenkateshupvc@gmail.com.'),
+              Text('An OTP has been sent to ${appState.companyEmail}.'),
               const SizedBox(height: 10),
               TextField(controller: otpController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '6-digit OTP')),
             ],
@@ -138,11 +137,12 @@ class _LoginScreenState extends State<LoginScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () {
-                if (otpController.text == realOtp) {
+                final otp = otpController.text.trim();
+                if (otp.isNotEmpty) {
                   Navigator.pop(context);
-                  _showNewPasswordDialog();
+                  _showNewPasswordDialog(otp);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid OTP')));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the OTP')));
                 }
               },
               child: const Text('Verify'),
@@ -153,7 +153,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _showNewPasswordDialog() {
+  void _showNewPasswordDialog(String otp) {
+    final appState = Provider.of<AppState>(context, listen: false);
     final passController = TextEditingController();
     showDialog(
       context: context,
@@ -169,10 +170,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   final newHash = _hashPassword(passController.text);
                   setState(() => _isLoading = true);
                   try {
-                    await SupabaseConfig.client.from('admins').update({'password_hash': newHash}).eq('email', _adminEmail);
+                    final res = await http.post(
+                      Uri.parse('/api/reset_client_password'),
+                      headers: {'Content-Type': 'application/json'},
+                      body: jsonEncode({'email': appState.companyEmail, 'otp': otp, 'new_hash': newHash}),
+                    );
+                    final data = jsonDecode(res.body) as Map<String, dynamic>;
                     if (!mounted) return;
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully in database!')));
+                    if (res.statusCode == 200) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!')));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text((data['error'] as String?) ?? 'Failed to reset password.')));
+                    }
                   } catch (e) {
                     if (!mounted) return;
                     Navigator.pop(context);
@@ -195,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appState = Provider.of<AppState>(context);
     
     return Scaffold(
       body: Center(
@@ -203,9 +214,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/logo.png', width: 120, height: 120, fit: BoxFit.contain).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
+              ClientLogo(config: appState.clientConfig, width: 120, height: 120).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
               const SizedBox(height: 20),
-              Text('Welcome Back', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor)).animate().fade(delay: 300.ms).slideY(begin: 0.2),
+              Text(appState.companyName, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor), textAlign: TextAlign.center).animate().fade(delay: 200.ms),
+              const SizedBox(height: 8),
+              Text('Welcome Back', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)).animate().fade(delay: 300.ms).slideY(begin: 0.2),
               const SizedBox(height: 8),
               Text('Sign in to manage quotations', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)).animate().fade(delay: 400.ms),
               const SizedBox(height: 40),

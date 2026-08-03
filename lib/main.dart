@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'login_screen.dart';
+import 'trial_gate.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 import 'app_state.dart';
 import 'notification_service.dart';
+import 'config/client_loader.dart';
+import 'favicon_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,14 +27,31 @@ void main() async {
     debugPrint("Could not initialize Supabase: $e");
   }
 
+  // Load client config
+  var initialConfig;
+  try {
+    initialConfig = await ClientLoader.loadConfig();
+  } catch (e) {
+    debugPrint('Config load error: $e');
+  }
+
+  final appState = AppState();
+  if (initialConfig != null) {
+    // Database-level tenant isolation: every data request is scoped by this header,
+    // enforced by Postgres Row Level Security on quotations/items/sent_emails.
+    SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
+    appState.applyClientConfig(initialConfig);
+    FaviconService.setFromUrl(initialConfig.logoUrl ?? '');
+  }
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
+    ChangeNotifierProvider.value(
+      value: appState,
       child: const QuotationApp(),
     ),
   );
 
-  // Initialize Notifications and Request permissions after the UI is rendered to avoid freezing the splash screen
+  // Initialize Notifications after the UI is rendered
   Future.delayed(const Duration(seconds: 1), () async {
     try {
       final notificationService = NotificationService();
@@ -51,12 +71,12 @@ class QuotationApp extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
 
     return MaterialApp(
-      title: 'UPVC Quotation Maker',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      title: appState.appName,
+      theme: AppTheme.lightTheme(appState.clientConfig),
+      darkTheme: AppTheme.darkTheme(appState.clientConfig),
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      home: TrialGate(child: LoginScreen()),
     );
   }
 }

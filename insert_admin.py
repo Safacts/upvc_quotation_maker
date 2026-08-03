@@ -1,13 +1,16 @@
 import os
 from supabase import create_client, Client
+from dotenv import load_dotenv
 
-url = "https://effxrwrbsjduvhmorvrq.supabase.co"
-key = "sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN"
+load_dotenv()
+
+url = os.environ["SUPABASE_URL"]
+key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 
 supabase: Client = create_client(url, key)
 
-email = "kongaaadisheshu@gmail.com"
-hash_val = "76ab9a422dcbeef43c1da0a4d22e558ff6f97f9b05342f4e24c5217a4d6bbae8"
+email = "vitarn.dev@gmail.com"
+hash_val = "3d9128ffccc6317d850c003d720fe0f2aa15f88877afc039a5b3eabab2f4e3f9"
 
 try:
     response = supabase.table("admins").upsert({"email": email, "password_hash": hash_val}).execute()

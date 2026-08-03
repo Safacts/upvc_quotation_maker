@@ -1,82 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'config/client_config.dart';
 
 class AppState extends ChangeNotifier {
+  ClientConfig? _clientConfig;
   bool _isDarkMode = false;
-  String _companyName = 'Venkateshwara UPVC Windows & Doors';
-  String _companyAddress = 'Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074';
-  String _companyContact = '9246588692, 9441888131';
-  String _companyEmail = 'jvenkateshupvc@gmail.com';
-  String _bankName = 'VENKATESHWARA WELDING WORKS';
-  String _bankBranch = 'Union Bank, Hastinapuram';
-  String _bankAccountNo = 'A/C No : 178511100000061';
-  String _bankIfsc = 'IFSC Code : UBIN0817856';
-  String _termsAndConditions = '1. 50% advance, 35% after dispatch, 15% after installation.\n2. Delivery minimum 15 days from advance.\n3. All payments in favor of M/s Niksha Industries Pvt Ltd.\n4. Client responsible for site safety & electricity.\n5. Material can be taken back if payment not received.\n6. Final wall-to-wall measurement includes silicone sealant.\n7. Rates may alter if size changes above 1 foot.\n8. Quotation valid for 15 days.\n9. Above rates inclusive of installation.';
+  String _companyName = '';
+  String _companyAddress = '';
+  String _companyContact = '';
+  String _companyEmail = '';
+  String _bankName = '';
+  String _bankBranch = '';
+  String _bankAccountNo = '';
+  String _bankIfsc = '';
+  String _termsAndConditions = '';
   double _defaultGstPercentage = 18.0;
-  String _companyProprietor = 'J.Venkateshwarlu';
-  String _gstNumber = '36AKDPJ7245B2ZF';
+  String _companyProprietor = '';
+  String _gstNumber = '';
 
-  bool get isDarkMode => _isDarkMode;
-  String get companyName => _companyName;
-  String get companyAddress => _companyAddress;
-  String get companyContact => _companyContact;
-  String get companyEmail => _companyEmail;
-  String get bankName => _bankName;
-  String get bankBranch => _bankBranch;
-  String get bankAccountNo => _bankAccountNo;
-  String get bankIfsc => _bankIfsc;
-  String get termsAndConditions => _termsAndConditions;
+  ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
+
+  String get companyName => _companyName.isNotEmpty ? _companyName : clientConfig.companyName;
+  String get companyAddress => _companyAddress.isNotEmpty ? _companyAddress : clientConfig.companyAddress;
+  String get companyContact => _companyContact.isNotEmpty ? _companyContact : clientConfig.companyContact;
+  String get companyEmail => _companyEmail.isNotEmpty ? _companyEmail : clientConfig.companyEmail;
+  String get bankName => _bankName.isNotEmpty ? _bankName : clientConfig.bankName;
+  String get bankBranch => _bankBranch.isNotEmpty ? _bankBranch : clientConfig.bankBranch;
+  String get bankAccountNo => _bankAccountNo.isNotEmpty ? _bankAccountNo : clientConfig.bankAccountNo;
+  String get bankIfsc => _bankIfsc.isNotEmpty ? _bankIfsc : clientConfig.bankIfsc;
+  String get termsAndConditions => _termsAndConditions.isNotEmpty ? _termsAndConditions : clientConfig.termsAsString;
   double get defaultGstPercentage => _defaultGstPercentage;
-  String get companyProprietor => _companyProprietor;
-  String get gstNumber => _gstNumber;
+  String get companyProprietor => _companyProprietor.isNotEmpty ? _companyProprietor : clientConfig.companyProprietor;
+  String get gstNumber => _gstNumber.isNotEmpty ? _gstNumber : clientConfig.gstNumber;
+  bool get isDarkMode => _isDarkMode;
+  String get appName => clientConfig.appName;
+  String get quotePrefix => clientConfig.quotePrefix;
+  List<String> get adminEmails => clientConfig.adminEmails;
 
   AppState() {
     _loadSettings();
   }
 
+  Future<void> applyClientConfig(ClientConfig config) async {
+    _clientConfig = config;
+
+    // Source of truth is the client config (per-client branding/settings).
+    // Always overwrite the in-memory values so each client sees its OWN
+    // company name, address, bank details, etc. (not the first-loaded client).
+    _companyName = config.companyName;
+    _companyAddress = config.companyAddress;
+    _companyContact = config.companyContact;
+    _companyEmail = config.companyEmail;
+    _bankName = config.bankName;
+    _bankBranch = config.bankBranch;
+    _bankAccountNo = config.bankAccountNo;
+    _bankIfsc = config.bankIfsc;
+    _termsAndConditions = config.termsAsString;
+    _defaultGstPercentage = config.defaultGstPercentage;
+    _companyProprietor = config.companyProprietor;
+    _gstNumber = config.gstNumber;
+
+    notifyListeners();
+  }
+
   void _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _isDarkMode = prefs.getBool('isDarkMode') ?? false;
-
-    String savedName = prefs.getString('companyName') ?? '';
-    _companyName = (savedName.isEmpty || savedName == 'Venkateshwara UPVC') 
-        ? 'Venkateshwara UPVC Windows & Doors' : savedName;
-
-    String savedAddress = prefs.getString('companyAddress') ?? '';
-    _companyAddress = (savedAddress.isEmpty || savedAddress == 'Sri Sai Ram Nagar, P.N.Palem, P.M.Palem, Visakhapatnam-530041') 
-        ? 'Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074' : savedAddress;
-
-    _companyContact = prefs.getString('companyContact') ?? '9246588692, 9441888131';
-    if (_companyContact.isEmpty) _companyContact = '9246588692, 9441888131';
-
-    _companyEmail = prefs.getString('companyEmail') ?? 'jvenkateshupvc@gmail.com';
-
-    String savedBankName = prefs.getString('bankName') ?? '';
-    _bankName = (savedBankName.isEmpty || savedBankName == 'UNION BANK OF INDIA') 
-        ? 'VENKATESHWARA WELDING WORKS' : savedBankName;
-
-    String savedBankBranch = prefs.getString('bankBranch') ?? '';
-    _bankBranch = (savedBankBranch.isEmpty || savedBankBranch == 'P.M.PALEM, VISAKHAPATNAM') 
-        ? 'Union Bank, Hastinapuram' : savedBankBranch;
-
-    String savedAccount = prefs.getString('bankAccountNo') ?? '';
-    _bankAccountNo = (savedAccount.isEmpty || savedAccount.contains('0000000') || savedAccount == '00000' || savedAccount == 'A/C.NO: 000000000000') 
-        ? 'A/C No : 178511100000061' : savedAccount;
-
-    String savedIfsc = prefs.getString('bankIfsc') ?? '';
-    _bankIfsc = (savedIfsc.isEmpty || savedIfsc.contains('0000') || savedIfsc == 'IFSC CODE: UBIN0000000') 
-        ? 'IFSC Code : UBIN0817856' : savedIfsc;
-
-    String savedTerms = prefs.getString('termsAndConditions') ?? '';
-    _termsAndConditions = (savedTerms.isEmpty || savedTerms.startsWith('1. 50% Advance along with work order.')) 
-        ? '1. 50% advance, 35% after dispatch, 15% after installation.\n2. Delivery minimum 15 days from advance.\n3. All payments in favor of M/s Niksha Industries Pvt Ltd.\n4. Client responsible for site safety & electricity.\n5. Material can be taken back if payment not received.\n6. Final wall-to-wall measurement includes silicone sealant.\n7. Rates may alter if size changes above 1 foot.\n8. Quotation valid for 15 days.\n9. Above rates inclusive of installation.' 
-        : savedTerms;
-
+    _companyName = prefs.getString('companyName') ?? '';
+    _companyAddress = prefs.getString('companyAddress') ?? '';
+    _companyContact = prefs.getString('companyContact') ?? '';
+    _companyEmail = prefs.getString('companyEmail') ?? '';
+    _bankName = prefs.getString('bankName') ?? '';
+    _bankBranch = prefs.getString('bankBranch') ?? '';
+    _bankAccountNo = prefs.getString('bankAccountNo') ?? '';
+    _bankIfsc = prefs.getString('bankIfsc') ?? '';
+    _termsAndConditions = prefs.getString('termsAndConditions') ?? '';
     _defaultGstPercentage = prefs.getDouble('defaultGstPercentage') ?? 18.0;
-    
-    _companyProprietor = prefs.getString('companyProprietor') ?? 'J.Venkateshwarlu';
-    _gstNumber = prefs.getString('gstNumber') ?? '36AKDPJ7245B2ZF';
-
+    _companyProprietor = prefs.getString('companyProprietor') ?? '';
+    _gstNumber = prefs.getString('gstNumber') ?? '';
     notifyListeners();
   }
 

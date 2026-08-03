@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +17,8 @@ import 'pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
+import 'file_helper.dart';
+import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
 
@@ -96,7 +98,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
   Future<void> _fetchPastQuotations() async {
     try {
-      final response = await SupabaseConfig.client.from('quotations').select();
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final response = await SupabaseConfig.client
+          .from('quotations')
+          .select()
+          .eq('client_id', clientId);
       if (mounted) {
         setState(() {
           _pastQuotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
@@ -134,8 +140,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
     setState(() => _isLoading = true);
     try {
       if (data.id != null) {
-        final measuredRes = await SupabaseConfig.client.from('measured_items').select().eq('quotation_id', data.id!);
-        final unmeasuredRes = await SupabaseConfig.client.from('unmeasured_items').select().eq('quotation_id', data.id!);
+        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        final measuredRes = await SupabaseConfig.client
+            .from('measured_items')
+            .select()
+            .eq('quotation_id', data.id!)
+            .eq('client_id', clientId);
+        final unmeasuredRes = await SupabaseConfig.client
+            .from('unmeasured_items')
+            .select()
+            .eq('quotation_id', data.id!)
+            .eq('client_id', clientId);
 
         setState(() {
           data.measuredItems = (measuredRes as List).map((e) => MeasuredItem.fromMap(e)).toList();
@@ -150,7 +165,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _initQuoteNumber() async {
-    String nextNo = await QuotationData.generateNextQuoteNumber();
+    final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
+    String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix);
     setState(() => data.quotationNo = nextNo);
     _autoSaveToDatabase();
   }
@@ -159,21 +175,34 @@ class _QuotationScreenState extends State<QuotationScreen> {
     if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
-      final quotationMap = data.toMap();
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final quotationMap = data.toMap(clientId: clientId);
       if (data.id == null) {
         final res = await SupabaseConfig.client.from('quotations').insert(quotationMap).select().single();
         data.id = res['id'];
       } else {
-        await SupabaseConfig.client.from('quotations').update(quotationMap).eq('id', data.id!);
-        await SupabaseConfig.client.from('measured_items').delete().eq('quotation_id', data.id!);
-        await SupabaseConfig.client.from('unmeasured_items').delete().eq('quotation_id', data.id!);
+        await SupabaseConfig.client
+            .from('quotations')
+            .update(quotationMap)
+            .eq('id', data.id!)
+            .eq('client_id', clientId);
+        await SupabaseConfig.client
+            .from('measured_items')
+            .delete()
+            .eq('quotation_id', data.id!)
+            .eq('client_id', clientId);
+        await SupabaseConfig.client
+            .from('unmeasured_items')
+            .delete()
+            .eq('quotation_id', data.id!)
+            .eq('client_id', clientId);
       }
 
       if (data.measuredItems.isNotEmpty) {
-        await SupabaseConfig.client.from('measured_items').insert(data.measuredItems.map((e) => e.toMap(data.id!)).toList());
+        await SupabaseConfig.client.from('measured_items').insert(data.measuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
       }
       if (data.unmeasuredItems.isNotEmpty) {
-        await SupabaseConfig.client.from('unmeasured_items').insert(data.unmeasuredItems.map((e) => e.toMap(data.id!)).toList());
+        await SupabaseConfig.client.from('unmeasured_items').insert(data.unmeasuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
@@ -183,28 +212,32 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _sendEmail(String targetEmail) async {
+    if (kIsWeb) {
+      throw Exception('Email sending is not supported on web. Please use the desktop or mobile app.');
+    }
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final pdfBytes = await generatePdfBytes(data, appState);
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${data.quotationNo}.pdf');
-      await file.writeAsBytes(pdfBytes);
+      final helper = FileHelper();
+      final dir = (await helper.getTempDir()) ?? '';
+      final pdfPath = '$dir/${data.quotationNo}.pdf';
+      await helper.writeFile(pdfPath, pdfBytes);
 
       final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
       if (smtpKey.isEmpty) throw Exception("SMTP Key not configured in .env");
 
       final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
 
-      final ByteData logoData = await rootBundle.load('assets/logo.png');
-      final File logoTempFile = File('${dir.path}/logo.png');
-      await logoTempFile.writeAsBytes(logoData.buffer.asUint8List(), flush: true);
+      final ByteData logoData = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
+      final logoPath = '$dir/logo.png';
+      await helper.writeFile(logoPath, logoData.buffer.asUint8List());
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="cid:logo" alt="Venkateshwara UPVC" style="max-height: 100px; margin-bottom: 10px;" />
+          <img src="cid:logo" alt="${appState.companyName}" style="max-height: 100px; margin-bottom: 10px;" />
         </div>
-        <h2 style="color: #1E3A5F; text-align: center; margin-top: 0;">Quotation from Venkateshwara UPVC</h2>
+        <h2 style="color: #1E3A5F; text-align: center; margin-top: 0;">Quotation from ${appState.companyName}</h2>
         <p style="color: #334155; font-size: 16px;">Dear <b>${data.customerName}</b>,</p>
         <p style="color: #475569; font-size: 15px; line-height: 1.6;">Please find attached the quotation <b>${data.quotationNo}</b> for your requested UPVC windows and doors.</p>
         <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
@@ -214,17 +247,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
         </div>
         <p style="color: #475569; font-size: 14px;">If you have any questions, please feel free to reach out.</p>
         <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 20px 0;">
-        <p style="color: #64748b; font-size: 12px; text-align: center;">Prop: J.Venkateshwarlu | 9246588692, 9441888131</p>
+        <p style="color: #64748b; font-size: 12px; text-align: center;">Prop: ${appState.companyProprietor} | ${appState.companyContact}</p>
       </div>
       ''';
 
       final message = Message()
-        ..from = Address('jvenkateshupvc@gmail.com', 'Venkateshwara UPVC')
+        ..from = Address(appState.companyEmail, appState.companyName)
         ..recipients.add(targetEmail.trim())
-        ..subject = 'Quotation ${data.quotationNo} from Venkateshwara UPVC'
+        ..subject = 'Quotation ${data.quotationNo} from ${appState.companyName}'
         ..html = htmlBody
-        ..attachments.add(FileAttachment(logoTempFile)..location = Location.inline..cid = '<logo>')
-        ..attachments.add(FileAttachment(file));
+        ..attachments.add(FileAttachment(File(pdfPath)))
+        ..attachments.add(FileAttachment(File(logoPath))..location = Location.inline..cid = '<logo>');
 
       await send(message, smtpServer);
     } catch (e) {
@@ -623,10 +656,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
               height: 60,
               child: ElevatedButton(
                 onPressed: _generateAndProcessPdf,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero),
+                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: Colors.transparent, elevation: 0, shadowColor: Colors.transparent),
                 child: Ink(
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
+                    gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Container(

@@ -1,74 +1,46 @@
-name: Build and Release APK
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
+    inputs:
+      clients:
+        description: 'Comma-separated client IDs to build'
+        required: true
+        default: 'venkateshwara'
 
 jobs:
   build:
+    strategy:
+      matrix:
+        client: ${{ fromJson(format('["{0}"]', replace(github.event.inputs.clients || 'venkateshwara', ',', '","'))) }}
+    
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+    
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Set up Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable'
-
-    - name: Decode Keystore
-      run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
-
-    - name: Create key.properties
-      run: |
-        cat << EOF > android/key.properties
-        storePassword=${{ secrets.STORE_PASSWORD }}
-        keyPassword=${{ secrets.KEY_PASSWORD }}
-        keyAlias=${{ secrets.KEY_ALIAS }}
-        storeFile=upload-keystore.jks
-        EOF
-
-    - name: Create .env
-      run: |
-        cat << EOF > .env
-        BREVO_SMTP_KEY=${{ secrets.BREVO_SMTP_KEY }}
-        BREVO_SMTP_EMAIL=${{ secrets.BREVO_SMTP_EMAIL }}
-        EOF
-
-    - name: Install Dependencies
-      run: flutter pub get
-
-    - name: Build Release APK
-      run: flutter build apk --release
-
-    - name: Rename APK
-      run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk
-
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.${{ github.run_number }}
-        name: UPVC Quotation Maker v1.0.${{ github.run_number }}
-        files: build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload APK to Supabase
-      run: |
-        curl -X POST "${{ secrets.SUPABASE_URL }}/storage/v1/object/app-releases/Venkateshwara_UPVC.apk" \
-        -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-        -H "Content-Type: application/vnd.android.package-archive" \
-        -H "x-upsert: true" \
-        --data-binary "@build/app/outputs/flutter-apk/Venkateshwara_UPVC.apk"
+      - uses: actions/checkout@v3
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+      
+      - run: flutter pub get
+      
+      - name: Build APK for ${{ matrix.client }}
+        run: flutter build apk --release --dart-define=CLIENT_ID=${{ matrix.client }} --obfuscate --split-debug-info=debug/${{ matrix.client }}
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-${{ matrix.client }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+      
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ matrix.client }}-${{ github.run_number }}
+          name: Release ${{ matrix.client }} v${{ github.run_number }}
+          files: build/app/outputs/flutter-apk/app-release.apk

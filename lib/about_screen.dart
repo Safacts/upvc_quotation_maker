@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'secret_panel_screen.dart';
+import 'client_logo.dart';
 
 class AboutScreen extends StatefulWidget {
   @override
@@ -104,18 +107,18 @@ class _AboutScreenState extends State<AboutScreen> {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
                 ),
-                child: Image.asset('assets/logo.png', width: 80, height: 80, fit: BoxFit.contain),
+                child: ClientLogo(config: Provider.of<AppState>(context).clientConfig, width: 80, height: 80),
               ).animate().scale(delay: 200.ms, curve: Curves.easeOutBack),
               
               const SizedBox(height: 24),
               Text(
-                'Venkateshwara UPVC',
+                Provider.of<AppState>(context).companyName,
                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
               
               const SizedBox(height: 8),
               Text(
-                'Quotation Maker v2.0',
+                Provider.of<AppState>(context).appName,
                 style: TextStyle(color: Colors.grey.shade500),
               ).animate().fade(delay: 400.ms),
               

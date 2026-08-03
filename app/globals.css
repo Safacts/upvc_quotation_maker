@@ -1,0 +1,31 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Prevent text size adjustment on iOS landscape */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  /* Prevent horizontal overflow globally */
+  overflow-x: hidden;
+  /* Improve tap highlight on mobile */
+  -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+}
+
+/* Prevent zoom on input focus on iOS < 16 */
+@supports not (font: -apple-system-body) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+/* Improve touch scrolling on iOS */
+html, body {
+  -webkit-overflow-scrolling: touch;
+}

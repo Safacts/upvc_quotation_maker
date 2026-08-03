@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'app_state.dart';
 import 'models.dart';
 import 'quotation_screen.dart';
 import 'supabase_config.dart';
@@ -11,7 +16,7 @@ import 'crafted_widget.dart';
 import 'email_portal_screen.dart';
 import 'analytics_screen.dart';
 import 'theme.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'client_logo.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -34,9 +39,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _fetchQuotations() async {
     setState(() => _isLoading = true);
     try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
           .select()
+          .eq('client_id', clientId)
           .order('created_at', ascending: false);
       
       setState(() {
@@ -50,8 +57,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _logout() async {
-    const storage = FlutterSecureStorage();
-    await storage.delete(key: 'session_active');
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('session_active');
+    } else {
+      try {
+        const storage = FlutterSecureStorage();
+        await storage.delete(key: 'session_active');
+      } catch (_) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('session_active');
+      }
+    }
     if (!mounted) return;
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
   }
@@ -116,10 +133,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: Image.asset('assets/logo.png', width: 60, height: 60, fit: BoxFit.contain),
+                    child: ClientLogo(config: Provider.of<AppState>(context, listen: false).clientConfig, width: 60, height: 60),
                   ),
                   const SizedBox(height: 10),
-                  const Text('Venkateshwara UPVC', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(Provider.of<AppState>(context).companyName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -188,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: _buildTopTile(
                     title: 'New Quotation',
                     icon: Icons.add_circle_outline,
-                    gradient: AppTheme.primaryGradient,
+                    gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
                     delay: 100,
                     onTap: () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));

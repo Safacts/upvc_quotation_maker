@@ -1,0 +1,22 @@
+{
+  "clientId": "venkateshwara",
+  "appName": "Venkateshwara UPVC Quote",
+  "companyName": "Venkateshwara UPVC Windows & Doors",
+  "companyAddress": "Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074",
+  "companyContact": "9246588692, 9441888131",
+  "companyEmail": "jvenkateshupvc@gmail.com",
+  "companyProprietor": "J.Venkateshwarlu",
+  "gstNumber": "36AKDPJ7245B2ZF",
+  "bankName": "VENKATESHWARA WELDING WORKS",
+  "bankBranch": "Union Bank, Hastinapuram",
+  "bankAccountNo": "A/C No : 178511100000061",
+  "bankIfsc": "IFSC Code : UBIN0817856",
+  "termsAndConditions": ["50% advance, 35% after dispatch, 15% after installation.", "Delivery minimum 15 days from advance.", "All payments in favor of M/s Niksha Industries Pvt Ltd.", "Client responsible for site safety & electricity.", "Material can be taken back if payment not received.", "Final wall-to-wall measurement includes silicone sealant.", "Rates may alter if size changes above 1 foot.", "Quotation valid for 15 days.", "Above rates inclusive of installation."],
+  "defaultGstPercentage": 18.0,
+  "quotePrefix": "JVUPVC",
+  "logoUrl": "",
+  "primaryColor": 6513505,
+  "accentColor": 15508377,
+  "isActive": true,
+  "adminEmails": ["jvenkateshupvc@gmail.com", "kongaaadisheshu@gmail.com"]
+}

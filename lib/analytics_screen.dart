@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'models.dart';
+import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 
@@ -28,18 +30,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _fetchAnalytics() async {
     setState(() => _isLoading = true);
     try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       // 1. Fetch all quotations
-      final quotesResp = await SupabaseConfig.client.from('quotations').select();
+      final quotesResp = await SupabaseConfig.client.from('quotations').select().eq('client_id', clientId);
       final quotations = (quotesResp as List).map((e) => QuotationData.fromMap(e)).toList();
       _totalQuotations = quotations.length;
 
       // 2. Fetch total emails
-      final emailsResp = await SupabaseConfig.client.from('sent_emails').select('id');
+      final emailsResp = await SupabaseConfig.client.from('sent_emails').select('id').eq('client_id', clientId);
       _totalEmails = (emailsResp as List).length;
 
       // 3. Fetch all items
-      final mItemsResp = await SupabaseConfig.client.from('measured_items').select();
-      final umItemsResp = await SupabaseConfig.client.from('unmeasured_items').select();
+      final mItemsResp = await SupabaseConfig.client.from('measured_items').select().eq('client_id', clientId);
+      final umItemsResp = await SupabaseConfig.client.from('unmeasured_items').select().eq('client_id', clientId);
 
       // Group items by quotation_id
       final mItemsMap = <String, List<MeasuredItem>>{};

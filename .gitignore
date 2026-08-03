@@ -1,62 +1,42 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# --- Vercel ---
+.vercel/
 
-# VS Code
-.vscode/
+# --- Secrets (never commit) ---
 .env
+.env.*
+!.env.example
+keystore_base64.txt
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# --- Flutter / Dart build artifacts ---
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
+.buildlog/
+build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Symbolication related
+# --- Flutter symbol / obfuscation ---
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Keystore files
+# --- Android signing ---
 android/app/upload-keystore.jks
 android/key.properties
 
-# Vercel and Node files
-.vercel
-node_modules/
-package.json
-package-lock.json
-build/
-android/
-ios/
-linux/
-macos/
-windows/
-test/
-lib/
+# --- Logs / misc ---
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.class
+*.pyc
+*.swp
+migrate_working_dir/

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'models.dart';
+import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,9 +25,11 @@ class _SecretPanelScreenState extends State<SecretPanelScreen> {
   Future<void> _fetchQuotations() async {
     setState(() => _isLoading = true);
     try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
           .select()
+          .eq('client_id', clientId)
           .order('created_at', ascending: false);
       
       setState(() {
@@ -58,7 +62,8 @@ class _SecretPanelScreenState extends State<SecretPanelScreen> {
     if (confirmed == true) {
       setState(() => _isLoading = true);
       try {
-        await SupabaseConfig.client.from('quotations').delete().eq('id', id);
+        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        await SupabaseConfig.client.from('quotations').delete().eq('id', id).eq('client_id', clientId);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Quotation $quoteNo deleted.')));
         _fetchQuotations();
       } catch (e) {
@@ -124,9 +129,10 @@ class _SecretPanelScreenState extends State<SecretPanelScreen> {
       if (doubleConfirmed == true) {
         setState(() => _isLoading = true);
         try {
-          // Delete all records (using neq on UUID or simple delete filter)
-          await SupabaseConfig.client.from('quotations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          await SupabaseConfig.client.from('sent_emails').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          // Delete only THIS client's records (tenant-isolated wipe)
+          final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+          await SupabaseConfig.client.from('quotations').delete().eq('client_id', clientId);
+          await SupabaseConfig.client.from('sent_emails').delete().eq('client_id', clientId);
           
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Database reset successfully.')));
           _fetchQuotations();

@@ -1,0 +1,378 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import "./login.css";
+
+const GOOGLE_CLIENT_ID =
+  "726482519803-od8lidratsv0du7jtaeopj29khmn6meb.apps.googleusercontent.com";
+
+function slugify(s: string) {
+  return (s || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function browserSha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [errorColor, setErrorColor] = useState("#ef4444");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpStage, setOtpStage] = useState<"email" | "otp">("email");
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpInput, setOtpInput] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [targetEmail, setTargetEmail] = useState("");
+
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const googleDivRef = useRef<HTMLDivElement>(null);
+
+  function showError(msg: string, color = "#ef4444") {
+    setError(msg);
+    setErrorColor(color);
+  }
+
+  async function redirectAfterAuth(data: any, emailFallback: string) {
+    localStorage.setItem("portal_session", "active");
+    localStorage.setItem("portal_email", data.email || emailFallback);
+    localStorage.setItem("portal_auth", "password");
+    localStorage.setItem("portal_role", data.role);
+
+    if (data.role === "admin") {
+      localStorage.removeItem("portal_client_id");
+      window.location.href = "/admin";
+      return;
+    }
+
+    localStorage.setItem("portal_client_id", data.client_id);
+    window.location.href = "/" + slugify(data.client_id) + "/home";
+  }
+
+  async function handleLogin() {
+    setError("");
+    if (!email.trim() || !password) {
+      showError("Please enter your email and password.");
+      return;
+    }
+
+    setLoginLoading(true);
+    try {
+      const res = await fetch("/api/portal_auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "login", email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showError(
+          data.error === "invalid email or password"
+            ? "Invalid email or password."
+            : data.error || "Login failed.",
+        );
+        return;
+      }
+      await redirectAfterAuth(data, email.trim());
+    } catch {
+      showError(
+        "Unable to connect to the login portal. Please check your network connection and try again.",
+      );
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleGoogleCredential(response: any) {
+    setError("");
+    try {
+      const payload = JSON.parse(atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      const gEmail = (payload.email || "").trim();
+      if (!gEmail || !payload.email_verified) {
+        throw new Error("Google account email is not verified");
+      }
+
+      const res = await fetch("/api/portal_auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "google", email: gEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "not authorized");
+
+      localStorage.setItem("portal_session", "active");
+      localStorage.setItem("portal_email", data.email || gEmail);
+      localStorage.setItem("portal_auth", "google");
+      localStorage.setItem("portal_role", data.role);
+
+      if (data.role === "admin") {
+        localStorage.removeItem("portal_client_id");
+        window.location.href = "/admin";
+        return;
+      }
+
+      localStorage.setItem("portal_client_id", data.client_id);
+      window.location.href = "/" + slugify(data.client_id) + "/home";
+    } catch (err: any) {
+      showError("Google sign-in failed: " + err.message);
+    }
+  }
+
+  function initGoogleButton() {
+    const w = window as any;
+    if (w.google && w.google.accounts && googleDivRef.current) {
+      w.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+        auto_select: false,
+      });
+      w.google.accounts.id.renderButton(googleDivRef.current, {
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+      });
+    }
+  }
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
+      if (params.get("action") === "reset") {
+        setTimeout(() => triggerForgotPassword(emailParam), 500);
+      }
+    }
+
+    const existing = document.querySelector('script[data-gsi]');
+    if (existing) {
+      initGoogleButton();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.dataset.gsi = "1";
+    script.onload = initGoogleButton;
+    document.head.appendChild(script);
+  }, []);
+
+  function triggerForgotPassword(prefillEmail?: string) {
+    const target = prefillEmail !== undefined ? prefillEmail : email.trim();
+    if (!target) {
+      showError("Please enter your email address first.");
+      return;
+    }
+    setError("");
+    setOtpEmail(target);
+    setOtpStage("email");
+    setOtpModalOpen(true);
+  }
+
+  async function sendOtp() {
+    const target = otpEmail.trim();
+    if (!target) {
+      showError("Please enter your email address.");
+      return;
+    }
+    setTargetEmail(target);
+    showError("Sending OTP code to your registered email...", "#6366f1");
+    try {
+      const response = await fetch("/api/reset_client_password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: target }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        showError(result.error || "Unable to send OTP.");
+        return;
+      }
+      setError("");
+      setOtpStage("otp");
+      setOtpInput("");
+    } catch {
+      showError("Unable to send OTP. Please check your network connection and try again.");
+    }
+  }
+
+  function verifyOtp() {
+    const inputOtp = otpInput.trim();
+    if (!inputOtp) {
+      alert("Please enter the OTP code.");
+      return;
+    }
+    setForgotOtp(inputOtp);
+    setOtpModalOpen(false);
+    setResetModalOpen(true);
+  }
+
+  async function saveNewPassword() {
+    if (newPass.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const newHash = await browserSha256(newPass);
+      const response = await fetch("/api/reset_client_password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: targetEmail, otp: forgotOtp, new_hash: newHash }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Reset failed");
+      alert("Password updated successfully!");
+      setResetModalOpen(false);
+    } catch {
+      alert("Unable to save password. Please check your connection and try again.");
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  return (
+    <div className="login-container">
+      <img
+        className="logo"
+        src="/logo.png"
+        onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
+        alt="Vitharn UPVC Quotation Maker"
+      />
+      <h2>Welcome Back</h2>
+      <p className="subtitle">Sign in to the Vitharn UPVC Quotation Maker Portal</p>
+
+      <div className="divider">Continue with</div>
+      <div className="g-signin-wrap">
+        <div ref={googleDivRef} id="gSignInDiv" />
+      </div>
+      <div className="divider">or</div>
+
+      <div className="input-group">
+        <label htmlFor="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          placeholder="jvenkateshupvc@gmail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+
+      <div className="input-group">
+        <label htmlFor="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
+        />
+      </div>
+
+      {error && (
+        <div id="errorBox" className="error-msg" style={{ color: errorColor, display: "block" }}>
+          {error}
+        </div>
+      )}
+
+      <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
+        {loginLoading && <span className="spinner" id="loginSpinner" />}
+        <span id="loginText">{loginLoading ? "Signing in…" : "Login"}</span>
+      </button>
+      <button className="forgot-link" onClick={() => triggerForgotPassword()}>
+        Forgot Password?
+      </button>
+
+      {otpModalOpen && (
+        <div className="modal" id="otpModal" style={{ display: "flex" }}>
+          <div className="modal-content">
+            <h3 id="otpModalTitle">{otpStage === "email" ? "Enter Email" : "Enter OTP"}</h3>
+            <p id="otpModalDesc">
+              {otpStage === "email"
+                ? "We'll send an OTP to this email to reset your password."
+                : `OTP sent to ${otpEmail}. Enter it below to verify.`}
+            </p>
+            {otpStage === "email" && (
+              <div className="input-group" id="otpEmailGroup">
+                <label htmlFor="otpEmail">Email Address</label>
+                <input
+                  type="email"
+                  id="otpEmail"
+                  placeholder="your@email.com"
+                  value={otpEmail}
+                  onChange={(e) => setOtpEmail(e.target.value)}
+                />
+              </div>
+            )}
+            {otpStage === "otp" && (
+              <div className="input-group" id="otpInputGroup">
+                <label htmlFor="otpInput">OTP Code</label>
+                <input
+                  type="number"
+                  id="otpInput"
+                  placeholder="123456"
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setOtpModalOpen(false)}>
+                Cancel
+              </button>
+              {otpStage === "email" ? (
+                <button id="otpSendBtn" onClick={sendOtp}>Send OTP</button>
+              ) : (
+                <button id="otpVerifyBtn" onClick={verifyOtp}>Verify</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetModalOpen && (
+        <div className="modal" id="resetModal" style={{ display: "flex" }}>
+          <div className="modal-content">
+            <h3>Set New Password</h3>
+            <p>Enter your new password below (minimum 6 characters).</p>
+            <div className="input-group">
+              <label htmlFor="newPassInput">New Password</label>
+              <input
+                type="password"
+                id="newPassInput"
+                placeholder="••••••••"
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setResetModalOpen(false)}>
+                Cancel
+              </button>
+              <button onClick={saveNewPassword} id="resetBtn" disabled={resetLoading}>
+                {resetLoading && <span className="spinner" id="resetSpinner" />}
+                <span>{resetLoading ? "Saving…" : "Save Password"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

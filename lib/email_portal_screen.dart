@@ -4,12 +4,14 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'dart:io';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:toastification/toastification.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
+import 'client_logo.dart';
 
 class EmailPortalScreen extends StatefulWidget {
   @override
@@ -23,15 +25,18 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
   bool _isSending = false;
   String _selectedTemplate = 'Custom';
 
-  final Map<String, String> _templates = {
-    'Custom': '',
-    'Follow Up': 'Dear Customer,\n\nI am following up on the quotation we provided for your UPVC windows/doors. Please let me know if you have any questions or if you are ready to proceed.\n\nBest regards,\nVenkateshwara UPVC',
-    'Payment Reminder': 'Dear Customer,\n\nThis is a gentle reminder regarding the pending payment for your recent UPVC order. We kindly request you to process it at your earliest convenience.\n\nThank you,\nVenkateshwara UPVC',
-    'Thank You': 'Dear Customer,\n\nThank you for choosing Venkateshwara UPVC! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\nVenkateshwara UPVC',
-  };
+  Map<String, String> _templates = {};
 
   void _applyTemplate(String? templateName) {
     if (templateName == null) return;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final companyName = appState.companyName;
+    _templates = {
+      'Custom': '',
+      'Follow Up': 'Dear Customer,\n\nI am following up on the quotation we provided for your UPVC windows/doors. Please let me know if you have any questions or if you are ready to proceed.\n\nBest regards,\n$companyName',
+      'Payment Reminder': 'Dear Customer,\n\nThis is a gentle reminder regarding the pending payment for your recent UPVC order. We kindly request you to process it at your earliest convenience.\n\nThank you,\n$companyName',
+      'Thank You': 'Dear Customer,\n\nThank you for choosing $companyName! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\n$companyName',
+    };
     setState(() {
       _selectedTemplate = templateName;
       if (templateName != 'Custom') {
@@ -47,13 +52,15 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       return;
     }
 
+    final appState = Provider.of<AppState>(context, listen: false);
+    final companyName = appState.companyName;
     setState(() => _isSending = true);
 
     try {
       final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
       final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
 
-      final ByteData data = await rootBundle.load('assets/logo.png');
+      final ByteData data = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
       final Directory tempDir = await getTemporaryDirectory();
       final File tempFile = File('${tempDir.path}/logo.png');
       await tempFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
@@ -61,22 +68,22 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       String htmlBody = '''
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <img src="cid:logo" alt="Venkateshwara UPVC" style="max-height: 100px; margin-bottom: 10px;" />
-            <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">Venkateshwara UPVC</h1>
+            <img src="cid:logo" alt="$companyName" style="max-height: 100px; margin-bottom: 10px;" />
+            <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">$companyName</h1>
             <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Premium Windows & Doors</p>
           </div>
           <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); color: #374151; font-size: 16px; line-height: 1.6;">
             ${_bodyController.text.replaceAll('\n', '<br>')}
           </div>
           <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
-            <p>© ${DateTime.now().year} Venkateshwara UPVC. All rights reserved.</p>
+            <p>© ${DateTime.now().year} $companyName. All rights reserved.</p>
             <p>Crafted with 💖 by Aadi</p>
           </div>
         </div>
       ''';
 
       final message = Message()
-        ..from = Address(dotenv.env['BREVO_SMTP_EMAIL'] ?? 'jvenkateshupvc@gmail.com', 'Venkateshwara UPVC')
+        ..from = Address(dotenv.env['BREVO_SMTP_EMAIL'] ?? appState.companyEmail, companyName)
         ..recipients.add(_toController.text.trim())
         ..subject = _subjectController.text
         ..html = htmlBody
@@ -89,6 +96,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
         'recipient': _toController.text.trim(),
         'subject': _subjectController.text,
         'body': _bodyController.text,
+        'client_id': appState.clientConfig.clientId,
       });
 
       toastification.show(
@@ -165,10 +173,10 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
               height: 60,
               child: ElevatedButton(
                 onPressed: _isSending ? null : _sendEmail,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero),
+                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: Colors.transparent, elevation: 0, shadowColor: Colors.transparent),
                 child: Ink(
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradient,
+                    gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Container(

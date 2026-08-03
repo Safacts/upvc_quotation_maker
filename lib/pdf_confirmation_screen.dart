@@ -1,14 +1,14 @@
-import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'models.dart';
 import 'theme.dart';
+import 'file_helper.dart';
 
 import 'notification_service.dart';
 
@@ -79,62 +79,50 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _savePdfToDevice() async {
     try {
-      Directory? directory;
-      if (Platform.isAndroid) {
-        directory = await getDownloadsDirectory();
-        directory ??= await getExternalStorageDirectory();
-      } else {
-        directory = await getApplicationDocumentsDirectory();
-      }
-      
-      if (directory != null) {
-        final file = File('${directory.path}/Quotation_${widget.data.quotationNo}.pdf');
-        await file.writeAsBytes(widget.pdfBytes);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to ${Platform.isAndroid ? "Downloads" : "Documents"}: Quotation_${widget.data.quotationNo}.pdf')));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not access storage directory.')));
-      }
+      final helper = FileHelper();
+      await helper.downloadPdf(widget.pdfBytes, 'Quotation_${widget.data.quotationNo}.pdf');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: Quotation_${widget.data.quotationNo}.pdf')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
     }
   }
 
   Future<void> _sharePdf() async {
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/Quotation_${widget.data.quotationNo}.pdf');
-    await file.writeAsBytes(widget.pdfBytes);
-    
-    await Share.shareXFiles([XFile(file.path)], text: 'Here is your quotation ${widget.data.quotationNo}');
-  }
-
-  Future<void> _shareToWhatsApp() async {
-    final message = Uri.encodeComponent("Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from Venkateshwara UPVC.");
-    final url = Uri.parse("whatsapp://send?text=$message");
-    
-    // We launch WhatsApp first to prepare the chat, then we can share the PDF manually.
-    // Standard whatsapp url scheme doesn't support file attachments directly without Share.shareXFiles.
-    // So we will trigger shareXFiles if URL launch succeeds.
-    
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/Quotation_${widget.data.quotationNo}.pdf');
-    await file.writeAsBytes(widget.pdfBytes);
-    
-    try {
-      await Share.shareXFiles([XFile(file.path)], text: "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from Venkateshwara UPVC.");
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not share file directly.')));
+    final text = 'Here is your quotation ${widget.data.quotationNo}';
+    if (kIsWeb) {
+      await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
+    } else {
+      final helper = FileHelper();
+      final dir = await helper.getTempDir();
+      if (dir != null) {
+        await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
+        await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
+      }
     }
   }
 
+  Future<void> _shareToWhatsApp() async {
+    final companyName = Provider.of<AppState>(context, listen: false).companyName;
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.";
+    await _shareViaXFiles(text);
+  }
+
   Future<void> _shareToTelegram() async {
-    final tempDir = await getTemporaryDirectory();
-    final file = File('${tempDir.path}/Quotation_${widget.data.quotationNo}.pdf');
-    await file.writeAsBytes(widget.pdfBytes);
-    
-    try {
-      await Share.shareXFiles([XFile(file.path)], text: "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from Venkateshwara UPVC.");
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not share file directly.')));
+    final companyName = Provider.of<AppState>(context, listen: false).companyName;
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.";
+    await _shareViaXFiles(text);
+  }
+
+  Future<void> _shareViaXFiles(String text) async {
+    if (kIsWeb) {
+      await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
+    } else {
+      final helper = FileHelper();
+      final dir = await helper.getTempDir();
+      if (dir != null) {
+        await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
+        await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
+      }
     }
   }
 
