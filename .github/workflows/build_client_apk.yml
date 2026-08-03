@@ -56,6 +56,52 @@ jobs:
       - name: Build Android Release APK
         run: flutter build apk --release
 
+      - name: Upload APK to Supabase Storage
+        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          SLUG=$(echo "${{ steps.vars.outputs.client_id }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+          echo "slug=${SLUG}" >> $GITHUB_ENV
+          curl -sS -X PUT \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "x-upsert: true" \
+            --data-binary "@build/app/outputs/flutter-apk/app-release.apk" \
+            "${SUPABASE_URL}/storage/v1/object/app-releases/${SLUG}/upvc-quote.apk"
+          echo "Uploaded app-releases/${SLUG}/upvc-quote.apk"
+
+      - name: Publish Download URL to Client Config
+        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLIENT_ID: ${{ steps.vars.outputs.client_id }}
+        run: node -e '
+            const cid = process.env.CLIENT_ID;
+            const slug = cid.toLowerCase().replace(/ /g, "-");
+            const url = process.env.SUPABASE_URL;
+            const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            const dl = `${url}/storage/v1/object/public/app-releases/${slug}/upvc-quote.apk`;
+            const headers = { apikey: key, Authorization: `Bearer ${key}` };
+            (async () => {
+              const r = await fetch(`${url}/rest/v1/clients?id=eq.${encodeURIComponent(cid)}&select=config`, { headers });
+              if (!r.ok) throw new Error("GET clients failed: " + await r.text());
+              const rows = await r.json();
+              if (!rows || !rows.length) throw new Error("client not found: " + cid);
+              const config = { ...(rows[0].config || {}) };
+              config.appDownloadUrl = dl;
+              config.lastBuildCompletedAt = new Date().toISOString();
+              const p = await fetch(`${url}/rest/v1/clients?id=eq.${encodeURIComponent(cid)}`, {
+                method: "PATCH",
+                headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+                body: JSON.stringify({ config })
+              });
+              if (!p.ok) throw new Error("PATCH clients failed: " + await p.text());
+              console.log("Published appDownloadUrl = " + dl);
+            })().catch(e => { console.error(e); process.exit(1); });
+          '
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:

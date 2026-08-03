@@ -374,11 +374,13 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           {/* Pro Mode: Native APK */}
           {(() => {
             const lastTriggered = config.lastBuildTriggeredAt;
+            const lastCompleted = config.lastBuildCompletedAt;
             let isBuilding = false;
             let buildMinutesRemaining = 0;
             if (lastTriggered) {
               const diffMinutes = (Date.now() - new Date(lastTriggered).getTime()) / 60000;
-              if (diffMinutes < 10) {
+              const completedAfterTrigger = !!lastCompleted && new Date(lastCompleted).getTime() >= new Date(lastTriggered).getTime();
+              if (diffMinutes < 10 && !completedAfterTrigger) {
                 isBuilding = true;
                 buildMinutesRemaining = Math.ceil(10 - diffMinutes);
               }
