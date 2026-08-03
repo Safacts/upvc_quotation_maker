@@ -827,21 +827,35 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                     Configure standard products and rates to speed up quote creation.
                   </p>
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={formData.enablePricePresets || false}
-                    onChange={e => {
-                      setFormData({...formData, enablePricePresets: e.target.checked});
-                      if (e.target.checked && (!formData.pricePresets || formData.pricePresets.length === 0)) {
-                         // Add a default template item if they just enabled it
-                         setFormData(prev => ({...prev, enablePricePresets: true, pricePresets: [{ label: "Standard 2-Track Sliding Window", description: "UPVC 2-Track Sliding Window with Clear Glass", rate: 450 }]}));
-                      }
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.enablePricePresets || false}
+                    aria-label="Enable Presets"
+                    onClick={() => {
+                      setFormData(prev => {
+                        const next = !(prev.enablePricePresets || false);
+                        if (next && (!prev.pricePresets || prev.pricePresets.length === 0)) {
+                          return { ...prev, enablePricePresets: true, pricePresets: [{ label: "Standard 2-Track Sliding Window", description: "UPVC 2-Track Sliding Window with Clear Glass", rate: 450 }] };
+                        }
+                        return { ...prev, enablePricePresets: next };
+                      });
                     }}
-                    style={{ width: '18px', height: '18px' }}
-                  />
+                    style={{
+                      width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                      background: formData.enablePricePresets ? 'var(--primary, #2563eb)' : '#cbd5e1',
+                      position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: '2px', left: formData.enablePricePresets ? '22px' : '2px',
+                      width: '20px', height: '20px', borderRadius: '50%', background: '#fff',
+                      transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </button>
                   <span style={{ fontWeight: '600' }}>Enable Presets</span>
-                </label>
+                </div>
               </div>
 
               {formData.enablePricePresets && (
