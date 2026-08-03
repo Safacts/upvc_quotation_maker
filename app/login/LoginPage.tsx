@@ -99,8 +99,30 @@ export default function LoginPage() {
   async function handleGoogleCredential(response: any) {
     setError("");
     try {
-      const payload = JSON.parse(atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      const gEmail = (payload.email || "").trim();
+      if (!response || typeof response !== "object") {
+        throw new Error("no response from Google");
+      }
+      if (response.error) {
+        throw new Error("Google denied the request: " + response.error);
+      }
+      if (!response.credential || typeof response.credential !== "string") {
+        throw new Error("Google did not return a credential");
+      }
+
+      const parts = response.credential.split(".");
+      if (parts.length < 2) {
+        throw new Error("malformed credential");
+      }
+      let payload: any;
+      try {
+        payload = JSON.parse(
+          atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+        );
+      } catch {
+        throw new Error("could not read Google credential");
+      }
+
+      const gEmail = String(payload.email || "").trim();
       if (!gEmail || !payload.email_verified) {
         throw new Error("Google account email is not verified");
       }
