@@ -57,11 +57,14 @@ jobs:
         run: flutter build apk --release
 
       - name: Upload APK to Supabase Storage
-        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "Supabase secrets not configured — skipping storage upload."
+            exit 0
+          fi
           SLUG=$(echo "${{ steps.vars.outputs.client_id }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
           echo "slug=${SLUG}" >> $GITHUB_ENV
           curl -sS -X PUT \
@@ -72,12 +75,16 @@ jobs:
           echo "Uploaded app-releases/${SLUG}/upvc-quote.apk"
 
       - name: Publish Download URL to Client Config
-        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           CLIENT_ID: ${{ steps.vars.outputs.client_id }}
-        run: node -e '
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            echo "Supabase secrets not configured — skipping config publish."
+            exit 0
+          fi
+          node -e '
             const cid = process.env.CLIENT_ID;
             const slug = cid.toLowerCase().replace(/ /g, "-");
             const url = process.env.SUPABASE_URL;
