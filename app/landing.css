@@ -7,6 +7,7 @@
   --bg-light: #f8fafc;
   --card-bg: rgba(255, 255, 255, 0.85);
   --card-border: rgba(255, 255, 255, 0.5);
+  --header-h: 73px;
 }
 
 * {
@@ -24,6 +25,7 @@ body {
 }
 
 /* ── HEADER ── */
+
 header {
   padding: 16px 40px;
   display: flex;
@@ -32,16 +34,17 @@ header {
   position: fixed;
   width: 100%;
   top: 0;
-  z-index: 100;
-  background: rgba(248, 250, 252, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  z-index: 1000;
+  background: rgba(248, 250, 252, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   transition: box-shadow 0.3s;
+  height: var(--header-h);
 }
 
 header.scrolled {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .logo-container {
@@ -128,6 +131,7 @@ nav a:hover {
 .hamburger {
   display: none;
   flex-direction: column;
+  justify-content: center;
   gap: 5px;
   cursor: pointer;
   padding: 8px;
@@ -135,6 +139,8 @@ nav a:hover {
   border: none;
   background: transparent;
   transition: background 0.2s;
+  /* Always stay at the right edge on mobile */
+  margin-left: auto;
 }
 
 .hamburger:hover {
@@ -144,81 +150,101 @@ nav a:hover {
 .hamburger span {
   display: block;
   width: 22px;
-  height: 2px;
+  height: 2.5px;
   background: var(--text-dark);
   border-radius: 2px;
-  transition: all 0.3s;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center;
 }
 
 .hamburger.open span:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
+  transform: translateY(7.5px) rotate(45deg);
 }
 .hamburger.open span:nth-child(2) {
   opacity: 0;
+  transform: scaleX(0);
 }
 .hamburger.open span:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
+  transform: translateY(-7.5px) rotate(-45deg);
 }
 
-/* Mobile Nav Drawer */
+/* ── Mobile Nav Drawer ── */
 .mobile-nav {
   display: none;
   position: fixed;
-  top: 73px;
+  /* Align flush under the header using CSS var */
+  top: var(--header-h);
   left: 0;
   right: 0;
-  background: white;
-  padding: 20px 24px 28px;
+  /* Fully opaque — no bleed-through from page content */
+  background: #ffffff;
+  padding: 8px 20px 24px;
   flex-direction: column;
-  gap: 4px;
-  z-index: 99;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  gap: 0;
+  z-index: 999;
   border-top: 1px solid #e2e8f0;
-  animation: slideDown 0.25s ease;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  animation: slideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .mobile-nav.open {
   display: flex;
 }
 
+/* Regular links in mobile nav */
 .mobile-nav a {
   text-decoration: none;
   color: var(--text-dark);
   font-weight: 600;
   font-size: 16px;
-  padding: 14px 0;
+  padding: 15px 4px;
   border-bottom: 1px solid #f1f5f9;
-  transition: color 0.2s;
+  transition: color 0.2s, padding-left 0.2s;
+  display: block;
 }
 
-.mobile-nav a:hover {
+/* Only plain nav links get the indent-on-hover effect, not buttons */
+.mobile-nav a:not(.btn-nav-login):not(.btn-nav-webapp):hover {
+  color: #6366f1;
+  padding-left: 8px;
+}
+
+.mobile-nav .btn-nav-login:hover,
+.mobile-nav .btn-nav-webapp:hover {
   color: #6366f1;
 }
 
-.mobile-nav a:last-child {
+/* Only plain links (not buttons) get the bottom separator */
+.mobile-nav a:not(.btn-nav-login):not(.btn-nav-webapp):last-of-type {
   border-bottom: none;
 }
 
+/* "Portal Login" button */
 .mobile-nav .btn-nav-login {
-  margin-top: 12px;
+  margin-top: 16px;
   text-align: center;
-  padding: 14px 22px;
+  padding: 15px 22px;
   border-radius: 14px;
-  border-bottom: none;
+  border-bottom: none !important;
   -webkit-text-fill-color: white !important;
+  display: block;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
 }
 
+/* "Open Web App" button */
 .mobile-nav .btn-nav-webapp {
+  margin-top: 10px;
   text-align: center;
-  padding: 14px 22px;
+  padding: 15px 22px;
   border-radius: 14px;
-  border-bottom: none;
+  border-bottom: none !important;
   -webkit-text-fill-color: #6366f1 !important;
+  display: block;
 }
 
 /* ── HERO SECTION ── */
@@ -418,7 +444,8 @@ footer {
   }
 
   .hero {
-    padding: 90px 20px 50px;
+    /* Use CSS var so top padding always clears the fixed header */
+    padding: calc(var(--header-h) + 28px) 20px 52px;
     min-height: 100svh;
   }
 
@@ -438,29 +465,41 @@ footer {
     justify-content: center;
     font-size: 16px;
     padding: 16px 20px;
+    /* Allow text to wrap on very small screens */
+    white-space: normal;
+    text-align: center;
+  }
+
+  .section-title {
+    margin-bottom: 32px;
   }
 
   .features {
-    padding: 60px 16px;
+    padding: 56px 16px;
   }
 
   .features-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
   }
 
   .feature-card {
-    padding: 28px 22px;
+    padding: 26px 20px;
     border-radius: 18px;
+    /* Disable costly backdrop-filter on mobile */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: #ffffff;
   }
 
   .docs {
-    padding: 60px 16px;
+    padding: 56px 16px;
   }
 
   .doc-step {
     padding: 22px 18px;
     border-radius: 16px;
+    margin-bottom: 16px;
   }
 }
 
