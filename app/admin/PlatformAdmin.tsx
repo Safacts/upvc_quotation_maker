@@ -29,6 +29,8 @@ interface FilePayload {
 interface EditorForm {
   id: string;
   logoUrl: string;
+  invoiceTopLogoUrl: string;
+  invoiceBackgroundLogoUrl: string;
   companyName: string;
   appName: string;
   address: string;
@@ -65,6 +67,8 @@ function defaultForm(): EditorForm {
   return {
     id: "",
     logoUrl: "",
+    invoiceTopLogoUrl: "",
+    invoiceBackgroundLogoUrl: "",
     companyName: "",
     appName: "",
     address: "",
@@ -207,21 +211,29 @@ export default function PlatformAdmin() {
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
   const [form, setForm] = useState<EditorForm>(defaultForm());
   const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
   const [selectedHeroFile, setSelectedHeroFile] = useState<File | null>(null);
+  const [selectedInvoiceTopFile, setSelectedInvoiceTopFile] = useState<File | null>(null);
+  const [selectedInvoiceBgFile, setSelectedInvoiceBgFile] = useState<File | null>(null);
   const [logoPreviewSrc, setLogoPreviewSrc] = useState<string | null>(null);
   const [heroPreviewSrc, setHeroPreviewSrc] = useState<string | null>(null);
+  const [invoiceTopPreviewSrc, setInvoiceTopPreviewSrc] = useState<string | null>(null);
+  const [invoiceBgPreviewSrc, setInvoiceBgPreviewSrc] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
+  const invoiceTopFileRef = useRef<HTMLInputElement>(null);
+  const invoiceBgFileRef = useRef<HTMLInputElement>(null);
 
   function showToast(msg: string, type: string) {
     setToast({ msg, type });
@@ -320,6 +332,8 @@ export default function PlatformAdmin() {
     return {
       id: client ? client.id : "",
       logoUrl: config.logoUrl || "",
+      invoiceTopLogoUrl: config.invoiceTopLogoUrl || "",
+      invoiceBackgroundLogoUrl: config.invoiceBackgroundLogoUrl || "",
       companyName: config.companyName || "",
       appName: config.appName || "",
       address: config.companyAddress || "",
@@ -361,16 +375,25 @@ export default function PlatformAdmin() {
     setEditorOpen(true);
     setEditingClient(client);
     setSelectedLogoFile(null);
+    setSelectedHeroFile(null);
+    setSelectedInvoiceTopFile(null);
+    setSelectedInvoiceBgFile(null);
+    setActiveTab(0);
     const config = client ? client.config || {} : {};
     setForm(formFromClient(client));
     setLogoPreviewSrc(config.logoUrl || null);
     setHeroPreviewSrc(config.landingHeroImage || null);
+    setInvoiceTopPreviewSrc(config.invoiceTopLogoUrl || null);
+    setInvoiceBgPreviewSrc(config.invoiceBackgroundLogoUrl || null);
     if (logoFileRef.current) logoFileRef.current.value = "";
     if (heroFileRef.current) heroFileRef.current.value = "";
+    if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = "";
+    if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = "";
   }
 
   function closeEditor() {
     setEditorOpen(false);
+    setEditingClient(null);
   }
 
   function setF(key: keyof EditorForm, value: any) {
@@ -423,6 +446,52 @@ export default function PlatformAdmin() {
     }
   }
 
+  async function handleInvoiceTopFileSelected(file: File) {
+    const resized = await resizeImage(file, 512);
+    setSelectedInvoiceTopFile(resized);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setInvoiceTopPreviewSrc(e.target?.result as string);
+      setF("invoiceTopLogoUrl", "");
+    };
+    reader.readAsDataURL(resized);
+  }
+
+  function onInvoiceTopUrlChange(value: string) {
+    const url = value.trim();
+    setF("invoiceTopLogoUrl", value);
+    if (url) {
+      setInvoiceTopPreviewSrc(url);
+      if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = "";
+      setSelectedInvoiceTopFile(null);
+    } else {
+      setInvoiceTopPreviewSrc(null);
+    }
+  }
+
+  async function handleInvoiceBgFileSelected(file: File) {
+    const resized = await resizeImage(file, 512);
+    setSelectedInvoiceBgFile(resized);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setInvoiceBgPreviewSrc(e.target?.result as string);
+      setF("invoiceBackgroundLogoUrl", "");
+    };
+    reader.readAsDataURL(resized);
+  }
+
+  function onInvoiceBgUrlChange(value: string) {
+    const url = value.trim();
+    setF("invoiceBackgroundLogoUrl", value);
+    if (url) {
+      setInvoiceBgPreviewSrc(url);
+      if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = "";
+      setSelectedInvoiceBgFile(null);
+    } else {
+      setInvoiceBgPreviewSrc(null);
+    }
+  }
+
   async function saveClient(e: React.FormEvent) {
     e.preventDefault();
     const isEdit = !!editingClient;
@@ -443,8 +512,20 @@ export default function PlatformAdmin() {
       heroFile = await readFileAsBase64(selectedHeroFile);
     }
 
+    let invoiceTopFile: FilePayload | null = null;
+    if (selectedInvoiceTopFile) {
+      invoiceTopFile = await readFileAsBase64(selectedInvoiceTopFile);
+    }
+
+    let invoiceBgFile: FilePayload | null = null;
+    if (selectedInvoiceBgFile) {
+      invoiceBgFile = await readFileAsBase64(selectedInvoiceBgFile);
+    }
+
     const config: Record<string, any> = {
       logoUrl,
+      invoiceTopLogoUrl: form.invoiceTopLogoUrl.trim() || null,
+      invoiceBackgroundLogoUrl: form.invoiceBackgroundLogoUrl.trim() || null,
       appName: form.appName.trim(),
       companyName: form.companyName.trim(),
       companyAddress: form.address.trim(),
@@ -510,6 +591,8 @@ export default function PlatformAdmin() {
       if (portalPasswordHash) body.portal_password_hash = portalPasswordHash;
       if (logoFile) body.logoFile = logoFile;
       if (heroFile) body.heroFile = heroFile;
+      if (invoiceTopFile) body.invoiceTopLogoFile = invoiceTopFile;
+      if (invoiceBgFile) body.invoiceBgLogoFile = invoiceBgFile;
       if (sendWelcome) body.send_welcome = true;
       if (sendWelcome && tempPassword) body.temp_password = tempPassword;
 
@@ -574,396 +657,508 @@ export default function PlatformAdmin() {
   }
 
   if (!ready) {
-    return <div id="loginView" className="hidden"></div>;
+    return <div className="admin-loading">Loading admin panel...</div>;
   }
+
+  const filteredClients = clients.filter((c) => {
+    const q = searchQuery.toLowerCase();
+    if (!q) return true;
+    const name = (c.config?.companyName || c.id).toLowerCase();
+    return name.includes(q) || c.id.toLowerCase().includes(q);
+  });
+
+  const activeCount = clients.filter((c) => c.is_active).length;
+  const inactiveCount = clients.filter((c) => !c.is_active).length;
+
+  const TABS = ["Company Info", "Auth & Security", "Billing", "Market Website", "System"];
+
+  const selectedClientConfig = editingClient?.config || {};
 
   return (
     <>
       {toast && (
-        <div id="toast" className={`toast ${toast.type}`} style={{ display: "block" }}>
+        <div className={`toast ${toast.type}`}>
+          <span>{toast.type === "success" ? "✓" : "✕"}</span>
           {toast.msg}
         </div>
       )}
 
-      <div id="dashboardView">
-        <div className="header">
-          <h2>Admin Panel</h2>
-          <div>
-            <span id="adminEmail" style={{ color: "#64748b", fontSize: 14, marginRight: 16 }}>
-              {currentUser}
-              {isCustomer ? " (customer)" : ""}
-            </span>
-            <Link
-              href="/dashboard"
-              className="secondary"
-              style={{
-                textDecoration: "none",
-                padding: "12px 24px",
-                background: "#e2e8f0",
-                color: "#475569",
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              Quotation Logs
-            </Link>
-            <button className="secondary" onClick={handleLogout}>
-              Logout
-            </button>
+      <div className="admin-shell">
+        {/* ─── SIDEBAR ─────────────────────────────────── */}
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar-header">
+            <div className="admin-brand">
+              <div className="admin-brand-icon">V</div>
+              <div className="admin-brand-text">
+                <h2>vitharn upvc</h2>
+                <span>Admin Panel</span>
+              </div>
+            </div>
+            <div className="admin-search">
+              <span className="admin-search-icon">⌕</span>
+              <input
+                type="text"
+                placeholder="Search clients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-        <div className="admin-container">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h2 style={{ fontSize: 20 }}>Clients</h2>
-            {!isCustomer && <button onClick={() => openEditor(null)}>+ Add Client</button>}
-          </div>
-          <div id="clientsList" className="card">
-            {clientsLoading && <p style={{ color: "#94a3b8" }}>Loading...</p>}
-            {!clientsLoading && clientsError && <p style={{ color: "#ef4444" }}>Error: {clientsError}</p>}
-            {!clientsLoading && !clientsError && clients.length === 0 && (
-              <p style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>
-                No clients yet. Click &quot;+ Add Client&quot; to create one.
-              </p>
+
+          <div className="admin-client-list">
+            {clientsLoading && <div className="empty-list">Loading...</div>}
+            {!clientsLoading && clientsError && <div className="empty-list" style={{ color: "#ef4444" }}>{clientsError}</div>}
+            {!clientsLoading && !clientsError && filteredClients.length === 0 && (
+              <div className="empty-list">No clients found.</div>
             )}
-            {clients.map((client) => {
+            {filteredClients.length > 0 && (
+              <div className="client-list-section-label">All Clients ({filteredClients.length})</div>
+            )}
+            {filteredClients.map((client) => {
               const config = client.config || {};
               const isActive = client.is_active;
               const trialDate = client.trial_expires_at ? new Date(client.trial_expires_at) : null;
               const trialExpired = !!trialDate && new Date() > trialDate;
+              const isSelected = editingClient?.id === client.id;
+              const initials = (config.companyName || client.id).slice(0, 2).toUpperCase();
               return (
-                <div key={client.id} className="client-item" onClick={() => openEditor(client)}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      {config.logoUrl && (
-                        <img
-                          src={config.logoUrl}
-                          alt=""
-                          style={{ height: 28, width: 28, borderRadius: 6, objectFit: "cover" }}
-                        />
-                      )}
-                      <strong style={{ fontSize: 15 }}>{config.companyName || client.id}</strong>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
-                      {client.id}
-                      {config.appName ? " — " + config.appName : ""}
-                    </div>
-                    <ClientLinks id={client.id} config={client.config} />
-                    <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <span className={`badge ${isActive ? "active" : "inactive"}`}>
-                        {isActive ? "Active" : "Inactive"}
-                      </span>
-                      {trialExpired && <span className="badge trial">Trial Expired</span>}
-                    </div>
+                <div
+                  key={client.id}
+                  className={`client-card${isSelected ? " active" : ""}`}
+                  onClick={() => openEditor(client)}
+                >
+                  <div className="client-avatar">
+                    {config.logoUrl
+                      ? <img src={config.logoUrl} alt="" />
+                      : initials
+                    }
                   </div>
-                  <span style={{ color: "#6366f1", fontSize: 13 }}>Edit →</span>
+                  <div className="client-card-info">
+                    <div className="client-card-name">{config.companyName || client.id}</div>
+                    <div className="client-card-id">{client.id}</div>
+                  </div>
+                  <div className={`client-status-dot ${isActive ? (trialExpired ? "trial" : "active") : "inactive"}`} />
                 </div>
               );
             })}
           </div>
-        </div>
-      </div>
 
-      {editorOpen && (
-        <div
-          className="modal"
-          style={{ display: "block" }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeEditor();
-          }}
-        >
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{editingClient ? "Edit Client" : "New Client"}</h3>
-              <span className="close" onClick={closeEditor}>
-                &times;
-              </span>
+          <div className="admin-sidebar-footer">
+            {!isCustomer && (
+              <button className="add-client-btn" onClick={() => openEditor(null)}>
+                <span>+</span> New Client
+              </button>
+            )}
+            <div className="sidebar-meta">
+              <span className="sidebar-user">{currentUser}{isCustomer ? " (customer)" : ""}</span>
+              <button className="sidebar-logout" onClick={handleLogout}>Sign out</button>
             </div>
-            <form onSubmit={saveClient}>
-              <label>Client ID</label>
-              <input
-                type="text"
-                value={form.id}
-                disabled={!!editingClient}
-                placeholder="e.g. client_b"
-                onChange={(e) => setF("id", e.target.value)}
-              />
+          </div>
+        </aside>
 
-              {editingClient && (
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    padding: 12,
-                    marginBottom: 12,
-                  }}
-                >
-                  <label style={{ marginBottom: 8 }}>Client Links</label>
-                  <ClientLinks id={editingClient.id} config={editingClient.config} />
+        {/* ─── MAIN PANEL ──────────────────────────────── */}
+        <main className="admin-main">
+          {!editorOpen ? (
+            <div className="admin-welcome">
+              <div className="admin-welcome-icon">🏢</div>
+              <h2>Welcome back!</h2>
+              <p>Select a client from the sidebar to edit their configuration, or create a new client.</p>
+              <div className="admin-stats">
+                <div className="admin-stat-card">
+                  <div className="num">{clients.length}</div>
+                  <div className="lbl">Total Clients</div>
                 </div>
-              )}
+                <div className="admin-stat-card">
+                  <div className="num" style={{ color: "#22c55e" }}>{activeCount}</div>
+                  <div className="lbl">Active</div>
+                </div>
+                <div className="admin-stat-card">
+                  <div className="num" style={{ color: "#ef4444" }}>{inactiveCount}</div>
+                  <div className="lbl">Inactive</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form className="admin-editor" onSubmit={saveClient}>
+              {/* Editor Header */}
+              <div className="admin-editor-header">
+                <div className="editor-client-info">
+                  <div className="editor-client-logo">
+                    {logoPreviewSrc
+                      ? <img src={logoPreviewSrc} alt="" />
+                      : (form.companyName || editingClient?.id || "N").slice(0, 1).toUpperCase()
+                    }
+                  </div>
+                  <div className="editor-client-meta">
+                    <h2>{form.companyName || (editingClient ? editingClient.id : "New Client")}</h2>
+                    <div className="editor-client-desc">
+                      {editingClient ? (
+                        <>
+                          {editingClient.id} &nbsp;·&nbsp;
+                          <ClientLinks id={editingClient.id} config={editingClient.config} />
+                        </>
+                      ) : "Fill in the details below"}
+                    </div>
+                  </div>
+                  <div className="editor-client-actions">
+                    <span className={`badge ${form.active ? "active" : "inactive"}`}>
+                      {form.active ? "Active" : "Inactive"}
+                    </span>
+                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}>✕ Close</button>
+                  </div>
+                </div>
 
-              <label>Logo</label>
-              <div className="upload-area">
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={logoFileRef}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleLogoFileSelected(f);
-                  }}
-                />
-                {logoPreviewSrc && <img className="logo-preview" src={logoPreviewSrc} alt="" />}
-              </div>
-              <label>Or Logo URL</label>
-              <input
-                type="text"
-                value={form.logoUrl}
-                placeholder="https://example.com/logo.png"
-                onChange={(e) => onLogoUrlChange(e.target.value)}
-              />
-
-              <div className="grid-2">
-                <div>
-                  <label>Company Name</label>
-                  <input type="text" value={form.companyName} onChange={(e) => setF("companyName", e.target.value)} />
-                </div>
-                <div>
-                  <label>App Name</label>
-                  <input type="text" value={form.appName} onChange={(e) => setF("appName", e.target.value)} />
-                </div>
-              </div>
-              <label>Address</label>
-              <input type="text" value={form.address} onChange={(e) => setF("address", e.target.value)} />
-              <div className="grid-2">
-                <div>
-                  <label>Contact</label>
-                  <input type="text" value={form.contact} onChange={(e) => setF("contact", e.target.value)} />
-                </div>
-                <div>
-                  <label>Email</label>
-                  <input type="email" value={form.email} onChange={(e) => setF("email", e.target.value)} />
-                </div>
-              </div>
-              <label>Portal Password (for customer login)</label>
-              <input
-                type="password"
-                value={form.portalPassword}
-                placeholder="Leave blank to keep current"
-                autoComplete="new-password"
-                onChange={(e) => setF("portalPassword", e.target.value)}
-              />
-              <label>New Client Temporary Password</label>
-              <input
-                type="password"
-                value={form.tempPassword}
-                placeholder="Temporary password for welcome email (new clients)"
-                autoComplete="new-password"
-                onChange={(e) => setF("tempPassword", e.target.value)}
-              />
-              <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={form.sendWelcome}
-                  style={{ width: "auto", margin: 0 }}
-                  onChange={(e) => setF("sendWelcome", e.target.checked)}
-                />
-                Send welcome email with login details &amp; links
-              </label>
-              <div className="grid-2">
-                <div>
-                  <label>Proprietor</label>
-                  <input type="text" value={form.proprietor} onChange={(e) => setF("proprietor", e.target.value)} />
-                </div>
-                <div>
-                  <label>GST Number</label>
-                  <input type="text" value={form.gst} onChange={(e) => setF("gst", e.target.value)} />
-                </div>
-              </div>
-              <div className="grid-2">
-                <div>
-                  <label>Bank Name</label>
-                  <input type="text" value={form.bankName} onChange={(e) => setF("bankName", e.target.value)} />
-                </div>
-                <div>
-                  <label>Branch</label>
-                  <input type="text" value={form.bankBranch} onChange={(e) => setF("bankBranch", e.target.value)} />
-                </div>
-              </div>
-              <div className="grid-2">
-                <div>
-                  <label>Account No</label>
-                  <input type="text" value={form.account} onChange={(e) => setF("account", e.target.value)} />
-                </div>
-                <div>
-                  <label>IFSC Code</label>
-                  <input type="text" value={form.ifsc} onChange={(e) => setF("ifsc", e.target.value)} />
-                </div>
-              </div>
-              <div className="grid-2">
-                <div>
-                  <label>Quote Prefix</label>
-                  <input type="text" value={form.prefix} onChange={(e) => setF("prefix", e.target.value)} />
-                </div>
-                <div>
-                  <label>Trial Days (0 = no trial)</label>
-                  <input
-                    type="number"
-                    value={form.trialDays}
-                    onChange={(e) => setF("trialDays", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid-2">
-                <div>
-                  <label>Primary Color</label>
-                  <input
-                    type="color"
-                    value={form.primaryColor}
-                    onChange={(e) => setF("primaryColor", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label>Accent Color</label>
-                  <input
-                    type="color"
-                    value={form.accentColor}
-                    onChange={(e) => setF("accentColor", e.target.value)}
-                  />
+                {/* Tabs */}
+                <div className="admin-tabs">
+                  {TABS.map((tab, i) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      className={`admin-tab${activeTab === i ? " active" : ""}`}
+                      onClick={() => setActiveTab(i)}
+                    >
+                      {tab}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "20px 0" }} />
-              <h3 style={{ fontSize: 16, marginBottom: 12 }}>
-                Business Website (for the shop owner&apos;s customers)
-              </h3>
+              {/* Tab Bodies */}
+              <div className="admin-editor-body">
 
-              <label>Business Name</label>
-              <input
-                type="text"
-                value={form.heroTitle}
-                placeholder="e.g. Venkateshwara UPVC Windows & Doors"
-                onChange={(e) => setF("heroTitle", e.target.value)}
-              />
-              <label>Tagline</label>
-              <input
-                type="text"
-                value={form.heroSubtitle}
-                placeholder="e.g. Quality UPVC solutions for your home"
-                onChange={(e) => setF("heroSubtitle", e.target.value)}
-              />
-              <label>Hero Banner Image URL</label>
-              <input
-                type="text"
-                value={form.heroImage}
-                placeholder="https://example.com/hero.jpg"
-                onChange={(e) => onHeroImageUrlChange(e.target.value)}
-              />
-              <div className="upload-area">
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={heroFileRef}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleHeroFileSelected(f);
-                  }}
-                />
-                {heroPreviewSrc && (
-                  <img className="logo-preview" src={heroPreviewSrc} alt="" style={{ maxHeight: 120 }} />
+                {/* ── TAB 0: Company Info ── */}
+                {activeTab === 0 && (
+                  <>
+                    <div className="form-section">
+                      <div className="form-section-title">Identity</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Client ID {editingClient && <span style={{ color: "#94a3b8", fontWeight: 400 }}>(cannot be changed)</span>}</label>
+                        <input
+                          type="text"
+                          value={form.id}
+                          disabled={!!editingClient}
+                          placeholder="e.g. venkateshwara"
+                          onChange={(e) => setF("id", e.target.value)}
+                        />
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Company Name</label>
+                          <input type="text" value={form.companyName} onChange={(e) => setF("companyName", e.target.value)} placeholder="e.g. Venkateshwara UPVC" />
+                        </div>
+                        <div className="form-group">
+                          <label>App Name</label>
+                          <input type="text" value={form.appName} onChange={(e) => setF("appName", e.target.value)} placeholder="e.g. Venkateshwara App" />
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Address</label>
+                        <input type="text" value={form.address} onChange={(e) => setF("address", e.target.value)} placeholder="Full business address" />
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Contact Number</label>
+                          <input type="text" value={form.contact} onChange={(e) => setF("contact", e.target.value)} placeholder="9876543210" />
+                        </div>
+                        <div className="form-group">
+                          <label>Email Address</label>
+                          <input type="email" value={form.email} onChange={(e) => setF("email", e.target.value)} placeholder="owner@example.com" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-section">
+                      <div className="form-section-title">Branding</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Company Logo</label>
+                        <div className="upload-row">
+                          <label className="upload-btn-label">
+                            <span>📁</span> Upload Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={logoFileRef}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleLogoFileSelected(f);
+                              }}
+                            />
+                          </label>
+                          {logoPreviewSrc && <img className="upload-preview" src={logoPreviewSrc} alt="" />}
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Or paste Logo URL</label>
+                        <input type="url" value={form.logoUrl} placeholder="https://example.com/logo.png" onChange={(e) => onLogoUrlChange(e.target.value)} />
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Primary Color</label>
+                          <input type="color" value={form.primaryColor} onChange={(e) => setF("primaryColor", e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label>Accent Color</label>
+                          <input type="color" value={form.accentColor} onChange={(e) => setF("accentColor", e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-section">
+                      <div className="form-section-title">PDF / Invoice Branding</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Invoice Top Logo</label>
+                        <div className="upload-row">
+                          <label className="upload-btn-label">
+                            <span>📁</span> Upload Top Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={invoiceTopFileRef}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleInvoiceTopFileSelected(f);
+                              }}
+                            />
+                          </label>
+                          {invoiceTopPreviewSrc && <img className="upload-preview" src={invoiceTopPreviewSrc} alt="" />}
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Or paste Invoice Top Logo URL</label>
+                        <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Invoice Background Watermark Logo</label>
+                        <div className="upload-row">
+                          <label className="upload-btn-label">
+                            <span>📁</span> Upload Background Logo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              ref={invoiceBgFileRef}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handleInvoiceBgFileSelected(f);
+                              }}
+                            />
+                          </label>
+                          {invoiceBgPreviewSrc && <img className="upload-preview" src={invoiceBgPreviewSrc} alt="" />}
+                        </div>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Or paste Invoice Background Logo URL</label>
+                        <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} />
+                      </div>
+                    </div>
+                  </>
                 )}
+
+                {/* ── TAB 1: Auth & Security ── */}
+                {activeTab === 1 && (
+                  <>
+                    <div className="form-section">
+                      <div className="form-section-title">Portal Access</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Portal Password <span style={{ color: "#94a3b8", fontWeight: 400 }}>(leave blank to keep current)</span></label>
+                        <input
+                          type="password"
+                          value={form.portalPassword}
+                          placeholder="Set a new password…"
+                          autoComplete="new-password"
+                          onChange={(e) => setF("portalPassword", e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Temporary Password for Welcome Email</label>
+                        <input
+                          type="password"
+                          value={form.tempPassword}
+                          placeholder="One-time password shown in welcome email"
+                          autoComplete="new-password"
+                          onChange={(e) => setF("tempPassword", e.target.value)}
+                        />
+                      </div>
+                      <label className="form-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={form.sendWelcome}
+                          onChange={(e) => setF("sendWelcome", e.target.checked)}
+                        />
+                        Send welcome email with login details &amp; portal links
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {/* ── TAB 2: Billing ── */}
+                {activeTab === 2 && (
+                  <>
+                    <div className="form-section">
+                      <div className="form-section-title">Business Details</div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Proprietor Name</label>
+                          <input type="text" value={form.proprietor} onChange={(e) => setF("proprietor", e.target.value)} placeholder="Owner full name" />
+                        </div>
+                        <div className="form-group">
+                          <label>GST Number</label>
+                          <input type="text" value={form.gst} onChange={(e) => setF("gst", e.target.value)} placeholder="36XXXXX0000X0XX" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="form-section-title">Bank Details</div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Bank Name</label>
+                          <input type="text" value={form.bankName} onChange={(e) => setF("bankName", e.target.value)} placeholder="e.g. Union Bank" />
+                        </div>
+                        <div className="form-group">
+                          <label>Branch</label>
+                          <input type="text" value={form.bankBranch} onChange={(e) => setF("bankBranch", e.target.value)} placeholder="e.g. Hastinapuram" />
+                        </div>
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Account Number</label>
+                          <input type="text" value={form.account} onChange={(e) => setF("account", e.target.value)} placeholder="178511100000061" />
+                        </div>
+                        <div className="form-group">
+                          <label>IFSC Code</label>
+                          <input type="text" value={form.ifsc} onChange={(e) => setF("ifsc", e.target.value)} placeholder="UBIN0817856" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="form-section-title">Quotation Settings</div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Quote Prefix</label>
+                          <input type="text" value={form.prefix} onChange={(e) => setF("prefix", e.target.value)} placeholder="e.g. JVUPVC" />
+                        </div>
+                        <div className="form-group">
+                          <label>Trial Period (days, 0 = none)</label>
+                          <input type="number" value={form.trialDays} onChange={(e) => setF("trialDays", e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ── TAB 3: Market Website ── */}
+                {activeTab === 3 && (
+                  <>
+                    <div className="form-section">
+                      <div className="form-section-title">Hero Section</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Business Name (Hero Title)</label>
+                        <input type="text" value={form.heroTitle} placeholder="e.g. Venkateshwara UPVC Windows & Doors" onChange={(e) => setF("heroTitle", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Tagline (Hero Subtitle)</label>
+                        <input type="text" value={form.heroSubtitle} placeholder="e.g. Quality UPVC solutions for your home" onChange={(e) => setF("heroSubtitle", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Hero Banner Image URL</label>
+                        <input type="url" value={form.heroImage} placeholder="https://example.com/hero.jpg" onChange={(e) => onHeroImageUrlChange(e.target.value)} />
+                      </div>
+                      <label className="upload-btn-label" style={{ display: "inline-flex", marginBottom: 12 }}>
+                        <span>📁</span> Upload Hero Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={heroFileRef}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleHeroFileSelected(f);
+                          }}
+                        />
+                      </label>
+                      {heroPreviewSrc && <img className="upload-preview-hero" src={heroPreviewSrc} alt="" />}
+                    </div>
+                    <div className="form-section">
+                      <div className="form-section-title">Content</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Services Offered <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <input type="text" value={form.services} placeholder="UPVC Windows, UPVC Doors, Glass Installation" onChange={(e) => setF("services", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>About Title</label>
+                        <input type="text" value={form.aboutTitle} placeholder="e.g. About Venkateshwara UPVC" onChange={(e) => setF("aboutTitle", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>About Text</label>
+                        <textarea value={form.aboutText} rows={4} placeholder="Tell customers about your business..." onChange={(e) => setF("aboutText", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Portfolio Images <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma-separated URLs)</span></label>
+                        <textarea value={form.gallery} rows={3} placeholder="https://example.com/photo1.jpg, https://example.com/photo2.jpg" onChange={(e) => setF("gallery", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>Google Maps Embed URL</label>
+                        <input type="url" value={form.mapUrl} placeholder="https://maps.google.com/maps?embed=..." onChange={(e) => setF("mapUrl", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label>Customer Reviews <span style={{ color: "#94a3b8", fontWeight: 400 }}>(JSON array)</span></label>
+                        <textarea value={form.testimonials} rows={4} placeholder={JSON.stringify([{ name: "Customer", text: "Great service!", role: "Homeowner" }], null, 2)} onChange={(e) => setF("testimonials", e.target.value)} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ── TAB 4: System ── */}
+                {activeTab === 4 && (
+                  <>
+                    <div className="form-section">
+                      <div className="form-section-title">Portal UI</div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label>Login Button Text</label>
+                          <input type="text" value={form.cta} placeholder="e.g. Login" onChange={(e) => setF("cta", e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label>Footer Text</label>
+                          <input type="text" value={form.footer} placeholder="e.g. Powered by Vitharn Technologies" onChange={(e) => setF("footer", e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="form-section-title">Account Status</div>
+                      <label className="form-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={form.active}
+                          onChange={(e) => setF("active", e.target.checked)}
+                        />
+                        <span><strong>Account is Active</strong> — uncheck to disable this client's access</span>
+                      </label>
+                    </div>
+                  </>
+                )}
+
               </div>
 
-              <label>Services Offered (comma-separated)</label>
-              <input
-                type="text"
-                value={form.services}
-                placeholder="e.g. UPVC Windows, UPVC Doors, Glass Installation, Repairs"
-                onChange={(e) => setF("services", e.target.value)}
-              />
-
-              <label>About Section Title</label>
-              <input
-                type="text"
-                value={form.aboutTitle}
-                placeholder="e.g. About Venkateshwara UPVC"
-                onChange={(e) => setF("aboutTitle", e.target.value)}
-              />
-              <label>About Section Text</label>
-              <textarea
-                rows={3}
-                value={form.aboutText}
-                placeholder="Tell customers about your business..."
-                onChange={(e) => setF("aboutText", e.target.value)}
-              />
-
-              <label>Portfolio Images (URLs, comma-separated)</label>
-              <input
-                type="text"
-                value={form.gallery}
-                placeholder="https://example.com/photo1.jpg, https://example.com/photo2.jpg"
-                onChange={(e) => setF("gallery", e.target.value)}
-              />
-
-              <label>Google Maps Embed URL</label>
-              <input
-                type="text"
-                value={form.mapUrl}
-                placeholder="https://maps.google.com/maps?embed=..."
-                onChange={(e) => setF("mapUrl", e.target.value)}
-              />
-
-              <label>Customer Reviews (JSON array)</label>
-              <textarea
-                rows={3}
-                value={form.testimonials}
-                placeholder={JSON.stringify([{ name: "Customer", text: "Great service!", role: "Homeowner" }])}
-                onChange={(e) => setF("testimonials", e.target.value)}
-              />
-
-              <label>Login Button Text</label>
-              <input
-                type="text"
-                value={form.cta}
-                placeholder="e.g. Login"
-                onChange={(e) => setF("cta", e.target.value)}
-              />
-
-              <label>Footer Text</label>
-              <input
-                type="text"
-                value={form.footer}
-                placeholder="e.g. Powered by Vitharn Technologies"
-                onChange={(e) => setF("footer", e.target.value)}
-              />
-              <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 16 }}>
-                <label style={{ margin: 0 }}>Active:</label>
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  style={{ width: "auto", margin: 0 }}
-                  onChange={(e) => setF("active", e.target.checked)}
-                />
-              </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <button type="submit" disabled={!!busy}>
-                  {busy || "Save"}
-                </button>
-                <button type="button" className="secondary" onClick={closeEditor}>
-                  Cancel
+              {/* Editor Footer */}
+              <div className="editor-footer">
+                <button type="submit" className="btn-primary" disabled={!!busy}>
+                  {busy ? busy : "💾 Save Changes"}
                 </button>
                 {editingClient && !isCustomer && (
-                  <button type="button" className="danger" onClick={deleteClient}>
-                    Delete
+                  <button type="button" className="btn-danger" onClick={deleteClient}>
+                    🗑 Delete Client
                   </button>
                 )}
+                <div style={{ flex: 1 }} />
+                <button type="button" className="btn-secondary" onClick={closeEditor}>
+                  Cancel
+                </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          )}
+        </main>
+      </div>
     </>
   );
 }
+
+

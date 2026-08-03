@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import UmamiTracker from "./UmamiTracker";
+import UmamiClickTracker from "./UmamiClickTracker";
 
 export const metadata: Metadata = {
   title: "vitharn upvc — Quotation & Business Management Portal",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         {children}
         <UmamiTracker />
+        <UmamiClickTracker />
       </body>
     </html>
   );

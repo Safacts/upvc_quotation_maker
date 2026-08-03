@@ -95,14 +95,15 @@ export default function Home() {
             onError={(e) => {
               e.currentTarget.src = "https://placehold.co/100";
             }}
-            alt="Vitharn UPVC Quotation Maker"
+            alt="vitharn upvc"
           />
-          <span className="logo-text">Vitharn UPVC</span>
+          <span className="logo-text">vitharn upvc</span>
         </div>
 
         {/* Desktop Nav */}
         <nav>
           <a href="#features">Features</a>
+          <a href="#app-purpose">Application Purpose</a>
           <a href="#how-it-works">How It Works</a>
           {isCustomer && (
             <a
@@ -139,6 +140,7 @@ export default function Home() {
       {/* Mobile Nav Drawer */}
       <div className={`mobile-nav${mobileMenuOpen ? " open" : ""}`}>
         <a href="#features" onClick={closeMobileMenu}>Features</a>
+        <a href="#app-purpose" onClick={closeMobileMenu}>Application Purpose</a>
         <a href="#how-it-works" onClick={closeMobileMenu}>How It Works</a>
         {isCustomer && (
           <a
@@ -163,20 +165,15 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="hero">
         <div className="hero-content">
-          <span className="hero-badge">Vitharn UPVC Quotation Maker</span>
+          <span className="hero-badge">vitharn upvc</span>
           <h1 className="hero-title">
-            Your Business,<br />Professionally Managed
+            vitharn upvc
           </h1>
           <p className="hero-subtitle">
-            Vitharn UPVC Quotation Maker is a complete platform for UPVC
-            window and door businesses to create, manage, and send
-            professional quotations — with a branded marketing website and
-            customer portal, on Android and the web.
+            <strong>vitharn upvc</strong> is an end-to-end quotation, catalog, and business management application designed for UPVC window and door manufacturers, dealers, and customers to generate accurate estimations, manage orders, and access personalized client portals.
           </p>
           <p className="hero-note">
-            Sign in with Google requests only your email address and basic
-            profile information, used solely to identify registered users and
-            grant access to their portal. We never sell or share your data.{" "}
+            Sign in with Google is used strictly to verify your identity and grant access to your account and saved quotations. We never access unneeded data, sell, or share your information.{" "}
             <a href="/privacy" style={{ color: "#6366f1" }}>
               Read our Privacy Policy
             </a>
@@ -196,6 +193,21 @@ export default function Home() {
               <Download size={20} /> Android App
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* ── APP PURPOSE & OAUTH DISCLOSURE ── */}
+      <section className="features" id="app-purpose" style={{ paddingBottom: 0 }}>
+        <div style={{ background: "white", padding: 36, borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.04)", border: "1px solid #e2e8f0" }}>
+          <h2 className="section-title" style={{ textAlign: "left", fontSize: 24, marginBottom: 16, color: "#0f172a" }}>
+            Application Purpose &amp; Google Sign-In Details
+          </h2>
+          <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
+            <strong>What vitharn upvc does:</strong> The <strong>vitharn upvc</strong> application provides UPVC window and door manufacturers and vendors with instant dimension-based quotation generators, automated SFT &amp; GST tax calculations, branded marketing websites, and secure web and mobile portals.
+          </p>
+          <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6 }}>
+            <strong>Why we use Google OAuth:</strong> <strong>vitharn upvc</strong> integrates Google Sign-In solely for secure account authentication. When users choose to log in with Google, we request basic profile information (email address and name) to authenticate their access to their registered business profile and saved quotations.
+          </p>
         </div>
       </section>
 

@@ -11,6 +11,7 @@ import 'app_state.dart';
 import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
 import 'client_logo.dart';
+import 'umami_tracker.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -126,10 +127,12 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
+        umamiTrack('login_success');
         await _writeSession('true');
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
       } else {
+        umamiTrack('login_failed');
         setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });
       }
     } catch (e) {

@@ -21,6 +21,7 @@ import 'file_helper.dart';
 import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
+import 'umami_tracker.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -308,6 +309,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
   Future<void> _generateAndProcessPdf() async {
     // 1. Force Save
+    umamiTrack('generate_pdf');
     await _autoSaveToDatabase();
     
     // Generate PDF bytes

@@ -17,6 +17,7 @@ import 'email_portal_screen.dart';
 import 'analytics_screen.dart';
 import 'theme.dart';
 import 'client_logo.dart';
+import 'umami_tracker.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -56,6 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _logout() async {
+    umamiTrack('logout');
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
@@ -326,6 +328,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
                     delay: 100,
                     onTap: () async {
+                      umamiTrack('new_quotation');
                       await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
                       _fetchQuotations();
                     },

@@ -11,8 +11,14 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async 
   final pdf = pw.Document();
   final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
   
-  final watermarkUrl = 'https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg';
-  final watermarkImage = await networkImage(watermarkUrl);
+  final defaultLogoUrl = 'https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg';
+  final clientConfig = appState.clientConfig;
+  final topLogoUrl = clientConfig.invoiceTopLogoUrl.isNotEmpty ? clientConfig.invoiceTopLogoUrl : defaultLogoUrl;
+  final bgLogoUrl = clientConfig.invoiceBackgroundLogoUrl.isNotEmpty
+      ? clientConfig.invoiceBackgroundLogoUrl
+      : (clientConfig.invoiceTopLogoUrl.isNotEmpty ? clientConfig.invoiceTopLogoUrl : defaultLogoUrl);
+  final headerLogo = await _loadLogoImage(topLogoUrl, defaultLogoUrl);
+  final watermarkImage = bgLogoUrl == topLogoUrl ? headerLogo : await _loadLogoImage(bgLogoUrl, defaultLogoUrl);
   final fontRegular = await PdfGoogleFonts.robotoRegular();
   final fontBold = await PdfGoogleFonts.robotoBold();
 
@@ -48,7 +54,7 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async 
       },
       build: (pw.Context context) {
         return [
-          _buildHeader(watermarkImage, appState),
+          _buildHeader(headerLogo, appState),
           _buildTopBar(data),
           _buildSectionTitle('Customer Details'),
           _buildCustomerDetails(data),
@@ -75,6 +81,14 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async 
 Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context, AppState appState) async {
   final bytes = await generatePdfBytes(data, appState);
   await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => bytes);
+}
+
+Future<pw.ImageProvider> _loadLogoImage(String url, String fallbackUrl) async {
+  try {
+    return await networkImage(url);
+  } catch (_) {
+    return await networkImage(fallbackUrl);
+  }
 }
 
 pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {

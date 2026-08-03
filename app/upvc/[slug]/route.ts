@@ -21,6 +21,11 @@ export async function GET(
   const client = findClientBySlug(rows, slug);
   const cfg = client?.config || {};
 
+  const isVitharnHost = _request.nextUrl.hostname.includes("vitharn.com");
+  const umamiScript = isVitharnHost
+    ? '<script defer src="https://umami.novamymentor.cloud/umami.js" data-website-id="13fc779a-eb5b-4e48-9011-f7b7b985a03d"></script>'
+    : "";
+
   const hasClientBranding = !!(client && (cfg.appName || cfg.companyName || cfg.logoUrl));
   const appName = String(cfg.appName || cfg.companyName || client?.id || VITHARN_NAME);
   const logoUrl = String(cfg.logoUrl || "").trim();
@@ -53,6 +58,7 @@ export async function GET(
     #loading .spinner { width:40px; height:40px; margin-top:24px; border:4px solid #e0e7ff; border-top-color:#6366f1; border-radius:50%; animation:spin .8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
+  ${umamiScript}
 </head>
 <body>
   <div id="loading">

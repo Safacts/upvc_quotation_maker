@@ -17,6 +17,8 @@ class ClientConfig {
   final double defaultGstPercentage;
   final String quotePrefix;
   final String logoUrl;
+  final String invoiceTopLogoUrl;
+  final String invoiceBackgroundLogoUrl;
   final String portalPasswordHash;
   final Color primaryColor;
   final Color accentColor;
@@ -73,6 +75,8 @@ class ClientConfig {
     this.defaultGstPercentage = 18.0,
     this.quotePrefix = 'JVUPVC',
     this.logoUrl = '',
+    this.invoiceTopLogoUrl = '',
+    this.invoiceBackgroundLogoUrl = '',
     this.portalPasswordHash = '',
     this.primaryColor = const Color(0xFF6366F1),
     this.accentColor = const Color(0xFFEC4899),
@@ -119,6 +123,8 @@ class ClientConfig {
     'defaultGstPercentage': defaultGstPercentage,
     'quotePrefix': quotePrefix,
     'logoUrl': logoUrl,
+    'invoiceTopLogoUrl': invoiceTopLogoUrl,
+    'invoiceBackgroundLogoUrl': invoiceBackgroundLogoUrl,
     'portalPasswordHash': portalPasswordHash,
     'primaryColor': primaryColor.value,
     'accentColor': accentColor.value,
@@ -163,6 +169,8 @@ class ClientConfig {
     defaultGstPercentage: (json['defaultGstPercentage'] as num?)?.toDouble() ?? 18.0,
     quotePrefix: json['quotePrefix'] as String? ?? 'JVUPVC',
     logoUrl: json['logoUrl'] as String? ?? '',
+    invoiceTopLogoUrl: json['invoiceTopLogoUrl'] as String? ?? '',
+    invoiceBackgroundLogoUrl: json['invoiceBackgroundLogoUrl'] as String? ?? '',
     portalPasswordHash: json['portalPasswordHash'] as String? ?? '',
     primaryColor: Color(json['primaryColor'] as int? ?? 0xFF6366F1),
     accentColor: Color(json['accentColor'] as int? ?? 0xFFEC4899),

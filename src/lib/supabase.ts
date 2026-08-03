@@ -103,6 +103,7 @@ export async function uploadToStorage(
 export function uploadLogoFile(
   clientId: string,
   logoFile: { mime?: string; data: string },
+  sub = "",
 ): Promise<string> {
   const mime = logoFile.mime || "image/png";
   const extMap: Record<string, string> = {
@@ -115,7 +116,10 @@ export function uploadLogoFile(
   const ext = extMap[mime] || "png";
   const safe = clientId.replace(/[^a-zA-Z0-9_-]/g, "_");
   const binary = Uint8Array.from(atob(logoFile.data), (c) => c.charCodeAt(0));
-  return uploadToStorage(`logos/${safe}.${ext}`, binary, mime);
+  const filename = sub
+    ? `logos/${safe}-${sub}.${ext}`
+    : `logos/${safe}.${ext}`;
+  return uploadToStorage(filename, binary, mime);
 }
 
 export function isServiceKeyConfigured(): boolean {

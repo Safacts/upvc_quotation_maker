@@ -19,6 +19,8 @@ export interface ClientConfig {
   unmeasuredPresets: { name: string; code: string; description: string; rate: number }[];
   quotePrefix: string;
   logoUrl: string;
+  invoiceTopLogoUrl: string;
+  invoiceBackgroundLogoUrl: string;
   appDownloadUrl: string;
   primaryColor?: number;
   accentColor?: number;
@@ -83,6 +85,8 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
       : [],
     quotePrefix: String(cfg.quotePrefix || "JVUPVC"),
     logoUrl: String(cfg.logoUrl || ""),
+    invoiceTopLogoUrl: String(cfg.invoiceTopLogoUrl || ""),
+    invoiceBackgroundLogoUrl: String(cfg.invoiceBackgroundLogoUrl || ""),
     appDownloadUrl: String(cfg.appDownloadUrl || ""),
     primaryColor: typeof cfg.primaryColor === "number" ? cfg.primaryColor : undefined,
     accentColor: typeof cfg.accentColor === "number" ? cfg.accentColor : undefined,

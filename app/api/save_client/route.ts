@@ -95,6 +95,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const invoiceTopLogoFile = p.invoiceTopLogoFile;
+    if (invoiceTopLogoFile && invoiceTopLogoFile.data) {
+      try {
+        config.invoiceTopLogoUrl = await uploadLogoFile(cid, invoiceTopLogoFile, 'invoice-top');
+      } catch (e: any) {
+        return json(
+          { error: "invoice top logo upload failed: " + String(e?.message ?? e) },
+          500,
+        );
+      }
+    }
+
+    const invoiceBgLogoFile = p.invoiceBgLogoFile;
+    if (invoiceBgLogoFile && invoiceBgLogoFile.data) {
+      try {
+        config.invoiceBackgroundLogoUrl = await uploadLogoFile(cid, invoiceBgLogoFile, 'invoice-bg');
+      } catch (e: any) {
+        return json(
+          { error: "invoice background logo upload failed: " + String(e?.message ?? e) },
+          500,
+        );
+      }
+    }
+
     if (p._delete) {
       await supaPatch("clients", { id: "eq." + cid }, { is_active: false });
       return json({ success: true, deleted: cid, logoUrl: config.logoUrl ?? null }, 200);

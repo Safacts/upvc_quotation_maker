@@ -12,6 +12,7 @@ import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 import 'client_logo.dart';
+import 'umami_tracker.dart';
 
 class EmailPortalScreen extends StatefulWidget {
   @override
@@ -90,6 +91,8 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
         ..attachments.add(FileAttachment(tempFile)..location = Location.inline..cid = '<logo>');
 
       await send(message, smtpServer);
+
+      umamiTrack('send_email');
 
       // Save to Supabase History
       await SupabaseConfig.client.from('sent_emails').insert({
