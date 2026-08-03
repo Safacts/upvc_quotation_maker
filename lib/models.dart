@@ -1,23 +1,55 @@
 import 'package:intl/intl.dart';
 import 'supabase_config.dart';
 
+enum QuotationStatus { draft, sent, won, lost }
+
+extension QuotationStatusX on QuotationStatus {
+  String get label {
+    switch (this) {
+      case QuotationStatus.draft: return 'Draft';
+      case QuotationStatus.sent:  return 'Sent';
+      case QuotationStatus.won:   return 'Won';
+      case QuotationStatus.lost:  return 'Lost';
+    }
+  }
+  String get value {
+    switch (this) {
+      case QuotationStatus.draft: return 'draft';
+      case QuotationStatus.sent:  return 'sent';
+      case QuotationStatus.won:   return 'won';
+      case QuotationStatus.lost:  return 'lost';
+    }
+  }
+  static QuotationStatus fromString(String? s) {
+    switch (s) {
+      case 'sent': return QuotationStatus.sent;
+      case 'won':  return QuotationStatus.won;
+      case 'lost': return QuotationStatus.lost;
+      default:     return QuotationStatus.draft;
+    }
+  }
+}
+
+
 class QuotationData {
   String? id; // UUID from Supabase
-  String quotationNo = ''; 
+  String quotationNo = '';
   DateTime date = DateTime.now();
   String customerName = '';
   String reference = '';
   String address = '';
   String contactNo = '';
-  String email = ''; // Added email field
-  DateTime createdAt = DateTime.now(); // Added createdAt timestamp
-  
+  String email = '';
+  DateTime createdAt = DateTime.now();
+  QuotationStatus status = QuotationStatus.draft;
+
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
   double transport = 0.0;
 
   bool includeGst = false;
   double gstPercentage = 0.0;
+
 
   // Logic to handle continuous numbering via Supabase RPC
   static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC'}) async {
@@ -76,6 +108,7 @@ class QuotationData {
       'transport_cost': transport,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
+      'status': status.value,
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
@@ -94,6 +127,7 @@ class QuotationData {
     q.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
+    q.status = QuotationStatusX.fromString(map['status']);
     return q;
   }
 }

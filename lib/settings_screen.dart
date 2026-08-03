@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _gstPercentageController;
   late TextEditingController _proprietorController;
   late TextEditingController _gstNoController;
+  double _marginPercent = 65.0;
 
   @override
   void initState() {
@@ -37,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
     _proprietorController = TextEditingController(text: appState.companyProprietor);
     _gstNoController = TextEditingController(text: appState.gstNumber);
+    _marginPercent = appState.costMarginPercent;
   }
 
   @override
@@ -170,6 +172,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _termsController,
                 decoration: const InputDecoration(labelText: 'Terms (Enter each on a new line)', border: OutlineInputBorder()),
                 maxLines: 6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Profit & Margin'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'What % of what you quote goes toward materials & labor?',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: _marginPercent,
+                          min: 10,
+                          max: 95,
+                          divisions: 85,
+                          label: '${_marginPercent.toInt()}%',
+                          onChanged: (v) => setState(() => _marginPercent = v),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 60,
+                        child: Text(
+                          '${_marginPercent.toInt()}%',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Theme.of(context).primaryColor),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Estimated profit = Revenue × ${(100 - _marginPercent.toInt())}%  (from Won quotes)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  ),
+                ],
               ),
             ),
           ),

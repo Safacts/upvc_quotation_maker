@@ -386,10 +386,30 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    // Status selector
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SegmentedButton<QuotationStatus>(
+                        segments: QuotationStatus.values.map((s) => ButtonSegment(
+                          value: s,
+                          label: Text(s.label, style: const TextStyle(fontSize: 12)),
+                        )).toList(),
+                        selected: {data.status},
+                        onSelectionChanged: (sel) {
+                          setState(() => data.status = sel.first);
+                          _onDataChanged();
+                        },
+                        style: ButtonStyle(
+                          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8, vertical: 0)),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ).animate().fade().slideY(begin: -0.1),
+
 
             
             _buildSectionTitle('Customer Details').animate().fade(delay: 100.ms),

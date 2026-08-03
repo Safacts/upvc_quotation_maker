@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 
 class ClientConfig {
   final String clientId;
@@ -38,6 +37,8 @@ class ClientConfig {
   final List<Map<String, String>> landingTestimonials;
   final String landingCTA;
   final String landingFooter;
+  // Profit & margin — what % of revenue goes to materials + labor (default 65%)
+  final double costMarginPercent;
 
   const ClientConfig({
     this.clientId = 'default',
@@ -86,6 +87,7 @@ class ClientConfig {
     this.landingTestimonials = const [],
     this.landingCTA = '',
     this.landingFooter = '',
+    this.costMarginPercent = 65.0,
   });
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
@@ -127,6 +129,7 @@ class ClientConfig {
     'landingTestimonials': landingTestimonials.map((t) => Map<String, String>.from(t)).toList(),
     'landingCTA': landingCTA,
     'landingFooter': landingFooter,
+    'costMarginPercent': costMarginPercent,
   };
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) => ClientConfig(
@@ -166,5 +169,6 @@ class ClientConfig {
     landingTestimonials: (json['landingTestimonials'] as List?)?.map((e) => Map<String, String>.from(e as Map)).toList() ?? const [],
     landingCTA: json['landingCTA'] as String? ?? '',
     landingFooter: json['landingFooter'] as String? ?? '',
+    costMarginPercent: (json['costMarginPercent'] as num?)?.toDouble() ?? 65.0,
   );
 }

@@ -36,6 +36,7 @@ class AppState extends ChangeNotifier {
   String get appName => clientConfig.appName;
   String get quotePrefix => clientConfig.quotePrefix;
   List<String> get adminEmails => clientConfig.adminEmails;
+  double get costMarginPercent => clientConfig.costMarginPercent;
 
   AppState() {
     _loadSettings();

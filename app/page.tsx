@@ -35,11 +35,13 @@ export default function Home() {
     const session = localStorage.getItem("portal_session");
     const role = localStorage.getItem("portal_role");
 
+    if (session === "active") {
+      setLoggedIn(true);
+    }
+
     if (session === "active" && role === "customer") {
       const clientId = localStorage.getItem("portal_client_id");
-      if (clientId) {
-        window.location.href = "/" + slugify(clientId) + "/home";
-      } else {
+      if (!clientId) {
         localStorage.clear();
       }
     }
@@ -53,7 +55,6 @@ export default function Home() {
         "/upvc/" +
         clientId!.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       setCustomerHref(target);
-      setLoggedIn(true);
     }
   }, []);
 
@@ -162,7 +163,6 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="hero">
         <div className="hero-content">
-          <div className="hero-badge">For UPVC Window &amp; Door Businesses</div>
           <h1 className="hero-title">
             Your Business,<br />Professionally Managed
           </h1>
@@ -181,7 +181,7 @@ export default function Home() {
                 <ArrowRight size={20} /> Go to Portal
               </a>
             )}
-            <a href={APK_URL} className="btn-webapp" id="downloadBtn">
+            <a href={loggedIn ? APK_URL : "/login"} className="btn-webapp" id="downloadBtn">
               <Download size={20} /> Android App
             </a>
           </div>
@@ -295,7 +295,7 @@ export default function Home() {
             <a href="/login" className="btn-download" id="ctaLoginBtn">
               <ArrowRight size={20} /> Go to Portal
             </a>
-            <a href={APK_URL} className="btn-webapp btn-webapp--light" id="ctaDownloadBtn">
+            <a href={loggedIn ? APK_URL : "/login"} className="btn-webapp btn-webapp--light" id="ctaDownloadBtn">
               <Download size={20} /> Android App
             </a>
           </div>
