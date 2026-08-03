@@ -8,9 +8,6 @@ export default function PrivacyPage() {
           <Link href="/" style={styles.brand}>
             <img
               src="/logo.png"
-              onError={(e) => {
-                e.currentTarget.src = "https://placehold.co/100";
-              }}
               alt="Vitharn UPVC Quotation Maker"
               style={styles.logo}
             />
