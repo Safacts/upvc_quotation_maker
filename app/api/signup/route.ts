@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supaGet, supaPatch, isServiceKeyConfigured } from "@/lib/supabase";
+import { supaGet, supaPatch, supaDelete, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession, deleteSession } from "@/lib/session";
 import { sendSignupNotification, sendSignupConfirmation, sendAdminCompose } from "@/lib/mail";
 
