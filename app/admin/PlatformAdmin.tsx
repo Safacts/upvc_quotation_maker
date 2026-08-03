@@ -279,15 +279,10 @@ export default function PlatformAdmin() {
           loadClients();
           return;
         }
-        const storedHash = localStorage.getItem("portal_auth_hash") || "";
-        if (!storedHash) {
-          router.push("/login");
-          return;
-        }
         const authRes = await fetch("/api/portal_auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "session", email, hash: storedHash }),
+          body: JSON.stringify({ mode: "session", email }),
         });
         const authData = await authRes.json();
         if (!authRes.ok || authData.role !== "admin") {
@@ -296,7 +291,7 @@ export default function PlatformAdmin() {
         }
         if (cancelled) return;
         setCurrentUser(authData.email);
-        setCurrentPasswordHash(authData.password_hash || storedHash);
+        setCurrentPasswordHash(authData.password_hash || "");
         setReady(true);
         loadClients();
       } catch (e) {
