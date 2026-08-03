@@ -18,6 +18,7 @@ export interface ClientConfig {
   pricePresets: { label: string; description: string; rate: number }[];
   quotePrefix: string;
   logoUrl: string;
+  appDownloadUrl: string;
   primaryColor?: number;
   accentColor?: number;
   trialExpiresAt?: string | null;
@@ -66,6 +67,7 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
       : [],
     quotePrefix: String(cfg.quotePrefix || "JVUPVC"),
     logoUrl: String(cfg.logoUrl || ""),
+    appDownloadUrl: String(cfg.appDownloadUrl || ""),
     primaryColor: typeof cfg.primaryColor === "number" ? cfg.primaryColor : undefined,
     accentColor: typeof cfg.accentColor === "number" ? cfg.accentColor : undefined,
     trialExpiresAt: cfg.trialExpiresAt ? String(cfg.trialExpiresAt) : null,
