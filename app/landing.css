@@ -258,6 +258,20 @@ nav a:hover {
   background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.05) 90%);
 }
 
+.hero-badge {
+  display: inline-block;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  margin-bottom: 24px;
+}
+
 .hero-content {
   max-width: 800px;
   text-align: center;
@@ -351,6 +365,13 @@ nav a:hover {
   font-size: clamp(26px, 5vw, 36px);
   font-weight: 800;
   text-align: center;
+  margin-bottom: 12px;
+}
+
+.section-subtitle {
+  font-size: 16px;
+  color: #64748b;
+  text-align: center;
   margin-bottom: 50px;
 }
 
@@ -358,6 +379,10 @@ nav a:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
+}
+
+.features-grid--4 {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .feature-card {
@@ -387,7 +412,16 @@ nav a:hover {
   margin-bottom: 10px;
 }
 
-/* ── DOCS ── */
+.feature-inline-code {
+  font-family: monospace;
+  font-size: 13px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── DOCS / HOW IT WORKS ── */
 .docs {
   padding: 80px 24px;
   background-color: #f1f5f9;
@@ -399,18 +433,93 @@ nav a:hover {
 }
 
 .doc-step {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   background: white;
-  padding: 28px;
+  padding: 28px 32px;
   border-radius: 20px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.doc-step-number {
+  font-size: 13px;
+  font-weight: 800;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 10px;
+  padding: 6px 12px;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
 }
 
 .doc-step h3 {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 10px;
-  color: #6366f1;
+  color: var(--text-dark);
+}
+
+/* ── CTA BANNER ── */
+.cta-banner {
+  padding: 90px 24px;
+  background: var(--primary-gradient);
+  text-align: center;
+}
+
+.cta-content {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.cta-title {
+  font-size: clamp(26px, 5vw, 38px);
+  font-weight: 800;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.cta-sub {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 36px;
+  line-height: 1.7;
+}
+
+.btn-webapp--light {
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  -webkit-text-fill-color: white !important;
+}
+
+.btn-webapp--light:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: white !important;
+}
+
+.cta-checks {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  justify-content: center;
+  margin-top: 36px;
+  padding: 0;
+}
+
+.cta-checks li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cta-checks svg {
+  color: rgba(255, 255, 255, 0.75);
+  flex-shrink: 0;
 }
 
 footer {
@@ -497,9 +606,30 @@ footer {
   }
 
   .doc-step {
+    flex-direction: column;
+    gap: 12px;
     padding: 22px 18px;
     border-radius: 16px;
     margin-bottom: 16px;
+  }
+
+  .features-grid--4 {
+    grid-template-columns: 1fr;
+  }
+
+  .cta-banner {
+    padding: 64px 20px;
+  }
+
+  .cta-checks {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-subtitle {
+    font-size: 14px;
+    margin-bottom: 32px;
   }
 }
 
@@ -518,7 +648,20 @@ footer {
     font-size: 14px;
   }
 
+  .hero-badge {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+
   .feature-card {
     padding: 24px 16px;
+  }
+
+  .cta-title {
+    font-size: 24px;
+  }
+
+  .cta-sub {
+    font-size: 14px;
   }
 }

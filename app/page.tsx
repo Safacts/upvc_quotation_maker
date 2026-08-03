@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, FileText, Globe, Ruler, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  Download,
+  FileText,
+  Globe,
+  Smartphone,
+  Users,
+  CheckCircle,
+} from "lucide-react";
 import "./landing.css";
 
 const APK_URL =
@@ -27,7 +35,6 @@ export default function Home() {
     const session = localStorage.getItem("portal_session");
     const role = localStorage.getItem("portal_role");
 
-    // Redirect logged-in customers to their business portal
     if (session === "active" && role === "customer") {
       const clientId = localStorage.getItem("portal_client_id");
       if (clientId) {
@@ -37,7 +44,6 @@ export default function Home() {
       }
     }
 
-    // Gate "Open Web App" to logged-in UPVC customers
     const clientId = localStorage.getItem("portal_client_id");
     const customer = session === "active" && role === "customer" && !!clientId;
     setIsCustomer(customer);
@@ -51,7 +57,6 @@ export default function Home() {
     }
   }, []);
 
-  // Add scrolled class to header on scroll
   useEffect(() => {
     const handleScroll = () => {
       if (headerRef.current) {
@@ -66,7 +71,6 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on outside click
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const handleOutsideClick = (e: MouseEvent) => {
@@ -98,7 +102,7 @@ export default function Home() {
         {/* Desktop Nav */}
         <nav>
           <a href="#features">Features</a>
-          <a href="#docs">Documentation</a>
+          <a href="#how-it-works">How It Works</a>
           {isCustomer && (
             <a
               href={customerHref}
@@ -134,7 +138,7 @@ export default function Home() {
       {/* Mobile Nav Drawer */}
       <div className={`mobile-nav${mobileMenuOpen ? " open" : ""}`}>
         <a href="#features" onClick={closeMobileMenu}>Features</a>
-        <a href="#docs" onClick={closeMobileMenu}>Documentation</a>
+        <a href="#how-it-works" onClick={closeMobileMenu}>How It Works</a>
         {isCustomer && (
           <a
             href={customerHref}
@@ -155,112 +159,152 @@ export default function Home() {
         </a>
       </div>
 
+      {/* ── HERO ── */}
       <section className="hero">
         <div className="hero-content">
+          <div className="hero-badge">For UPVC Window &amp; Door Businesses</div>
           <h1 className="hero-title">
-            Vitharn UPVC
-            <br />
-            Quotation Maker
+            Your Business,<br />Professionally Managed
           </h1>
           <p className="hero-subtitle">
-            A complete platform for UPVC window and door businesses to create,
-            manage, and send professional quotations — on Android and the web.
+            Vitharn gives every UPVC shop its own branded marketing website,
+            customer portal, and professional quoting system — accessible on
+            Android and the web, all in one platform.
           </p>
           <div className="btn-group">
-            <a href={APK_URL} className="btn-download" id="downloadBtn">
-              <Download size={20} /> Download Android App
-            </a>
-            {isCustomer && (
-              <a
-                href={customerHref}
-                className="btn-webapp"
-                id="heroWebAppBtn"
-                style={{ display: "inline-flex" }}
-              >
+            {isCustomer ? (
+              <a href={customerHref} className="btn-download" id="heroWebAppBtn">
                 <Globe size={20} /> Open Web App
               </a>
+            ) : (
+              <a href="/login" className="btn-download" id="heroLoginBtn">
+                <ArrowRight size={20} /> Go to Portal
+              </a>
             )}
+            <a href={APK_URL} className="btn-webapp" id="downloadBtn">
+              <Download size={20} /> Android App
+            </a>
           </div>
         </div>
       </section>
 
+      {/* ── FEATURES ── */}
       <section className="features" id="features">
-        <h2 className="section-title">Premium Features</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <Ruler className="feature-icon-svg" />
-            <h3 className="feature-title">Measured &amp; Custom Items</h3>
-            <p>
-              Input exact dimensions in millimeters (width, height) to
-              auto-compute total Square Feet (SFT) and pricing instantly.
-            </p>
-          </div>
-          <div className="feature-card">
-            <Wallet className="feature-icon-svg" />
-            <h3 className="feature-title">Real-Time Computations</h3>
-            <p>
-              Calculates item subtotal, transport charges, and computes 18% IGST
-              automatically with amount-in-words translation.
-            </p>
-          </div>
+        <h2 className="section-title">Everything Your Business Needs</h2>
+        <p className="section-subtitle">
+          One platform, built end-to-end for UPVC shop owners.
+        </p>
+        <div className="features-grid features-grid--4">
           <div className="feature-card">
             <FileText className="feature-icon-svg" />
-            <h3 className="feature-title">PDF Generation</h3>
+            <h3 className="feature-title">Instant Branded Quotations</h3>
             <p>
-              Generate clean, branded PDF receipts with custom company details,
-              terms, and bank details ready to send.
+              Input exact mm dimensions to auto-calculate SFT, transport, and
+              18% IGST. Generate clean, logo-branded PDF quotes ready to print
+              or email — in seconds.
+            </p>
+          </div>
+          <div className="feature-card">
+            <Globe className="feature-icon-svg" />
+            <h3 className="feature-title">Your Own Business Website</h3>
+            <p>
+              Every business on the platform gets a dedicated, SEO-friendly
+              marketing website showcasing their services, gallery, and contact
+              details — at a clean URL like{" "}
+              <span className="feature-inline-code">vitharn.com/akshaya</span>.
+            </p>
+          </div>
+          <div className="feature-card">
+            <Users className="feature-icon-svg" />
+            <h3 className="feature-title">Dedicated Customer Portal</h3>
+            <p>
+              Your buyers get their own login to a branded portal where they can
+              interact with your business, view their quotes, and request work
+              — giving them a professional, trust-building experience.
+            </p>
+          </div>
+          <div className="feature-card">
+            <Smartphone className="feature-icon-svg" />
+            <h3 className="feature-title">Web &amp; Android, Anywhere</h3>
+            <p>
+              Manage your business from your desk on the web admin panel or on
+              the go with the Android app. Everything syncs to the cloud in
+              real time across all your devices.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="docs" id="docs">
+      {/* ── HOW IT WORKS ── */}
+      <section className="docs" id="how-it-works">
         <div className="docs-content">
-          <h2 className="section-title">Application Documentation</h2>
+          <h2 className="section-title">How It Works</h2>
+          <p className="section-subtitle" style={{ textAlign: "center", marginBottom: 48 }}>
+            Getting your business on the platform is simple. We handle the
+            setup — you just start quoting.
+          </p>
 
           <div className="doc-step">
-            <h3>Step 1: Installation</h3>
-            <p>
-              Click the download button above to retrieve the Android
-              application package (APK) on your device. Enable &quot;Install from
-              Unknown Sources&quot; in settings if prompted, then install the
-              package.
-            </p>
-            <p style={{ marginTop: 10 }}>
-              Alternatively, use the{" "}
-              <a href={isCustomer ? customerHref : "/login"} id="docsWebAppLink">
-                Web App
-              </a>{" "}
-              directly from your browser without any installation.
-            </p>
+            <div className="doc-step-number">01</div>
+            <div>
+              <h3>We Configure Your Account</h3>
+              <p>
+                Our team sets up your business profile with your company name,
+                logo, brand colors, GST number, bank details, and admin email.
+                Your platform is fully branded to your business from day one.
+              </p>
+            </div>
           </div>
 
           <div className="doc-step">
-            <h3>Step 2: Sign In</h3>
-            <p>
-              Sign in with your registered admin account to access the app main
-              dashboard.
-            </p>
+            <div className="doc-step-number">02</div>
+            <div>
+              <h3>Your Platform Goes Live</h3>
+              <p>
+                The moment your account is ready, your branded marketing website
+                and customer portal are live on the internet. Share your link
+                with clients immediately — no waiting, no technical setup on
+                your end.
+              </p>
+            </div>
           </div>
 
           <div className="doc-step">
-            <h3>Step 3: Creating Quotations</h3>
-            <p>
-              Tap &quot;New Quotation&quot; on the dashboard. Add client details, items
-              (with measurements or flat rate), add transport cost, and tap
-              &quot;GENERATE PDF&quot;. The PDF is automatically created and ready to be
-              printed or emailed.
-            </p>
+            <div className="doc-step-number">03</div>
+            <div>
+              <h3>Manage &amp; Quote Anywhere</h3>
+              <p>
+                Log in to the web admin or Android app using your registered
+                credentials. Start creating professional quotations, managing
+                client records, and sending branded PDFs — all from one place.
+              </p>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <div className="doc-step">
-            <h3>Step 4: Developer Panel</h3>
-            <p>
-              For developer options, navigate to the &quot;About&quot; screen or the
-              dashboard tagline, tap 7 times on the developer name, and enter
-              code `533842` to clear logs or wipe the database.
-            </p>
+      {/* ── CTA BANNER ── */}
+      <section className="cta-banner">
+        <div className="cta-content">
+          <h2 className="cta-title">Ready to take your UPVC business online?</h2>
+          <p className="cta-sub">
+            Get your own branded website, customer portal, and quoting system.
+            Reach out to get your business set up on the platform.
+          </p>
+          <div className="btn-group" style={{ justifyContent: "center" }}>
+            <a href="/login" className="btn-download" id="ctaLoginBtn">
+              <ArrowRight size={20} /> Go to Portal
+            </a>
+            <a href={APK_URL} className="btn-webapp btn-webapp--light" id="ctaDownloadBtn">
+              <Download size={20} /> Android App
+            </a>
           </div>
+          <ul className="cta-checks">
+            <li><CheckCircle size={16} /> Fully branded to your business</li>
+            <li><CheckCircle size={16} /> Your own marketing website</li>
+            <li><CheckCircle size={16} /> Web &amp; Android access</li>
+            <li><CheckCircle size={16} /> Professional PDF quotations</li>
+          </ul>
         </div>
       </section>
 
