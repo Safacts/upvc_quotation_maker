@@ -7,6 +7,7 @@ const GATEWAY_PORT = 3000;
 
 function isFlutterPath(url) {
   const p = (url || "").split("?")[0];
+  if (p === "/pwa-sw.js") return false;
   if (p === "/favicon.png" || p === "/manifest.json") return true;
   if (p === "/app" || p.startsWith("/app/")) return true;
   if (

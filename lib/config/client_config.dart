@@ -38,6 +38,7 @@ class ClientConfig {
   final String landingCTA;
   final String landingFooter;
   // Price Customizations & Presets
+  final double costMarginPercent;
   final bool enablePricePresets;
   final List<Map<String, dynamic>> pricePresets;
   
@@ -179,7 +180,7 @@ class ClientConfig {
     landingTestimonials: (json['landingTestimonials'] as List?)?.map((e) => Map<String, String>.from(e as Map)).toList() ?? const [],
     landingCTA: json['landingCTA'] as String? ?? '',
     landingFooter: json['landingFooter'] as String? ?? '',
-    costMarginPercent: (json['costMarginPercent'] as num?)?.toDouble() ?? 65.0,
+    costMarginPercent: (json['costMarginPercent'] ?? json['cost_margin_percent'] as num?)?.toDouble() ?? 65.0,
     enablePricePresets: json['enablePricePresets'] as bool? ?? false,
     pricePresets: (json['pricePresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     appDownloadUrl: json['appDownloadUrl'] as String? ?? '',

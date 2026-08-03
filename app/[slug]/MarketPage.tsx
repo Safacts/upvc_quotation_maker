@@ -35,6 +35,7 @@ type FormValues = {
 
 type Business = {
   name: string;
+  logoUrl?: string;
   positioning: string;
   years: string;
   serviceArea: string;
@@ -110,7 +111,11 @@ function buildProducts(services: string[]): Product[] {
 function Brand({ business }: { business: Business }) {
   return (
     <a className="brand" href="#home" aria-label={`${business.name} home`}>
-      <span className="brand-symbol"><span /></span>
+      {business.logoUrl ? (
+        <img src={business.logoUrl} alt={`${business.name} Logo`} style={{ height: "40px", width: "auto", marginRight: "12px", objectFit: "contain", borderRadius: "4px" }} />
+      ) : (
+        <span className="brand-symbol"><span /></span>
+      )}
       <span className="brand-copy"><strong>{business.name}</strong><small>WINDOWS · DOORS · FACADES</small></span>
     </a>
   );
@@ -391,6 +396,7 @@ export default function MarketPage({ client, slug }: { client: any; slug: string
   const phone = firstPhoneDigits(cfg.companyContact);
   const business: Business = {
     name: cfg.companyName || cfg.appName || DEFAULT_BUSINESS_NAME,
+    logoUrl: cfg.logoUrl,
     positioning: cfg.landingHeroSubtitle || DEFAULT_POSITIONING,
     years: "7+",
     serviceArea: serviceAreaFrom(cfg.companyAddress),

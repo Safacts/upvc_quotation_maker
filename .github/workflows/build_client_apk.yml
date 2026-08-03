@@ -1,0 +1,60 @@
+name: Build White-Labeled Client APK (Pro Mode)
+
+on:
+  workflow_dispatch:
+    inputs:
+      client_id:
+        description: 'Client ID (e.g. venkateshwara)'
+        required: true
+        type: string
+      app_name:
+        description: 'Custom App Title (e.g. Venkateshwara UPVC Quote)'
+        required: true
+        type: string
+  repository_dispatch:
+    types: [build-client-apk]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Extract Inputs
+        id: vars
+        run: |
+          CLIENT_ID="${{ github.event.inputs.client_id || github.event.client_payload.client_id }}"
+          APP_NAME="${{ github.event.inputs.app_name || github.event.client_payload.app_name }}"
+          echo "client_id=${CLIENT_ID}" >> $GITHUB_OUTPUT
+          echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Patch Android App Label
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.client_id }}-upvc-quote
+          path: build/app/outputs/flutter-apk/app-release.apk

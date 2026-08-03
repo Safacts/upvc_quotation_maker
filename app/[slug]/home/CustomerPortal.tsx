@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ClientRow } from "@/lib/slug";
 import { slugify } from "@/lib/slug";
@@ -30,6 +30,39 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   const [formData, setFormData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const deferredPrompt = useRef<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 6000);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/pwa-sw.js").catch(() => {});
+    }
+    const onBeforeInstall = (e: any) => {
+      e.preventDefault();
+      deferredPrompt.current = e;
+      setCanInstall(true);
+    };
+    const onAppInstalled = () => {
+      deferredPrompt.current = null;
+      setCanInstall(false);
+      showToast("App installed! Find it on your home screen.", "success");
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     const session = localStorage.getItem("portal_session");
@@ -158,6 +191,25 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
     }
   };
 
+  const handleLiteMode = async () => {
+    if (deferredPrompt.current) {
+      try {
+        deferredPrompt.current.prompt();
+        const choice = await deferredPrompt.current.userChoice;
+        if (choice && choice.outcome === "accepted") {
+          showToast("App installed! Find it on your home screen.", "success");
+        }
+      } catch (e) {
+        // prompt can throw if it was already shown / dismissed
+      } finally {
+        deferredPrompt.current = null;
+        setCanInstall(false);
+      }
+      return;
+    }
+    setActiveTab("app");
+  };
+
   if (status === "error") {
     return (
       <div className="dashboard-layout" style={{ justifyContent: "center", alignItems: "center" }}>
@@ -183,7 +235,51 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   };
 
   return (
-    <div className="dashboard-layout">
+    <div className="portal-root">
+      {/* Custom Theme Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '14px 20px',
+          borderRadius: '12px',
+          background: toast.type === 'success' ? '#064e3b' : toast.type === 'error' ? '#7f1d1d' : '#1e1b4b',
+          color: '#ffffff',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
+          backdropFilter: 'blur(8px)',
+          border: `1px solid ${toast.type === 'success' ? '#059669' : toast.type === 'error' ? '#dc2626' : '#6366f1'}`,
+          animation: 'slideIn 0.3s ease-out',
+          maxWidth: '420px',
+          fontSize: '14px',
+          fontWeight: '500',
+          lineHeight: '1.4'
+        }}>
+          <div style={{ flexShrink: 0 }}>
+            {toast.type === 'success' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            )}
+            {toast.type === 'error' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            )}
+            {toast.type === 'info' && (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            )}
+          </div>
+          <div style={{ flex: 1 }}>{toast.message}</div>
+          <button 
+            onClick={() => setToast(null)} 
+            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      )}
+      <div className="dashboard-layout">
       {/* Sidebar */}
       <div className={`mobile-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
       <aside className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
@@ -245,17 +341,96 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
             Settings
           </button>
         </nav>
-        <div className="sidebar-footer">
-          {config.appDownloadUrl && (
-            <a href={config.appDownloadUrl} target="_blank" rel="noopener noreferrer" className="btn-download" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: 'var(--text)', textDecoration: 'none', borderRadius: '12px', marginBottom: '8px', transition: 'background-color 0.2s', fontWeight: '500' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {/* Lite Mode: Instant Web App / PWA */}
+          <button 
+            onClick={handleLiteMode}
+            className="btn-download" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '10px 14px', 
+              color: 'var(--text)', 
+              borderRadius: '10px', 
+              border: '1px solid var(--border, #e2e8f0)',
+              background: 'white',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              <span>App Lite Mode</span>
+            </div>
+            <span style={{ fontSize: '10px', background: canInstall ? '#dcfce7' : '#e0e7ff', color: canInstall ? '#166534' : '#3730a3', padding: '2px 6px', borderRadius: '10px' }}>{canInstall ? 'Install' : 'Instant'}</span>
+          </button>
+
+          {/* Pro Mode: Native APK */}
+          <a 
+            href={config.appDownloadUrl || "#"} 
+            target={config.appDownloadUrl ? "_blank" : "_self"}
+            rel="noopener noreferrer" 
+            onClick={async (e) => {
+              if (!config.appDownloadUrl) {
+                e.preventDefault();
+                const btn = e.currentTarget;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<span style="font-size: 13px; font-weight: 600;">Triggering Build...</span>`;
+                btn.style.pointerEvents = 'none';
+                try {
+                  const res = await fetch("/api/trigger_build", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      client_id: client.id,
+                      app_name: config.appName
+                    })
+                  });
+                  if (res.ok) {
+                    showToast("Build successfully triggered! Your Pro Native APK is being generated in the cloud. Check back in 5-10 minutes. You can use Lite Mode instantly while Pro is preparing!", "success");
+                  } else {
+                    const err = await res.json();
+                    showToast("Failed to trigger build: " + (err.error || "Unknown error"), "error");
+                  }
+                } catch (err: any) {
+                  showToast("Network error while triggering build.", "error");
+                } finally {
+                  btn.innerHTML = originalText;
+                  btn.style.pointerEvents = 'auto';
+                }
+              }
+            }}
+            className="btn-download" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '10px 14px', 
+              color: 'var(--text)', 
+              textDecoration: 'none', 
+              borderRadius: '10px', 
+              border: '1px solid var(--border, #e2e8f0)',
+              background: config.appDownloadUrl ? '#f0fdf4' : '#f8fafc',
+              fontWeight: '600',
+              fontSize: '13px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Download App
-            </a>
-          )}
+              <span>App Pro Mode</span>
+            </div>
+            <span style={{ fontSize: '10px', background: config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', color: config.appDownloadUrl ? '#166534' : '#64748b', padding: '2px 6px', borderRadius: '10px' }}>
+              {config.appDownloadUrl ? 'APK Ready' : 'Request Build'}
+            </span>
+          </a>
           <button className="btn-logout" onClick={handleLogout}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -724,6 +899,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
         </div>
       </main>
+    </div>
     </div>
   );
 }

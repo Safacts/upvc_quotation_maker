@@ -164,9 +164,8 @@ export default function DashboardPage() {
         color: "#0f172a",
       });
     } else {
-      alert("Please select a valid .apk file.");
       setApkFile(null);
-      setUploadStatus({ text: "", color: "" });
+      setUploadStatus({ text: "Please select a valid .apk file.", color: "#ef4444" });
     }
   }
 

@@ -213,7 +213,7 @@ export default function LoginPage() {
   function verifyOtp() {
     const inputOtp = otpInput.trim();
     if (!inputOtp) {
-      alert("Please enter the OTP code.");
+      showError("Please enter the OTP code.");
       return;
     }
     setForgotOtp(inputOtp);
@@ -223,7 +223,7 @@ export default function LoginPage() {
 
   async function saveNewPassword() {
     if (newPass.length < 6) {
-      alert("Password must be at least 6 characters.");
+      showError("Password must be at least 6 characters.");
       return;
     }
     setResetLoading(true);
@@ -236,10 +236,10 @@ export default function LoginPage() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Reset failed");
-      alert("Password updated successfully!");
+      showError("Password updated successfully!", "#10b981");
       setResetModalOpen(false);
     } catch {
-      alert("Unable to save password. Please check your connection and try again.");
+      showError("Unable to save password. Please check your connection and try again.");
     } finally {
       setResetLoading(false);
     }
