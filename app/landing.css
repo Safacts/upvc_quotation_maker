@@ -319,6 +319,14 @@ nav a:hover {
   max-width: 560px;
 }
 
+.hero-note {
+  font-size: 13px;
+  color: #64748b;
+  margin: -20px 0 28px;
+  max-width: 560px;
+  line-height: 1.6;
+}
+
 .btn-download {
   display: inline-flex;
   align-items: center;

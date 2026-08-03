@@ -173,6 +173,15 @@ export default function Home() {
             professional quotations — with a branded marketing website and
             customer portal, on Android and the web.
           </p>
+          <p className="hero-note">
+            Sign in with Google requests only your email address and basic
+            profile information, used solely to identify registered users and
+            grant access to their portal. We never sell or share your data.{" "}
+            <a href="/privacy" style={{ color: "#6366f1" }}>
+              Read our Privacy Policy
+            </a>
+            .
+          </p>
           <div className="btn-group">
             {isCustomer ? (
               <a href={customerHref} className="btn-download" id="heroWebAppBtn">
@@ -312,6 +321,15 @@ export default function Home() {
 
       <footer>
         <p>© 2026 Vitharn UPVC Quotation Maker. Crafted by Aadi.</p>
+        <p style={{ marginTop: 8, fontSize: 13 }}>
+          <a href="/privacy" style={{ color: "#6366f1" }}>
+            Privacy Policy
+          </a>{" "}
+          ·{" "}
+          <a href="/terms" style={{ color: "#6366f1" }}>
+            Terms of Service
+          </a>
+        </p>
       </footer>
     </>
   );
