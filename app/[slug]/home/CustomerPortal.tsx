@@ -724,7 +724,11 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                           </a>
                         )}
                         <button 
-                          onClick={() => setActiveTab("app")} 
+                          onClick={() => {
+                            const newAppUrl = "/upvc/" + slugify(config.appName || client.id) + "?client=" + encodeURIComponent(client.id) + "&auto_login=true&open_quote=" + encodeURIComponent(item.id);
+                            setAppUrl(newAppUrl);
+                            setActiveTab("app");
+                          }} 
                           style={{ 
                             padding: '8px 14px', 
                             borderRadius: '8px', 

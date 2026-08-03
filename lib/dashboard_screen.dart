@@ -29,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _filterType = 'Newest';
+  bool _hasHandledOpenQuote = false;
 
   @override
   void initState() {
@@ -50,6 +51,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _quotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
         _isLoading = false;
       });
+
+      if (!_hasHandledOpenQuote && kIsWeb) {
+        _hasHandledOpenQuote = true;
+        try {
+          final uri = Uri.base;
+          final openQuoteId = uri.queryParameters['open_quote'];
+          if (openQuoteId != null && openQuoteId.isNotEmpty) {
+            final qIndex = _quotations.indexWhere((q) => q.id == openQuoteId);
+            if (qIndex != -1) {
+              Future.microtask(() {
+                if (mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => QuotationScreen(existingData: _quotations[qIndex])),
+                  ).then((_) => _fetchQuotations());
+                }
+              });
+            }
+          }
+        } catch (_) {}
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       debugPrint('Fetch error: $e');
