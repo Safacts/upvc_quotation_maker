@@ -13,6 +13,9 @@ export interface ClientConfig {
   bankIfsc: string;
   termsAndConditions: string[];
   defaultGstPercentage: number;
+  cost_margin_percent: number;
+  enablePricePresets: boolean;
+  pricePresets: { label: string; description: string; rate: number }[];
   quotePrefix: string;
   logoUrl: string;
   primaryColor?: number;
@@ -52,6 +55,15 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     bankIfsc: String(cfg.bankIfsc || ""),
     termsAndConditions: Array.isArray(cfg.termsAndConditions) ? cfg.termsAndConditions.map(String) : [],
     defaultGstPercentage: Number(cfg.defaultGstPercentage ?? 18.0),
+    cost_margin_percent: Number(cfg.cost_margin_percent ?? 0),
+    enablePricePresets: cfg.enablePricePresets === true,
+    pricePresets: Array.isArray(cfg.pricePresets)
+      ? cfg.pricePresets.map((p: any) => ({
+          label: String((p && p.label) || ""),
+          description: String((p && p.description) || ""),
+          rate: Number((p && p.rate) || 0),
+        }))
+      : [],
     quotePrefix: String(cfg.quotePrefix || "JVUPVC"),
     logoUrl: String(cfg.logoUrl || ""),
     primaryColor: typeof cfg.primaryColor === "number" ? cfg.primaryColor : undefined,
