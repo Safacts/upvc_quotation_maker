@@ -60,9 +60,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkExistingSession() async {
+    String? openQuote;
     if (kIsWeb) {
       try {
         final uri = Uri.base;
+        openQuote = uri.queryParameters['open_quote'];
         if (uri.queryParameters['auto_login'] == 'true') {
           // Verify with Next.js backend using the secure HttpOnly cookie
           final res = await http.post(
@@ -75,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
             if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
               await _writeSession('true');
               if (!mounted) return;
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
               return;
             }
           }
@@ -86,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String? session = await _readSession();
     if (session == 'true') {
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
     }
   }
 
