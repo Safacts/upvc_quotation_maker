@@ -110,11 +110,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
         const appSlug = slugify(config.appName) || slugify(client.id);
         const marketSlug = slugify(config.companyName) || slugify(client.id);
         
-        if (process.env.NODE_ENV === "development") {
-          setAppUrl("http://127.0.0.1:8080/" + appSlug);
-        } else {
-          setAppUrl("/upvc/" + appSlug);
-        }
+        setAppUrl("/upvc/" + appSlug);
         setMarketUrl("/" + marketSlug);
 
         setInfoFields(
@@ -370,67 +366,104 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           </button>
 
           {/* Pro Mode: Native APK */}
-          <a 
-            href={config.appDownloadUrl || "#"} 
-            target={config.appDownloadUrl ? "_blank" : "_self"}
-            rel="noopener noreferrer" 
-            onClick={async (e) => {
-              if (!config.appDownloadUrl) {
-                e.preventDefault();
-                const btn = e.currentTarget;
-                const originalText = btn.innerHTML;
-                btn.innerHTML = `<span style="font-size: 13px; font-weight: 600;">Triggering Build...</span>`;
-                btn.style.pointerEvents = 'none';
-                try {
-                  const res = await fetch("/api/trigger_build", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      client_id: client.id,
-                      app_name: config.appName
-                    })
-                  });
-                  if (res.ok) {
-                    showToast("Build successfully triggered! Your Pro Native APK is being generated in the cloud. Check back in 5-10 minutes. You can use Lite Mode instantly while Pro is preparing!", "success");
-                  } else {
-                    const err = await res.json();
-                    showToast("Failed to trigger build: " + (err.error || "Unknown error"), "error");
-                  }
-                } catch (err: any) {
-                  showToast("Network error while triggering build.", "error");
-                } finally {
-                  btn.innerHTML = originalText;
-                  btn.style.pointerEvents = 'auto';
-                }
+          {(() => {
+            const lastTriggered = config.lastBuildTriggeredAt;
+            let isBuilding = false;
+            let buildMinutesRemaining = 0;
+            if (lastTriggered) {
+              const diffMinutes = (Date.now() - new Date(lastTriggered).getTime()) / 60000;
+              if (diffMinutes < 10) {
+                isBuilding = true;
+                buildMinutesRemaining = Math.ceil(10 - diffMinutes);
               }
-            }}
-            className="btn-download" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              padding: '10px 14px', 
-              color: 'var(--text)', 
-              textDecoration: 'none', 
-              borderRadius: '10px', 
-              border: '1px solid var(--border, #e2e8f0)',
-              background: config.appDownloadUrl ? '#f0fdf4' : '#f8fafc',
-              fontWeight: '600',
-              fontSize: '13px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>App Pro Mode</span>
-            </div>
-            <span style={{ fontSize: '10px', background: config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', color: config.appDownloadUrl ? '#166534' : '#64748b', padding: '2px 6px', borderRadius: '10px' }}>
-              {config.appDownloadUrl ? 'APK Ready' : 'Request Build'}
-            </span>
-          </a>
+            }
+
+            return (
+              <a 
+                href={isBuilding ? "#" : (config.appDownloadUrl || "#")} 
+                target={config.appDownloadUrl && !isBuilding ? "_blank" : "_self"}
+                rel="noopener noreferrer" 
+                onClick={async (e) => {
+                  if (isBuilding) {
+                    e.preventDefault();
+                    showToast(`A build is currently in progress. Please check back in ~${buildMinutesRemaining} minutes.`, "info");
+                    return;
+                  }
+                  if (!config.appDownloadUrl) {
+                    e.preventDefault();
+                    const btn = e.currentTarget;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<span style="font-size: 13px; font-weight: 600;">Triggering Build...</span>`;
+                    btn.style.pointerEvents = 'none';
+                    try {
+                      const res = await fetch("/api/trigger_build", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          client_id: client.id,
+                          app_name: config.appName
+                        })
+                      });
+                      if (res.ok) {
+                        showToast("Build successfully triggered! Your Pro Native APK is being generated in the cloud. Check back in 5-10 minutes.", "success");
+                        // Force page reload to show 'Building' status
+                        setTimeout(() => window.location.reload(), 2000);
+                      } else {
+                        const err = await res.json();
+                        showToast("Failed to trigger build: " + (err.error || "Unknown error"), "error");
+                      }
+                    } catch (err: any) {
+                      showToast("Network error while triggering build.", "error");
+                    } finally {
+                      btn.innerHTML = originalText;
+                      btn.style.pointerEvents = 'auto';
+                    }
+                  }
+                }}
+                className="btn-download" 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  padding: '10px 14px', 
+                  color: 'var(--text)', 
+                  textDecoration: 'none', 
+                  borderRadius: '10px', 
+                  border: '1px solid var(--border, #e2e8f0)',
+                  background: isBuilding ? '#fef3c7' : config.appDownloadUrl ? '#f0fdf4' : '#f8fafc',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {isBuilding ? (
+                      <>
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </>
+                    ) : (
+                      <>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </>
+                    )}
+                  </svg>
+                  <span>App Pro Mode</span>
+                </div>
+                <span style={{ 
+                  fontSize: '10px', 
+                  background: isBuilding ? '#fde68a' : config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', 
+                  color: isBuilding ? '#92400e' : config.appDownloadUrl ? '#166534' : '#64748b', 
+                  padding: '2px 6px', 
+                  borderRadius: '10px' 
+                }}>
+                  {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'APK Ready' : 'Request Build'}
+                </span>
+              </a>
+            );
+          })()}
           <button className="btn-logout" onClick={handleLogout}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
