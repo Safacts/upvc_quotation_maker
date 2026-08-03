@@ -38,6 +38,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   bool _isSaving = false;
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
+  bool _usePresets = false;
 
   final _nameFocus = FocusNode();
   final _referenceFocus = FocusNode();
@@ -87,6 +88,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   @override
   void initState() {
     super.initState();
+    _usePresets = Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets;
     if (widget.existingData != null) {
       data = widget.existingData!;
       _loadItems();
@@ -494,6 +496,13 @@ class _QuotationScreenState extends State<QuotationScreen> {
               ),
             ).animate().fade(delay: 200.ms),
 
+            SwitchListTile(
+              title: const Text('Enable Presets (Autofill from Catalog)', style: TextStyle(fontWeight: FontWeight.bold)),
+              value: _usePresets,
+              activeColor: theme.colorScheme.primary,
+              onChanged: (val) => setState(() => _usePresets = val),
+            ).animate().fade(delay: 250.ms),
+
             _buildSectionTitle('Measured Items').animate().fade(delay: 300.ms),
             ...data.measuredItems.asMap().entries.map((entry) {
               int index = entry.key;
@@ -513,66 +522,47 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      if (_usePresets) ...[
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(labelText: 'Select Preset from Catalog (Autofills fields)'),
+                          value: null,
+                          isExpanded: true,
+                          items: Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets.asMap().entries.map((e) {
+                            return DropdownMenuItem<int>(
+                              value: e.key,
+                              child: Text(e.value['name']?.toString() ?? e.value['description']?.toString() ?? 'Unknown'),
+                            );
+                          }).toList(),
+                          onChanged: (idx) {
+                            if (idx != null) {
+                              final selection = Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets[idx];
+                              setState(() {
+                                if (selection['code'] != null && selection['code'].toString().isNotEmpty) item.code = selection['code'].toString();
+                                if (selection['glass'] != null && selection['glass'].toString().isNotEmpty) item.glass = selection['glass'].toString();
+                                if (selection['width'] != null && selection['width'].toString().isNotEmpty) item.width = (selection['width'] as num?)?.toDouble() ?? 0;
+                                if (selection['height'] != null && selection['height'].toString().isNotEmpty) item.height = (selection['height'] as num?)?.toDouble() ?? 0;
+                                item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
+                                item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
+                                item.cardKey = UniqueKey();
+                              });
+                              _onDataChanged();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       Row(children: [
                         Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
                         Expanded(flex: 2, child: 
-                          (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
-                            ? Autocomplete<Map<String, dynamic>>(
-                                initialValue: TextEditingValue(text: item.description),
-                                displayStringForOption: (option) => option['description'] ?? option['name'] ?? '',
-                                optionsBuilder: (TextEditingValue textEditingValue) {
-                                  final presets = Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets;
-                                  if (textEditingValue.text.isEmpty) return presets;
-                                  return presets.where((preset) {
-                                    final name = preset['name']?.toString().toLowerCase() ?? '';
-                                    final desc = preset['description']?.toString().toLowerCase() ?? '';
-                                    final input = textEditingValue.text.toLowerCase();
-                                    return name.contains(input) || desc.contains(input);
-                                  });
-                                },
-                                onSelected: (Map<String, dynamic> selection) {
-                                  setState(() {
-                                    if (selection['code'] != null && selection['code'].toString().isNotEmpty) {
-                                      item.code = selection['code'].toString();
-                                    }
-                                    if (selection['glass'] != null && selection['glass'].toString().isNotEmpty) {
-                                      item.glass = selection['glass'].toString();
-                                    }
-                                    if (selection['width'] != null && selection['width'].toString().isNotEmpty) {
-                                      item.width = (selection['width'] as num?)?.toDouble() ?? 0;
-                                    }
-                                    if (selection['height'] != null && selection['height'].toString().isNotEmpty) {
-                                      item.height = (selection['height'] as num?)?.toDouble() ?? 0;
-                                    }
-                                    item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
-                                    item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
-                                    item.cardKey = UniqueKey();
-                                  });
-                                  _onDataChanged();
-                                },
-                                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                                  return TextFormField(
-                                    controller: textEditingController,
-                                    focusNode: focusNode,
-                                    textInputAction: TextInputAction.next,
-                                    onFieldSubmitted: (_) {
-                                      onFieldSubmitted();
-                                      _nextField('m_${index}_1');
-                                    },
-                                    decoration: const InputDecoration(labelText: 'Description (Type to search measured presets)'),
-                                    onChanged: (val) { item.description = val; _onDataChanged(); },
-                                  );
-                                },
-                              )
-                            : TextFormField(
-                                focusNode: _node('m_${index}_1'), 
-                                initialValue: item.description, 
-                                textInputAction: TextInputAction.next, 
-                                onFieldSubmitted: (_) => _nextField('m_${index}_1'), 
-                                decoration: const InputDecoration(labelText: 'Description'), 
-                                onChanged: (val) { item.description = val; _onDataChanged(); }
-                              )
+                          TextFormField(
+                            focusNode: _node('m_${index}_1'), 
+                            initialValue: item.description, 
+                            textInputAction: TextInputAction.next, 
+                            onFieldSubmitted: (_) => _nextField('m_${index}_1'), 
+                            decoration: const InputDecoration(labelText: 'Description'), 
+                            onChanged: (val) { item.description = val; _onDataChanged(); }
+                          )
                         ),
                       ]),
                       const SizedBox(height: 12),
@@ -618,43 +608,39 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
-                        ? Autocomplete<Map<String, dynamic>>(
-                            initialValue: TextEditingValue(text: item.description),
-                            displayStringForOption: (option) => option['description'] ?? option['name'] ?? '',
-                            optionsBuilder: (TextEditingValue textEditingValue) {
-                              final presets = Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets;
-                              if (textEditingValue.text.isEmpty) return presets;
-                              return presets.where((preset) {
-                                final name = preset['name']?.toString().toLowerCase() ?? '';
-                                final desc = preset['description']?.toString().toLowerCase() ?? '';
-                                final input = textEditingValue.text.toLowerCase();
-                                return name.contains(input) || desc.contains(input);
-                              });
-                            },
-                            onSelected: (Map<String, dynamic> selection) {
+                      if (_usePresets) ...[
+                        DropdownButtonFormField<int>(
+                          decoration: const InputDecoration(labelText: 'Select Preset from Catalog'),
+                          value: null,
+                          isExpanded: true,
+                          items: Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets.asMap().entries.map((e) {
+                            return DropdownMenuItem<int>(
+                              value: e.key,
+                              child: Text(e.value['name']?.toString() ?? e.value['description']?.toString() ?? 'Unknown'),
+                            );
+                          }).toList(),
+                          onChanged: (idx) {
+                            if (idx != null) {
+                              final selection = Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets[idx];
                               setState(() {
                                 item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
                                 item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
                                 item.cardKey = UniqueKey();
                               });
                               _onDataChanged();
-                            },
-                            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textEditingController,
-                                focusNode: focusNode,
-                                textInputAction: TextInputAction.next,
-                                onFieldSubmitted: (_) {
-                                  onFieldSubmitted();
-                                  _nextField('u_${index}_0');
-                                },
-                                decoration: const InputDecoration(labelText: 'Description (Type to search unmeasured presets)'),
-                                onChanged: (val) { item.description = val; _onDataChanged(); },
-                              );
-                            },
-                          )
-                        : TextFormField(focusNode: _node('u_${index}_0'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_0'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      TextFormField(
+                        focusNode: _node('u_${index}_0'), 
+                        initialValue: item.description, 
+                        textInputAction: TextInputAction.next, 
+                        onFieldSubmitted: (_) => _nextField('u_${index}_0'), 
+                        decoration: const InputDecoration(labelText: 'Description'), 
+                        onChanged: (val) { item.description = val; _onDataChanged(); }
+                      ),
                       const SizedBox(height: 12),
                       Row(children: [
                         Expanded(child: TextFormField(focusNode: _node('u_${index}_1'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_1'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
