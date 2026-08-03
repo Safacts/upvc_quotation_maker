@@ -53,6 +53,12 @@ export default function LoginPage() {
     localStorage.setItem("portal_auth", "password");
     localStorage.setItem("portal_role", data.role);
 
+    if (data.role === "signup") {
+      localStorage.removeItem("portal_client_id");
+      window.location.href = "/signup";
+      return;
+    }
+
     if (data.role === "admin") {
       localStorage.removeItem("portal_client_id");
       window.location.href = "/admin";
@@ -98,6 +104,7 @@ export default function LoginPage() {
 
   async function handleGoogleCredential(response: any) {
     setError("");
+    setLoginLoading(true);
     try {
       if (!response || typeof response !== "object") {
         throw new Error("no response from Google");
@@ -140,6 +147,12 @@ export default function LoginPage() {
       localStorage.setItem("portal_auth", "google");
       localStorage.setItem("portal_role", data.role);
 
+      if (data.role === "signup") {
+        localStorage.removeItem("portal_client_id");
+        window.location.href = "/signup";
+        return;
+      }
+
       if (data.role === "admin") {
         localStorage.removeItem("portal_client_id");
         window.location.href = "/admin";
@@ -150,6 +163,7 @@ export default function LoginPage() {
       window.location.href = "/" + slugify(data.client_id) + "/home";
     } catch (err: any) {
       showError("Google sign-in failed: " + err.message);
+      setLoginLoading(false);
     }
   }
 
@@ -288,8 +302,13 @@ export default function LoginPage() {
       <p className="subtitle">Sign in to the Vitharn UPVC Quotation Maker Portal</p>
 
       <div className="divider">Continue with</div>
-      <div className="g-signin-wrap">
-        <div ref={googleDivRef} id="gSignInDiv" />
+      <div className="g-signin-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+        <div ref={googleDivRef} id="gSignInDiv" style={{ opacity: loginLoading ? 0.5 : 1, pointerEvents: loginLoading ? 'none' : 'auto' }} />
+        {loginLoading && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px', borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
+          </div>
+        )}
       </div>
       <div className="divider">or</div>
 

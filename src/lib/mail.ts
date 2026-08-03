@@ -2,6 +2,8 @@ import nodemailer from "nodemailer";
 
 export const MAIL_FROM = "Vitharn | Rubix IT Solution <vitharn@rubixitsolution.com>";
 
+export const ADMIN_EMAILS = ["kongaaadisheshu@gmail.com", "vitarn.dev@gmail.com", "pusalalaxmi41@gmail.com"];
+
 function transporter() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || "465");
@@ -96,4 +98,81 @@ export async function sendOtpEmail(recipient: string, otp: string): Promise<void
     subject: "Your Password Reset OTP",
     html,
   });
+}
+
+export async function sendSignupNotification(
+  kind: "new" | "submitted",
+  opts: {
+    email: string;
+    name?: string;
+    phone?: string;
+    config?: Record<string, any>;
+    submittedAt?: string;
+  },
+): Promise<void> {
+  const { email, name, phone, config = {}, submittedAt } = opts;
+  const label = name || email;
+
+  const subject =
+    kind === "new"
+      ? `New signup request: ${label}`
+      : `Signup profile submitted: ${label}`;
+
+  const heading =
+    kind === "new"
+      ? "New Signup Request"
+      : "Signup Profile Submitted";
+
+  const intro =
+    kind === "new"
+      ? "A new UPVC business has registered via login on the Vitharn UPVC Quotation Maker Portal. Their full profile auto-saves as they type, so check the admin panel and follow up."
+      : "A user has completed and submitted their company profile on the Vitharn UPVC Quotation Maker Portal and is awaiting review.";
+
+  const configFields = ([
+    ["Company Name", String(config.companyName ?? "")],
+    ["Company Contact", String(config.companyContact ?? "")],
+    ["Company Address", String(config.companyAddress ?? "")],
+    ["GST Number", String(config.gstNumber ?? "")],
+    ["City", String(config.city ?? "")],
+    ["Business Type", String(config.businessType ?? "")],
+  ] as Array<[string, string]>).filter(([, value]) => value !== "");
+
+  const detailRows = ([
+    ["Name", name || ""],
+    ["Email", email],
+    ["Phone", phone || ""],
+    ["Submitted At", submittedAt || ""],
+    ...configFields,
+  ] as Array<[string, string]>).filter(([, value]) => value !== "");
+
+  const detailTable = detailRows
+    .map(
+      ([key, value]) => `
+      <tr>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; white-space: nowrap; vertical-align: top;">${key}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #1E3A5F; font-size: 14px; font-weight: bold; vertical-align: top;">${value}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const note =
+    kind === "new"
+      ? "Their full profile auto-saves as they type. Please check the admin panel and follow up with this user."
+      : "Please review this profile in the admin panel and create the client account when ready.";
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <h2 style="color: #1E3A5F; margin-top: 0;">${heading}</h2>
+      <p style="color: #475569; font-size: 16px;">${intro}</p>
+      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse;">${detailTable}</table>
+      </div>
+      <p style="color: #475569; font-size: 15px;">${note}</p>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">This is an automated notification sent by the Vitharn UPVC Quotation Maker Portal.</p>
+    </div>
+  `;
+
+  for (const admin of ADMIN_EMAILS) {
+    await sendMail({ to: admin, subject, html });
+  }
 }

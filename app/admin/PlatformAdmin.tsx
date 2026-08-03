@@ -108,6 +108,21 @@ function defaultForm(): EditorForm {
   };
 }
 
+function signupStatusColor(status: string): string {
+  switch (status) {
+    case "pending":
+      return "#f59e0b";
+    case "submitted":
+      return "#22c55e";
+    case "approved":
+      return "#3b82f6";
+    case "rejected":
+      return "#ef4444";
+    default:
+      return "#94a3b8";
+  }
+}
+
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
@@ -237,6 +252,8 @@ export default function PlatformAdmin() {
   const [invoiceBgPreviewSrc, setInvoiceBgPreviewSrc] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
+  const [signupRequests, setSignupRequests] = useState<any[]>([]);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -324,6 +341,28 @@ export default function PlatformAdmin() {
     };
   }, [router, loadClients]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (localStorage.getItem("portal_role") !== "admin") return;
+        const r = await fetch("/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: "list" }),
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setSignupRequests(data || []);
+      } catch (e) {
+        console.warn("Failed to load signup requests:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function handleLogout() {
     localStorage.removeItem("portal_session");
     localStorage.removeItem("portal_email");
@@ -409,6 +448,20 @@ export default function PlatformAdmin() {
 
   function setF(key: keyof EditorForm, value: any) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function useSignupRequest(req: any) {
+    const cfg = req.config || {};
+    setShowSignupModal(false);
+    openEditor(null);
+    setF("companyName", cfg.companyName || "");
+    setF("email", req.email || "");
+    setF("contact", cfg.companyContact || req.phone || "");
+    setF("address", cfg.companyAddress || "");
+    setF("proprietor", cfg.companyProprietor || req.name || "");
+    setF("gst", cfg.gstNumber || "");
+    showToast("Loaded signup request into editor — set a temp password and save to create the account.", "success");
+    setSignupRequests(null);
   }
 
   async function handleLogoFileSelected(file: File) {
@@ -787,9 +840,18 @@ export default function PlatformAdmin() {
 
           <div className="admin-sidebar-footer">
             {!isCustomer && (
-              <button className="add-client-btn" onClick={() => openEditor(null)}>
-                <span>+</span> New Client
-              </button>
+              <>
+                <button className="add-client-btn" onClick={() => openEditor(null)}>
+                  <span>+</span> New Client
+                </button>
+                <button
+                  className="add-client-btn"
+                  style={{ marginTop: 8 }}
+                  onClick={() => setShowSignupModal(true)}
+                >
+                  Signup Requests ({signupRequests?.length ?? 0})
+                </button>
+              </>
             )}
             <div className="sidebar-meta">
               <span className="sidebar-user">{currentUser}{isCustomer ? " (customer)" : ""}</span>
@@ -1223,6 +1285,52 @@ export default function PlatformAdmin() {
             <div className="modal-actions" style={{ marginTop: '24px' }}>
               <button className="btn-secondary" onClick={() => setConfirmDialog(null)}>Cancel</button>
               <button className="btn-danger" onClick={() => deleteClient(confirmDialog.id)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSignupModal && (
+        <div className="modal" style={{ display: "flex" }}>
+          <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
+            <h3>Signup Requests</h3>
+            {(signupRequests || []).length === 0 && (
+              <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
+            )}
+            {(signupRequests || []).map((req) => {
+              const cfg = req.config || {};
+              const statusColor = signupStatusColor(req.status);
+              return (
+                <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                    <div>
+                      <strong>{req.email}</strong>
+                      <div style={{ color: "#475569", fontSize: 13 }}>
+                        {[req.name, req.phone].filter(Boolean).join(" · ")}
+                      </div>
+                    </div>
+                    <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
+                      {req.status}
+                    </span>
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                    Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
+                  </div>
+                  {(cfg.companyName || cfg.city || cfg.gstNumber) && (
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                      {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                  <div className="modal-actions" style={{ marginTop: 10 }}>
+                    <button className="btn-primary" onClick={() => useSignupRequest(req)}>
+                      Use in Editor
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
             </div>
           </div>
         </div>

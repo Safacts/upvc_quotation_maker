@@ -131,6 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSession('true');
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+      } else if (res.statusCode == 200 && data['role'] == 'signup') {
+        setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
       } else {
         umamiTrack('login_failed');
         setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });

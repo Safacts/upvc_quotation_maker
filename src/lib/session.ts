@@ -5,9 +5,10 @@ const secretKey = process.env.JWT_SECRET || "default_super_secret_key_change_me_
 const encodedKey = new TextEncoder().encode(secretKey);
 
 export type SessionPayload = {
-  role: "admin" | "customer";
+  role: "admin" | "customer" | "signup";
   email: string;
   client_id?: string;
+  signup_request_id?: string;
   expiresAt: Date;
 };
 
