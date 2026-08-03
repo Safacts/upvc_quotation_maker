@@ -87,7 +87,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       ''';
 
       final message = Message()
-        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solutions')
+        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solution')
         ..recipients.add(_toController.text.trim())
         ..subject = _subjectController.text
         ..html = htmlBody

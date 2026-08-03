@@ -256,7 +256,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       ''';
 
       final message = Message()
-        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solutions')
+        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solution')
         ..recipients.add(targetEmail.trim())
         ..subject = 'Quotation ${data.quotationNo} from ${appState.companyName}'
         ..html = htmlBody

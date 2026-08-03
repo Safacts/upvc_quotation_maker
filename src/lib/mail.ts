@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-export const MAIL_FROM = "Vitharn | Rubix IT Solutions <vitharn@rubixitsolution.com>";
+export const MAIL_FROM = "Vitharn | Rubix IT Solution <vitharn@rubixitsolution.com>";
 
 function transporter() {
   const host = process.env.SMTP_HOST;

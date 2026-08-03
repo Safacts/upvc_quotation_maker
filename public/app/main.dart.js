@@ -131364,7 +131364,7 @@ b0=new A.aup(a1,[],[],A.v(a7,t.z),a9)
 b1=$.zB().gxm().h(0,"SMTP_FROM")
 if(b1==null)b1="vitharn@rubixitsolution.com"
 b2=$.zB().gxm().h(0,"SMTP_FROM_NAME")
-b0.c=new A.ho(b2==null?"Vitharn | Rubix IT Solutions":b2,b1)
+b0.c=new A.ho(b2==null?"Vitharn | Rubix IT Solution":b2,b1)
 a1.push(B.q.cw(b6.a.a))
 a1=m.e
 b0.w=a1.a.a
