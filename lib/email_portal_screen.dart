@@ -136,72 +136,181 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appState = Provider.of<AppState>(context, listen: false);
+    final primaryGradient = AppTheme.primaryGradientFrom(appState.clientConfig);
     
     return Scaffold(
-      appBar: AppBar(title: const Text('Email Portal')),
+      backgroundColor: Colors.grey[100], // Premium off-white background
+      appBar: AppBar(
+        title: const Text('Email Portal', style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(decoration: BoxDecoration(gradient: primaryGradient)),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              value: _selectedTemplate,
-              decoration: const InputDecoration(labelText: 'Choose a Template', prefixIcon: Icon(Icons.file_copy)),
-              items: _templates.keys.map((String key) {
-                return DropdownMenuItem<String>(value: key, child: Text(key));
-              }).toList(),
-              onChanged: _applyTemplate,
-            ).animate().fade().slideY(begin: -0.2),
-            const SizedBox(height: 24),
-            
-            TextField(
-              controller: _toController,
-              decoration: const InputDecoration(labelText: 'To (Recipient Email)', prefixIcon: Icon(Icons.email)),
-              keyboardType: TextInputType.emailAddress,
-            ).animate().fade(delay: 100.ms).slideY(begin: -0.2),
-            const SizedBox(height: 16),
-            
-            TextField(
-              controller: _subjectController,
-              decoration: const InputDecoration(labelText: 'Subject', prefixIcon: Icon(Icons.title)),
-            ).animate().fade(delay: 200.ms).slideY(begin: -0.2),
-            const SizedBox(height: 16),
-            
-            TextField(
-              controller: _bodyController,
-              maxLines: 8,
-              decoration: const InputDecoration(labelText: 'Email Body', alignLabelWithHint: true),
-            ).animate().fade(delay: 300.ms).slideY(begin: -0.2),
-            const SizedBox(height: 32),
-            
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: _isSending ? null : _sendEmail,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: Colors.transparent, elevation: 0, shadowColor: Colors.transparent),
-                child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header Card
+                Container(
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                    ],
                   ),
-                  child: Container(
-                    alignment: Alignment.center,
-                    child: _isSending 
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.send, color: Colors.white),
-                              SizedBox(width: 12),
-                              Text('SEND DIRECT EMAIL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                            ],
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Compose Email',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Send personalized messages directly to your customers with professional templates.',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
+                      ),
+                      const SizedBox(height: 24),
+                      DropdownButtonFormField<String>(
+                        value: _selectedTemplate,
+                        decoration: InputDecoration(
+                          labelText: 'Choose a Template',
+                          prefixIcon: Icon(Icons.auto_awesome, color: theme.primaryColor),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                        ),
+                        icon: const Icon(Icons.expand_more, color: Colors.grey),
+                        dropdownColor: Colors.white,
+                        items: _templates.keys.map((String key) {
+                          return DropdownMenuItem<String>(value: key, child: Text(key, style: const TextStyle(fontWeight: FontWeight.w500)));
+                        }).toList(),
+                        onChanged: _applyTemplate,
+                      ).animate().fade().slideY(begin: -0.1),
+                    ],
                   ),
-                ),
-              ),
-            ).animate().scale(delay: 500.ms),
-          ],
+                ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+                
+                const SizedBox(height: 24),
+
+                // Form Card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _toController,
+                        decoration: InputDecoration(
+                          labelText: 'To (Recipient Email)',
+                          prefixIcon: Icon(Icons.person_outline, color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ).animate().fade(delay: 100.ms).slideX(begin: -0.1),
+                      const SizedBox(height: 20),
+                      
+                      TextField(
+                        controller: _subjectController,
+                        decoration: InputDecoration(
+                          labelText: 'Subject',
+                          prefixIcon: Icon(Icons.title, color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ).animate().fade(delay: 200.ms).slideX(begin: -0.1),
+                      const SizedBox(height: 20),
+                      
+                      TextField(
+                        controller: _bodyController,
+                        maxLines: 10,
+                        decoration: InputDecoration(
+                          labelText: 'Email Body',
+                          alignLabelWithHint: true,
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                        ),
+                        style: const TextStyle(height: 1.5),
+                      ).animate().fade(delay: 300.ms).slideX(begin: -0.1),
+                    ],
+                  ),
+                ).animate().fade(delay: 200.ms, duration: 400.ms).slideY(begin: 0.1),
+                
+                const SizedBox(height: 32),
+                
+                // Submit Button
+                SizedBox(
+                  height: 65,
+                  child: ElevatedButton(
+                    onPressed: _isSending ? null : _sendEmail,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero, 
+                      backgroundColor: Colors.transparent, 
+                      elevation: 8, 
+                      shadowColor: theme.primaryColor.withOpacity(0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    ),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: primaryGradient,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: _isSending 
+                            ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 24, height: 24,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Text('SENDING...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                                ],
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.send_rounded, color: Colors.white, size: 24),
+                                  SizedBox(width: 12),
+                                  Text('SEND DIRECT EMAIL', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                ).animate().scale(delay: 400.ms, curve: Curves.easeOutBack),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -907,6 +907,13 @@ export default function PlatformAdmin() {
                 >
                   Signup Requests ({signupRequests?.length ?? 0})
                 </button>
+                <button
+                  className="add-client-btn"
+                  style={{ marginTop: 8 }}
+                  onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
+                >
+                  Compose Email
+                </button>
               </>
             )}
             <div className="sidebar-meta">
@@ -1350,94 +1357,97 @@ export default function PlatformAdmin() {
         <div className="modal" style={{ display: "flex" }}>
           <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
             <h3>Signup Requests</h3>
-            {composeMail ? (
-              <>
-                <div style={{ color: "#64748b", fontSize: 12, marginBottom: 10 }}>
-                  Sending to {composeMail.req.email} · status: {composeMail.req.status}
-                </div>
-                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "8px 0 4px", color: "#1E3A5F" }}>
-                  To
-                </label>
-                <input
-                  value={composeMail.to}
-                  onChange={(e) => setComposeMail({ ...composeMail, to: e.target.value })}
-                  placeholder="recipient@example.com"
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
-                  Subject
-                </label>
-                <input
-                  value={composeMail.subject}
-                  onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
-                  placeholder="Subject"
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
-                  Message
-                </label>
-                <textarea
-                  value={composeMail.body}
-                  onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
-                  rows={7}
-                  placeholder="Write your message here…"
-                  style={{ width: "100%", boxSizing: "border-box" }}
-                />
-                <div className="modal-actions" style={{ marginTop: 16 }}>
-                  <button className="btn-secondary" onClick={() => setComposeMail(null)}>Back</button>
-                  <button
-                    className="btn-primary"
-                    onClick={sendAdminMail}
-                    disabled={sendingMail || !composeMail.to.trim() || !composeMail.subject.trim() || !composeMail.body.trim()}
-                  >
-                    {sendingMail ? "Sending…" : "Send Email"}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {(signupRequests || []).length === 0 && (
-                  <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
-                )}
-                {(signupRequests || []).map((req) => {
-                  const cfg = req.config || {};
-                  const statusColor = signupStatusColor(req.status);
-                  return (
-                    <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                        <div>
-                          <strong>{req.email}</strong>
-                          <div style={{ color: "#475569", fontSize: 13 }}>
-                            {[req.name, req.phone].filter(Boolean).join(" · ")}
-                          </div>
-                        </div>
-                        <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
-                          {req.status}
-                        </span>
-                      </div>
-                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                        Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
-                      </div>
-                      {(cfg.companyName || cfg.city || cfg.gstNumber) && (
-                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                          {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                      <div className="modal-actions" style={{ marginTop: 10 }}>
-                        <button className="btn-secondary" onClick={() => openCompose(req)}>
-                          Send Email
-                        </button>
-                        <button className="btn-primary" onClick={() => useSignupRequest(req)}>
-                          Use in Editor
-                        </button>
+            {(signupRequests || []).length === 0 && (
+              <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
+            )}
+            {(signupRequests || []).map((req) => {
+              const cfg = req.config || {};
+              const statusColor = signupStatusColor(req.status);
+              return (
+                <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                    <div>
+                      <strong>{req.email}</strong>
+                      <div style={{ color: "#475569", fontSize: 13 }}>
+                        {[req.name, req.phone].filter(Boolean).join(" · ")}
                       </div>
                     </div>
-                  );
-                })}
-              </>
-            )}
+                    <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
+                      {req.status}
+                    </span>
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                    Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
+                  </div>
+                  {(cfg.companyName || cfg.city || cfg.gstNumber) && (
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                      {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
+                    </div>
+                  )}
+                  <div className="modal-actions" style={{ marginTop: 10 }}>
+                    <button className="btn-secondary" onClick={() => { setShowSignupModal(false); openCompose(req); }}>
+                      Send Email
+                    </button>
+                    <button className="btn-primary" onClick={() => useSignupRequest(req)}>
+                      Use in Editor
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
             <div className="modal-actions" style={{ marginTop: 16 }}>
               <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {composeMail && (
+        <div className="modal" style={{ display: "flex" }}>
+          <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
+            <h3>Compose Email</h3>
+            {composeMail.req && (
+              <div style={{ color: "#64748b", fontSize: 12, marginBottom: 10 }}>
+                Sending to {composeMail.req.email} · status: {composeMail.req.status}
+              </div>
+            )}
+            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "8px 0 4px", color: "#1E3A5F" }}>
+              To
+            </label>
+            <input
+              value={composeMail.to}
+              onChange={(e) => setComposeMail({ ...composeMail, to: e.target.value })}
+              placeholder="recipient@example.com"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
+              Subject
+            </label>
+            <input
+              value={composeMail.subject}
+              onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
+              placeholder="Subject"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
+              Message
+            </label>
+            <textarea
+              value={composeMail.body}
+              onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
+              rows={7}
+              placeholder="Write your message here…"
+              style={{ width: "100%", boxSizing: "border-box" }}
+            />
+            <div className="modal-actions" style={{ marginTop: 16 }}>
+              <button className="btn-secondary" onClick={() => setComposeMail(null)}>Cancel</button>
+              <button
+                className="btn-primary"
+                onClick={sendAdminMail}
+                disabled={sendingMail || !composeMail.to.trim() || !composeMail.subject.trim() || !composeMail.body.trim()}
+              >
+                {sendingMail ? "Sending…" : "Send Email"}
+              </button>
             </div>
           </div>
         </div>
