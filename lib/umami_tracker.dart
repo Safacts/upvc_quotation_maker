@@ -1,11 +1,2 @@
-import 'dart:js_interop';
-import 'dart:js_interop_unsafe';
-
-@JS('umami')
-external JSObject? get _umami;
-
-void umamiTrack(String event) {
-  try {
-    _umami?.callMethod('track'.toJS, event.toJS);
-  } catch (_) {}
-}
+export 'umami_tracker_stub.dart'
+    if (dart.library.js_interop) 'umami_tracker_web.dart';
