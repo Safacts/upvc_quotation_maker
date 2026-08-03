@@ -386,25 +386,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    // Status selector
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SegmentedButton<QuotationStatus>(
-                        segments: QuotationStatus.values.map((s) => ButtonSegment(
-                          value: s,
-                          label: Text(s.label, style: const TextStyle(fontSize: 12)),
-                        )).toList(),
-                        selected: {data.status},
-                        onSelectionChanged: (sel) {
-                          setState(() => data.status = sel.first);
-                          _onDataChanged();
-                        },
-                        style: ButtonStyle(
-                          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 8, vertical: 0)),
-                        ),
-                      ),
-                    ),
+
                   ],
                 ),
               ),
@@ -512,6 +494,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
               int index = entry.key;
               MeasuredItem item = entry.value;
               return Card(
+                key: item.cardKey,
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -532,21 +515,34 @@ class _QuotationScreenState extends State<QuotationScreen> {
                           (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
                             ? Autocomplete<Map<String, dynamic>>(
                                 initialValue: TextEditingValue(text: item.description),
-                                displayStringForOption: (option) => option['description'] ?? option['label'] ?? '',
+                                displayStringForOption: (option) => option['description'] ?? option['name'] ?? '',
                                 optionsBuilder: (TextEditingValue textEditingValue) {
-                                  final presets = Provider.of<AppState>(context, listen: false).clientConfig.pricePresets;
+                                  final presets = Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets;
                                   if (textEditingValue.text.isEmpty) return presets;
                                   return presets.where((preset) {
-                                    final label = preset['label']?.toString().toLowerCase() ?? '';
+                                    final name = preset['name']?.toString().toLowerCase() ?? '';
                                     final desc = preset['description']?.toString().toLowerCase() ?? '';
                                     final input = textEditingValue.text.toLowerCase();
-                                    return label.contains(input) || desc.contains(input);
+                                    return name.contains(input) || desc.contains(input);
                                   });
                                 },
                                 onSelected: (Map<String, dynamic> selection) {
                                   setState(() {
-                                    item.description = selection['description']?.toString() ?? selection['label']?.toString() ?? '';
+                                    if (selection['code'] != null && selection['code'].toString().isNotEmpty) {
+                                      item.code = selection['code'].toString();
+                                    }
+                                    if (selection['glass'] != null && selection['glass'].toString().isNotEmpty) {
+                                      item.glass = selection['glass'].toString();
+                                    }
+                                    if (selection['width'] != null && selection['width'].toString().isNotEmpty) {
+                                      item.width = (selection['width'] as num?)?.toDouble() ?? 0;
+                                    }
+                                    if (selection['height'] != null && selection['height'].toString().isNotEmpty) {
+                                      item.height = (selection['height'] as num?)?.toDouble() ?? 0;
+                                    }
+                                    item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
                                     item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
+                                    item.cardKey = UniqueKey();
                                   });
                                   _onDataChanged();
                                 },
@@ -559,7 +555,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                                       onFieldSubmitted();
                                       _nextField('m_${index}_1');
                                     },
-                                    decoration: const InputDecoration(labelText: 'Description (Type to search presets)'),
+                                    decoration: const InputDecoration(labelText: 'Description (Type to search measured presets)'),
                                     onChanged: (val) { item.description = val; _onDataChanged(); },
                                   );
                                 },
@@ -603,6 +599,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
               int index = entry.key;
               UnmeasuredItem item = entry.value;
               return Card(
+                key: item.cardKey,
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -619,21 +616,22 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
                         ? Autocomplete<Map<String, dynamic>>(
                             initialValue: TextEditingValue(text: item.description),
-                            displayStringForOption: (option) => option['description'] ?? option['label'] ?? '',
+                            displayStringForOption: (option) => option['description'] ?? option['name'] ?? '',
                             optionsBuilder: (TextEditingValue textEditingValue) {
-                              final presets = Provider.of<AppState>(context, listen: false).clientConfig.pricePresets;
+                              final presets = Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets;
                               if (textEditingValue.text.isEmpty) return presets;
                               return presets.where((preset) {
-                                final label = preset['label']?.toString().toLowerCase() ?? '';
+                                final name = preset['name']?.toString().toLowerCase() ?? '';
                                 final desc = preset['description']?.toString().toLowerCase() ?? '';
                                 final input = textEditingValue.text.toLowerCase();
-                                return label.contains(input) || desc.contains(input);
+                                return name.contains(input) || desc.contains(input);
                               });
                             },
                             onSelected: (Map<String, dynamic> selection) {
                               setState(() {
-                                item.description = selection['description']?.toString() ?? selection['label']?.toString() ?? '';
+                                item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
                                 item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
+                                item.cardKey = UniqueKey();
                               });
                               _onDataChanged();
                             },
@@ -646,7 +644,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                                   onFieldSubmitted();
                                   _nextField('u_${index}_0');
                                 },
-                                decoration: const InputDecoration(labelText: 'Description (Type to search presets)'),
+                                decoration: const InputDecoration(labelText: 'Description (Type to search unmeasured presets)'),
                                 onChanged: (val) { item.description = val; _onDataChanged(); },
                               );
                             },

@@ -15,7 +15,8 @@ export interface ClientConfig {
   defaultGstPercentage: number;
   cost_margin_percent: number;
   enablePricePresets: boolean;
-  pricePresets: { label: string; description: string; rate: number }[];
+  measuredPresets: { name: string; code: string; description: string; glass: string; rate: number }[];
+  unmeasuredPresets: { name: string; code: string; description: string; rate: number }[];
   quotePrefix: string;
   logoUrl: string;
   appDownloadUrl: string;
@@ -55,13 +56,27 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     bankBranch: String(cfg.bankBranch || ""),
     bankAccountNo: String(cfg.bankAccountNo || ""),
     bankIfsc: String(cfg.bankIfsc || ""),
-    termsAndConditions: Array.isArray(cfg.termsAndConditions) ? cfg.termsAndConditions.map(String) : [],
+    termsAndConditions: Array.isArray(cfg.termsAndConditions) 
+      ? cfg.termsAndConditions.map(String) 
+      : typeof cfg.termsAndConditions === 'string' 
+        ? cfg.termsAndConditions.split('\n').filter((s: string) => s.trim() !== '')
+        : [],
     defaultGstPercentage: Number(cfg.defaultGstPercentage ?? 18.0),
     cost_margin_percent: Number(cfg.cost_margin_percent ?? 0),
     enablePricePresets: cfg.enablePricePresets === true,
-    pricePresets: Array.isArray(cfg.pricePresets)
-      ? cfg.pricePresets.map((p: any) => ({
-          label: String((p && p.label) || ""),
+    measuredPresets: Array.isArray(cfg.measuredPresets)
+      ? cfg.measuredPresets.map((p: any) => ({
+          name: String((p && p.name) || ""),
+          code: String((p && p.code) || ""),
+          description: String((p && p.description) || ""),
+          glass: String((p && p.glass) || ""),
+          rate: Number((p && p.rate) || 0),
+        }))
+      : [],
+    unmeasuredPresets: Array.isArray(cfg.unmeasuredPresets)
+      ? cfg.unmeasuredPresets.map((p: any) => ({
+          name: String((p && p.name) || ""),
+          code: String((p && p.code) || ""),
           description: String((p && p.description) || ""),
           rate: Number((p && p.rate) || 0),
         }))

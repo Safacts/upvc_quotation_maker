@@ -326,7 +326,7 @@ body { font-family: 'Outfit', sans-serif; background: var(--bg-light); color: va
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: 600px;
+    width: 100%;
 }
 
 .form-group {

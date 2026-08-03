@@ -40,7 +40,8 @@ class ClientConfig {
   // Price Customizations & Presets
   final double costMarginPercent;
   final bool enablePricePresets;
-  final List<Map<String, dynamic>> pricePresets;
+  final List<Map<String, dynamic>> measuredPresets;
+  final List<Map<String, dynamic>> unmeasuredPresets;
   
   // Custom Download Links
   final String appDownloadUrl;
@@ -94,7 +95,8 @@ class ClientConfig {
     this.landingFooter = '',
     this.costMarginPercent = 65.0,
     this.enablePricePresets = false,
-    this.pricePresets = const [],
+    this.measuredPresets = const [],
+    this.unmeasuredPresets = const [],
     this.appDownloadUrl = '',
   });
 
@@ -139,7 +141,8 @@ class ClientConfig {
     'landingFooter': landingFooter,
     'costMarginPercent': costMarginPercent,
     'enablePricePresets': enablePricePresets,
-    'pricePresets': pricePresets,
+    'measuredPresets': measuredPresets,
+    'unmeasuredPresets': unmeasuredPresets,
     'appDownloadUrl': appDownloadUrl,
   };
 
@@ -182,7 +185,8 @@ class ClientConfig {
     landingFooter: json['landingFooter'] as String? ?? '',
     costMarginPercent: (json['costMarginPercent'] ?? json['cost_margin_percent'] as num?)?.toDouble() ?? 65.0,
     enablePricePresets: json['enablePricePresets'] as bool? ?? false,
-    pricePresets: (json['pricePresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
+    measuredPresets: (json['measuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
+    unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
   );
 }

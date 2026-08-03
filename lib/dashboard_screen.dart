@@ -254,7 +254,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: ClientLogo(config: Provider.of<AppState>(context, listen: false).clientConfig, width: 60, height: 60),
                   ),
                   const SizedBox(height: 10),
-                  Text(Provider.of<AppState>(context).companyName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Flexible(child: Text(Provider.of<AppState>(context).companyName, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
                 ],
               ),
             ),
@@ -346,11 +346,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          if (!_isLoading && _quotations.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _buildSummaryRow(_quotations),
-            ),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(

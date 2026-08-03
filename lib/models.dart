@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'supabase_config.dart';
 
@@ -134,6 +135,7 @@ class QuotationData {
 
 class MeasuredItem {
   String? id;
+  Key cardKey = UniqueKey();
   String code = '';
   String description = '';
   double width = 0;
@@ -176,6 +178,7 @@ class MeasuredItem {
 
 class UnmeasuredItem {
   String? id;
+  Key cardKey = UniqueKey();
   String description = '';
   int units = 1;
   double rate = 0;

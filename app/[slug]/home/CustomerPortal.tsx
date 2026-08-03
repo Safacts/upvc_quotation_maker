@@ -133,10 +133,16 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           companyEmail: config.companyEmail || "",
           companyAddress: config.companyAddress || "",
           gstNumber: config.gstNumber || "",
+          bankName: config.bankName || "",
+          bankBranch: config.bankBranch || "",
+          bankAccountNo: config.bankAccountNo || "",
+          bankIfsc: config.bankIfsc || "",
+          termsAndConditions: config.termsAndConditions || [],
           defaultGstPercentage: config.defaultGstPercentage || 0,
           cost_margin_percent: config.cost_margin_percent || 0,
           enablePricePresets: config.enablePricePresets || false,
-          pricePresets: config.pricePresets || [],
+          measuredPresets: config.measuredPresets || [],
+          unmeasuredPresets: config.unmeasuredPresets || [],
         });
 
         // Fetch stats in parallel
@@ -542,7 +548,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                + Create New Quotation
+                Create New Quotation
               </button>
             </div>
 
@@ -760,61 +766,118 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
           {/* Settings Tab */}
           <div className={`tab-pane ${activeTab === "settings" ? "active" : ""}`}>
-            <div className="info-card">
-              <h3>Update Business Information</h3>
-              <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>
-                Manage your profile, contact details, and profit margins below.
-              </p>
+            <form onSubmit={handleSettingsSave} className="settings-form" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              <form onSubmit={handleSettingsSave} className="settings-form">
-                <div className="form-group">
-                  <label>Company Name</label>
-                  <input type="text" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} />
+              {/* Header Card */}
+              <div className="info-card" style={{ background: 'var(--primary-gradient)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '24px' }}>Update Business Information</h2>
+                  <p style={{ margin: '4px 0 0', opacity: 0.9 }}>Manage your profile, contact details, bank accounts, and profit margins.</p>
                 </div>
-                <div className="form-group">
-                  <label>Proprietor Name</label>
-                  <input type="text" value={formData.companyProprietor} onChange={e => setFormData({...formData, companyProprietor: e.target.value})} />
+                <button type="submit" disabled={isSaving} style={{ background: 'white', color: 'var(--primary)', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+              
+              {saveMessage && (
+                <div style={{ padding: '12px 16px', borderRadius: '8px', background: saveMessage.includes('Error') ? '#fee2e2' : '#d1fae5', color: saveMessage.includes('Error') ? '#ef4444' : '#059669', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {saveMessage}
                 </div>
-                <div className="form-group">
-                  <label>Contact Number</label>
-                  <input type="text" value={formData.companyContact} onChange={e => setFormData({...formData, companyContact: e.target.value})} />
+              )}
+
+              {/* Company Information */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Company Information</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Company Name</label>
+                    <input type="text" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Proprietor Name</label>
+                    <input type="text" value={formData.companyProprietor} onChange={e => setFormData({...formData, companyProprietor: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Contact Number</label>
+                    <input type="text" value={formData.companyContact} onChange={e => setFormData({...formData, companyContact: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Email Address</label>
+                    <input type="email" value={formData.companyEmail} onChange={e => setFormData({...formData, companyEmail: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>GST Number</label>
+                    <input type="text" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                    <label style={{ fontWeight: '600' }}>Company Address</label>
+                    <textarea value={formData.companyAddress} onChange={e => setFormData({...formData, companyAddress: e.target.value})} rows={2} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input type="email" value={formData.companyEmail} onChange={e => setFormData({...formData, companyEmail: e.target.value})} />
+              </div>
+
+              {/* Bank Details */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Bank Details</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Bank Name</label>
+                    <input type="text" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Branch Name</label>
+                    <input type="text" value={formData.bankBranch} onChange={e => setFormData({...formData, bankBranch: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Account Number</label>
+                    <input type="text" value={formData.bankAccountNo} onChange={e => setFormData({...formData, bankAccountNo: e.target.value})} placeholder="A/C.NO: 123456" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>IFSC Code</label>
+                    <input type="text" value={formData.bankIfsc} onChange={e => setFormData({...formData, bankIfsc: e.target.value})} placeholder="IFSC CODE: ABCD0123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Company Address</label>
-                  <textarea value={formData.companyAddress} onChange={e => setFormData({...formData, companyAddress: e.target.value})} rows={3} />
+              </div>
+
+              {/* Billing & Terms */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Billing & Terms</h3>
+                <div className="form-group" style={{ margin: 0, marginBottom: '20px' }}>
+                  <label style={{ fontWeight: '600' }}>Default GST Percentage (%)</label>
+                  <input type="number" value={formData.defaultGstPercentage} onChange={e => setFormData({...formData, defaultGstPercentage: parseFloat(e.target.value) || 0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', maxWidth: '300px' }} />
                 </div>
-                <div className="form-group">
-                  <label>GST Number</label>
-                  <input type="text" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} />
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label style={{ fontWeight: '600' }}>Terms & Conditions (Enter each on a new line)</label>
+                  <textarea 
+                    value={(formData.termsAndConditions || []).join('\n')} 
+                    onChange={e => setFormData({...formData, termsAndConditions: e.target.value.split('\n')})} 
+                    rows={6} 
+                    style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', lineHeight: '1.5' }}
+                  />
                 </div>
-                <div className="form-group">
-                  <label>Cost Margin / Profit %</label>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              </div>
+
+              {/* Profit & Margin */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Profit & Margin</h3>
+                <p style={{ color: 'var(--text-light)', fontSize: '14px', marginBottom: '16px' }}>What % of what you quote goes toward materials & labor?</p>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <input 
                       type="range" 
                       min="10" 
                       max="95" 
                       value={formData.cost_margin_percent} 
                       onChange={e => setFormData({...formData, cost_margin_percent: parseInt(e.target.value)})}
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, height: '6px', borderRadius: '3px', accentColor: 'var(--primary)' }}
                     />
-                    <span style={{ fontWeight: 'bold' }}>{formData.cost_margin_percent}%</span>
+                    <div style={{ width: '80px', textAlign: 'center', padding: '12px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontWeight: '800', fontSize: '20px', color: 'var(--primary)' }}>{formData.cost_margin_percent}%</span>
+                    </div>
                   </div>
                 </div>
-
-                <div className="form-actions" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <button type="submit" disabled={isSaving} className="btn-save">
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </button>
-                  {saveMessage && <span className="save-message" style={{ color: saveMessage.includes('Error') ? '#ef4444' : '#10b981' }}>{saveMessage}</span>}
-                </div>
-              </form>
-
-            </div>
+              </div>
+            </form>
           </div>
 
           {/* Catalog Tab */}
@@ -836,8 +899,13 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                     onClick={() => {
                       setFormData(prev => {
                         const next = !(prev.enablePricePresets || false);
-                        if (next && (!prev.pricePresets || prev.pricePresets.length === 0)) {
-                          return { ...prev, enablePricePresets: true, pricePresets: [{ label: "Standard 2-Track Sliding Window", description: "UPVC 2-Track Sliding Window with Clear Glass", rate: 450 }] };
+                        if (next && (!prev.measuredPresets || prev.measuredPresets.length === 0) && (!prev.unmeasuredPresets || prev.unmeasuredPresets.length === 0)) {
+                          return { 
+                            ...prev, 
+                            enablePricePresets: true, 
+                            measuredPresets: [{ name: "Standard 2-Track Window", code: "2TRK", description: "UPVC 2-Track Sliding Window", glass: "Clear 5mm", width: "", height: "", rate: 450 }],
+                            unmeasuredPresets: [{ name: "Mosquito Mesh", code: "MESH", description: "Fiberglass Mosquito Mesh", rate: 120 }]
+                          };
                         }
                         return { ...prev, enablePricePresets: next };
                       });
@@ -859,71 +927,164 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
               </div>
 
               {formData.enablePricePresets && (
-                <div style={{ marginTop: '24px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {(formData.pricePresets || []).map((preset: any, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'var(--bg-light)', padding: '16px', borderRadius: '8px' }}>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <input 
-                            type="text" 
-                            placeholder="Preset Name (e.g. 2-Track Sliding)" 
-                            value={preset.label || ''}
+                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  
+                  {/* Measured Presets Section */}
+                  <div>
+                    <h4 style={{ marginBottom: '12px', color: 'var(--primary)' }}>Measured Items</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {(formData.measuredPresets || []).map((preset: any, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-light)', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: '600', fontSize: '14px' }}>Measured Item #{idx + 1}</span>
+                            <button 
+                              onClick={() => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets.splice(idx, 1);
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                            >✕ Remove</button>
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <input type="text" placeholder="Preset Name (e.g. 2-Track Sliding)" value={preset.name || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].name = e.target.value;
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            <input type="text" placeholder="Code (e.g. 2TRK)" value={preset.code || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].code = e.target.value;
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ width: '120px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                          </div>
+                          
+                          <input type="text" placeholder="Full Description for Quote" value={preset.description || ''}
                             onChange={(e) => {
-                              const newPresets = [...formData.pricePresets];
-                              newPresets[idx].label = e.target.value;
-                              setFormData({...formData, pricePresets: newPresets});
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                          />
-                          <input 
-                            type="text" 
-                            placeholder="Full Description for Quote" 
-                            value={preset.description || ''}
-                            onChange={(e) => {
-                              const newPresets = [...formData.pricePresets];
+                              const newPresets = [...formData.measuredPresets];
                               newPresets[idx].description = e.target.value;
-                              setFormData({...formData, pricePresets: newPresets});
+                              setFormData({...formData, measuredPresets: newPresets});
                             }}
-                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                          />
+                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <input type="text" placeholder="Glass Specification" value={preset.glass || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].glass = e.target.value;
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            <input type="number" placeholder="W (MM)" value={preset.width || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].width = parseFloat(e.target.value) || '';
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ width: '90px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            <input type="number" placeholder="H (MM)" value={preset.height || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].height = parseFloat(e.target.value) || '';
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ width: '90px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            <input type="number" placeholder="Rate (₹/sqft)" value={preset.rate || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.measuredPresets];
+                                newPresets[idx].rate = parseFloat(e.target.value) || 0;
+                                setFormData({...formData, measuredPresets: newPresets});
+                              }}
+                              style={{ width: '130px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                          </div>
                         </div>
-                        <div style={{ width: '120px' }}>
-                          <input 
-                            type="number" 
-                            placeholder="Rate (₹)" 
-                            value={preset.rate || ''}
-                            onChange={(e) => {
-                              const newPresets = [...formData.pricePresets];
-                              newPresets[idx].rate = parseFloat(e.target.value) || 0;
-                              setFormData({...formData, pricePresets: newPresets});
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
-                          />
-                        </div>
-                        <button 
-                          onClick={() => {
-                            const newPresets = [...formData.pricePresets];
-                            newPresets.splice(idx, 1);
-                            setFormData({...formData, pricePresets: newPresets});
-                          }}
-                          style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setFormData({
+                          ...formData, 
+                          measuredPresets: [...(formData.measuredPresets || []), { name: "", code: "", description: "", glass: "", width: "", height: "", rate: 0 }]
+                        });
+                      }}
+                      style={{ marginTop: '16px', padding: '10px 16px', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: 'var(--primary)', fontWeight: '600', cursor: 'pointer', width: '100%' }}
+                    >
+                      + Add Measured Preset
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setFormData({
-                        ...formData, 
-                        pricePresets: [...(formData.pricePresets || []), { label: "", description: "", rate: 0 }]
-                      });
-                    }}
-                    style={{ marginTop: '16px', padding: '10px 16px', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: 'var(--primary)', fontWeight: '600', cursor: 'pointer', width: '100%' }}
-                  >
-                    + Add Product Preset
-                  </button>
+
+                  {/* Unmeasured Presets Section */}
+                  <div>
+                    <h4 style={{ marginBottom: '12px', color: '#10b981' }}>Unmeasured Items</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {(formData.unmeasuredPresets || []).map((preset: any, idx: number) => (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-light)', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: '600', fontSize: '14px' }}>Unmeasured Item #{idx + 1}</span>
+                            <button 
+                              onClick={() => {
+                                const newPresets = [...formData.unmeasuredPresets];
+                                newPresets.splice(idx, 1);
+                                setFormData({...formData, unmeasuredPresets: newPresets});
+                              }}
+                              style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                            >✕ Remove</button>
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            <input type="text" placeholder="Preset Name (e.g. Mosquito Mesh)" value={preset.name || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.unmeasuredPresets];
+                                newPresets[idx].name = e.target.value;
+                                setFormData({...formData, unmeasuredPresets: newPresets});
+                              }}
+                              style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            <input type="text" placeholder="Code (e.g. MESH)" value={preset.code || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.unmeasuredPresets];
+                                newPresets[idx].code = e.target.value;
+                                setFormData({...formData, unmeasuredPresets: newPresets});
+                              }}
+                              style={{ width: '120px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                          </div>
+                          
+                          <input type="text" placeholder="Full Description for Quote" value={preset.description || ''}
+                            onChange={(e) => {
+                              const newPresets = [...formData.unmeasuredPresets];
+                              newPresets[idx].description = e.target.value;
+                              setFormData({...formData, unmeasuredPresets: newPresets});
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                            
+                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <input type="number" placeholder="Rate (₹/unit)" value={preset.rate || ''}
+                              onChange={(e) => {
+                                const newPresets = [...formData.unmeasuredPresets];
+                                newPresets[idx].rate = parseFloat(e.target.value) || 0;
+                                setFormData({...formData, unmeasuredPresets: newPresets});
+                              }}
+                              style={{ width: '150px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setFormData({
+                          ...formData, 
+                          unmeasuredPresets: [...(formData.unmeasuredPresets || []), { name: "", code: "", description: "", rate: 0 }]
+                        });
+                      }}
+                      style={{ marginTop: '16px', padding: '10px 16px', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: '#10b981', fontWeight: '600', cursor: 'pointer', width: '100%' }}
+                    >
+                      + Add Unmeasured Preset
+                    </button>
+                  </div>
                   <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button onClick={handleSettingsSave} disabled={isSaving} className="btn-save">
                       {isSaving ? "Saving Presets..." : "Save All Changes"}
