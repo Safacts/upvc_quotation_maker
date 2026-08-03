@@ -22,6 +22,7 @@ export interface ClientConfig {
   primaryColor?: number;
   accentColor?: number;
   trialExpiresAt?: string | null;
+  lastBuildTriggeredAt?: string;
   isActive: boolean;
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -71,6 +72,7 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     primaryColor: typeof cfg.primaryColor === "number" ? cfg.primaryColor : undefined,
     accentColor: typeof cfg.accentColor === "number" ? cfg.accentColor : undefined,
     trialExpiresAt: cfg.trialExpiresAt ? String(cfg.trialExpiresAt) : null,
+    lastBuildTriggeredAt: cfg.lastBuildTriggeredAt ? String(cfg.lastBuildTriggeredAt) : undefined,
     isActive: cfg.isActive !== false,
     supabaseUrl: String(cfg.supabaseUrl || "https://effxrwrbsjduvhmorvrq.supabase.co"),
     supabaseAnonKey: String(cfg.supabaseAnonKey || ""),

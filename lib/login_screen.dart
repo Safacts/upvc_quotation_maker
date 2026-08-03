@@ -59,8 +59,32 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkExistingSession() async {
+    if (kIsWeb) {
+      try {
+        final uri = Uri.base;
+        if (uri.queryParameters['auto_login'] == 'true') {
+          // Verify with Next.js backend using the secure HttpOnly cookie
+          final res = await http.post(
+            Uri.parse('/api/portal_auth'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'mode': 'session'}),
+          );
+          if (res.statusCode == 200) {
+            final data = _decodeJson(res);
+            if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
+              await _writeSession('true');
+              if (!mounted) return;
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     String? session = await _readSession();
     if (session == 'true') {
+      if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
     }
   }

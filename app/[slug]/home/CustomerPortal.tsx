@@ -110,7 +110,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
         const appSlug = slugify(config.appName) || slugify(client.id);
         const marketSlug = slugify(config.companyName) || slugify(client.id);
         
-        setAppUrl("/upvc/" + appSlug);
+        setAppUrl("/upvc/" + appSlug + "?client=" + encodeURIComponent(client.id) + "&auto_login=true");
         setMarketUrl("/" + marketSlug);
 
         setInfoFields(

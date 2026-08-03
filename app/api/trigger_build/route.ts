@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { supaGet, supaPatch } from "@/lib/supabase";
+import { parseClientConfig } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +18,27 @@ export async function POST(request: NextRequest) {
     // Allow admins to build for anyone, but customers can only build for themselves.
     if (session.role !== "admin" && session.client_id !== client_id) {
        return NextResponse.json({ error: "Forbidden: You can only build your own app." }, { status: 403 });
+    }
+
+    const clientDataArray = await supaGet("clients", { select: "config", id: `eq.${client_id}` });
+    const clientData = clientDataArray && clientDataArray.length > 0 ? clientDataArray[0] : null;
+    
+    if (!clientData) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    const config = parseClientConfig(clientData.config || {}, client_id);
+    const lastTriggered = config.lastBuildTriggeredAt;
+
+    if (lastTriggered) {
+      const now = new Date().getTime();
+      const diffMinutes = (now - new Date(lastTriggered).getTime()) / 60000;
+      if (diffMinutes < 10) {
+        return NextResponse.json(
+          { error: `A build is already in progress. Please wait ${Math.ceil(10 - diffMinutes)} more minutes before triggering another.` }, 
+          { status: 429 }
+        );
+      }
     }
 
     const githubToken = process.env.GITHUB_TOKEN;
@@ -49,6 +72,10 @@ export async function POST(request: NextRequest) {
       const errText = await res.text();
       return NextResponse.json({ error: `GitHub API error: ${errText}` }, { status: res.status });
     }
+
+    // Save timestamp to prevent spam
+    const updatedConfig = { ...config, lastBuildTriggeredAt: new Date().toISOString() };
+    await supaPatch("clients", { id: `eq.${client_id}` }, { config: updatedConfig });
 
     return NextResponse.json({ success: true, message: `APK build triggered for ${client_id}` });
   } catch (e: any) {
