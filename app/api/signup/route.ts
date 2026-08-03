@@ -68,6 +68,31 @@ export async function POST(request: NextRequest) {
       return json({ sent: true, to, subject });
     }
 
+    if (mode === "archive") {
+      if (session.role !== "admin") {
+        return json({ error: "not authorized" }, 403);
+      }
+      const reqId = String(body.id || "").trim();
+      if (!reqId) return json({ error: "id required" }, 400);
+      const allowedStatuses = ["archived", "pending", "submitted"];
+      const newStatus = allowedStatuses.includes(body.status) ? body.status : "archived";
+      await supaPatch("signup_requests", { id: "eq." + reqId }, {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      });
+      return json({ archived: true, status: newStatus });
+    }
+
+    if (mode === "delete") {
+      if (session.role !== "admin") {
+        return json({ error: "not authorized" }, 403);
+      }
+      const reqId = String(body.id || "").trim();
+      if (!reqId) return json({ error: "id required" }, 400);
+      await supaDelete("signup_requests", { id: "eq." + reqId });
+      return json({ deleted: true });
+    }
+
     if (session.role !== "signup") {
       return json({ error: "not authorized" }, 403);
     }

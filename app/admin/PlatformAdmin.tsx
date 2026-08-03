@@ -256,6 +256,7 @@ export default function PlatformAdmin() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [composeMail, setComposeMail] = useState<{ req: any; to: string; subject: string; body: string } | null>(null);
   const [sendingMail, setSendingMail] = useState(false);
+  const [signupView, setSignupView] = useState<"active" | "archived">("active");
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -502,6 +503,43 @@ export default function PlatformAdmin() {
       showToast("Failed to send email: " + e.message, "error");
     } finally {
       setSendingMail(false);
+    }
+  }
+
+  async function archiveRequest(req: any) {
+    const isRestore = !!req._restore;
+    const newStatus = isRestore ? "pending" : "archived";
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "archive", id: req.id, status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed");
+      setSignupRequests((prev: any[]) =>
+        prev.map((r) => r.id === req.id ? { ...r, status: newStatus } : r)
+      );
+      showToast(isRestore ? "Restored to active requests" : "Archived — data is preserved", "success");
+    } catch (e: any) {
+      showToast("Failed: " + e.message, "error");
+    }
+  }
+
+  async function deleteSignupRequest(req: any) {
+    if (!window.confirm(`Permanently delete request from ${req.email}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "delete", id: req.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to delete");
+      setSignupRequests((prev: any[]) => prev.filter((r) => r.id !== req.id));
+      showToast("Permanently deleted", "success");
+    } catch (e: any) {
+      showToast("Failed to delete: " + e.message, "error");
     }
   }
 
@@ -1358,46 +1396,108 @@ export default function PlatformAdmin() {
 
       {showSignupModal && (
         <div className="modal" style={{ display: "flex" }}>
-          <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
+          <div className="modal-content" style={{ maxWidth: 600, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
             <h3>Signup Requests</h3>
-            {(signupRequests || []).length === 0 && (
-              <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
-            )}
-            {(signupRequests || []).map((req) => {
-              const cfg = req.config || {};
-              const statusColor = signupStatusColor(req.status);
-              return (
-                <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <div>
-                      <strong>{req.email}</strong>
-                      <div style={{ color: "#475569", fontSize: 13 }}>
-                        {[req.name, req.phone].filter(Boolean).join(" · ")}
-                      </div>
-                    </div>
-                    <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
-                      {req.status}
-                    </span>
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                    Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
-                  </div>
-                  {(cfg.companyName || cfg.city || cfg.gstNumber) && (
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                      {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
-                    </div>
-                  )}
-                  <div className="modal-actions" style={{ marginTop: 10 }}>
-                    <button className="btn-secondary" onClick={() => { setShowSignupModal(false); openCompose(req); }}>
-                      Send Email
-                    </button>
-                    <button className="btn-primary" onClick={() => useSignupRequest(req)}>
-                      Use in Editor
-                    </button>
-                  </div>
-                </div>
+
+            {/* Tab switcher */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
+              {(["active", "archived"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setSignupView(v)}
+                  style={{
+                    padding: "6px 18px",
+                    borderRadius: "var(--radius-md)",
+                    border: "1.5px solid",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    background: signupView === v ? "var(--primary)" : "var(--bg)",
+                    borderColor: signupView === v ? "var(--primary)" : "var(--border)",
+                    color: signupView === v ? "white" : "var(--text-mid)",
+                  }}
+                >
+                  {v === "active" ? "Active" : "🗄 Archive"}
+                </button>
+              ))}
+            </div>
+
+            {(() => {
+              const filtered = (signupRequests || []).filter((r: any) =>
+                signupView === "archived" ? r.status === "archived" : r.status !== "archived"
               );
-            })}
+              if (filtered.length === 0) {
+                return (
+                  <p style={{ color: "#94a3b8", textAlign: "center", padding: "24px 0" }}>
+                    {signupView === "archived" ? "No archived requests." : "No active signup requests."}
+                  </p>
+                );
+              }
+              return filtered.map((req: any) => {
+                const cfg = req.config || {};
+                const statusColor = signupStatusColor(req.status);
+                const isArchived = req.status === "archived";
+                return (
+                  <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12, opacity: isArchived ? 0.8 : 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <div>
+                        <strong>{req.email}</strong>
+                        <div style={{ color: "#475569", fontSize: 13 }}>
+                          {[req.name, req.phone].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                      <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize", flexShrink: 0 }}>
+                        {req.status}
+                      </span>
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                      Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
+                    </div>
+                    {(cfg.companyName || cfg.city || cfg.gstNumber) && (
+                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                        {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                    <div className="modal-actions" style={{ marginTop: 10, justifyContent: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                      {!isArchived && (
+                        <>
+                          <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setShowSignupModal(false); openCompose(req); }}>
+                            Send Email
+                          </button>
+                          <button className="btn-primary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => useSignupRequest(req)}>
+                            Use in Editor
+                          </button>
+                          <button
+                            className="btn-secondary"
+                            style={{ fontSize: 13, padding: "8px 14px", marginLeft: "auto" }}
+                            title="Move to archive — data is preserved"
+                            onClick={() => archiveRequest(req)}
+                          >
+                            🗄 Archive
+                          </button>
+                        </>
+                      )}
+                      {isArchived && (
+                        <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}>
+                          ↩ Restore
+                        </button>
+                      )}
+                      <button
+                        className="btn-danger"
+                        style={{ fontSize: 13, padding: "8px 14px" }}
+                        title="Permanently delete — cannot be undone"
+                        onClick={() => deleteSignupRequest(req)}
+                      >
+                        🗑 Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+
             <div className="modal-actions" style={{ marginTop: 16 }}>
               <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
             </div>
