@@ -224,10 +224,13 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final pdfPath = '$dir/${data.quotationNo}.pdf';
       await helper.writeFile(pdfPath, pdfBytes);
 
-      final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
-      if (smtpKey.isEmpty) throw Exception("SMTP Key not configured in .env");
+      final smtpHost = dotenv.env['SMTP_HOST'] ?? 'smtp.hostinger.com';
+      final smtpPort = int.tryParse(dotenv.env['SMTP_PORT'] ?? '') ?? 465;
+      final smtpUser = dotenv.env['SMTP_USER'] ?? 'vitharn@rubixitsolution.com';
+      final smtpPass = dotenv.env['SMTP_PASS'] ?? '';
+      if (smtpPass.isEmpty) throw Exception("SMTP password not configured in .env");
 
-      final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
+      final smtpServer = SmtpServer(smtpHost, port: smtpPort, username: smtpUser, password: smtpPass, ssl: true);
 
       final ByteData logoData = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
       final logoPath = '$dir/logo.png';
@@ -253,7 +256,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       ''';
 
       final message = Message()
-        ..from = Address(appState.companyEmail, appState.companyName)
+        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solutions')
         ..recipients.add(targetEmail.trim())
         ..subject = 'Quotation ${data.quotationNo} from ${appState.companyName}'
         ..html = htmlBody

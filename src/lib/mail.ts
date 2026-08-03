@@ -1,13 +1,18 @@
 import nodemailer from "nodemailer";
 
+export const MAIL_FROM = "Vitharn | Rubix IT Solutions <vitharn@rubixitsolution.com>";
+
 function transporter() {
-  const smtpKey = process.env.BREVO_SMTP_KEY;
-  if (!smtpKey) throw new Error("SMTP key not configured");
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || "465");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) throw new Error("SMTP not configured");
   return nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
-    auth: { user: "ad3d10001@smtp-brevo.com", pass: smtpKey },
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
   });
 }
 
@@ -21,7 +26,7 @@ export async function sendMail(opts: {
   html: string;
   from?: string;
 }): Promise<void> {
-  const from = opts.from || "Vitharn UPVC <jvenkateshupvc@gmail.com>";
+  const from = opts.from || MAIL_FROM;
   await transporter().sendMail({
     from,
     to: opts.to,
@@ -86,7 +91,7 @@ export async function sendOtpEmail(recipient: string, otp: string): Promise<void
   `;
 
   await sendMail({
-    from: "System Security <jvenkateshupvc@gmail.com>",
+    from: MAIL_FROM,
     to: recipient,
     subject: "Your Password Reset OTP",
     html,

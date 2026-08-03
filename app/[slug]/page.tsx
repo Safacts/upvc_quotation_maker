@@ -29,7 +29,8 @@ export async function generateMetadata({
   if (!client) return {};
   const cfg = parseClientConfig(client.config || {}, client.id);
   return {
-    title: cfg.companyName || cfg.appName || "Market Page",
-    description: cfg.landingHeroSubtitle || "",
+    title: cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
+    description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
+    keywords: cfg.seoKeywords || "",
   };
 }

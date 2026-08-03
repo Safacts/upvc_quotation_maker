@@ -21,6 +21,9 @@ export interface ClientConfig {
   logoUrl: string;
   invoiceTopLogoUrl: string;
   invoiceBackgroundLogoUrl: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
   appDownloadUrl: string;
   primaryColor?: number;
   accentColor?: number;
@@ -87,6 +90,9 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     logoUrl: String(cfg.logoUrl || ""),
     invoiceTopLogoUrl: String(cfg.invoiceTopLogoUrl || ""),
     invoiceBackgroundLogoUrl: String(cfg.invoiceBackgroundLogoUrl || ""),
+    seoTitle: String(cfg.seoTitle || ""),
+    seoDescription: String(cfg.seoDescription || ""),
+    seoKeywords: String(cfg.seoKeywords || ""),
     appDownloadUrl: String(cfg.appDownloadUrl || ""),
     primaryColor: typeof cfg.primaryColor === "number" ? cfg.primaryColor : undefined,
     accentColor: typeof cfg.accentColor === "number" ? cfg.accentColor : undefined,

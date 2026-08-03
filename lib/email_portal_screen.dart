@@ -58,8 +58,11 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
     setState(() => _isSending = true);
 
     try {
-      final smtpKey = dotenv.env['BREVO_SMTP_KEY'] ?? '';
-      final smtpServer = SmtpServer('smtp-relay.brevo.com', port: 587, username: 'ad3d10001@smtp-brevo.com', password: smtpKey, ssl: false);
+      final smtpHost = dotenv.env['SMTP_HOST'] ?? 'smtp.hostinger.com';
+      final smtpPort = int.tryParse(dotenv.env['SMTP_PORT'] ?? '') ?? 465;
+      final smtpUser = dotenv.env['SMTP_USER'] ?? 'vitharn@rubixitsolution.com';
+      final smtpPass = dotenv.env['SMTP_PASS'] ?? '';
+      final smtpServer = SmtpServer(smtpHost, port: smtpPort, username: smtpUser, password: smtpPass, ssl: true);
 
       final ByteData data = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
       final Directory tempDir = await getTemporaryDirectory();
@@ -84,7 +87,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       ''';
 
       final message = Message()
-        ..from = Address(dotenv.env['BREVO_SMTP_EMAIL'] ?? appState.companyEmail, companyName)
+        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solutions')
         ..recipients.add(_toController.text.trim())
         ..subject = _subjectController.text
         ..html = htmlBody

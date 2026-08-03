@@ -31,6 +31,9 @@ interface EditorForm {
   logoUrl: string;
   invoiceTopLogoUrl: string;
   invoiceBackgroundLogoUrl: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
   companyName: string;
   appName: string;
   address: string;
@@ -69,6 +72,9 @@ function defaultForm(): EditorForm {
     logoUrl: "",
     invoiceTopLogoUrl: "",
     invoiceBackgroundLogoUrl: "",
+    seoTitle: "",
+    seoDescription: "",
+    seoKeywords: "",
     companyName: "",
     appName: "",
     address: "",
@@ -334,6 +340,9 @@ export default function PlatformAdmin() {
       logoUrl: config.logoUrl || "",
       invoiceTopLogoUrl: config.invoiceTopLogoUrl || "",
       invoiceBackgroundLogoUrl: config.invoiceBackgroundLogoUrl || "",
+      seoTitle: config.seoTitle || "",
+      seoDescription: config.seoDescription || "",
+      seoKeywords: config.seoKeywords || "",
       companyName: config.companyName || "",
       appName: config.appName || "",
       address: config.companyAddress || "",
@@ -526,6 +535,9 @@ export default function PlatformAdmin() {
       logoUrl,
       invoiceTopLogoUrl: form.invoiceTopLogoUrl.trim() || null,
       invoiceBackgroundLogoUrl: form.invoiceBackgroundLogoUrl.trim() || null,
+      seoTitle: form.seoTitle.trim() || null,
+      seoDescription: form.seoDescription.trim() || null,
+      seoKeywords: form.seoKeywords.trim() || null,
       appName: form.appName.trim(),
       companyName: form.companyName.trim(),
       companyAddress: form.address.trim(),
@@ -1101,6 +1113,21 @@ export default function PlatformAdmin() {
                       <div className="form-group">
                         <label>Customer Reviews <span style={{ color: "#94a3b8", fontWeight: 400 }}>(JSON array)</span></label>
                         <textarea value={form.testimonials} rows={4} placeholder={JSON.stringify([{ name: "Customer", text: "Great service!", role: "Homeowner" }], null, 2)} onChange={(e) => setF("testimonials", e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="form-section">
+                      <div className="form-section-title">Search Engine Optimization (SEO)</div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>SEO Meta Title</label>
+                        <input type="text" value={form.seoTitle} placeholder="e.g. Best UPVC Windows in Hyderabad | Venkateshwara" onChange={(e) => setF("seoTitle", e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 16 }}>
+                        <label>SEO Meta Description</label>
+                        <textarea value={form.seoDescription} rows={3} placeholder="A short description of your business to show on Google search results." onChange={(e) => setF("seoDescription", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label>SEO Keywords <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <input type="text" value={form.seoKeywords} placeholder="upvc windows, upvc doors, interior" onChange={(e) => setF("seoKeywords", e.target.value)} />
                       </div>
                     </div>
                   </>
