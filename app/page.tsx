@@ -163,13 +163,15 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="hero">
         <div className="hero-content">
+          <span className="hero-badge">Vitharn UPVC Quotation Maker</span>
           <h1 className="hero-title">
             Your Business,<br />Professionally Managed
           </h1>
           <p className="hero-subtitle">
-            Vitharn gives every UPVC shop its own branded marketing website,
-            customer portal, and professional quoting system — accessible on
-            Android and the web, all in one platform.
+            Vitharn UPVC Quotation Maker is a complete platform for UPVC
+            window and door businesses to create, manage, and send
+            professional quotations — with a branded marketing website and
+            customer portal, on Android and the web.
           </p>
           <div className="btn-group">
             {isCustomer ? (
