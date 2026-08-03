@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import UmamiTracker from "./UmamiTracker";
 
 export const metadata: Metadata = {
-  title: "Vitharn UPVC Quotation Maker",
-  description: "A complete platform for UPVC window and door businesses to create, manage, and send professional quotations — on Android and the web.",
+  title: "vitharn upvc — Quotation & Business Management Portal",
+  description: "vitharn upvc is a complete platform for UPVC window and door businesses to create, manage, and send professional quotations — on Android and the web.",
 };
 
 export const viewport: Viewport = {
@@ -18,7 +19,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <UmamiTracker />
+      </body>
     </html>
   );
 }
