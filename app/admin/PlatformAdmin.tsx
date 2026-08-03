@@ -900,20 +900,23 @@ export default function PlatformAdmin() {
                 <button className="add-client-btn" onClick={() => openEditor(null)}>
                   <span>+</span> New Client
                 </button>
-                <button
-                  className="add-client-btn"
-                  style={{ marginTop: 8 }}
-                  onClick={() => setShowSignupModal(true)}
-                >
-                  Signup Requests ({signupRequests?.length ?? 0})
-                </button>
-                <button
-                  className="add-client-btn"
-                  style={{ marginTop: 8 }}
-                  onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
-                >
-                  Compose Email
-                </button>
+                <div className="sidebar-action-row">
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => setShowSignupModal(true)}
+                  >
+                    Requests
+                    {(signupRequests?.length ?? 0) > 0 && (
+                      <span className="sidebar-badge">{signupRequests.length}</span>
+                    )}
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
+                  >
+                    ✉ Compose
+                  </button>
+                </div>
               </>
             )}
             <div className="sidebar-meta">
@@ -1404,42 +1407,40 @@ export default function PlatformAdmin() {
 
       {composeMail && (
         <div className="modal" style={{ display: "flex" }}>
-          <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
-            <h3>Compose Email</h3>
+          <div className="modal-content" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
+            <h3>✉ Compose Email</h3>
             {composeMail.req && (
-              <div style={{ color: "#64748b", fontSize: 12, marginBottom: 10 }}>
-                Sending to {composeMail.req.email} · status: {composeMail.req.status}
-              </div>
+              <p className="modal-hint">
+                Replying to <strong>{composeMail.req.email}</strong> — status: {composeMail.req.status}
+              </p>
             )}
-            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "8px 0 4px", color: "#1E3A5F" }}>
-              To
-            </label>
-            <input
-              value={composeMail.to}
-              onChange={(e) => setComposeMail({ ...composeMail, to: e.target.value })}
-              placeholder="recipient@example.com"
-              style={{ width: "100%", boxSizing: "border-box" }}
-            />
-            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
-              Subject
-            </label>
-            <input
-              value={composeMail.subject}
-              onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
-              placeholder="Subject"
-              style={{ width: "100%", boxSizing: "border-box" }}
-            />
-            <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
-              Message
-            </label>
-            <textarea
-              value={composeMail.body}
-              onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
-              rows={7}
-              placeholder="Write your message here…"
-              style={{ width: "100%", boxSizing: "border-box" }}
-            />
-            <div className="modal-actions" style={{ marginTop: 16 }}>
+            <div className="modal-field">
+              <label>To</label>
+              <input
+                type="email"
+                value={composeMail.to}
+                onChange={(e) => setComposeMail({ ...composeMail, to: e.target.value })}
+                placeholder="recipient@example.com"
+              />
+            </div>
+            <div className="modal-field">
+              <label>Subject</label>
+              <input
+                type="text"
+                value={composeMail.subject}
+                onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
+                placeholder="Email subject…"
+              />
+            </div>
+            <div className="modal-field">
+              <label>Message</label>
+              <textarea
+                value={composeMail.body}
+                onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
+                placeholder="Write your message here…"
+              />
+            </div>
+            <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setComposeMail(null)}>Cancel</button>
               <button
                 className="btn-primary"
