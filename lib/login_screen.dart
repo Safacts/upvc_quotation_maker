@@ -70,6 +70,21 @@ class _LoginScreenState extends State<LoginScreen> {
     return sha256.convert(bytes).toString();
   }
 
+  Map<String, dynamic>? _decodeJson(http.Response res) {
+    final body = res.body.trim();
+    if (body.isEmpty) return null;
+    try {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _badResponseMessage(http.Response res) =>
+      res.body.trim().isEmpty
+          ? 'Server returned an empty response. The backend may be restarting - retry, or run npm run dev:all.'
+          : 'Server returned an invalid response (HTTP ${res.statusCode}).';
+
   void _login() async {
     setState(() { _isLoading = true; _errorMessage = ''; });
     final email = _emailController.text.trim();
@@ -81,7 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'mode': 'login', 'email': email, 'password': password}),
       );
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final data = _decodeJson(res);
+      if (data == null) {
+        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        return;
+      }
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
         await _writeSession('true');
         if (!mounted) return;
@@ -104,12 +123,16 @@ class _LoginScreenState extends State<LoginScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': appState.companyEmail}),
       );
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final data = _decodeJson(res);
+      if (data == null) {
+        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        return;
+      }
       if (res.statusCode != 200) {
         setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Failed to send OTP.'; });
         return;
       }
-      setState(() => _isLoading = false);
+      setState(() { _isLoading = false; });
       _showOtpDialog();
     } catch (e) {
       setState(() { _isLoading = false; _errorMessage = 'Failed to send OTP: $e'; });
@@ -175,13 +198,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode({'email': appState.companyEmail, 'otp': otp, 'new_hash': newHash}),
                     );
-                    final data = jsonDecode(res.body) as Map<String, dynamic>;
+                    final data = _decodeJson(res);
                     if (!mounted) return;
                     Navigator.pop(context);
                     if (res.statusCode == 200) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!')));
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text((data['error'] as String?) ?? 'Failed to reset password.')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text((data?['error'] as String?) ?? (data == null ? _badResponseMessage(res) : 'Failed to reset password.'))));
                     }
                   } catch (e) {
                     if (!mounted) return;

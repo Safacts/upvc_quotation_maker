@@ -19,12 +19,17 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "app" | "market" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "app" | "catalog" | "market" | "settings">("overview");
 
   const [brand, setBrand] = useState("Loading...");
   const [infoFields, setInfoFields] = useState<InfoField[]>([]);
   const [appUrl, setAppUrl] = useState("");
   const [marketUrl, setMarketUrl] = useState("");
+
+  const [stats, setStats] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
     const session = localStorage.getItem("portal_session");
@@ -71,7 +76,12 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
         
         const appSlug = slugify(config.appName) || slugify(client.id);
         const marketSlug = slugify(config.companyName) || slugify(client.id);
-        setAppUrl("/upvc/" + appSlug);
+        
+        if (process.env.NODE_ENV === "development") {
+          setAppUrl("http://127.0.0.1:8080/" + appSlug);
+        } else {
+          setAppUrl("/upvc/" + appSlug);
+        }
         setMarketUrl("/" + marketSlug);
 
         setInfoFields(
@@ -86,6 +96,25 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
             { label: "Client ID", value: client.id },
           ].filter((f) => f.value),
         );
+        
+        setFormData({
+          companyName: config.companyName || "",
+          companyProprietor: config.companyProprietor || "",
+          companyContact: config.companyContact || "",
+          companyEmail: config.companyEmail || "",
+          companyAddress: config.companyAddress || "",
+          gstNumber: config.gstNumber || "",
+          defaultGstPercentage: config.defaultGstPercentage || 0,
+          cost_margin_percent: config.cost_margin_percent || 0,
+          enablePricePresets: config.enablePricePresets || false,
+          pricePresets: config.pricePresets || [],
+        });
+
+        // Fetch stats in parallel
+        fetch("/api/portal_stats").then(r => r.json()).then(data => {
+          if (!cancelled && !data.error) setStats(data);
+        }).catch(e => console.error(e));
+
         setStatus("ready");
       } catch (e) {
         if (cancelled) return;
@@ -108,6 +137,26 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
     });
     router.replace("/login");
   }, [router]);
+  
+  const handleSettingsSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveMessage("");
+    try {
+      const res = await fetch("/api/portal_settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setSaveMessage("Settings saved successfully! Changes will reflect on app reload.");
+    } catch (err: any) {
+      setSaveMessage("Error: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (status === "error") {
     return (
@@ -128,6 +177,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   const tabTitles = {
     overview: "Business Overview",
     app: "Quotation Maker",
+    catalog: "Product Catalog",
     market: "Market Page Preview",
     settings: "Business Settings"
   };
@@ -165,6 +215,15 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
             Quotation App
           </button>
           <button 
+            className={`nav-item ${activeTab === "catalog" ? "active" : ""}`}
+            onClick={() => { setActiveTab("catalog"); setSidebarOpen(false); }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            Product Catalog
+          </button>
+          <button 
             className={`nav-item ${activeTab === "market" ? "active" : ""}`}
             onClick={() => { setActiveTab("market"); setSidebarOpen(false); }}
           >
@@ -187,6 +246,16 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           </button>
         </nav>
         <div className="sidebar-footer">
+          {config.appDownloadUrl && (
+            <a href={config.appDownloadUrl} target="_blank" rel="noopener noreferrer" className="btn-download" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', color: 'var(--text)', textDecoration: 'none', borderRadius: '12px', marginBottom: '8px', transition: 'background-color 0.2s', fontWeight: '500' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'var(--bg-light)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download App
+            </a>
+          )}
           <button className="btn-logout" onClick={handleLogout}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -197,7 +266,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           </button>
         </div>
       </aside>
-
+      
       {/* Main Content */}
       <main className="dashboard-main">
         <header className="dashboard-header">
@@ -224,23 +293,246 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           
           {/* Overview Tab */}
           <div className={`tab-pane ${activeTab === "overview" ? "active" : ""}`}>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="label">Status</div>
-                <div className="value" style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>
-                  {client.is_active ? 'Active' : 'Inactive'}
-                </div>
+            
+            {/* Greeting & Quick Action Banner */}
+            <div className="info-card" style={{ 
+              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', 
+              color: 'white', 
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px'
+            }}>
+              <div>
+                <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
+                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! 👋
+                </h2>
+                <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+                  Here is your real-time business summary. Keep closing orders!
+                </p>
               </div>
-              <div className="stat-card">
-                <div className="label">Trial Expiration</div>
-                <div className="value" style={{ fontSize: '18px' }}>
-                  {client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'N/A'}
-                </div>
-              </div>
+              <button 
+                onClick={() => setActiveTab("app")}
+                style={{
+                  background: 'var(--primary-gradient)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  fontWeight: '700',
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                + Create New Quotation
+              </button>
             </div>
 
+            {/* Hero Stats */}
+            {stats && (
+              <div className="stats-grid" style={{ marginBottom: '24px' }}>
+                <div className="stat-card" style={{ background: 'var(--primary-gradient)', color: 'white' }}>
+                  <div className="label" style={{ color: 'rgba(255,255,255,0.8)' }}>Orders Won %</div>
+                  <div className="value" style={{ fontSize: '32px' }}>{stats.winRate.toFixed(1)}%</div>
+                  <div style={{ fontSize: '14px', marginTop: '4px', opacity: 0.9 }}>
+                    {stats.wonCount} won out of {stats.totalCount} total quotes
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="label">Total Work Quoted</div>
+                  <div className="value" style={{ fontSize: '24px' }}>₹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  {stats.monthChangePercent !== 0 && (
+                    <div style={{ 
+                      fontSize: '13px', 
+                      marginTop: '6px', 
+                      fontWeight: '600',
+                      color: stats.monthChangePercent >= 0 ? '#10b981' : '#ef4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      {stats.monthChangePercent >= 0 ? '↑' : '↓'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
+                    </div>
+                  )}
+                </div>
+
+                <div className="stat-card">
+                  <div className="label">Confirmed Orders (Revenue)</div>
+                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>₹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '6px' }}>
+                    From {stats.wonCount} closed deal{stats.wonCount !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pending Follow-ups Reminder Section */}
+            {stats && stats.pendingFollowUps && stats.pendingFollowUps.length > 0 && (
+              <div className="info-card" style={{ marginBottom: '24px', borderLeft: '4px solid #f59e0b' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🔔</span>
+                    <h3 style={{ margin: 0, padding: 0, border: 'none' }}>Quotes Needing Follow-up ({stats.pendingFollowUps.length})</h3>
+                  </div>
+                  <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
+                    High Conversion Opportunity
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {stats.pendingFollowUps.map((item: any) => (
+                    <div key={item.id} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      padding: '12px 16px', 
+                      background: 'var(--bg-light)', 
+                      borderRadius: '12px',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.customer_name} ({item.quote_no})</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                          Value: ₹{item.total.toLocaleString('en-IN')} • Date: {new Date(item.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {item.contact_no && (
+                          <a 
+                            href={`tel:${item.contact_no}`} 
+                            style={{ 
+                              padding: '8px 14px', 
+                              borderRadius: '8px', 
+                              background: '#3b82f6', 
+                              color: 'white', 
+                              textDecoration: 'none', 
+                              fontSize: '13px', 
+                              fontWeight: '600' 
+                            }}
+                          >
+                            📞 Call Client
+                          </a>
+                        )}
+                        <button 
+                          onClick={() => setActiveTab("app")} 
+                          style={{ 
+                            padding: '8px 14px', 
+                            borderRadius: '8px', 
+                            background: 'white', 
+                            border: '1px solid #cbd5e1', 
+                            fontSize: '13px', 
+                            fontWeight: '600',
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          View Quote
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Visual Charts */}
+            {stats && (
+              <div className="stats-grid" style={{ marginBottom: '32px' }}>
+                {/* Status Summary Donut Chart */}
+                <div className="info-card" style={{ flex: 1 }}>
+                  <h3>Quote Status Summary</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                    <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                      <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                        {(() => {
+                          const total = stats.totalCount;
+                          if (total === 0) return <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="20" />;
+                          
+                          let currentAngle = 0;
+                          const colors: Record<string, string> = { Draft: '#94a3b8', Sent: '#60a5fa', Won: '#22c55e', Lost: '#f87171' };
+                          
+                          return ['Draft', 'Sent', 'Won', 'Lost'].map(status => {
+                            const count = stats.countsByStatus[status] || 0;
+                            if (count === 0) return null;
+                            const percentage = count / total;
+                            const dasharray = `${percentage * 251.2} 251.2`;
+                            const dashoffset = currentAngle * -251.2;
+                            currentAngle += percentage;
+                            return (
+                              <circle key={status} cx="50" cy="50" r="40" fill="none"
+                                stroke={colors[status]} strokeWidth="20"
+                                strokeDasharray={dasharray} strokeDashoffset={dashoffset}
+                              />
+                            );
+                          });
+                        })()}
+                      </svg>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{stats.winRate.toFixed(0)}%</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>won</span>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {[
+                        { label: 'Draft', name: 'Being Prepared', color: '#94a3b8' },
+                        { label: 'Sent', name: 'Delivered to Client', color: '#60a5fa' },
+                        { label: 'Won', name: 'Order Confirmed ✅', color: '#22c55e' },
+                        { label: 'Lost', name: 'Did Not Close ❌', color: '#f87171' }
+                      ].map(s => (
+                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: s.color }} />
+                            <span style={{ fontSize: '13px' }}>{s.name}</span>
+                          </div>
+                          <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{stats.countsByStatus[s.label] || 0}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly Bar Chart */}
+                <div className="info-card" style={{ flex: 1 }}>
+                  <h3>Weekly Work Trend</h3>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '8px', marginTop: '16px' }}>
+                    {(() => {
+                      const maxAmount = Math.max(...stats.weeklyBars.map((b: any) => b.amount), 1);
+                      return stats.weeklyBars.map((b: any, i: number) => {
+                        const height = (b.amount / maxAmount) * 100;
+                        const isLast = i === stats.weeklyBars.length - 1;
+                        return (
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                            {b.amount > 0 && <span style={{ fontSize: '9px', color: 'var(--text-light)', marginBottom: '4px' }}>{b.amount >= 1000 ? (b.amount/1000).toFixed(0)+'k' : b.amount}</span>}
+                            <div style={{ 
+                              width: '100%', 
+                              height: `${Math.max(height, 5)}%`, 
+                              background: isLast ? 'var(--primary-gradient)' : '#e0e7ff', 
+                              borderRadius: '4px 4px 0 0',
+                              transition: 'height 0.5s ease'
+                            }} />
+                            <span style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '4px', whiteSpace: 'nowrap' }}>{b.label.split(' ')[0]}</span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Profile Info */}
             <div className="info-card">
-              <h3>Business Profile</h3>
+              <h3>Business Profile Details</h3>
               <div className="info-grid">
                 {infoFields.map((f) => (
                   <div className="info-item" key={f.label}>
@@ -249,26 +541,175 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   </div>
                 ))}
               </div>
+
+              {/* Account Status Footer Note */}
+              <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', display: 'flex', gap: '24px', fontSize: '13px', color: 'var(--text-light)' }}>
+                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active ✅' : 'Inactive'}</strong></div>
+                <div>Plan Expiration: <strong>{client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'Lifetime Unlimited'}</strong></div>
+              </div>
             </div>
           </div>
 
           {/* Settings Tab */}
           <div className={`tab-pane ${activeTab === "settings" ? "active" : ""}`}>
             <div className="info-card">
-              <h3>Administrative Controls</h3>
+              <h3>Update Business Information</h3>
               <p style={{ color: 'var(--text-light)', marginBottom: '24px' }}>
-                To modify your colors, logo, or view all active customer quotations, you must access the Super Admin panel.
+                Manage your profile, contact details, and profit margins below.
               </p>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <a 
-                  href="/admin" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  style={{ background: 'var(--primary-gradient)', color: 'white', padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', fontWeight: 600 }}
-                >
-                  Open Advanced Settings
-                </a>
+              
+              <form onSubmit={handleSettingsSave} className="settings-form">
+                <div className="form-group">
+                  <label>Company Name</label>
+                  <input type="text" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Proprietor Name</label>
+                  <input type="text" value={formData.companyProprietor} onChange={e => setFormData({...formData, companyProprietor: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Contact Number</label>
+                  <input type="text" value={formData.companyContact} onChange={e => setFormData({...formData, companyContact: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input type="email" value={formData.companyEmail} onChange={e => setFormData({...formData, companyEmail: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Company Address</label>
+                  <textarea value={formData.companyAddress} onChange={e => setFormData({...formData, companyAddress: e.target.value})} rows={3} />
+                </div>
+                <div className="form-group">
+                  <label>GST Number</label>
+                  <input type="text" value={formData.gstNumber} onChange={e => setFormData({...formData, gstNumber: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label>Cost Margin / Profit %</label>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                    <input 
+                      type="range" 
+                      min="10" 
+                      max="95" 
+                      value={formData.cost_margin_percent} 
+                      onChange={e => setFormData({...formData, cost_margin_percent: parseInt(e.target.value)})}
+                      style={{ flex: 1 }}
+                    />
+                    <span style={{ fontWeight: 'bold' }}>{formData.cost_margin_percent}%</span>
+                  </div>
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <button type="submit" disabled={isSaving} className="btn-save">
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </button>
+                  {saveMessage && <span className="save-message" style={{ color: saveMessage.includes('Error') ? '#ef4444' : '#10b981' }}>{saveMessage}</span>}
+                </div>
+              </form>
+
+            </div>
+          </div>
+
+          {/* Catalog Tab */}
+          <div className={`tab-pane ${activeTab === "catalog" ? "active" : ""}`}>
+            <div className="info-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3>Product & Pricing Presets</h3>
+                  <p style={{ color: 'var(--text-light)', fontSize: '14px', marginTop: '4px' }}>
+                    Configure standard products and rates to speed up quote creation.
+                  </p>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={formData.enablePricePresets || false}
+                    onChange={e => {
+                      setFormData({...formData, enablePricePresets: e.target.checked});
+                      if (e.target.checked && (!formData.pricePresets || formData.pricePresets.length === 0)) {
+                         // Add a default template item if they just enabled it
+                         setFormData(prev => ({...prev, enablePricePresets: true, pricePresets: [{ label: "Standard 2-Track Sliding Window", description: "UPVC 2-Track Sliding Window with Clear Glass", rate: 450 }]}));
+                      }
+                    }}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span style={{ fontWeight: '600' }}>Enable Presets</span>
+                </label>
               </div>
+
+              {formData.enablePricePresets && (
+                <div style={{ marginTop: '24px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {(formData.pricePresets || []).map((preset: any, idx: number) => (
+                      <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', background: 'var(--bg-light)', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <input 
+                            type="text" 
+                            placeholder="Preset Name (e.g. 2-Track Sliding)" 
+                            value={preset.label || ''}
+                            onChange={(e) => {
+                              const newPresets = [...formData.pricePresets];
+                              newPresets[idx].label = e.target.value;
+                              setFormData({...formData, pricePresets: newPresets});
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Full Description for Quote" 
+                            value={preset.description || ''}
+                            onChange={(e) => {
+                              const newPresets = [...formData.pricePresets];
+                              newPresets[idx].description = e.target.value;
+                              setFormData({...formData, pricePresets: newPresets});
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          />
+                        </div>
+                        <div style={{ width: '120px' }}>
+                          <input 
+                            type="number" 
+                            placeholder="Rate (₹)" 
+                            value={preset.rate || ''}
+                            onChange={(e) => {
+                              const newPresets = [...formData.pricePresets];
+                              newPresets[idx].rate = parseFloat(e.target.value) || 0;
+                              setFormData({...formData, pricePresets: newPresets});
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                          />
+                        </div>
+                        <button 
+                          onClick={() => {
+                            const newPresets = [...formData.pricePresets];
+                            newPresets.splice(idx, 1);
+                            setFormData({...formData, pricePresets: newPresets});
+                          }}
+                          style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setFormData({
+                        ...formData, 
+                        pricePresets: [...(formData.pricePresets || []), { label: "", description: "", rate: 0 }]
+                      });
+                    }}
+                    style={{ marginTop: '16px', padding: '10px 16px', background: 'white', border: '1px dashed #cbd5e1', borderRadius: '8px', color: 'var(--primary)', fontWeight: '600', cursor: 'pointer', width: '100%' }}
+                  >
+                    + Add Product Preset
+                  </button>
+                  <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button onClick={handleSettingsSave} disabled={isSaving} className="btn-save">
+                      {isSaving ? "Saving Presets..." : "Save All Changes"}
+                    </button>
+                    {saveMessage && <span className="save-message" style={{ color: saveMessage.includes('Error') ? '#ef4444' : '#10b981' }}>{saveMessage}</span>}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

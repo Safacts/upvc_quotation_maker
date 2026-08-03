@@ -37,8 +37,12 @@ class ClientConfig {
   final List<Map<String, String>> landingTestimonials;
   final String landingCTA;
   final String landingFooter;
-  // Profit & margin — what % of revenue goes to materials + labor (default 65%)
-  final double costMarginPercent;
+  // Price Customizations & Presets
+  final bool enablePricePresets;
+  final List<Map<String, dynamic>> pricePresets;
+  
+  // Custom Download Links
+  final String appDownloadUrl;
 
   const ClientConfig({
     this.clientId = 'default',
@@ -88,6 +92,9 @@ class ClientConfig {
     this.landingCTA = '',
     this.landingFooter = '',
     this.costMarginPercent = 65.0,
+    this.enablePricePresets = false,
+    this.pricePresets = const [],
+    this.appDownloadUrl = '',
   });
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
@@ -130,6 +137,9 @@ class ClientConfig {
     'landingCTA': landingCTA,
     'landingFooter': landingFooter,
     'costMarginPercent': costMarginPercent,
+    'enablePricePresets': enablePricePresets,
+    'pricePresets': pricePresets,
+    'appDownloadUrl': appDownloadUrl,
   };
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) => ClientConfig(
@@ -170,5 +180,9 @@ class ClientConfig {
     landingCTA: json['landingCTA'] as String? ?? '',
     landingFooter: json['landingFooter'] as String? ?? '',
     costMarginPercent: (json['costMarginPercent'] as num?)?.toDouble() ?? 65.0,
+    enablePricePresets: json['enablePricePresets'] as bool? ?? false,
+    pricePresets: (json['pricePresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
+    appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
   );
 }
+

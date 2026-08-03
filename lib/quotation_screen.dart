@@ -528,7 +528,51 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       Row(children: [
                         Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
-                        Expanded(flex: 2, child: TextFormField(focusNode: _node('m_${index}_1'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_1'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); })),
+                        Expanded(flex: 2, child: 
+                          (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
+                            ? Autocomplete<Map<String, dynamic>>(
+                                initialValue: TextEditingValue(text: item.description),
+                                displayStringForOption: (option) => option['description'] ?? option['label'] ?? '',
+                                optionsBuilder: (TextEditingValue textEditingValue) {
+                                  final presets = Provider.of<AppState>(context, listen: false).clientConfig.pricePresets;
+                                  if (textEditingValue.text.isEmpty) return presets;
+                                  return presets.where((preset) {
+                                    final label = preset['label']?.toString().toLowerCase() ?? '';
+                                    final desc = preset['description']?.toString().toLowerCase() ?? '';
+                                    final input = textEditingValue.text.toLowerCase();
+                                    return label.contains(input) || desc.contains(input);
+                                  });
+                                },
+                                onSelected: (Map<String, dynamic> selection) {
+                                  setState(() {
+                                    item.description = selection['description']?.toString() ?? selection['label']?.toString() ?? '';
+                                    item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
+                                  });
+                                  _onDataChanged();
+                                },
+                                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                                  return TextFormField(
+                                    controller: textEditingController,
+                                    focusNode: focusNode,
+                                    textInputAction: TextInputAction.next,
+                                    onFieldSubmitted: (_) {
+                                      onFieldSubmitted();
+                                      _nextField('m_${index}_1');
+                                    },
+                                    decoration: const InputDecoration(labelText: 'Description (Type to search presets)'),
+                                    onChanged: (val) { item.description = val; _onDataChanged(); },
+                                  );
+                                },
+                              )
+                            : TextFormField(
+                                focusNode: _node('m_${index}_1'), 
+                                initialValue: item.description, 
+                                textInputAction: TextInputAction.next, 
+                                onFieldSubmitted: (_) => _nextField('m_${index}_1'), 
+                                decoration: const InputDecoration(labelText: 'Description'), 
+                                onChanged: (val) { item.description = val; _onDataChanged(); }
+                              )
+                        ),
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
@@ -572,7 +616,42 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(focusNode: _node('u_${index}_0'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_0'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
+                      (Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets) 
+                        ? Autocomplete<Map<String, dynamic>>(
+                            initialValue: TextEditingValue(text: item.description),
+                            displayStringForOption: (option) => option['description'] ?? option['label'] ?? '',
+                            optionsBuilder: (TextEditingValue textEditingValue) {
+                              final presets = Provider.of<AppState>(context, listen: false).clientConfig.pricePresets;
+                              if (textEditingValue.text.isEmpty) return presets;
+                              return presets.where((preset) {
+                                final label = preset['label']?.toString().toLowerCase() ?? '';
+                                final desc = preset['description']?.toString().toLowerCase() ?? '';
+                                final input = textEditingValue.text.toLowerCase();
+                                return label.contains(input) || desc.contains(input);
+                              });
+                            },
+                            onSelected: (Map<String, dynamic> selection) {
+                              setState(() {
+                                item.description = selection['description']?.toString() ?? selection['label']?.toString() ?? '';
+                                item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
+                              });
+                              _onDataChanged();
+                            },
+                            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                              return TextFormField(
+                                controller: textEditingController,
+                                focusNode: focusNode,
+                                textInputAction: TextInputAction.next,
+                                onFieldSubmitted: (_) {
+                                  onFieldSubmitted();
+                                  _nextField('u_${index}_0');
+                                },
+                                decoration: const InputDecoration(labelText: 'Description (Type to search presets)'),
+                                onChanged: (val) { item.description = val; _onDataChanged(); },
+                              );
+                            },
+                          )
+                        : TextFormField(focusNode: _node('u_${index}_0'), initialValue: item.description, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_0'), decoration: const InputDecoration(labelText: 'Description'), onChanged: (val) { item.description = val; _onDataChanged(); }),
                       const SizedBox(height: 12),
                       Row(children: [
                         Expanded(child: TextFormField(focusNode: _node('u_${index}_1'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_1'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
