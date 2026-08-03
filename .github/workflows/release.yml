@@ -14,7 +14,7 @@ jobs:
   build:
     strategy:
       matrix:
-        client: ${{ fromJson(format('["{0}"]', replace(github.event.inputs.clients || 'venkateshwara', ',', '","'))) }}
+        client: ${{ fromJson(format('["{0}"]', replace(inputs.clients || 'venkateshwara', ',', '","'))) }}
     
     runs-on: ubuntu-latest
     

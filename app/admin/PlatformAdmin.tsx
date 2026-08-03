@@ -254,6 +254,8 @@ export default function PlatformAdmin() {
   const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
   const [signupRequests, setSignupRequests] = useState<any[]>([]);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [composeMail, setComposeMail] = useState<{ req: any; to: string; subject: string; body: string } | null>(null);
+  const [sendingMail, setSendingMail] = useState(false);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -464,6 +466,45 @@ export default function PlatformAdmin() {
     setSignupRequests(null);
   }
 
+  function openCompose(req: any) {
+    const cfg = req.config || {};
+    const company = cfg.companyName || req.name || "";
+    setComposeMail({
+      req,
+      to: req.email || "",
+      subject: "Your Vitharn UPVC account request",
+      body:
+        (company ? `Hi ${company},\n\n` : "Hi,\n\n") +
+        "We received your UPVC business profile and our team is reviewing it. You will receive your login details by email once your account is approved.\n\n" +
+        "If you have any questions, just reply to this email.\n\nThanks,\nVitharn UPVC Team",
+    });
+  }
+
+  async function sendAdminMail() {
+    if (!composeMail) return;
+    setSendingMail(true);
+    try {
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "send",
+          to: composeMail.to.trim(),
+          subject: composeMail.subject.trim(),
+          body: composeMail.body,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to send email");
+      showToast("Email sent to " + composeMail.to.trim(), "success");
+      setComposeMail(null);
+    } catch (e: any) {
+      showToast("Failed to send email: " + e.message, "error");
+    } finally {
+      setSendingMail(false);
+    }
+  }
+
   async function handleLogoFileSelected(file: File) {
     const resized = await resizeImage(file, 512);
     setSelectedLogoFile(resized);
@@ -562,6 +603,21 @@ export default function PlatformAdmin() {
     const id = form.id.trim();
     if (!id) {
       showToast("Client ID is required", "error");
+      return;
+    }
+
+    const emailStr = form.email.trim();
+    if (emailStr) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailStr)) {
+        showToast("Please enter a valid email address", "error");
+        return;
+      }
+    }
+
+    const contactStr = form.contact.trim();
+    if (contactStr && contactStr.length !== 10) {
+      showToast("Contact number must be exactly 10 digits", "error");
       return;
     }
 
@@ -962,7 +1018,7 @@ export default function PlatformAdmin() {
                       <div className="form-grid">
                         <div className="form-group">
                           <label>Contact Number</label>
-                          <input type="text" value={form.contact} onChange={(e) => setF("contact", e.target.value)} placeholder="9876543210" />
+                          <input type="text" value={form.contact} onChange={(e) => setF("contact", e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} placeholder="9876543210" />
                         </div>
                         <div className="form-group">
                           <label>Email Address</label>
@@ -1294,41 +1350,92 @@ export default function PlatformAdmin() {
         <div className="modal" style={{ display: "flex" }}>
           <div className="modal-content" style={{ maxWidth: 600, maxHeight: "80vh", overflowY: "auto" }}>
             <h3>Signup Requests</h3>
-            {(signupRequests || []).length === 0 && (
-              <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
-            )}
-            {(signupRequests || []).map((req) => {
-              const cfg = req.config || {};
-              const statusColor = signupStatusColor(req.status);
-              return (
-                <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                    <div>
-                      <strong>{req.email}</strong>
-                      <div style={{ color: "#475569", fontSize: 13 }}>
-                        {[req.name, req.phone].filter(Boolean).join(" · ")}
+            {composeMail ? (
+              <>
+                <div style={{ color: "#64748b", fontSize: 12, marginBottom: 10 }}>
+                  Sending to {composeMail.req.email} · status: {composeMail.req.status}
+                </div>
+                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "8px 0 4px", color: "#1E3A5F" }}>
+                  To
+                </label>
+                <input
+                  value={composeMail.to}
+                  onChange={(e) => setComposeMail({ ...composeMail, to: e.target.value })}
+                  placeholder="recipient@example.com"
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
+                  Subject
+                </label>
+                <input
+                  value={composeMail.subject}
+                  onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
+                  placeholder="Subject"
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <label style={{ display: "block", fontWeight: 600, fontSize: 13, margin: "12px 0 4px", color: "#1E3A5F" }}>
+                  Message
+                </label>
+                <textarea
+                  value={composeMail.body}
+                  onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
+                  rows={7}
+                  placeholder="Write your message here…"
+                  style={{ width: "100%", boxSizing: "border-box" }}
+                />
+                <div className="modal-actions" style={{ marginTop: 16 }}>
+                  <button className="btn-secondary" onClick={() => setComposeMail(null)}>Back</button>
+                  <button
+                    className="btn-primary"
+                    onClick={sendAdminMail}
+                    disabled={sendingMail || !composeMail.to.trim() || !composeMail.subject.trim() || !composeMail.body.trim()}
+                  >
+                    {sendingMail ? "Sending…" : "Send Email"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {(signupRequests || []).length === 0 && (
+                  <p style={{ color: "#94a3b8" }}>No signup requests yet.</p>
+                )}
+                {(signupRequests || []).map((req) => {
+                  const cfg = req.config || {};
+                  const statusColor = signupStatusColor(req.status);
+                  return (
+                    <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                        <div>
+                          <strong>{req.email}</strong>
+                          <div style={{ color: "#475569", fontSize: 13 }}>
+                            {[req.name, req.phone].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                        <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
+                          {req.status}
+                        </span>
+                      </div>
+                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                        Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
+                      </div>
+                      {(cfg.companyName || cfg.city || cfg.gstNumber) && (
+                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                          {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                      <div className="modal-actions" style={{ marginTop: 10 }}>
+                        <button className="btn-secondary" onClick={() => openCompose(req)}>
+                          Send Email
+                        </button>
+                        <button className="btn-primary" onClick={() => useSignupRequest(req)}>
+                          Use in Editor
+                        </button>
                       </div>
                     </div>
-                    <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize" }}>
-                      {req.status}
-                    </span>
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                    Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
-                  </div>
-                  {(cfg.companyName || cfg.city || cfg.gstNumber) && (
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                      {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
-                    </div>
-                  )}
-                  <div className="modal-actions" style={{ marginTop: 10 }}>
-                    <button className="btn-primary" onClick={() => useSignupRequest(req)}>
-                      Use in Editor
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </>
+            )}
             <div className="modal-actions" style={{ marginTop: 16 }}>
               <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
             </div>
