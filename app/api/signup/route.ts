@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPatch, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession, deleteSession } from "@/lib/session";
-import { sendSignupNotification } from "@/lib/mail";
+import { sendSignupNotification, sendSignupConfirmation, sendAdminCompose } from "@/lib/mail";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -45,6 +45,27 @@ export async function POST(request: NextRequest) {
           "id,email,name,phone,auth_method,status,config,created_at,updated_at",
       });
       return json(Array.isArray(rows) ? rows : []);
+    }
+
+    if (mode === "send") {
+      if (session.role !== "admin") {
+        return json({ error: "not authorized" }, 403);
+      }
+      const to = String(body.to || "").trim().toLowerCase();
+      const subject = String(body.subject || "").trim();
+      const text = String(body.body || "");
+      if (!to || !subject || !text) {
+        return json({ error: "to, subject and body are required" }, 400);
+      }
+      if (to.length > 320 || subject.length > 200 || text.length > 10000) {
+        return json({ error: "content too long" }, 400);
+      }
+      try {
+        await sendAdminCompose({ to, subject, text });
+      } catch (e: any) {
+        return json({ error: String(e?.message ?? e) }, 500);
+      }
+      return json({ sent: true, to, subject });
     }
 
     if (session.role !== "signup") {
@@ -110,6 +131,16 @@ export async function POST(request: NextRequest) {
           name: row.name,
           phone: row.phone,
           config: row.config || {},
+          submittedAt,
+        });
+      } catch (e) {
+        // mail failure must not fail the submit
+      }
+      try {
+        await sendSignupConfirmation({
+          email: row.email,
+          name: row.name,
+          companyName: (row.config || {}).companyName,
           submittedAt,
         });
       } catch (e) {

@@ -176,3 +176,70 @@ export async function sendSignupNotification(
     await sendMail({ to: admin, subject, html });
   }
 }
+
+export function escapeHtml(s: string): string {
+  return String(s ?? "").replace(/[&<>"']/g, (ch) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string),
+  );
+}
+
+export async function sendSignupConfirmation(opts: {
+  email: string;
+  name?: string;
+  companyName?: string;
+  submittedAt: string;
+}): Promise<void> {
+  const { email, name, companyName, submittedAt } = opts;
+  const label = companyName || name || email;
+  const loginUrl = "https://app.vitharn.com/login";
+  const submittedText = submittedAt
+    ? new Date(submittedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    : "";
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <h2 style="color: #1E3A5F; margin-top: 0;">Thank you, ${escapeHtml(label)}!</h2>
+      <p style="color: #475569; font-size: 16px;">We received your UPVC business profile on the <strong>Vitharn UPVC Quotation Maker Portal</strong> on ${submittedText}.</p>
+      <p style="color: #475569; font-size: 16px;">Our team is now reviewing your details. Once approved, you will receive your login details by email and can start creating quotations right away.</p>
+      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 6px 0;"><strong>Registered Email:</strong> ${escapeHtml(email)}</p>
+        ${companyName ? `<p style="margin: 6px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>` : ""}
+      </div>
+      <p style="margin: 24px 0; text-align: center;">
+        <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Check Request Status</a>
+      </p>
+      <p style="color: #64748b; font-size: 14px;">If you have questions, just reply to this email and our team will help you.</p>
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">This is an automated message from the Vitharn UPVC Quotation Maker Portal.</p>
+    </div>
+  `;
+
+  await sendMail({
+    to: email,
+    subject: "We received your request — Vitharn UPVC",
+    html,
+  });
+}
+
+export async function sendAdminCompose(opts: {
+  to: string;
+  subject: string;
+  text: string;
+}): Promise<void> {
+  const { to, subject, text } = opts;
+  const paragraphs = String(text ?? "")
+    .split(/\n{2,}/)
+    .map(
+      (p) =>
+        `<p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0;">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`,
+    )
+    .join("");
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      ${paragraphs}
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Sent by the Vitharn UPVC Quotation Maker Portal team.</p>
+    </div>
+  `;
+
+  await sendMail({ to, subject, html });
+}
