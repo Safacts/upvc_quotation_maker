@@ -43,11 +43,10 @@ export async function POST(request: NextRequest) {
 
     const currentConfig = rows[0].config || {};
     
-    // Allowed fields to update from the client dashboard
     const allowedFields = [
       "companyName", "companyProprietor", "companyContact", "companyEmail", 
       "companyAddress", "gstNumber", "defaultGstPercentage", "cost_margin_percent",
-      "enablePricePresets", "pricePresets"
+      "enablePricePresets", "pricePresets", "measuredPresets", "unmeasuredPresets"
     ];
 
     let hasChanges = false;
