@@ -92,7 +92,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     return _quotations.where((q) => q.createdAt.year == now.year && q.createdAt.month == now.month).toList();
   }
 
-  double get _totalRevenue => _quotations.fold(0.0, (s, q) => s + q.grandTotal);
   double get _wonRevenue => _wonQuotes.fold(0.0, (s, q) => s + q.grandTotal);
   double get _totalIgst => _quotations.fold(0.0, (s, q) => s + q.igst);
   double get _thisMonthIgst => _thisMonthQuotes.fold(0.0, (s, q) => s + q.igst);
@@ -188,7 +187,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final currFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     final thisMonth = _thisMonthQuotes.length;
     final thisMonthVal = _thisMonthQuotes.fold(0.0, (s, q) => s + q.grandTotal);
-    final appState = Provider.of<AppState>(context, listen: false);
 
     return _card(
       delay: 0,
@@ -601,7 +599,6 @@ class _DonutPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
     final strokeWidth = radius * 0.35;
-    final innerRadius = radius - strokeWidth;
 
     if (total == 0) {
       final paint = Paint()
