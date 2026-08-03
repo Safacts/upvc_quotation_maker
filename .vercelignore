@@ -12,7 +12,7 @@ test/
 web/
 build/
 sources/
-assets/
+/assets/
 backups/
 docs/
 pubspec.yaml
