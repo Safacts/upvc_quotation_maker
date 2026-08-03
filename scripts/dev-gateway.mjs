@@ -38,6 +38,26 @@ function targetFor(url) {
 }
 
 const server = http.createServer((req, res) => {
+  const p = (req.url || "").split("?")[0];
+
+  // Intercept and destroy any stale service workers from previous projects (e.g., CRA/Vite)
+  if (p === "/service-worker.js" || p === "/sw.js") {
+    res.writeHead(200, {
+      "Content-Type": "application/javascript",
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    });
+    res.end(`
+      self.addEventListener('install', () => self.skipWaiting());
+      self.addEventListener('activate', () => {
+        self.registration.unregister();
+        self.clients.matchAll({ type: 'window' }).then(clients => {
+          for (const client of clients) client.navigate(client.url);
+        });
+      });
+    `);
+    return;
+  }
+
   const port = targetFor(req.url);
   const proxyReq = http.request(
     {

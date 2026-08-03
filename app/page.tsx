@@ -165,7 +165,6 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="hero">
         <div className="hero-content">
-          <span className="hero-badge">vitharn upvc</span>
           <h1 className="hero-title">
             vitharn upvc
           </h1>

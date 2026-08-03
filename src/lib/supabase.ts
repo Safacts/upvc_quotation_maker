@@ -74,6 +74,17 @@ export async function supaPost(
   return parseResponse(res);
 }
 
+export async function supaDelete(
+  path: string,
+  qs: Record<string, QsValue>,
+): Promise<any> {
+  const res = await fetch(buildUrl(path, qs), {
+    method: "DELETE",
+    headers: AUTH_HEADERS,
+  });
+  return parseResponse(res);
+}
+
 export async function uploadToStorage(
   filename: string,
   binary: Uint8Array,

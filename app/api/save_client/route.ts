@@ -3,6 +3,7 @@ import {
   supaGet,
   supaPatch,
   supaPost,
+  supaDelete,
   uploadLogoFile,
   isServiceKeyConfigured,
 } from "@/lib/supabase";
@@ -120,8 +121,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (p._delete) {
-      await supaPatch("clients", { id: "eq." + cid }, { is_active: false });
-      return json({ success: true, deleted: cid, logoUrl: config.logoUrl ?? null }, 200);
+      await supaDelete("quotations", { client_id: "eq." + cid });
+      await supaDelete("sent_emails", { client_id: "eq." + cid });
+      await supaDelete("clients", { id: "eq." + cid });
+      return json({ success: true, deleted: cid }, 200);
     }
 
     const existing = await supaGet("clients", { id: "eq." + cid, select: "id" });

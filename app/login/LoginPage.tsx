@@ -180,17 +180,26 @@ export default function LoginPage() {
       }
     }
 
-    const existing = document.querySelector('script[data-gsi]');
-    if (existing) {
-      initGoogleButton();
-      return;
+    let interval: any;
+    
+    // Check if the script exists, if not create it
+    if (!document.querySelector('script[data-gsi]')) {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.dataset.gsi = "1";
+      document.head.appendChild(script);
     }
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.dataset.gsi = "1";
-    script.onload = initGoogleButton;
-    document.head.appendChild(script);
+    
+    // Wait for the window.google object to be available
+    interval = setInterval(() => {
+      if ((window as any).google && (window as any).google.accounts) {
+        clearInterval(interval);
+        initGoogleButton();
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
   }, []);
 
   function triggerForgotPassword(prefillEmail?: string) {

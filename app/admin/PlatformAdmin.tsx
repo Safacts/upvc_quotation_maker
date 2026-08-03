@@ -218,6 +218,7 @@ export default function PlatformAdmin() {
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -235,6 +236,7 @@ export default function PlatformAdmin() {
   const [invoiceTopPreviewSrc, setInvoiceTopPreviewSrc] = useState<string | null>(null);
   const [invoiceBgPreviewSrc, setInvoiceBgPreviewSrc] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -338,8 +340,8 @@ export default function PlatformAdmin() {
     return {
       id: client ? client.id : "",
       logoUrl: config.logoUrl || "",
-      invoiceTopLogoUrl: config.invoiceTopLogoUrl || "",
-      invoiceBackgroundLogoUrl: config.invoiceBackgroundLogoUrl || "",
+      invoiceTopLogoUrl: config.invoiceTopLogoUrl || config.logoUrl || "",
+      invoiceBackgroundLogoUrl: config.invoiceBackgroundLogoUrl || config.logoUrl || "",
       seoTitle: config.seoTitle || "",
       seoDescription: config.seoDescription || "",
       seoKeywords: config.seoKeywords || "",
@@ -636,10 +638,16 @@ export default function PlatformAdmin() {
     }
   }
 
-  async function deleteClient() {
-    const id = editingClient ? editingClient.id : form.id;
+  async function deleteClient(confirmedId?: string) {
+    const id = confirmedId || (editingClient ? editingClient.id : form.id);
     if (!id) return;
-    if (!window.confirm(`Delete client "${id}"? This cannot be undone.`)) return;
+    
+    if (typeof confirmedId !== 'string') {
+      setConfirmDialog({ id });
+      return;
+    }
+
+    setConfirmDialog(null);
 
     setBusy("Deleting...");
 
@@ -658,7 +666,7 @@ export default function PlatformAdmin() {
       });
       const result = await r.json();
       if (!r.ok) throw new Error(result.error || "Delete failed");
-      showToast("Client deactivated", "success");
+      showToast("Client deleted", "success");
       closeEditor();
       loadClients();
     } catch (err: any) {
@@ -673,6 +681,9 @@ export default function PlatformAdmin() {
   }
 
   const filteredClients = clients.filter((c) => {
+    const statusOk =
+      statusFilter === "all" || (statusFilter === "active") === !!c.is_active;
+    if (!statusOk) return false;
     const q = searchQuery.toLowerCase();
     if (!q) return true;
     const name = (c.config?.companyName || c.id).toLowerCase();
@@ -700,7 +711,12 @@ export default function PlatformAdmin() {
         <aside className="admin-sidebar">
           <div className="admin-sidebar-header">
             <div className="admin-brand">
-              <div className="admin-brand-icon">V</div>
+              <img 
+                src="/logo.png" 
+                alt="Vitharn Logo" 
+                className="admin-brand-icon" 
+                style={{ objectFit: 'contain', background: 'transparent', boxShadow: 'none' }} 
+              />
               <div className="admin-brand-text">
                 <h2>vitharn upvc</h2>
                 <span>Admin Panel</span>
@@ -715,6 +731,18 @@ export default function PlatformAdmin() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <div className="admin-status-filter">
+              {(["active", "inactive", "all"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={statusFilter === f ? "active" : ""}
+                  onClick={() => setStatusFilter(f)}
+                >
+                  {f === "active" ? "Active" : f === "inactive" ? "Inactive" : "All"}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="admin-client-list">
@@ -724,7 +752,9 @@ export default function PlatformAdmin() {
               <div className="empty-list">No clients found.</div>
             )}
             {filteredClients.length > 0 && (
-              <div className="client-list-section-label">All Clients ({filteredClients.length})</div>
+              <div className="client-list-section-label">
+                {statusFilter === "active" ? "Active" : statusFilter === "inactive" ? "Inactive" : "All"} Clients ({filteredClients.length})
+              </div>
             )}
             {filteredClients.map((client) => {
               const config = client.config || {};
@@ -1168,10 +1198,10 @@ export default function PlatformAdmin() {
               {/* Editor Footer */}
               <div className="editor-footer">
                 <button type="submit" className="btn-primary" disabled={!!busy}>
-                  {busy ? busy : "💾 Save Changes"}
+                  {busy ? busy : "Save Changes"}
                 </button>
                 {editingClient && !isCustomer && (
-                  <button type="button" className="btn-danger" onClick={deleteClient}>
+                  <button type="button" className="btn-danger" onClick={() => deleteClient()}>
                     🗑 Delete Client
                   </button>
                 )}
@@ -1184,6 +1214,19 @@ export default function PlatformAdmin() {
           )}
         </main>
       </div>
+
+      {confirmDialog && (
+        <div className="modal" style={{ display: 'flex' }}>
+          <div className="modal-content">
+            <h3>Delete Client</h3>
+            <p>Are you sure you want to delete client <strong>{confirmDialog.id}</strong>? This action cannot be undone.</p>
+            <div className="modal-actions" style={{ marginTop: '24px' }}>
+              <button className="btn-secondary" onClick={() => setConfirmDialog(null)}>Cancel</button>
+              <button className="btn-danger" onClick={() => deleteClient(confirmDialog.id)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
