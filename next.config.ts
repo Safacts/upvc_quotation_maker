@@ -20,7 +20,6 @@ const nextConfig: NextConfig = {
       ];
     }
     return [
-      { source: "/upvc/:path*", destination: "/app/index.html" },
       { source: "/app", destination: "/app/index.html" },
       { source: "/app/", destination: "/app/index.html" },
     ];
