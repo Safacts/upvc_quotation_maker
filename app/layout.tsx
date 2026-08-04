@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     title: "UPVC Quotation Maker",
     statusBarStyle: "black-translucent",
   },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
