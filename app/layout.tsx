@@ -1,11 +1,21 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PwaSwRegister from "./PwaSwRegister";
 import UmamiTracker from "./UmamiTracker";
 import UmamiClickTracker from "./UmamiClickTracker";
 
 export const metadata: Metadata = {
   title: "vitharn upvc — Quotation & Business Management Portal",
   description: "vitharn upvc is a complete platform for UPVC window and door businesses to create, manage, and send professional quotations — on Android and the web.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "UPVC Quotation Maker",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
@@ -22,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         {children}
+        <PwaSwRegister />
         <UmamiTracker />
         <UmamiClickTracker />
       </body>

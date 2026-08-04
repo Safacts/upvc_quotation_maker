@@ -33,11 +33,13 @@ export async function GET(
 
   const icons: any[] = [];
   if (logoUrl) {
-    icons.push({ src: logoUrl, sizes: "512x512", purpose: "any" });
+    icons.push({ src: logoUrl, sizes: "512x512", type: "image/png", purpose: "any" });
   }
   icons.push(
     { src: "/app/icons/Icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
     { src: "/app/icons/Icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+    { src: "/app/icons/Icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+    { src: "/app/icons/Icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
   );
 
   const manifest = {

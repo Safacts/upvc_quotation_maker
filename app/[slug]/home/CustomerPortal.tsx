@@ -35,6 +35,9 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
   const deferredPrompt = useRef<any>(null);
   const [canInstall, setCanInstall] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showA2hsModal, setShowA2hsModal] = useState(false);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
     setToast({ message, type });
@@ -43,6 +46,12 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua);
+    const standalone =
+      (navigator as any).standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    setIsIOS(iOS);
+    setIsStandalone(standalone);
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/pwa-sw.js").catch(() => {});
     }
@@ -54,6 +63,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
     const onAppInstalled = () => {
       deferredPrompt.current = null;
       setCanInstall(false);
+      setIsStandalone(true);
       showToast("App installed! Find it on your home screen.", "success");
     };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -194,13 +204,16 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   };
 
   const handleLiteMode = async () => {
+    // Already running as an installed app → jump straight to the app.
+    if (isStandalone) {
+      if (appUrl) window.location.href = appUrl;
+      return;
+    }
+    // Android / desktop Chrome: show the native install prompt.
     if (deferredPrompt.current) {
       try {
         deferredPrompt.current.prompt();
-        const choice = await deferredPrompt.current.userChoice;
-        if (choice && choice.outcome === "accepted") {
-          showToast("App installed! Find it on your home screen.", "success");
-        }
+        await deferredPrompt.current.userChoice;
       } catch (e) {
         // prompt can throw if it was already shown / dismissed
       } finally {
@@ -209,6 +222,12 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
       }
       return;
     }
+    // iOS Safari: no install prompt API → show "Add to Home Screen" steps.
+    if (isIOS) {
+      setShowA2hsModal(true);
+      return;
+    }
+    // Fallback: open the app inside the portal.
     setActiveTab("app");
   };
 
@@ -366,9 +385,9 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
-              <span>App Lite Mode</span>
+              <span>{isStandalone ? "Open App" : "App Lite Mode"}</span>
             </div>
-            <span style={{ fontSize: '10px', background: canInstall ? '#dcfce7' : '#e0e7ff', color: canInstall ? '#166534' : '#3730a3', padding: '2px 6px', borderRadius: '10px' }}>{canInstall ? 'Install' : 'Instant'}</span>
+            <span style={{ fontSize: '10px', background: (canInstall || isIOS) && !isStandalone ? '#dcfce7' : isStandalone ? '#ede9fe' : '#e0e7ff', color: (canInstall || isIOS) && !isStandalone ? '#166534' : isStandalone ? '#5b21b6' : '#3730a3', padding: '2px 6px', borderRadius: '10px' }}>{isStandalone ? 'Open' : canInstall || isIOS ? 'Install' : 'Instant'}</span>
           </button>
 
           {/* Pro Mode: Native APK */}
@@ -1110,6 +1129,35 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
           </div>
+
+          {/* iOS "Add to Home Screen" instructions */}
+          {showA2hsModal && (
+            <div
+              onClick={() => setShowA2hsModal(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{ background: 'white', borderRadius: '16px', maxWidth: '380px', width: '100%', padding: '24px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '17px', color: '#0f172a' }}>Install on iPhone / iPad</h3>
+                  <button
+                    onClick={() => setShowA2hsModal(false)}
+                    style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700', color: '#475569' }}
+                  >✕</button>
+                </div>
+                <ol style={{ margin: '0 0 12px', paddingLeft: '20px', color: '#334155', fontSize: '14px', lineHeight: 1.8 }}>
+                  <li>Tap the <b>Share</b> icon in the Safari toolbar.</li>
+                  <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+                  <li>Tap <b>Add</b> in the top-right corner.</li>
+                </ol>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  {brand} will appear on your home screen like a normal app.
+                </p>
+              </div>
+            </div>
+          )}
 
         </div>
       </main>
