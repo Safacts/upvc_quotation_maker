@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
       is_active: p.is_active ?? true,
       trial_expires_at: p.trial_expires_at ?? null,
     };
+    if (portalHash) body.password_hash = portalHash;
     if (Array.isArray(existing) && existing.length > 0) {
       await supaPatch("clients", { id: "eq." + cid }, body);
     } else {
