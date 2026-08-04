@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
     }
 
     const config: Record<string, any> = p.config || {};
-    delete config.portalPasswordHash;
     const portalHash = p.portal_password_hash || null;
+    if (portalHash) {
+      config.portalPasswordHash = portalHash;
+    }
 
     if (isCustomer && p._delete) {
       return json({ error: "customers cannot delete clients" }, 403);
@@ -133,7 +135,6 @@ export async function POST(request: NextRequest) {
       is_active: p.is_active ?? true,
       trial_expires_at: p.trial_expires_at ?? null,
     };
-    if (portalHash) body.password_hash = portalHash;
     if (Array.isArray(existing) && existing.length > 0) {
       await supaPatch("clients", { id: "eq." + cid }, body);
     } else {

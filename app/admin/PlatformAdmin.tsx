@@ -207,8 +207,8 @@ function ClientLinks({ id, config }: { id: string; config?: Record<string, any> 
   const cfg = config || {};
   const marketSlug = slugify(cfg.companyName) || slugify(id);
   const appSlug = slugify(cfg.appName) || slugify(id);
-  const marketUrl = "https://app.vitharn.com/upvc/" + marketSlug;
-  const appUrl = "https://app.vitharn.com/upvc/" + appSlug;
+  const marketUrl = window.location.origin + "/" + marketSlug;
+  const appUrl = window.location.origin + "/upvc/" + appSlug;
   return (
     <div className="client-links">
       <a href={marketUrl} target="_blank" rel="noreferrer">
