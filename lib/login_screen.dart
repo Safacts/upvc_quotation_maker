@@ -117,6 +117,22 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
+    if (!kIsWeb) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      if (appState.clientConfig.adminEmails.contains(email)) {
+        if (appState.clientConfig.portalPasswordHash == _hashPassword(password)) {
+          umamiTrack('login_success');
+          await _writeSession('true');
+          if (!mounted) return;
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+          return;
+        }
+      }
+      umamiTrack('login_failed');
+      setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+      return;
+    }
+
     try {
       final res = await http.post(
         Uri.parse('/api/portal_auth'),
@@ -146,6 +162,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _forgotPassword() async {
     final appState = Provider.of<AppState>(context, listen: false);
+    
+    if (!kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please use the Web Portal to reset your password.')));
+      return;
+    }
+    
     setState(() => _isLoading = true);
 
     try {
