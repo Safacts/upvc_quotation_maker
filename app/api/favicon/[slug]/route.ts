@@ -32,13 +32,16 @@ export async function GET(
   const logoUrl = client?.config?.logoUrl;
   if (client && typeof logoUrl === "string" && logoUrl.trim()) {
     const target = await resolveFavicon(logoUrl.trim());
-    return NextResponse.redirect(target, 302);
+    return NextResponse.redirect(target, {
+      status: 302,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
   const ico = readFileSync(join(process.cwd(), "public", "favicon.ico"));
   return new NextResponse(ico, {
     headers: {
       "Content-Type": "image/x-icon",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "no-store",
     },
   });
 }
