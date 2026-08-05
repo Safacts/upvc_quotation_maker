@@ -8,8 +8,8 @@ function transporter() {
   const host = (process.env.SMTP_HOST || "").trim();
   const ip = (process.env.SMTP_HOST_IP || "").trim();
   const port = Number(process.env.SMTP_PORT || "465");
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = (process.env.SMTP_PASS || "").trim();
   if (!host || !user || !pass) throw new Error("SMTP not configured");
   // Serverless DNS resolvers can fail to resolve the SMTP hostname
   // ("queryA EBADNAME smtp.hostinger.com"). When a static IP is provided,
