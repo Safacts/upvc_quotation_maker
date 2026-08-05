@@ -6,16 +6,27 @@ export const ADMIN_EMAILS = ["kongaaadisheshu@gmail.com", "vitarn.dev@gmail.com"
 
 function transporter() {
   const host = process.env.SMTP_HOST;
+  const ip = process.env.SMTP_HOST_IP || "";
   const port = Number(process.env.SMTP_PORT || "465");
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) throw new Error("SMTP not configured");
-  return nodemailer.createTransport({
-    host,
+  // Serverless DNS resolvers can fail to resolve the SMTP hostname
+  // ("queryA EBADNAME smtp.hostinger.com"). When a static IP is provided,
+  // connect to it directly and keep the hostname only for TLS SNI validation.
+  const address = ip || host;
+  const opts: any = {
+    host: address,
     port,
     secure: port === 465,
     auth: { user, pass },
-  });
+    timeout: 30000,
+    connectionTimeout: 30000,
+  };
+  if (ip) {
+    opts.tls = { servername: host, rejectUnauthorized: true };
+  }
+  return nodemailer.createTransport(opts);
 }
 
 export function slugify(s: string): string {

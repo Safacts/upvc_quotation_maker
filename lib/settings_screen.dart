@@ -73,8 +73,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       gstPercentage: double.tryParse(_gstPercentageController.text) ?? 18.0,
       proprietor: _proprietorController.text,
       gstNumber: _gstNoController.text,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved successfully')));
+    ).then((synced) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(synced
+            ? 'Settings saved successfully'
+            : 'Saved on this device, but failed to sync to server'),
+      ));
+    });
   }
 
   @override

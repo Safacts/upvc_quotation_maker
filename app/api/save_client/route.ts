@@ -64,7 +64,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const config: Record<string, any> = p.config || {};
+    let config: Record<string, any> = p.config || {};
+    if (typeof config === "string") {
+      try {
+        config = JSON.parse(config);
+      } catch {
+        return json({ error: "invalid config" }, 400);
+      }
+    }
+    // Merge mode: only the fields sent by the client are updated. Protects
+    // fields the sender doesn't know about (portalPasswordHash, appDownloadUrl,
+    // colors, quotePrefix, adminEmails, ...) from being wiped by a partial save.
+    if (p.merge) {
+      const existing = await supaGet("clients", {
+        id: "eq." + cid,
+        select: "config",
+      });
+      if (
+        Array.isArray(existing) &&
+        existing.length > 0 &&
+        existing[0].config &&
+        typeof existing[0].config === "object" &&
+        !Array.isArray(existing[0].config)
+      ) {
+        config = { ...existing[0].config, ...config };
+      }
+    }
     const portalHash = p.portal_password_hash || null;
     if (portalHash) {
       config.portalPasswordHash = portalHash;

@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
 
@@ -89,7 +92,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateSettings({
+  Future<bool> updateSettings({
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
     required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
@@ -120,7 +123,60 @@ class AppState extends ChangeNotifier {
     await prefs.setDouble('defaultGstPercentage', gstPercentage);
     await prefs.setString('companyProprietor', proprietor);
     await prefs.setString('gstNumber', gstNumber);
-    
+
     notifyListeners();
+
+    return _pushSettingsToServer(
+      name: name, address: address, contact: contact, email: email,
+      bankName: bankName, bankBranch: bankBranch, accountNo: accountNo, ifsc: ifsc,
+      terms: terms, gstPercentage: gstPercentage, proprietor: proprietor, gstNumber: gstNumber,
+    );
+  }
+
+  // Persists the settings edit to the server so every device/client sees it
+  // (local SharedPreferences are per-device only). Uses merge mode so only the
+  // fields edited here are written; server-side secrets are left untouched.
+  Future<bool> _pushSettingsToServer({
+    required String name, required String address, required String contact, required String email,
+    required String bankName, required String bankBranch, required String accountNo, required String ifsc,
+    required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
+  }) async {
+    final cfg = clientConfig;
+    final url = kIsWeb
+        ? '/api/save_client'
+        : 'https://app.vitharn.com/api/save_client';
+    try {
+      final res = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'admin_email': cfg.companyEmail,
+          'id': cfg.clientId,
+          'merge': true,
+          'config': {
+            'companyName': name,
+            'companyAddress': address,
+            'companyContact': contact,
+            'companyEmail': email,
+            'companyProprietor': proprietor,
+            'gstNumber': gstNumber,
+            'bankName': bankName,
+            'bankBranch': bankBranch,
+            'bankAccountNo': accountNo,
+            'bankIfsc': ifsc,
+            'defaultGstPercentage': gstPercentage,
+            'termsAndConditions': terms
+                .split('\n')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList(),
+          },
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('Settings sync to server failed: $e');
+      return false;
+    }
   }
 }
