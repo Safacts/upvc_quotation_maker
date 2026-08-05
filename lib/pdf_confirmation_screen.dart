@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:printing/printing.dart';
+import 'package:printing/printing.dart' deferred as printLib;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
@@ -127,7 +127,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   }
 
   Future<void> _printPdf() async {
-    await Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
+    await printLib.loadLibrary();
+    await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
   }
 
   Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay) {

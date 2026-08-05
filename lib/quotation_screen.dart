@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'models.dart';
 import 'app_state.dart';
-import 'pdf_generator.dart';
+import 'pdf_generator.dart' deferred as pdfGen;
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
@@ -18,7 +18,7 @@ import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
 import 'umami_tracker.dart';
-import 'quotation_export.dart';
+import 'quotation_export.dart' deferred as exportLib;
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -33,6 +33,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   late QuotationData data;
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isExporting = false;
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
   bool _usePresets = false;
@@ -215,7 +216,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _sendEmail(String targetEmail) async {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      final pdfBytes = await generatePdfBytes(data, appState);
+      await pdfGen.loadLibrary();
+      final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
 
       final htmlBody = '''
@@ -316,7 +318,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
     
     // Generate PDF bytes
     final appState = Provider.of<AppState>(context, listen: false);
-    final pdfBytes = await generatePdfBytes(data, appState);
+    await pdfGen.loadLibrary();
+    final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
     
     // 2. If email exists, send automatically in background
     Future<void>? emailTask;
@@ -799,13 +802,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _exportData(String format) async {
+    if (_isExporting) return;
+    _isExporting = true;
     final appState = Provider.of<AppState>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     try {
+      await exportLib.loadLibrary();
       if (format == 'xlsx') {
-        await exportQuotationXlsx(data, appState);
+        await exportLib.exportQuotationXlsx(data, appState);
       } else {
-        await exportQuotationCsv(data, appState);
+        await exportLib.exportQuotationCsv(data, appState);
       }
       messenger.showSnackBar(SnackBar(
         content: Text('Exported ${data.quotationNo}.$format'),
@@ -813,6 +819,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    } finally {
+      _isExporting = false;
     }
   }
 

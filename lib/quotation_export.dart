@@ -103,7 +103,7 @@ Uint8List buildXlsx(QuotationData data, AppState appState) {
   }
   summary.setColumnAutoFit(1);
 
-  final bytes = excel.save();
+  final bytes = excel.encode();
   return bytes != null ? Uint8List.fromList(bytes) : Uint8List(0);
 }
 
