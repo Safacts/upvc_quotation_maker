@@ -53,9 +53,10 @@ class QuotationData {
 
 
   // Logic to handle continuous numbering via Supabase RPC
-  static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC'}) async {
+  static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC', String? clientId}) async {
     try {
-      final result = await SupabaseConfig.client.rpc('get_next_quote_number');
+      final result = await SupabaseConfig.client
+          .rpc('get_next_quote_number', params: {'cid': clientId});
       return result.toString();
     } catch (e) {
       // Fallback for offline/error: add milliseconds since epoch modulo 10000 to prevent collisions

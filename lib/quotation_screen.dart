@@ -169,7 +169,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
   Future<void> _initQuoteNumber() async {
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
-    String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix);
+    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
     setState(() => data.quotationNo = nextNo);
     _autoSaveToDatabase();
   }

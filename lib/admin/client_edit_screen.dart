@@ -51,7 +51,7 @@ class _ClientEditScreenState extends State<ClientEditScreen> {
     _bankBranchController = TextEditingController(text: config['bankBranch'] as String? ?? '');
     _bankAccountController = TextEditingController(text: config['bankAccountNo'] as String? ?? '');
     _bankIfscController = TextEditingController(text: config['bankIfsc'] as String? ?? '');
-    _quotePrefixController = TextEditingController(text: config['quotePrefix'] as String? ?? 'JVUPVC');
+    _quotePrefixController = TextEditingController(text: config['quotePrefix'] as String? ?? '');
     _gstPercentController = TextEditingController(text: (config['defaultGstPercentage'] ?? 18.0).toString());
     _isActive = widget.clientData?['is_active'] as bool? ?? true;
 
