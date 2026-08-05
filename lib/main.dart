@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'login_screen.dart';
 import 'trial_gate.dart';
@@ -12,13 +11,6 @@ import 'favicon_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Could not load .env file: $e");
-  }
 
   // Initialize Supabase
   try {

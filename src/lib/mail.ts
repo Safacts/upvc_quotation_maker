@@ -38,6 +38,7 @@ export async function sendMail(opts: {
   subject: string;
   html: string;
   from?: string;
+  attachments?: Array<{ filename?: string; content?: string | Buffer; cid?: string }>;
 }): Promise<void> {
   const from = opts.from || MAIL_FROM;
   await transporter().sendMail({
@@ -45,6 +46,7 @@ export async function sendMail(opts: {
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    ...(opts.attachments?.length ? { attachments: opts.attachments } : {}),
   });
 }
 

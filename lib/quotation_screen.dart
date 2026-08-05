@@ -1,15 +1,12 @@
-import 'dart:io';
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'models.dart';
 import 'app_state.dart';
@@ -17,11 +14,11 @@ import 'pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
-import 'file_helper.dart';
 import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
 import 'umami_tracker.dart';
+import 'quotation_export.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -216,28 +213,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _sendEmail(String targetEmail) async {
-    if (kIsWeb) {
-      throw Exception('Email sending is not supported on web. Please use the desktop or mobile app.');
-    }
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final pdfBytes = await generatePdfBytes(data, appState);
-      final helper = FileHelper();
-      final dir = (await helper.getTempDir()) ?? '';
-      final pdfPath = '$dir/${data.quotationNo}.pdf';
-      await helper.writeFile(pdfPath, pdfBytes);
-
-      final smtpHost = dotenv.env['SMTP_HOST'] ?? 'smtp.hostinger.com';
-      final smtpPort = int.tryParse(dotenv.env['SMTP_PORT'] ?? '') ?? 465;
-      final smtpUser = dotenv.env['SMTP_USER'] ?? 'vitharn@rubixitsolution.com';
-      final smtpPass = dotenv.env['SMTP_PASS'] ?? '';
-      if (smtpPass.isEmpty) throw Exception("SMTP password not configured in .env");
-
-      final smtpServer = SmtpServer(smtpHost, port: smtpPort, username: smtpUser, password: smtpPass, ssl: true);
-
-      final ByteData logoData = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
-      final logoPath = '$dir/logo.png';
-      await helper.writeFile(logoPath, logoData.buffer.asUint8List());
+      final logoBytes = await loadLogoBytes(appState.clientConfig);
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
@@ -258,15 +237,32 @@ class _QuotationScreenState extends State<QuotationScreen> {
       </div>
       ''';
 
-      final message = Message()
-        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solution')
-        ..recipients.add(targetEmail.trim())
-        ..subject = 'Quotation ${data.quotationNo} from ${appState.companyName}'
-        ..html = htmlBody
-        ..attachments.add(FileAttachment(File(pdfPath)))
-        ..attachments.add(FileAttachment(File(logoPath))..location = Location.inline..cid = '<logo>');
-
-      await send(message, smtpServer);
+      final url = kIsWeb
+          ? '/api/send_email'
+          : 'https://app.vitharn.com/api/send_email';
+      final res = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'to': targetEmail.trim(),
+          'subject': 'Quotation ${data.quotationNo} from ${appState.companyName}',
+          'html': htmlBody,
+          'attachments': [
+            {
+              'filename': '${data.quotationNo}.pdf',
+              'content': base64Encode(pdfBytes),
+            },
+            {
+              'filename': 'logo.png',
+              'cid': 'logo',
+              'content': base64Encode(logoBytes),
+            },
+          ],
+        }),
+      );
+      if (res.statusCode != 200) {
+        throw Exception('Server returned ${res.statusCode}: ${res.body}');
+      }
     } catch (e) {
       throw Exception('Failed to send email: $e');
     }
@@ -765,6 +761,34 @@ class _QuotationScreenState extends State<QuotationScreen> {
                 ),
               ),
             ).animate().scale(delay: 800.ms),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exportData('xlsx'),
+                    icon: const Icon(Icons.table_chart),
+                    label: const Text('EXPORT EXCEL'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _exportData('csv'),
+                    icon: const Icon(Icons.grid_on),
+                    label: const Text('EXPORT CSV'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
+                ),
+              ],
+            ).animate().fade(delay: 850.ms),
             const SizedBox(height: 20),
             CraftedWithLoveWidget(),
             const SizedBox(height: 40),
@@ -772,6 +796,24 @@ class _QuotationScreenState extends State<QuotationScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _exportData(String format) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (format == 'xlsx') {
+        await exportQuotationXlsx(data, appState);
+      } else {
+        await exportQuotationCsv(data, appState);
+      }
+      messenger.showSnackBar(SnackBar(
+        content: Text('Exported ${data.quotationNo}.$format'),
+        duration: const Duration(seconds: 2),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    }
   }
 
   Widget _buildComputationRow(String label, double amount, {bool isBold = false}) {

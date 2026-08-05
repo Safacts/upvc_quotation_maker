@@ -1,12 +1,9 @@
-import 'dart:typed_data';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'package:toastification/toastification.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'supabase_config.dart';
@@ -58,16 +55,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
     setState(() => _isSending = true);
 
     try {
-      final smtpHost = dotenv.env['SMTP_HOST'] ?? 'smtp.hostinger.com';
-      final smtpPort = int.tryParse(dotenv.env['SMTP_PORT'] ?? '') ?? 465;
-      final smtpUser = dotenv.env['SMTP_USER'] ?? 'vitharn@rubixitsolution.com';
-      final smtpPass = dotenv.env['SMTP_PASS'] ?? '';
-      final smtpServer = SmtpServer(smtpHost, port: smtpPort, username: smtpUser, password: smtpPass, ssl: true);
-
-      final ByteData data = ByteData.sublistView(await loadLogoBytes(appState.clientConfig));
-      final Directory tempDir = await getTemporaryDirectory();
-      final File tempFile = File('${tempDir.path}/logo.png');
-      await tempFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+      final logoBytes = await loadLogoBytes(appState.clientConfig);
 
       String htmlBody = '''
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
@@ -86,14 +74,28 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
         </div>
       ''';
 
-      final message = Message()
-        ..from = Address(dotenv.env['SMTP_FROM'] ?? 'vitharn@rubixitsolution.com', dotenv.env['SMTP_FROM_NAME'] ?? 'Vitharn | Rubix IT Solution')
-        ..recipients.add(_toController.text.trim())
-        ..subject = _subjectController.text
-        ..html = htmlBody
-        ..attachments.add(FileAttachment(tempFile)..location = Location.inline..cid = '<logo>');
-
-      await send(message, smtpServer);
+      final url = kIsWeb
+          ? '/api/send_email'
+          : 'https://app.vitharn.com/api/send_email';
+      final res = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'to': _toController.text.trim(),
+          'subject': _subjectController.text,
+          'html': htmlBody,
+          'attachments': [
+            {
+              'filename': 'logo.png',
+              'cid': 'logo',
+              'content': base64Encode(logoBytes),
+            },
+          ],
+        }),
+      );
+      if (res.statusCode != 200) {
+        throw Exception('Server returned ${res.statusCode}: ${res.body}');
+      }
 
       umamiTrack('send_email');
 
