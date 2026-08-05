@@ -20,7 +20,9 @@ function readKprHtml(): string | null {
 }
 
 function kprShell(html: string): string {
-  const links = [...html.matchAll(/<link[^>]*>/gi)].map((m) => m[0]);
+  const links = [...html.matchAll(/<link[^>]*>/gi)]
+    .map((m) => m[0])
+    .filter((l) => !/rel=["']icon/i.test(l));
   const scripts = [...html.matchAll(/<script[^>]*>[^<]*<\/script>/gi)].map((m) => m[0]);
   const root = html.match(/<div id="root"[^>]*><\/div>/i)?.[0];
   return [links.join("\n"), scripts.join("\n"), root || ""].filter(Boolean).join("\n");
@@ -63,12 +65,12 @@ export async function generateMetadata({
   if (!client) return {};
   if (client.id === KPR_SLUG) {
     const html = readKprHtml();
-    if (html) {
-      return {
-        title: kprMeta(html, "title"),
-        description: kprMeta(html, "description"),
-      };
-    }
+    const cfg = parseClientConfig(client.config || {}, client.id);
+    return {
+      title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
+      description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
+      icons: { icon: cfg.logoUrl ? "/kprupvc/logo.png" : "/favicon.ico" },
+    };
   }
   const cfg = parseClientConfig(client.config || {}, client.id);
   return {
