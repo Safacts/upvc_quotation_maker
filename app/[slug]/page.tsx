@@ -69,7 +69,7 @@ export async function generateMetadata({
     return {
       title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
       description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
-      icons: { icon: cfg.logoUrl ? "/kprupvc/logo.png" : "/favicon.ico" },
+      icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
     };
   }
   const cfg = parseClientConfig(client.config || {}, client.id);
@@ -77,5 +77,6 @@ export async function generateMetadata({
     title: cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
     description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
     keywords: cfg.seoKeywords || "",
+    icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
   };
 }
