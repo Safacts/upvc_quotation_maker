@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
+import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { sha256 } from "@/lib/auth";
 import { sendSignupNotification } from "@/lib/mail";
@@ -71,6 +71,31 @@ async function findSignupByEmail(email: string): Promise<any | null> {
   });
   if (Array.isArray(rows) && rows.length > 0) return rows[0];
   return null;
+}
+
+async function backfillPortalHash(client: any): Promise<void> {
+  try {
+    if (!client?.id || !client.password_hash) return;
+    if (client.config && client.config.portalPasswordHash) return;
+    const rows = await supaGet("clients", {
+      id: "eq." + client.id,
+      select: "config",
+    });
+    if (!Array.isArray(rows) || rows.length === 0) return;
+    const existing =
+      rows[0].config &&
+      typeof rows[0].config === "object" &&
+      !Array.isArray(rows[0].config)
+        ? rows[0].config
+        : {};
+    await supaPatch(
+      "clients",
+      { id: "eq." + client.id },
+      { config: { ...existing, portalPasswordHash: client.password_hash } },
+    );
+  } catch {
+    // best-effort backfill: never block login on it
+  }
 }
 
 async function findInactiveClientByEmail(email: string): Promise<any | null> {
@@ -193,6 +218,7 @@ export async function POST(request: NextRequest) {
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
+      await backfillPortalHash(client);
       await createSession({ role: "customer", email, client_id: client.id });
       return json({ role: "customer", email, client_id: client.id }, 200);
     }

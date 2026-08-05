@@ -10,7 +10,8 @@
     "dev:all": "node scripts/dev-all.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync-hashes": "node scripts/sync_portal_hashes.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
@@ -28,6 +29,7 @@
     "@types/node": "22.19.19",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "19.2.14",
+    "pg": "^8.22.0",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   }
