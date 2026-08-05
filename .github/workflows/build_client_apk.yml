@@ -43,6 +43,35 @@ jobs:
           echo "client_id=${CLIENT_ID}" >> $GITHUB_OUTPUT
           echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
 
+      - name: Generate Client Launcher Icons
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CLIENT_ID: ${{ steps.vars.outputs.client_id }}
+        run: |
+          set -e
+          mkdir -p /tmp/icon
+          SRC="public/logo.png"
+          if [ -n "${SUPABASE_URL}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            ENCODED_ID=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$CLIENT_ID")
+            LOGO_URL=$(curl -sS "${SUPABASE_URL}/rest/v1/clients?id=eq.${ENCODED_ID}&select=config" \
+              -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+              | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const r=JSON.parse(s);process.stdout.write((r&&r[0]&&r[0].config&&r[0].config.logoUrl)||'')}catch(e){process.stdout.write('')}})")
+            if [ -n "${LOGO_URL}" ]; then
+              if curl -sSL --max-time 30 -o /tmp/icon/src.png "${LOGO_URL}" && file /tmp/icon/src.png | grep -qi "image"; then
+                SRC="/tmp/icon/src.png"
+              fi
+            fi
+          fi
+          echo "Icon source: $SRC"
+          convert "$SRC" -background white -flatten -resize 48x48   android/app/src/main/res/mipmap-mdpi/launcher_icon.png
+          convert "$SRC" -background white -flatten -resize 72x72   android/app/src/main/res/mipmap-hdpi/launcher_icon.png
+          convert "$SRC" -background white -flatten -resize 96x96   android/app/src/main/res/mipmap-xhdpi/launcher_icon.png
+          convert "$SRC" -background white -flatten -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/launcher_icon.png
+          convert "$SRC" -background white -flatten -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/launcher_icon.png
+          echo "Launcher icons generated from client logo"
+
       - name: Patch Android App Label
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
