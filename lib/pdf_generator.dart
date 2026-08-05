@@ -165,6 +165,19 @@ pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency) {
     cellStyle: pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
+    columnWidths: {
+      0: pw.FlexColumnWidth(1),
+      1: pw.FlexColumnWidth(1.5),
+      2: pw.FlexColumnWidth(6),
+      3: pw.FlexColumnWidth(1.2),
+      4: pw.FlexColumnWidth(1.2),
+      5: pw.FlexColumnWidth(1.5),
+      6: pw.FlexColumnWidth(2),
+      7: pw.FlexColumnWidth(1.5),
+      8: pw.FlexColumnWidth(1.5),
+      9: pw.FlexColumnWidth(2),
+      10: pw.FlexColumnWidth(2.5),
+    },
     data: List<List<String>>.generate(data.measuredItems.length, (index) {
       final item = data.measuredItems[index];
       return [
@@ -184,6 +197,13 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
     cellStyle: pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
+    columnWidths: {
+      0: pw.FlexColumnWidth(1),
+      1: pw.FlexColumnWidth(6),
+      2: pw.FlexColumnWidth(1.5),
+      3: pw.FlexColumnWidth(2.5),
+      4: pw.FlexColumnWidth(2.5),
+    },
     data: List<List<String>>.generate(data.unmeasuredItems.length, (index) {
       final item = data.unmeasuredItems[index];
       return ['${index + 1}', item.description, item.units.toString(), currency.format(item.rate), currency.format(item.total)];
