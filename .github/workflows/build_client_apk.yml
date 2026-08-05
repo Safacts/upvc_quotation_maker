@@ -43,6 +43,16 @@ jobs:
           echo "client_id=${CLIENT_ID}" >> $GITHUB_OUTPUT
           echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
 
+      - name: Patch Android App Label
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
+
+      - name: Create dummy .env
+        run: touch .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Generate Client Launcher Icons
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -58,30 +68,13 @@ jobs:
               -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
               | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const r=JSON.parse(s);process.stdout.write((r&&r[0]&&r[0].config&&r[0].config.logoUrl)||'')}catch(e){process.stdout.write('')}})")
-            if [ -n "${LOGO_URL}" ]; then
-              if curl -sSL --max-time 30 -o /tmp/icon/src.png "${LOGO_URL}" && file /tmp/icon/src.png | grep -qi "image"; then
-                SRC="/tmp/icon/src.png"
-              fi
+            if [ -n "${LOGO_URL}" ] && curl -sSL --max-time 30 -o /tmp/icon/src "${LOGO_URL}" && file /tmp/icon/src | grep -qi "image"; then
+              SRC="/tmp/icon/src"
             fi
           fi
-          echo "Icon source: $SRC"
-          for size in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            dir="${size%%:*}"; px="${size##*:}"
-            ffmpeg -y -loglevel error -i "$SRC" \
-              -vf "scale=${px}:${px}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${px}:${px}:(ow-iw)/2:(oh-ih)/2:color=white" \
-              -frames:v 1 "android/app/src/main/res/mipmap-${dir}/launcher_icon.png"
-          done
-          echo "Launcher icons generated from client logo"
-
-      - name: Patch Android App Label
-        run: |
-          sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
-
-      - name: Create dummy .env
-        run: touch .env
-
-      - name: Install dependencies
-        run: flutter pub get
+          cp "$SRC" assets/icon_source.png
+          echo "Icon source: $SRC -> assets/icon_source.png"
+          dart run flutter_launcher_icons
 
       - name: Build Android Release APK
         run: flutter build apk --release

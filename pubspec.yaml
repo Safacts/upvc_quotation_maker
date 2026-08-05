@@ -108,6 +108,6 @@ flutter:
 # Add this at the very end of the file, after everything else
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: true
-  image_path: "logo.png"
+  ios: false
+  image_path: "assets/icon_source.png"
   min_sdk_android: 21
