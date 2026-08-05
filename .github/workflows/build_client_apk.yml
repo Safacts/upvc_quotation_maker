@@ -65,11 +65,12 @@ jobs:
             fi
           fi
           echo "Icon source: $SRC"
-          convert "$SRC" -background white -flatten -resize 48x48   android/app/src/main/res/mipmap-mdpi/launcher_icon.png
-          convert "$SRC" -background white -flatten -resize 72x72   android/app/src/main/res/mipmap-hdpi/launcher_icon.png
-          convert "$SRC" -background white -flatten -resize 96x96   android/app/src/main/res/mipmap-xhdpi/launcher_icon.png
-          convert "$SRC" -background white -flatten -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/launcher_icon.png
-          convert "$SRC" -background white -flatten -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/launcher_icon.png
+          for size in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            dir="${size%%:*}"; px="${size##*:}"
+            ffmpeg -y -loglevel error -i "$SRC" \
+              -vf "scale=${px}:${px}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${px}:${px}:(ow-iw)/2:(oh-ih)/2:color=white" \
+              -frames:v 1 "android/app/src/main/res/mipmap-${dir}/launcher_icon.png"
+          done
           echo "Launcher icons generated from client logo"
 
       - name: Patch Android App Label
