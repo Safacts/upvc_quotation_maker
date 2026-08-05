@@ -5,8 +5,8 @@ export const MAIL_FROM = "Vitharn | Rubix IT Solution <vitharn@rubixitsolution.c
 export const ADMIN_EMAILS = ["kongaaadisheshu@gmail.com", "vitarn.dev@gmail.com", "pusalalaxmi41@gmail.com"];
 
 function transporter() {
-  const host = process.env.SMTP_HOST;
-  const ip = process.env.SMTP_HOST_IP || "";
+  const host = (process.env.SMTP_HOST || "").trim();
+  const ip = (process.env.SMTP_HOST_IP || "").trim();
   const port = Number(process.env.SMTP_PORT || "465");
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
