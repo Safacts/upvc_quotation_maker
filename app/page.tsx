@@ -18,6 +18,7 @@ const APK_URL =
 export default function Home() {
   const [isCustomer, setIsCustomer] = useState(false);
   const [customerHref, setCustomerHref] = useState("/login");
+  const [dashboardHref, setDashboardHref] = useState("/login");
   const [loggedIn, setLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -55,6 +56,11 @@ export default function Home() {
         "/upvc/" +
         clientId!.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       setCustomerHref(target);
+      setDashboardHref("/" + slugify(clientId!) + "/home");
+    } else if (role === "admin") {
+      setDashboardHref("/admin");
+    } else if (role === "signup") {
+      setDashboardHref("/signup");
     }
   }, []);
 
@@ -105,14 +111,9 @@ export default function Home() {
           <a href="#features">Features</a>
           <a href="#app-purpose">Application Purpose</a>
           <a href="#how-it-works">How It Works</a>
-          {isCustomer && (
-            <a
-              href={customerHref}
-              className="btn-nav-webapp"
-              id="navWebAppBtn"
-              style={{ display: "inline-flex" }}
-            >
-              Open Web App
+          {loggedIn && (
+            <a href={dashboardHref} className="btn-nav-dashboard" id="navDashboardBtn">
+              Dashboard
             </a>
           )}
           <a
@@ -142,14 +143,14 @@ export default function Home() {
         <a href="#features" onClick={closeMobileMenu}>Features</a>
         <a href="#app-purpose" onClick={closeMobileMenu}>Application Purpose</a>
         <a href="#how-it-works" onClick={closeMobileMenu}>How It Works</a>
-        {isCustomer && (
+        {loggedIn && (
           <a
-            href={customerHref}
-            className="btn-nav-webapp"
-            id="mobileWebAppBtn"
+            href={dashboardHref}
+            className="btn-nav-dashboard"
+            id="mobileDashboardBtn"
             onClick={closeMobileMenu}
           >
-            Open Web App
+            Dashboard
           </a>
         )}
         <a
