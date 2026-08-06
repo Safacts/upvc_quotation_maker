@@ -2,7 +2,7 @@
 
 import "./quote.css";
 import { useCallback, useEffect, useState } from "react";
-import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert } from "lucide-react";
+import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert, Printer } from "lucide-react";
 import { parseClientConfig } from "@/lib/types";
 
 interface Quotation {
@@ -314,6 +314,9 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
           <h3>Customer Confirmation</h3>
           <p>Please review the details above and confirm your decision to proceed.</p>
           <div className="action-buttons">
+            <button onClick={() => window.print()} className="btn" style={{ backgroundColor: '#2d3748', color: 'white' }}>
+              <Printer size={18} /> Download / Print PDF
+            </button>
             <button onClick={() => handleAction("approve")} disabled={submitting} className="btn btn-approve">
               <Check size={18} /> Approve Quotation
             </button>

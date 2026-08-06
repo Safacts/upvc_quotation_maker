@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
-import 'secret_panel_screen.dart';
 import 'client_logo.dart';
 
 class AboutScreen extends StatefulWidget {
@@ -15,77 +14,11 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> {
-  int _clickCount = 0;
-  Timer? _timer;
-
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
     if (!await launchUrl(url)) {
       debugPrint('Could not launch $url');
     }
-  }
-
-  void _handleNameTap() {
-    _clickCount++;
-    _timer?.cancel();
-
-    if (_clickCount >= 7) {
-      _clickCount = 0;
-      _showSecretDialog();
-    } else {
-      _timer = Timer(const Duration(milliseconds: 450), () {
-        _clickCount = 0;
-      });
-    }
-  }
-
-  void _showSecretDialog() {
-    final codeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Developer Access'),
-          content: TextField(
-            controller: codeController,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Enter Secret Code'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final val = codeController.text.trim();
-                // Obfuscated code representation: 533842 is 0x82552
-                final expected = (0x82552).toString();
-                if (val == expected) {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SecretPanelScreen()),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid developer code')),
-                  );
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Submit'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   @override
@@ -94,7 +27,7 @@ class _AboutScreenState extends State<AboutScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About & Developer'),
+        title: const Text('About'),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -130,36 +63,6 @@ class _AboutScreenState extends State<AboutScreen> {
               const Divider(),
               const SizedBox(height: 20),
               
-              Text('Developer Details', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)).animate().fade(delay: 500.ms),
-              const SizedBox(height: 16),
-              
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.person, color: Colors.blueAccent),
-                  title: const Text('Konga Aadisheshu'),
-                  subtitle: const Text('Software Developer'),
-                  onTap: _handleNameTap,
-                ),
-              ).animate().fade(delay: 600.ms).slideX(begin: -0.1),
-              
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.email, color: Colors.redAccent),
-                  title: const Text('kongaaadisheshu@gmail.com'),
-                  onTap: () => launchUrl(Uri.parse('mailto:kongaaadisheshu@gmail.com')),
-                ),
-              ).animate().fade(delay: 700.ms).slideX(begin: -0.1),
-              
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.phone, color: Colors.green),
-                  title: const Text('6304562779'),
-                  onTap: () => launchUrl(Uri.parse('tel:6304562779')),
-                ),
-              ).animate().fade(delay: 800.ms).slideX(begin: -0.1),
-              
               const SizedBox(height: 30),
               InkWell(
                 onTap: _launchLinkedIn,
@@ -182,7 +85,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     ],
                   ),
                 ),
-              ).animate().fade(delay: 900.ms).slideY(begin: 0.2),
+              ).animate().fade(delay: 500.ms).slideY(begin: 0.2),
             ],
           ),
         ),

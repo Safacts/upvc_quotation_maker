@@ -13,7 +13,7 @@ import {
 import "./landing.css";
 
 const APK_URL =
-  "https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk";
+  "https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
 
 export default function Home() {
   const [isCustomer, setIsCustomer] = useState(false);

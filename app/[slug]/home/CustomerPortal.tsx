@@ -701,12 +701,18 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '8px', marginTop: '16px' }}>
                     {(() => {
                       const maxAmount = Math.max(...stats.weeklyBars.map((b: any) => b.amount), 1);
+                      const formatInd = (v: number) => {
+                        if (v >= 10000000) return (v/10000000).toFixed(1).replace(/\.0$/,'') + 'Cr';
+                        if (v >= 100000) return (v/100000).toFixed(1).replace(/\.0$/,'') + 'L';
+                        if (v >= 1000) return (v/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+                        return v;
+                      };
                       return stats.weeklyBars.map((b: any, i: number) => {
                         const height = (b.amount / maxAmount) * 100;
                         const isLast = i === stats.weeklyBars.length - 1;
                         return (
                           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                            {b.amount > 0 && <span style={{ fontSize: '9px', color: 'var(--text-light)', marginBottom: '4px' }}>{b.amount >= 1000 ? (b.amount/1000).toFixed(0)+'k' : b.amount}</span>}
+                            {b.amount > 0 && <span style={{ fontSize: '9px', color: 'var(--text-light)', marginBottom: '4px' }}>{formatInd(b.amount)}</span>}
                             <div style={{ 
                               width: '100%', 
                               height: `${Math.max(height, 5)}%`, 
@@ -751,7 +757,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                       <div>
                         <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.customer_name} ({item.quote_no})</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
-                          Value: ₹{item.total.toLocaleString('en-IN')} • Date: {new Date(item.created_at).toLocaleDateString()}
+                          Value: ₹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Date: {new Date(item.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>

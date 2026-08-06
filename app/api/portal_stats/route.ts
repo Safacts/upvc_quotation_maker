@@ -103,7 +103,9 @@ export async function GET(request: NextRequest) {
 
       totalQuoted += qTotal;
       
-      const s = q.status || 'Draft';
+      const rawStatus = q.status || 'draft';
+      const s = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+      
       countsByStatus[s] = (countsByStatus[s] || 0) + 1;
 
       if (s === 'Won') {
