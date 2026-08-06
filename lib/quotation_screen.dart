@@ -38,6 +38,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
   bool _usePresets = false;
+  DateTime? _lastSaved;
+  String? _lastSaveError;
 
   final _nameFocus = FocusNode();
   final _referenceFocus = FocusNode();
@@ -216,11 +218,29 @@ class _QuotationScreenState extends State<QuotationScreen> {
       if (data.unmeasuredItems.isNotEmpty) {
         await SupabaseConfig.client.from('unmeasured_items').insert(data.unmeasuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
       }
+      if (mounted) {
+        setState(() { _lastSaved = DateTime.now(); _lastSaveError = null; });
+        toastification.show(
+          context: context,
+          title: Text('Saved ${data.quotationNo}'),
+          type: ToastificationType.success,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 2),
+          alignment: Alignment.bottomCenter,
+        );
+      }
     } catch (e) {
       debugPrint('Auto-save error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
+        setState(() => _lastSaveError = e.toString());
+        toastification.show(
+          context: context,
+          title: const Text('Save failed'),
+          description: Text(e.toString()),
+          type: ToastificationType.error,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 5),
+          alignment: Alignment.bottomCenter,
         );
       }
     } finally {
@@ -457,6 +477,22 @@ class _QuotationScreenState extends State<QuotationScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+            )
+          else if (_lastSaveError != null)
+            Tooltip(
+              message: 'Save error: $_lastSaveError',
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.0),
+                child: Center(child: Icon(Icons.error, color: Colors.red, size: 18)),
+              ),
+            )
+          else if (_lastSaved != null)
+            Tooltip(
+              message: 'Last saved ${DateFormat('HH:mm:ss').format(_lastSaved!)}',
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.0),
+                child: Center(child: Icon(Icons.cloud_done, color: Colors.green, size: 18)),
+              ),
             ),
           IconButton(icon: const Icon(Icons.email), onPressed: _manualEmailPrompt, tooltip: 'Send to custom email'),
         ],
@@ -490,7 +526,26 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ),
                       ],
                     ),
-
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          _lastSaveError != null ? Icons.error : (_isSaving ? Icons.sync : Icons.cloud_done),
+                          size: 14,
+                          color: _lastSaveError != null ? Colors.red : Colors.green,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _lastSaveError != null
+                                ? 'Save ERROR: $_lastSaveError'
+                                : (_isSaving ? 'Saving...' : (_lastSaved != null ? 'Saved to ${Provider.of<AppState>(context, listen: false).clientConfig.clientId} at ${DateFormat('HH:mm:ss').format(_lastSaved!)}' : 'Not saved yet')),
+                            style: TextStyle(fontSize: 11, color: _lastSaveError != null ? Colors.red : Colors.green.shade700),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
