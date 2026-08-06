@@ -185,7 +185,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _autoSaveToDatabase() async {
-    if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;

@@ -148,7 +148,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      await _shareViaXFiles(text);
+      await _sharePdf();
     }
     await _markAsSent();
   }
@@ -156,11 +156,6 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    await _shareViaXFiles(text);
-    await _markAsSent();
-  }
-
-  Future<void> _shareViaXFiles(String text) async {
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
     } else {
@@ -171,6 +166,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
         await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
       }
     }
+    await _markAsSent();
   }
 
   Future<void> _printPdf() async {

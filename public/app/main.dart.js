@@ -114922,100 +114922,99 @@ case 2:q.N(new m.aZd(q,b))
 q.na()
 return A.y(null,r)}})
 return A.z($async$H1,r)},
-na(){var s=0,r=A.A(t.H),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g,f,e,d,c
-var $async$na=A.B(function(a,b){if(a===1){o.push(b)
-s=p}for(;;)switch(s){case 0:if(m.f){s=1
-break}m.N(new A.aZ6(m))
-p=4
-h=m.c
-h.toString
-h=A.c4(h,!1,t.i).a
-l=(h==null?A.aO(B.V,B.Z,"","UPVC Quotation Maker","A/C No : 178511100000061","Union Bank, Hastinapuram","IFSC Code : UBIN0817856","VENKATESHWARA WELDING WORKS","default",u.J,"9246588692, 9441888131","jvenkateshupvc@gmail.com","Venkateshwara UPVC Windows & Doors","J.Venkateshwarlu",65,18,!1,"36AKDPJ7245B2ZF","","",!0,"","","",B.u,"",B.u,"","Quality UPVC solutions for your home","","",B.X,B.W,"",B.D,"",B.U,"",u.j,"https://effxrwrbsjduvhmorvrq.supabase.co",B.u,B.Y,null,B.D):h).a
-h=m.d
+na(){var s=0,r=A.A(t.H),q=1,p=[],o=[],n=this,m,l,k,j,i,h,g,f,e,d
+var $async$na=A.B(function(a,b){if(a===1){p.push(b)
+s=q}for(;;)switch(s){case 0:n.N(new A.aZ6(n))
+q=3
+i=n.c
+i.toString
+i=A.c4(i,!1,t.i).a
+m=(i==null?A.aO(B.V,B.Z,"","UPVC Quotation Maker","A/C No : 178511100000061","Union Bank, Hastinapuram","IFSC Code : UBIN0817856","VENKATESHWARA WELDING WORKS","default",u.J,"9246588692, 9441888131","jvenkateshupvc@gmail.com","Venkateshwara UPVC Windows & Doors","J.Venkateshwarlu",65,18,!1,"36AKDPJ7245B2ZF","","",!0,"","","",B.u,"",B.u,"","Quality UPVC solutions for your home","","",B.X,B.W,"",B.D,"",B.U,"",u.j,"https://effxrwrbsjduvhmorvrq.supabase.co",B.u,B.Y,null,B.D):i).a
+i=n.d
+i===$&&A.a()
+h=m
+g=A.v(t.N,t.z)
+f=i.a
+if(f!=null)g.k(0,"id",f)
+g.k(0,"quote_no",i.b)
+g.k(0,"date",A.j6("yyyy-MM-dd").cD(i.c))
+g.k(0,"customer_name",i.d)
+g.k(0,"reference",i.e)
+g.k(0,"address",i.f)
+g.k(0,"contact_no",i.r)
+g.k(0,"email",i.w)
+g.k(0,"transport_cost",i.as)
+g.k(0,"include_gst",i.at)
+g.k(0,"gst_percentage",i.ax)
+g.k(0,"status",A.a2H(i.y))
+g.k(0,"supplier_company",i.ay)
+if(h!=null&&h.length!==0)g.k(0,"client_id",h)
+l=g
+s=n.d.a==null?6:8
+break
+case 6:i=$.dy()
+h=i.b
 h===$&&A.a()
-g=l
-f=A.v(t.N,t.z)
-e=h.a
-if(e!=null)f.k(0,"id",e)
-f.k(0,"quote_no",h.b)
-f.k(0,"date",A.j6("yyyy-MM-dd").cD(h.c))
-f.k(0,"customer_name",h.d)
-f.k(0,"reference",h.e)
-f.k(0,"address",h.f)
-f.k(0,"contact_no",h.r)
-f.k(0,"email",h.w)
-f.k(0,"transport_cost",h.as)
-f.k(0,"include_gst",h.at)
-f.k(0,"gst_percentage",h.ax)
-f.k(0,"status",A.a2H(h.y))
-f.k(0,"supplier_company",h.ay)
-if(g!=null&&g.length!==0)f.k(0,"client_id",g)
-k=f
-s=m.d.a==null?7:9
+s=9
+return A.t(h.dB("quotations").iJ(0,l).kK(0).YM(0),$async$na)
+case 9:k=b
+n.d.a=J.p(k,"id")
+s=7
 break
-case 7:h=$.dy()
-g=h.b
-g===$&&A.a()
+case 8:i=$.dy()
+h=i.b
+h===$&&A.a()
+h=h.dB("quotations").cK(0,l)
+g=n.d.a
+g.toString
 s=10
-return A.t(g.dB("quotations").iJ(0,k).kK(0).YM(0),$async$na)
-case 10:j=b
-m.d.a=J.p(j,"id")
-s=8
-break
-case 9:h=$.dy()
-g=h.b
-g===$&&A.a()
-g=g.dB("quotations").cK(0,k)
-f=m.d.a
-f.toString
+return A.t(h.d8("id",g).d8("client_id",m),$async$na)
+case 10:g=i.b.dB("measured_items").uT(0)
+h=n.d.a
+h.toString
 s=11
-return A.t(g.d8("id",f).d8("client_id",l),$async$na)
-case 11:f=h.b.dB("measured_items").uT(0)
-g=m.d.a
+return A.t(g.d8("quotation_id",h).d8("client_id",m),$async$na)
+case 11:h=i.b.dB("unmeasured_items").uT(0)
+g=n.d.a
 g.toString
 s=12
-return A.t(f.d8("quotation_id",g).d8("client_id",l),$async$na)
-case 12:g=h.b.dB("unmeasured_items").uT(0)
-f=m.d.a
-f.toString
-s=13
-return A.t(g.d8("quotation_id",f).d8("client_id",l),$async$na)
-case 13:case 8:s=J.fp(m.d.z)?14:15
+return A.t(h.d8("quotation_id",g).d8("client_id",m),$async$na)
+case 12:case 7:s=J.fp(n.d.z)?13:14
 break
-case 14:g=h.b
-g===$&&A.a()
-g=g.dB("measured_items")
-f=J.fC(m.d.z,new A.aZ7(m,l),t.a)
-f=A.X(f,f.$ti.i("aB.E"))
-s=16
-return A.t(g.iJ(0,f),$async$na)
-case 16:case 15:s=m.d.Q.length!==0?17:18
-break
-case 17:h=h.b
+case 13:h=i.b
 h===$&&A.a()
-h=h.dB("unmeasured_items")
-g=m.d.Q
-f=A.a1(g).i("a7<1,ao<h,@>>")
-g=A.X(new A.a7(g,new A.aZ8(m,l),f),f.i("aB.E"))
-s=19
+h=h.dB("measured_items")
+g=J.fC(n.d.z,new A.aZ7(n,m),t.a)
+g=A.X(g,g.$ti.i("aB.E"))
+s=15
 return A.t(h.iJ(0,g),$async$na)
-case 19:case 18:n.push(6)
-s=5
+case 15:case 14:s=n.d.Q.length!==0?16:17
 break
-case 4:p=3
-c=o.pop()
-i=A.a2(c)
-A.ix().$1("Auto-save error: "+A.k(i))
-n.push(6)
-s=5
+case 16:i=i.b
+i===$&&A.a()
+i=i.dB("unmeasured_items")
+h=n.d.Q
+g=A.a1(h).i("a7<1,ao<h,@>>")
+h=A.X(new A.a7(h,new A.aZ8(n,m),g),g.i("aB.E"))
+s=18
+return A.t(i.iJ(0,h),$async$na)
+case 18:case 17:o.push(5)
+s=4
 break
-case 3:n=[2]
-case 5:p=2
-if(m.c!=null)m.N(new A.aZ9(m))
-s=n.pop()
+case 3:q=2
+d=p.pop()
+j=A.a2(d)
+A.ix().$1("Auto-save error: "+A.k(j))
+o.push(5)
+s=4
 break
-case 6:case 1:return A.y(q,r)
-case 2:return A.x(o.at(-1),r)}})
+case 2:o=[1]
+case 4:q=1
+if(n.c!=null)n.N(new A.aZ9(n))
+s=o.pop()
+break
+case 5:return A.y(null,r)
+case 1:return A.x(p.at(-1),r)}})
 return A.z($async$na,r)},
 pw(a){return this.aHs(a)},
 aHs(a8){var s=0,r=A.A(t.H),q=1,p=[],o=this,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7
