@@ -6,6 +6,7 @@ import type { ClientRow } from "@/lib/slug";
 import { slugify } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import "./portal.css";
+import { MarketPageSettings } from "./MarketPageSettings";
 
 interface InfoField {
   label: string;
@@ -1128,6 +1129,11 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
+            {activeTab === "market" && client.id.toLowerCase() === "kprupvc" && (
+              <div style={{ marginTop: 24 }}>
+                <MarketPageSettings clientId={client.id} />
+              </div>
+            )}
           </div>
 
           {/* iOS "Add to Home Screen" instructions */}
