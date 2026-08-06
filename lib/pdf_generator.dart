@@ -153,6 +153,13 @@ pw.Widget _buildCustomerDetails(QuotationData data) {
         pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Contact No', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
         pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.contactNo, style: pw.TextStyle(fontSize: 10))),
       ]),
+      if (data.supplierCompany.isNotEmpty)
+        pw.TableRow(children: [
+          pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Supplier Company', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+          pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.supplierCompany, style: pw.TextStyle(fontSize: 10))),
+          pw.SizedBox(),
+          pw.SizedBox(),
+        ]),
     ],
   );
 }

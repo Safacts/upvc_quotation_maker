@@ -48,6 +48,9 @@ class ClientConfig {
   // Custom Download Links
   final String appDownloadUrl;
 
+  // Supplier company names (kprupvc only)
+  final List<String> supplierCompanies;
+
   const ClientConfig({
     this.clientId = 'default',
     this.appName = 'UPVC Quotation Maker',
@@ -102,6 +105,7 @@ class ClientConfig {
     this.measuredPresets = const [],
     this.unmeasuredPresets = const [],
     this.appDownloadUrl = '',
+    this.supplierCompanies = const [],
   });
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
@@ -150,6 +154,7 @@ class ClientConfig {
     'measuredPresets': measuredPresets,
     'unmeasuredPresets': unmeasuredPresets,
     'appDownloadUrl': appDownloadUrl,
+    'supplierCompanies': supplierCompanies,
   };
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) => ClientConfig(
@@ -196,6 +201,7 @@ class ClientConfig {
     measuredPresets: (json['measuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
+    supplierCompanies: (json['supplierCompanies'] as List?)?.cast<String>() ?? const [],
   );
 }
 

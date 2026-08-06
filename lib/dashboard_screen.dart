@@ -19,6 +19,7 @@ import 'market_page_preview_screen.dart';
 import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
+import 'gst_invoice_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
@@ -276,9 +277,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 72,
+                    height: 72,
+                    padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: ClientLogo(config: Provider.of<AppState>(context, listen: false).clientConfig, width: 60, height: 60),
+                    child: Container(
+                      decoration: const BoxDecoration(shape: BoxShape.circle),
+                      clipBehavior: Clip.antiAlias,
+                      child: ClientLogo(
+                        config: Provider.of<AppState>(context, listen: false).clientConfig, 
+                        width: 64, 
+                        height: 64, 
+                        fit: BoxFit.cover
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Flexible(child: Text(Provider.of<AppState>(context).companyName, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
@@ -293,6 +305,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.pop(context);
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
                 _fetchQuotations();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long, color: Colors.green),
+              title: const Text('GST Invoices'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const GstInvoiceListScreen()));
               },
             ),
             ListTile(
@@ -380,19 +400,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     },
                   ),
                 ),
-                if (Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc')
-                  SizedBox(
-                    width: (MediaQuery.of(context).size.width / 2) - 22,
-                    child: _buildTopTile(
-                      title: 'Market Page',
-                      icon: Icons.web,
-                      gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF2D5F8A)]),
-                      delay: 300,
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketPagePreviewScreen()));
-                      },
-                    ),
-                  ),
               ],
             ),
           ),

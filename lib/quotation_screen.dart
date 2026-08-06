@@ -313,9 +313,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
     return digest.toString().substring(0, 16);
   }
 
-  // placeholder
-  }
-
   Future<void> _manualEmailPrompt() async {
     final emailController = TextEditingController(text: data.email);
     showDialog(

@@ -29,3 +29,22 @@ body {
 html, body {
   -webkit-overflow-scrolling: touch;
 }
+
+/* Review page (app/[slug]/review) */
+.review-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.review-input:focus {
+  border-color: rgba(216, 155, 37, 0.6);
+  outline: none;
+}
+
+.review-back {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+}
+
+.review-back:hover {
+  color: #d89b25;
+}

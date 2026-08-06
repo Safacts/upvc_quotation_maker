@@ -7,11 +7,16 @@ create table if not exists service_reviews (
   review_text text not null,
   is_visible boolean not null default true,
   source text not null default 'market',
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  quotation_no text
 );
 
 create index if not exists service_reviews_client_created_idx
   on service_reviews (client_id, is_visible, created_at desc);
+
+create unique index if not exists service_reviews_client_quote_uidx
+  on service_reviews (client_id, quotation_no)
+  where quotation_no is not null;
 
 alter table service_reviews enable row level security;
 

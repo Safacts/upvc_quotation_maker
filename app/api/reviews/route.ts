@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supaPost } from "@/lib/supabase";
+import { supaGet, supaPost } from "@/lib/supabase";
 
 export async function GET() {
   return NextResponse.json({ reviews: [] });
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const customerName = typeof body.customerName === "string" ? body.customerName.trim() : "";
     const role = typeof body.role === "string" ? body.role.trim() : "";
     const reviewText = typeof body.reviewText === "string" ? body.reviewText.trim() : "";
+    const quotationNo = typeof body.quotationNo === "string" ? body.quotationNo.trim() : "";
     const rating = body.rating;
 
     if (!clientId) {
@@ -26,6 +27,12 @@ export async function POST(request: NextRequest) {
     if (customerName.length < 1 || customerName.length > 100) {
       return NextResponse.json(
         { ok: false, error: "customerName must be between 1 and 100 characters" },
+        { status: 400 },
+      );
+    }
+    if (quotationNo.length > 100) {
+      return NextResponse.json(
+        { ok: false, error: "quotationNo must be at most 100 characters" },
         { status: 400 },
       );
     }
@@ -42,6 +49,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (quotationNo) {
+      const existing = await supaGet("service_reviews", {
+        select: "id",
+        client_id: "eq." + clientId,
+        quotation_no: "eq." + quotationNo,
+        limit: 1,
+      });
+      if (Array.isArray(existing) && existing.length > 0) {
+        return NextResponse.json(
+          { ok: false, error: "This quotation has already been reviewed. Thank you!", code: "duplicate_review" },
+          { status: 409 },
+        );
+      }
+    }
+
     const newRows = await supaPost("service_reviews", {
       client_id: clientId,
       customer_name: customerName,
@@ -49,9 +71,17 @@ export async function POST(request: NextRequest) {
       rating,
       review_text: reviewText,
       source: typeof body.source === "string" && body.source ? body.source : "quote-link",
+      ...(quotationNo ? { quotation_no: quotationNo } : {}),
     });
     return NextResponse.json({ ok: true, review: newRows[0] });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: String(e?.message ?? e) }, { status: 500 });
+    const msg = String(e?.message ?? e);
+    if (msg.includes("service_reviews_client_quote_uidx") || msg.includes("23505")) {
+      return NextResponse.json(
+        { ok: false, error: "This quotation has already been reviewed. Thank you!", code: "duplicate_review" },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
     const currentConfig = rows[0].config || {};
     
     const allowedFields = [
-      "companyName", "companyProprietor", "companyContact", "companyEmail", 
+      "companyName", "companyProprietor", "companyContact", "companyEmail",
       "companyAddress", "gstNumber", "defaultGstPercentage", "cost_margin_percent",
-      "enablePricePresets", "pricePresets", "measuredPresets", "unmeasuredPresets"
+      "enablePricePresets", "pricePresets", "measuredPresets", "unmeasuredPresets",
+      "supplierCompanies"
     ];
 
     let hasChanges = false;

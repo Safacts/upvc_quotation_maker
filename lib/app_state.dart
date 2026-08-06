@@ -20,6 +20,7 @@ class AppState extends ChangeNotifier {
   double _defaultGstPercentage = 18.0;
   String _companyProprietor = '';
   String _gstNumber = '';
+  List<String> _supplierCompanies = [];
 
   ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
 
@@ -35,6 +36,7 @@ class AppState extends ChangeNotifier {
   double get defaultGstPercentage => _defaultGstPercentage;
   String get companyProprietor => _companyProprietor.isNotEmpty ? _companyProprietor : clientConfig.companyProprietor;
   String get gstNumber => _gstNumber.isNotEmpty ? _gstNumber : clientConfig.gstNumber;
+  List<String> get supplierCompanies => _supplierCompanies.isNotEmpty ? _supplierCompanies : clientConfig.supplierCompanies;
   bool get isDarkMode => _isDarkMode;
   String get appName => clientConfig.appName;
   String get quotePrefix => clientConfig.quotePrefix;
@@ -63,6 +65,7 @@ class AppState extends ChangeNotifier {
     _defaultGstPercentage = config.defaultGstPercentage;
     _companyProprietor = config.companyProprietor;
     _gstNumber = config.gstNumber;
+    _supplierCompanies = config.supplierCompanies;
 
     notifyListeners();
   }
@@ -82,6 +85,7 @@ class AppState extends ChangeNotifier {
     _defaultGstPercentage = prefs.getDouble('defaultGstPercentage') ?? 18.0;
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
+    _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
     notifyListeners();
   }
 
@@ -96,6 +100,7 @@ class AppState extends ChangeNotifier {
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
     required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
+    required List<String> supplierCompanies,
   }) async {
     _companyName = name;
     _companyAddress = address;
@@ -109,6 +114,7 @@ class AppState extends ChangeNotifier {
     _defaultGstPercentage = gstPercentage;
     _companyProprietor = proprietor;
     _gstNumber = gstNumber;
+    _supplierCompanies = supplierCompanies;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('companyName', name);
@@ -123,6 +129,7 @@ class AppState extends ChangeNotifier {
     await prefs.setDouble('defaultGstPercentage', gstPercentage);
     await prefs.setString('companyProprietor', proprietor);
     await prefs.setString('gstNumber', gstNumber);
+    await prefs.setStringList('supplierCompanies', supplierCompanies);
 
     notifyListeners();
 
@@ -130,6 +137,7 @@ class AppState extends ChangeNotifier {
       name: name, address: address, contact: contact, email: email,
       bankName: bankName, bankBranch: bankBranch, accountNo: accountNo, ifsc: ifsc,
       terms: terms, gstPercentage: gstPercentage, proprietor: proprietor, gstNumber: gstNumber,
+      supplierCompanies: supplierCompanies,
     );
   }
 
@@ -140,6 +148,7 @@ class AppState extends ChangeNotifier {
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
     required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
+    required List<String> supplierCompanies,
   }) async {
     final cfg = clientConfig;
     final url = kIsWeb
@@ -160,6 +169,7 @@ class AppState extends ChangeNotifier {
             'companyEmail': email,
             'companyProprietor': proprietor,
             'gstNumber': gstNumber,
+            'supplierCompanies': supplierCompanies,
             'bankName': bankName,
             'bankBranch': bankBranch,
             'bankAccountNo': accountNo,

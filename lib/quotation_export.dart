@@ -40,6 +40,9 @@ Uint8List buildXlsx(QuotationData data, AppState appState) {
   summary.appendRow([TextCellValue('Address: ${data.address}')]);
   summary.appendRow([TextCellValue('Contact: ${data.contactNo}')]);
   summary.appendRow([TextCellValue('Email: ${data.email}')]);
+  if (data.supplierCompany.isNotEmpty) {
+    summary.appendRow([TextCellValue('Supplier Company: ${data.supplierCompany}')]);
+  }
   summary.appendRow([TextCellValue('')]);
   summary.appendRow([TextCellValue('Subtotal (Items)'), DoubleCellValue(data.actualAmount)]);
   summary.appendRow([TextCellValue('Transport'), DoubleCellValue(data.transport)]);
@@ -129,6 +132,9 @@ String buildCsv(QuotationData data, AppState appState) {
   row(['Address', data.address]);
   row(['Contact', data.contactNo]);
   row(['Email', data.email]);
+  if (data.supplierCompany.isNotEmpty) {
+    row(['Supplier Company', data.supplierCompany]);
+  }
   row([]);
   row([]);
   row(['Code', 'Description', 'Width (mm)', 'Height (mm)', 'Units', 'Sft', 'Glass', 'Rate', 'Total']);

@@ -101,13 +101,15 @@ class _AboutScreenState extends State<AboutScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
                 ),
-                child: ClientLogo(config: Provider.of<AppState>(context).clientConfig, width: 80, height: 80),
+                child: ClipOval(
+                  child: ClientLogo(config: Provider.of<AppState>(context).clientConfig, width: 80, height: 80, fit: BoxFit.cover),
+                ),
               ).animate().scale(delay: 200.ms, curve: Curves.easeOutBack),
               
               const SizedBox(height: 24),

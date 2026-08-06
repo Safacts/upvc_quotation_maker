@@ -46,6 +46,7 @@ export interface ClientConfig {
   landingTestimonials: { title?: string; text?: string; author?: string }[];
   landingCTA: string;
   landingFooter: string;
+  supplierCompanies: string[];
 }
 
 export function parseClientConfig(cfg: Record<string, any>, clientId: string): ClientConfig {
@@ -124,5 +125,6 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
       : [],
     landingCTA: String(cfg.landingCTA || ""),
     landingFooter: String(cfg.landingFooter || ""),
+    supplierCompanies: Array.isArray(cfg.supplierCompanies) ? cfg.supplierCompanies.map(String) : [],
   };
 }

@@ -20,9 +20,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _gstPercentageController;
   late TextEditingController _proprietorController;
   late TextEditingController _gstNoController;
-  double _marginPercent = 65.0;
+   double _marginPercent = 65.0;
+   List<String> _supplierCompanies = [];
+   final _supplierController = TextEditingController();
 
-  @override
+   @override
   void initState() {
     super.initState();
     final appState = Provider.of<AppState>(context, listen: false);
@@ -38,11 +40,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
     _proprietorController = TextEditingController(text: appState.companyProprietor);
     _gstNoController = TextEditingController(text: appState.gstNumber);
-    _marginPercent = appState.costMarginPercent;
-  }
+     _marginPercent = appState.costMarginPercent;
+     _supplierCompanies = List<String>.from(appState.supplierCompanies);
+   }
 
-  @override
-  void dispose() {
+   @override
+   void dispose() {
     _nameController.dispose();
     _addressController.dispose();
     _contactController.dispose();
@@ -54,8 +57,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _termsController.dispose();
     _gstPercentageController.dispose();
     _proprietorController.dispose();
-    _gstNoController.dispose();
-    super.dispose();
+     _gstNoController.dispose();
+     _supplierController.dispose();
+     super.dispose();
   }
 
   void _saveSettings() {
@@ -72,8 +76,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       terms: _termsController.text,
       gstPercentage: double.tryParse(_gstPercentageController.text) ?? 18.0,
       proprietor: _proprietorController.text,
-      gstNumber: _gstNoController.text,
-    ).then((synced) {
+       gstNumber: _gstNoController.text,
+       supplierCompanies: _supplierCompanies,
+     ).then((synced) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(synced
@@ -224,8 +229,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          SizedBox(
+           if (Provider.of<AppState>(context).clientConfig.clientId == 'kprupvc') ...[
+             const SizedBox(height: 16),
+             _buildSectionHeader('Supplier Companies'),
+             Card(
+               child: Padding(
+                 padding: const EdgeInsets.all(16.0),
+                 child: Column(
+                   children: [
+                     ..._supplierCompanies.asMap().entries.map((entry) {
+                       return Padding(
+                         padding: const EdgeInsets.only(bottom: 8.0),
+                         child: Row(
+                           children: [
+                             Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 15))),
+                             IconButton(
+                               icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                               onPressed: () {
+                                 setState(() => _supplierCompanies.removeAt(entry.key));
+                               },
+                             ),
+                           ],
+                         ),
+                       );
+                     }),
+                     Row(
+                       children: [
+                         Expanded(
+                           child: TextField(
+                             controller: _supplierController,
+                             textAlign: TextAlign.center,
+                             textInputAction: TextInputAction.done,
+                             decoration: const InputDecoration(labelText: 'Add Company Name'),
+                             onSubmitted: (_) {
+                               if (_supplierController.text.trim().isNotEmpty) {
+                                 setState(() {
+                                   _supplierCompanies.add(_supplierController.text.trim());
+                                   _supplierController.clear();
+                                 });
+                               }
+                             },
+                           ),
+                         ),
+                         IconButton(
+                           icon: const Icon(Icons.add_circle, color: Colors.green),
+                           onPressed: () {
+                             if (_supplierController.text.trim().isNotEmpty) {
+                               setState(() {
+                                 _supplierCompanies.add(_supplierController.text.trim());
+                                 _supplierController.clear();
+                               });
+                             }
+                           },
+                         ),
+                       ],
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+           ],
+           const SizedBox(height: 32),
+           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(

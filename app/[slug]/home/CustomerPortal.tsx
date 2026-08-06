@@ -154,6 +154,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
           enablePricePresets: config.enablePricePresets || false,
           measuredPresets: config.measuredPresets || [],
           unmeasuredPresets: config.unmeasuredPresets || [],
+          supplierCompanies: config.supplierCompanies || [],
         });
 
         // Fetch stats in parallel
@@ -922,13 +923,59 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                       onChange={e => setFormData({...formData, cost_margin_percent: parseInt(e.target.value)})}
                       style={{ flex: 1, height: '6px', borderRadius: '3px', accentColor: 'var(--primary)' }}
                     />
-                    <div style={{ width: '80px', textAlign: 'center', padding: '12px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <span style={{ fontWeight: '800', fontSize: '20px', color: 'var(--primary)' }}>{formData.cost_margin_percent}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
+                     <div style={{ width: '80px', textAlign: 'center', padding: '12px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                       <span style={{ fontWeight: '800', fontSize: '20px', color: 'var(--primary)' }}>{formData.cost_margin_percent}%</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {client.id === "kprupvc" && (
+                 <div className="info-card">
+                   <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Supplier Companies</h3>
+                   <p style={{ color: 'var(--text-light)', fontSize: '14px', marginBottom: '16px' }}>Add the names of supplier/material companies you use (e.g. Baar). These will appear as a dropdown when creating quotations.</p>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                     {(formData.supplierCompanies || []).map((company: string, idx: number) => (
+                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', background: 'var(--bg-light)', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                         <span style={{ flex: 1, fontSize: '15px' }}>{company}</span>
+                         <button type="button" onClick={() => {
+                           const updated = [...formData.supplierCompanies];
+                           updated.splice(idx, 1);
+                           setFormData({...formData, supplierCompanies: updated});
+                         }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>✕</button>
+                       </div>
+                     ))}
+                   </div>
+                   <div style={{ display: 'flex', gap: '12px' }}>
+                     <input
+                       type="text"
+                       id="new-supplier"
+                       placeholder="Enter company name"
+                       onKeyDown={(e) => {
+                         if (e.key === 'Enter') {
+                           e.preventDefault();
+                           const input = e.target as HTMLInputElement;
+                           const val = input.value.trim();
+                           if (val && !(formData.supplierCompanies || []).includes(val)) {
+                             setFormData({...formData, supplierCompanies: [...(formData.supplierCompanies || []), val]});
+                             input.value = '';
+                           }
+                         }
+                       }}
+                       style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                     />
+                     <button type="button" onClick={() => {
+                       const input = document.getElementById('new-supplier') as HTMLInputElement;
+                       const val = input.value.trim();
+                       if (val && !(formData.supplierCompanies || []).includes(val)) {
+                         setFormData({...formData, supplierCompanies: [...(formData.supplierCompanies || []), val]});
+                         input.value = '';
+                       }
+                     }} style={{ padding: '10px 20px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Add</button>
+                   </div>
+                 </div>
+               )}
+             </form>
           </div>
 
           {/* Catalog Tab */}

@@ -50,6 +50,7 @@ class QuotationData {
 
   bool includeGst = false;
   double gstPercentage = 0.0;
+  String supplierCompany = '';
 
 
   // Logic to handle continuous numbering via Supabase RPC
@@ -111,6 +112,7 @@ class QuotationData {
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
       'status': status.value,
+      'supplier_company': supplierCompany,
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
@@ -130,6 +132,7 @@ class QuotationData {
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     q.status = QuotationStatusX.fromString(map['status']);
+    q.supplierCompany = map['supplier_company'] ?? '';
     return q;
   }
 }
