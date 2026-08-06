@@ -83,19 +83,19 @@ class QuotationData {
       const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
       const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
       if (n < 20) return ones[n];
-      if (n < 100) return tens[n ~/ 10] + (n % 10 != 0 ? "-" + ones[n % 10] : "");
-      if (n < 1000) return ones[n ~/ 100] + " Hundred" + (n % 100 != 0 ? " " + convertChunk(n % 100) : "");
+      if (n < 100) return tens[n ~/ 10] + (n % 10 != 0 ? "-${ones[n % 10]}" : "");
+      if (n < 1000) return "${ones[n ~/ 100]} Hundred${n % 100 != 0 ? " ${convertChunk(n % 100)}" : ""}";
       return "";
     }
 
     String words = "";
-    if (number >= 10000000) { words += convertChunk(number ~/ 10000000) + " Crore "; number %= 10000000; }
-    if (number >= 100000) { words += convertChunk(number ~/ 100000) + " Lakh "; number %= 100000; }
-    if (number >= 1000) { words += convertChunk(number ~/ 1000) + " Thousand "; number %= 1000; }
-    if (number > 0) words += convertChunk(number) + " ";
+    if (number >= 10000000) { words += "${convertChunk(number ~/ 10000000)} Crore "; number %= 10000000; }
+    if (number >= 100000) { words += "${convertChunk(number ~/ 100000)} Lakh "; number %= 100000; }
+    if (number >= 1000) { words += "${convertChunk(number ~/ 1000)} Thousand "; number %= 1000; }
+    if (number > 0) words += "${convertChunk(number)} ";
     words += "Rupees";
-    if (paise > 0) words += " and " + convertChunk(paise) + " Paise";
-    return (words + " Only").toUpperCase();
+    if (paise > 0) words += " and ${convertChunk(paise)} Paise";
+    return ("$words Only").toUpperCase();
   }
 
   Map<String, dynamic> toMap({String? clientId}) {

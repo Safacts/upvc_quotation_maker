@@ -7,7 +7,7 @@ import 'supabase_config.dart';
 import 'app_state.dart';
 
 class GstInvoiceListScreen extends StatefulWidget {
-  const GstInvoiceListScreen({Key? key}) : super(key: key);
+  const GstInvoiceListScreen({super.key});
 
   @override
   _GstInvoiceListScreenState createState() => _GstInvoiceListScreenState();
@@ -58,9 +58,9 @@ class _GstInvoiceListScreenState extends State<GstInvoiceListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _statusColor(s).withOpacity(0.15),
+        color: _statusColor(s).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _statusColor(s).withOpacity(0.5), width: 1),
+        border: Border.all(color: _statusColor(s).withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         s.label,
@@ -109,7 +109,7 @@ class _GstInvoiceListScreenState extends State<GstInvoiceListScreen> {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                                   child: Icon(Icons.receipt_long, color: theme.colorScheme.primary),
                                 ),
                                 const SizedBox(width: 16),

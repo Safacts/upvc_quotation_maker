@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 
 class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
   @override
   _SettingsScreenState createState() => _SettingsScreenState();
 }
@@ -115,7 +117,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               trailing: Switch(
                 value: isDark,
                 onChanged: (val) => appState.toggleTheme(),
-                activeColor: Theme.of(context).colorScheme.primary,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),

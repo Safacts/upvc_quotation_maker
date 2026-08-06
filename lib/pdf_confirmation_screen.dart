@@ -1,16 +1,16 @@
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart' deferred as printLib;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'models.dart';
 import 'supabase_config.dart';
-import 'theme.dart';
 import 'file_helper.dart';
 
 import 'notification_service.dart';
@@ -21,11 +21,11 @@ class PdfConfirmationScreen extends StatefulWidget {
   final Future<void>? emailTask;
 
   const PdfConfirmationScreen({
-    Key? key,
+    super.key,
     required this.data,
     required this.pdfBytes,
     this.emailTask,
-  }) : super(key: key);
+  });
 
   @override
   _PdfConfirmationScreenState createState() => _PdfConfirmationScreenState();
@@ -126,6 +126,12 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   Future<void> _sharePdf() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copied to clipboard! Paste it when sharing.')));
+    }
+
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
     } else {
@@ -141,32 +147,26 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    if (kIsWeb) {
-      await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
+    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    
+    final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(text)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      final helper = FileHelper();
-      final dir = await helper.getTempDir();
-      if (dir != null) {
-        await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
-        await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
-      }
+      await Share.share(text);
     }
     await _markAsSent();
   }
 
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    if (kIsWeb) {
-      await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
+    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    
+    final url = Uri.parse("https://t.me/share/url?url=${Uri.encodeComponent(_quoteLink())}&text=${Uri.encodeComponent(text)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      final helper = FileHelper();
-      final dir = await helper.getTempDir();
-      if (dir != null) {
-        await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
-        await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
-      }
+      await Share.share(text);
     }
     await _markAsSent();
   }
@@ -184,8 +184,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
         width: 100,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          border: Border.all(color: color.withOpacity(0.3)),
+          color: color.withValues(alpha: 0.1),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -231,9 +231,9 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _emailColor.withOpacity(0.1),
+                  color: _emailColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _emailColor.withOpacity(0.3)),
+                  border: Border.all(color: _emailColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,

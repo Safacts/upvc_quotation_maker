@@ -73,14 +73,12 @@ class ClientLoader {
       // If the URL used a slug (e.g. /upvc/<app name>), resolve it to the real id
       if (row == null || row['config'] == null) {
         final all = await supabase.from('client_public').select();
-        if (all is List) {
-          for (final r in all) {
-            final rid = (r['id'] as String?) ?? '';
-            final appName = ((r['config'] as Map?) ?? {})['appName'] as String? ?? '';
-            if (_slugify(rid) == rawId || _slugify(appName) == rawId) {
-              row = r;
-              break;
-            }
+        for (final r in all) {
+          final rid = (r['id'] as String?) ?? '';
+          final appName = ((r['config'] as Map?) ?? {})['appName'] as String? ?? '';
+          if (_slugify(rid) == rawId || _slugify(appName) == rawId) {
+            row = r;
+            break;
           }
         }
       }

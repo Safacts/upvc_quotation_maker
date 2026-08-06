@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'models.dart';
 import 'app_state.dart';
 import 'supabase_config.dart';
-import 'theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Analytics Screen
@@ -162,7 +161,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 10),
@@ -575,7 +574,7 @@ class _MiniSparkPainter extends CustomPainter {
         Rect.fromLTWH(x, size.height - barH, barW, barH),
         const Radius.circular(3),
       );
-      paint.color = i == bars.length - 1 ? color : color.withOpacity(0.3);
+      paint.color = i == bars.length - 1 ? color : color.withValues(alpha: 0.3);
       canvas.drawRRect(rect, paint);
     }
   }

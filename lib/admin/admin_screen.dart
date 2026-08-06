@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_state.dart';
 import '../supabase_config.dart';
-import '../theme.dart';
 import 'client_edit_screen.dart';
 
 class AdminScreen extends StatefulWidget {
+  const AdminScreen({super.key});
+
   @override
   State<AdminScreen> createState() => _AdminScreenState();
 }
@@ -144,8 +144,8 @@ class _AdminScreenState extends State<AdminScreen> {
                               children: [
                                 CircleAvatar(
                                   backgroundColor: isActive
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.grey.withOpacity(0.1),
+                                      ? Colors.green.withValues(alpha: 0.1)
+                                      : Colors.grey.withValues(alpha: 0.1),
                                   child: logoUrl != null && logoUrl.isNotEmpty
                                       ? ClipOval(child: Image.network(logoUrl, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.business, color: isActive ? Colors.green : Colors.grey)))
                                       : Icon(Icons.business, color: isActive ? Colors.green : Colors.grey),
@@ -165,7 +165,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: isActive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                              color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
@@ -182,7 +182,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                               margin: const EdgeInsets.only(left: 6),
                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: Colors.orange.withOpacity(0.1),
+                                                color: Colors.orange.withValues(alpha: 0.1),
                                                 borderRadius: BorderRadius.circular(8),
                                               ),
                                               child: const Text(
@@ -198,7 +198,7 @@ class _AdminScreenState extends State<AdminScreen> {
                                 Switch(
                                   value: isActive,
                                   onChanged: (_) => _toggleActive(id, isActive),
-                                  activeColor: Colors.green,
+                                  activeThumbColor: Colors.green,
                                 ),
                               ],
                             ),

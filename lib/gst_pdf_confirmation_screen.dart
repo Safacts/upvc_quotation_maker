@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart' deferred as printLib;
 import 'package:flutter_animate/flutter_animate.dart';
@@ -14,10 +14,10 @@ class GstPdfConfirmationScreen extends StatefulWidget {
   final Uint8List pdfBytes;
 
   const GstPdfConfirmationScreen({
-    Key? key,
+    super.key,
     required this.data,
     required this.pdfBytes,
-  }) : super(key: key);
+  });
 
   @override
   _GstPdfConfirmationScreenState createState() => _GstPdfConfirmationScreenState();
@@ -45,6 +45,11 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
   }
 
   Future<void> _sharePdf(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copied to clipboard! Paste it when sharing.')));
+    }
+
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: _fileName())], text: text);
     } else {
@@ -70,8 +75,8 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
         width: 100,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          border: Border.all(color: color.withOpacity(0.3)),
+          color: color.withValues(alpha: 0.1),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -19,7 +18,7 @@ class GstInvoiceScreen extends StatefulWidget {
   final GstInvoiceData? existingData;
   final QuotationData? sourceQuotation;
 
-  GstInvoiceScreen({this.existingData, this.sourceQuotation});
+  const GstInvoiceScreen({super.key, this.existingData, this.sourceQuotation});
 
   @override
   _GstInvoiceScreenState createState() => _GstInvoiceScreenState();
@@ -592,7 +591,7 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                   ),
                 ),
               ).animate().fade(delay: 300.ms).slideX(begin: 0.1);
-            }).toList(),
+            }),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -615,7 +614,7 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                     SwitchListTile(
                       title: const Text('Interstate (IGST)', style: TextStyle(fontWeight: FontWeight.bold)),
                       value: data.isInterstate,
-                      activeColor: Theme.of(context).colorScheme.primary,
+                      activeThumbColor: Theme.of(context).colorScheme.primary,
                       onChanged: (val) {
                         setState(() => data.isInterstate = val);
                         _onDataChanged();
@@ -624,7 +623,7 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                     SwitchListTile(
                       title: const Text('Reverse Charge', style: TextStyle(fontWeight: FontWeight.bold)),
                       value: data.isReverseCharge,
-                      activeColor: Theme.of(context).colorScheme.primary,
+                      activeThumbColor: Theme.of(context).colorScheme.primary,
                       onChanged: (val) {
                         setState(() => data.isReverseCharge = val);
                         _onDataChanged();

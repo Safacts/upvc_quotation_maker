@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:upvc_quotation_maker/config/client_config.dart';
 import 'login_screen.dart';
 import 'trial_gate.dart';
 import 'supabase_config.dart';
@@ -20,7 +21,7 @@ void main() async {
   }
 
   // Load client config
-  var initialConfig;
+  ClientConfig? initialConfig;
   try {
     initialConfig = await ClientLoader.loadConfig();
   } catch (e) {
@@ -28,9 +29,9 @@ void main() async {
   }
 
   final appState = AppState();
+  // Database-level tenant isolation: every data request is scoped by this header,
+  // enforced by Postgres Row Level Security on quotations/items/sent_emails.
   if (initialConfig != null) {
-    // Database-level tenant isolation: every data request is scoped by this header,
-    // enforced by Postgres Row Level Security on quotations/items/sent_emails.
     SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
     appState.applyClientConfig(initialConfig);
     FaviconService.setFromUrl(initialConfig.logoUrl ?? '');

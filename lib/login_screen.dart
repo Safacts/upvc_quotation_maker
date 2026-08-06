@@ -14,6 +14,8 @@ import 'client_logo.dart';
 import 'umami_tracker.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }

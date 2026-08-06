@@ -12,6 +12,8 @@ import 'client_logo.dart';
 import 'umami_tracker.dart';
 
 class EmailPortalScreen extends StatefulWidget {
+  const EmailPortalScreen({super.key});
+
   @override
   _EmailPortalScreenState createState() => _EmailPortalScreenState();
 }
@@ -164,7 +166,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 10))
                     ],
                   ),
                   child: Column(
@@ -184,14 +186,14 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                       ),
                       const SizedBox(height: 24),
                       DropdownButtonFormField<String>(
-                        value: _selectedTemplate,
+                        initialValue: _selectedTemplate,
                         decoration: InputDecoration(
                           labelText: 'Choose a Template',
                           prefixIcon: Icon(Icons.auto_awesome, color: theme.primaryColor),
                           filled: true,
                           fillColor: Colors.grey[50],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withValues(alpha: 0.5), width: 2)),
                         ),
                         icon: const Icon(Icons.expand_more, color: Colors.grey),
                         dropdownColor: Colors.white,
@@ -213,7 +215,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 10))
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 10))
                     ],
                   ),
                   child: Column(
@@ -226,7 +228,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                           filled: true,
                           fillColor: Colors.grey[50],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withValues(alpha: 0.5), width: 2)),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         style: const TextStyle(fontWeight: FontWeight.w500),
@@ -241,7 +243,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                           filled: true,
                           fillColor: Colors.grey[50],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.primaryColor.withValues(alpha: 0.5), width: 2)),
                         ),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ).animate().fade(delay: 200.ms).slideX(begin: -0.1),
@@ -256,7 +258,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                           filled: true,
                           fillColor: Colors.grey[50],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withOpacity(0.5), width: 2)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: theme.primaryColor.withValues(alpha: 0.5), width: 2)),
                         ),
                         style: const TextStyle(height: 1.5),
                       ).animate().fade(delay: 300.ms).slideX(begin: -0.1),
@@ -275,7 +277,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                       padding: EdgeInsets.zero, 
                       backgroundColor: Colors.transparent, 
                       elevation: 8, 
-                      shadowColor: theme.primaryColor.withOpacity(0.4),
+                      shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                     ),
                     child: Ink(

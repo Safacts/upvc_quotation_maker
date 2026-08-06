@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -24,7 +23,7 @@ import 'quotation_export.dart' deferred as exportLib;
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
 
-  QuotationScreen({this.existingData});
+  const QuotationScreen({super.key, this.existingData});
 
   @override
   _QuotationScreenState createState() => _QuotationScreenState();
@@ -275,9 +274,9 @@ class _QuotationScreenState extends State<QuotationScreen> {
           <p style="margin: 5px 0; color: #1E3A5F;"><strong>Total Amount:</strong> Rs. ${data.grandTotal.toStringAsFixed(2)}</p>
         </div>
         <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">Please review and confirm your quotation:</p>
-        <p style="margin: 6px 0 0 0;"><a href="${quoteLink}" style="display: inline-block; background-color: #16a34a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Review & Confirm Quotation</a></p>
+        <p style="margin: 6px 0 0 0;"><a href="$quoteLink" style="display: inline-block; background-color: #16a34a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Review & Confirm Quotation</a></p>
         <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">We'd love your feedback! Please rate your experience with us here:</p>
-        <p style="margin: 6px 0 0 0;"><a href="${reviewUrl}" style="display: inline-block; background-color: #1E3A5F; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Rate Your Experience</a></p>
+        <p style="margin: 6px 0 0 0;"><a href="$reviewUrl" style="display: inline-block; background-color: #1E3A5F; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Rate Your Experience</a></p>
         <p style="color: #475569; font-size: 14px;">If you have any questions, please feel free to reach out.</p>
         <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 20px 0;">
         <p style="color: #64748b; font-size: 12px; text-align: center;">Prop: ${appState.companyProprietor} | ${appState.companyContact}</p>
@@ -704,7 +703,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
             SwitchListTile(
               title: const Text('Enable Presets (Autofill from Catalog)', style: TextStyle(fontWeight: FontWeight.bold)),
               value: _usePresets,
-              activeColor: Theme.of(context).colorScheme.primary,
+              activeThumbColor: Theme.of(context).colorScheme.primary,
               onChanged: (val) => setState(() => _usePresets = val),
             ).animate().fade(delay: 250.ms),
 
@@ -730,7 +729,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       if (_usePresets) ...[
                         DropdownButtonFormField<int>(
                           decoration: const InputDecoration(labelText: 'Select Preset from Catalog (Autofills fields)'),
-                          value: null,
+                          initialValue: null,
                           isExpanded: true,
                           items: Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets.asMap().entries.map((e) {
                             return DropdownMenuItem<int>(
@@ -788,7 +787,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                   ),
                 ),
               ).animate().fade(delay: 300.ms).slideX(begin: 0.1);
-            }).toList(),
+            }),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Measured Item'), onPressed: () { setState(() => data.measuredItems.add(MeasuredItem())); _onDataChanged(); }),
@@ -816,7 +815,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       if (_usePresets) ...[
                         DropdownButtonFormField<int>(
                           decoration: const InputDecoration(labelText: 'Select Preset from Catalog'),
-                          value: null,
+                          initialValue: null,
                           isExpanded: true,
                           items: Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets.asMap().entries.map((e) {
                             return DropdownMenuItem<int>(
@@ -856,7 +855,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
                   ),
                 ),
               ).animate().fade(delay: 500.ms).slideX(begin: 0.1);
-            }).toList(),
+            }),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Unmeasured Item'), onPressed: () { setState(() => data.unmeasuredItems.add(UnmeasuredItem())); _onDataChanged(); }),

@@ -5,6 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'secret_panel_screen.dart';
 
 class CraftedWithLoveWidget extends StatefulWidget {
+  const CraftedWithLoveWidget({super.key});
+
   @override
   State<CraftedWithLoveWidget> createState() => _CraftedWithLoveWidgetState();
 }

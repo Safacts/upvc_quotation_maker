@@ -23,7 +23,7 @@ import 'gst_invoice_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
-  const DashboardScreen({Key? key, this.initialOpenQuote}) : super(key: key);
+  const DashboardScreen({super.key, this.initialOpenQuote});
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
@@ -164,9 +164,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _statusColor(s).withOpacity(0.15),
+        color: _statusColor(s).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _statusColor(s).withOpacity(0.5), width: 1),
+        border: Border.all(color: _statusColor(s).withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         s.label,
@@ -184,7 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: gradient.colors.first.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 5))],
+          boxShadow: [BoxShadow(color: gradient.colors.first.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 5))],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -220,9 +220,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,7 +468,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: Row(
                                     children: [
                                       CircleAvatar(
-                                        backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                                         child: Icon(Icons.description, color: theme.colorScheme.primary),
                                       ),
                                       const SizedBox(width: 16),

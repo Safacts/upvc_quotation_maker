@@ -4,10 +4,11 @@ import 'package:provider/provider.dart';
 import 'models.dart';
 import 'app_state.dart';
 import 'supabase_config.dart';
-import 'theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class SecretPanelScreen extends StatefulWidget {
+  const SecretPanelScreen({super.key});
+
   @override
   _SecretPanelScreenState createState() => _SecretPanelScreenState();
 }
@@ -175,7 +176,7 @@ class _SecretPanelScreenState extends State<SecretPanelScreen> {
                   children: [
                     Container(
                       width: double.infinity,
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: const [
@@ -203,7 +204,7 @@ class _SecretPanelScreenState extends State<SecretPanelScreen> {
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor: Colors.red.withOpacity(0.1),
+                                    backgroundColor: Colors.red.withValues(alpha: 0.1),
                                     child: const Icon(Icons.insert_drive_file, color: Colors.redAccent),
                                   ),
                                   const SizedBox(width: 16),

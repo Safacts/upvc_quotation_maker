@@ -7,7 +7,7 @@ import 'supabase_config.dart';
 import 'crafted_widget.dart';
 
 class MarketPagePreviewScreen extends StatefulWidget {
-  const MarketPagePreviewScreen({Key? key}) : super(key: key);
+  const MarketPagePreviewScreen({super.key});
 
   @override
   _MarketPagePreviewScreenState createState() => _MarketPagePreviewScreenState();

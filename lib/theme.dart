@@ -55,7 +55,7 @@ class AppTheme {
       textTheme: _safeTextTheme(ThemeData.light().textTheme),
       cardTheme: CardThemeData(
         elevation: 12,
-        shadowColor: config.primaryColor.withOpacity(0.15),
+        shadowColor: config.primaryColor.withValues(alpha: 0.15),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(24)),
           side: BorderSide(color: Color(0xCCFFFFFF), width: 1.5),
@@ -64,7 +64,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF1F5F9).withOpacity(0.7),
+        fillColor: const Color(0xFFF1F5F9).withValues(alpha: 0.7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
@@ -82,7 +82,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 10,
-          shadowColor: config.primaryColor.withOpacity(0.5),
+          shadowColor: config.primaryColor.withValues(alpha: 0.5),
           backgroundColor: config.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -122,7 +122,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF0F172A).withOpacity(0.6),
+        fillColor: const Color(0xFF0F172A).withValues(alpha: 0.6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide.none,
@@ -140,7 +140,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 12,
-          shadowColor: config.primaryColor.withOpacity(0.5),
+          shadowColor: config.primaryColor.withValues(alpha: 0.5),
           backgroundColor: config.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
