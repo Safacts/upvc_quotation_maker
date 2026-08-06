@@ -218,6 +218,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
     email TEXT,
     status TEXT DEFAULT 'Draft',
     transport_cost NUMERIC DEFAULT 0.0,
+    client_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
