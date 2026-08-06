@@ -15,6 +15,7 @@ import 'about_screen.dart';
 import 'crafted_widget.dart';
 import 'email_portal_screen.dart';
 import 'analytics_screen.dart';
+import 'market_page_preview_screen.dart';
 import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
@@ -310,6 +311,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(quotations: _quotations)));
               },
             ),
+            if (Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc')
+              ListTile(
+                leading: const Icon(Icons.web, color: Colors.indigo),
+                title: const Text('Market Page'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketPagePreviewScreen()));
+                },
+              ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
@@ -370,6 +380,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     },
                   ),
                 ),
+                if (Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc')
+                  SizedBox(
+                    width: (MediaQuery.of(context).size.width / 2) - 22,
+                    child: _buildTopTile(
+                      title: 'Market Page',
+                      icon: Icons.web,
+                      gradient: const LinearGradient(colors: [Color(0xFF1E3A5F), Color(0xFF2D5F8A)]),
+                      delay: 300,
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const MarketPagePreviewScreen()));
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
