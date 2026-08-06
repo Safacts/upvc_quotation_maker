@@ -7,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'models.dart';
+import 'supabase_config.dart';
 import 'theme.dart';
 import 'file_helper.dart';
 
@@ -90,7 +91,21 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   String _reviewUrl() {
     final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-    return '$origin/review/$clientId';
+    return '$origin/$clientId/review?q=${Uri.encodeComponent(widget.data.quotationNo)}';
+  }
+
+  Future<void> _markAsSent() async {
+    final d = widget.data;
+    if (d.status != QuotationStatus.sent && d.id != null) {
+      try {
+        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        await SupabaseConfig.client
+            .from('quotations')
+            .update({'status': QuotationStatus.sent.value})
+            .eq('id', d.id!)
+            .eq('client_id', clientId);
+      } catch (_) {}
+    }
   }
 
   Future<void> _sharePdf() async {
@@ -105,18 +120,21 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
         await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
       }
     }
+    await _markAsSent();
   }
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
+    await _markAsSent();
   }
 
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
+    await _markAsSent();
   }
 
   Future<void> _shareViaXFiles(String text) async {

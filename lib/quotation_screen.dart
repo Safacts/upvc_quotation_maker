@@ -280,8 +280,23 @@ class _QuotationScreenState extends State<QuotationScreen> {
       if (res.statusCode != 200) {
         throw Exception('Server returned ${res.statusCode}: ${res.body}');
       }
+      await _markAsSent();
     } catch (e) {
       throw Exception('Failed to send email: $e');
+    }
+  }
+
+  Future<void> _markAsSent() async {
+    if (data.status != QuotationStatus.sent && data.id != null) {
+      setState(() => data.status = QuotationStatus.sent);
+      try {
+        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        await SupabaseConfig.client
+            .from('quotations')
+            .update({'status': QuotationStatus.sent.value})
+            .eq('id', data.id!)
+            .eq('client_id', clientId);
+      } catch (_) {}
     }
   }
 
