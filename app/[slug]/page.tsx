@@ -25,7 +25,10 @@ function kprShell(html: string): string {
     .filter((l) => !/rel=["']icon/i.test(l));
   const scripts = [...html.matchAll(/<script[^>]*>[^<]*<\/script>/gi)].map((m) => m[0]);
   const root = html.match(/<div id="root"[^>]*><\/div>/i)?.[0];
-  return [links.join("\n"), scripts.join("\n"), root || ""].filter(Boolean).join("\n");
+  const shell = [links.join("\n"), scripts.join("\n"), root || ""]
+    .filter(Boolean)
+    .join("\n");
+  return shell.replace(/\s*\/>/g, ">");
 }
 
 function kprMeta(html: string, key: "title" | "description"): string {
@@ -48,7 +51,13 @@ export default async function MarketPageRoute({
   if (client.id === KPR_SLUG) {
     if (slug !== KPR_SLUG) redirect(`/${KPR_SLUG}/`);
     const html = readKprHtml();
-    if (html) return <div dangerouslySetInnerHTML={{ __html: kprShell(html) }} />;
+    if (html)
+      return (
+        <div
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: kprShell(html) }}
+        />
+      );
   }
 
   return <MarketPage client={client} slug={slug} />;

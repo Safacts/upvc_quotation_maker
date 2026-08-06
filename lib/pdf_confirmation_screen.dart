@@ -87,8 +87,14 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     }
   }
 
+  String _reviewUrl() {
+    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
+    return '$origin/review/$clientId';
+  }
+
   Future<void> _sharePdf() async {
-    final text = 'Here is your quotation ${widget.data.quotationNo}';
+    final text = 'Here is your quotation ${widget.data.quotationNo}.\n\nWe value your feedback! Please rate your experience here: ${_reviewUrl()}';
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
     } else {
@@ -103,13 +109,13 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.";
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
   }
 
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.";
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
   }
 

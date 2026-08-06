@@ -95,6 +95,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
       _initQuoteNumber();
     }
     _fetchPastQuotations();
+    unawaited(_prefetchGenerationLibs());
+  }
+
+  Future<void> _prefetchGenerationLibs() async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    try {
+      await Future.wait([pdfGen.loadLibrary(), exportLib.loadLibrary()]);
+    } catch (_) {
+      return;
+    }
   }
 
   Future<void> _fetchPastQuotations() async {
@@ -219,6 +229,9 @@ class _QuotationScreenState extends State<QuotationScreen> {
       await pdfGen.loadLibrary();
       final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
+      final reviewUrl = kIsWeb
+          ? '${Uri.base.origin}/review/${appState.clientConfig.clientId}'
+          : 'https://app.vitharn.com/review/${appState.clientConfig.clientId}';
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
@@ -233,6 +246,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
           <p style="margin: 5px 0; color: #1E3A5F;"><strong>Date:</strong> ${DateFormat('dd-MMM-yyyy').format(data.date)}</p>
           <p style="margin: 5px 0; color: #1E3A5F;"><strong>Total Amount:</strong> Rs. ${data.grandTotal.toStringAsFixed(2)}</p>
         </div>
+        <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">We'd love your feedback! Please rate your experience with us here:</p>
+        <p style="margin: 6px 0 0 0;"><a href="${reviewUrl}" style="display: inline-block; background-color: #1E3A5F; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Rate Your Experience</a></p>
         <p style="color: #475569; font-size: 14px;">If you have any questions, please feel free to reach out.</p>
         <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 20px 0;">
         <p style="color: #64748b; font-size: 12px; text-align: center;">Prop: ${appState.companyProprietor} | ${appState.companyContact}</p>
