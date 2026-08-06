@@ -10,7 +10,12 @@ function generateToken(quotationId: string): string {
 
 function verifyToken(quotationId: string, token: string): boolean {
   const expected = generateToken(quotationId);
-  return expected === token;
+  if (expected === token) return true;
+  
+  // Fallback: The Flutter app currently hardcodes "dev-secret" to generate the token.
+  // We must check against this fallback so existing links don't return Access Denied.
+  const fallbackToken = createHmac("sha256", "dev-secret").update(quotationId).digest("hex").slice(0, 16);
+  return fallbackToken === token;
 }
 
 export async function GET(
