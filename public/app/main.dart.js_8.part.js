@@ -48,18 +48,18 @@ $S:z+0}
 F.b71.prototype={
 $1(a9){var x,w,v,u,t,s,r,q,p,o=null,n="#1e3a5f",m="UPVC Quotation Maker",l="A/C No : 178511100000061",k="Union Bank, Hastinapuram",j="IFSC Code : UBIN0817856",i="VENKATESHWARA WELDING WORKS",h="default",g="Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD \u2013 500074",f="9246588692, 9441888131",e="jvenkateshupvc@gmail.com",d="Venkateshwara UPVC Windows & Doors",a0="J.Venkateshwarlu",a1="36AKDPJ7245B2ZF",a2="Quality UPVC solutions for your home",a3="sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN",a4="https://effxrwrbsjduvhmorvrq.supabase.co",a5=this.a,a6=A.beS(A.bm("TAX INVOICE",A.bd(o,A.nH(n),o,o,o,o,o,o,o,B.a4,o,o,20,o,B.aA,o,!0,o,o,o,o),o,o)),a7=A.nH(n),a8=a5.c
 if(!(a8.length!==0)){a8=a5.a
-a8=(a8==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):a8).c}a8=A.bm(a8,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,16,o,B.aA,o,!0,o,o,o,o),o,o)
+a8=(a8==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):a8).c}a8=A.bm(a8,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,16,o,B.aA,o,!0,o,o,o,o),o,o)
 x=a5.d
 if(!(x.length!==0)){x=a5.a
-x=(x==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):x).d}x=A.bm(x,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)
+x=(x==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):x).d}x=A.bm(x,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)
 w=a5.as
 if(!(w.length!==0)){w=a5.a
-w=(w==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):w).r}v=a5.e
+w=(w==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):w).r}v=a5.e
 if(!(v.length!==0)){v=a5.a
-v=(v==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):v).e}v=A.bm("Prop: "+w+"   Contact: "+v,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)
+v=(v==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):v).e}v=A.bm("Prop: "+w+"   Contact: "+v,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)
 w=a5.at
 if(!(w.length!==0)){w=a5.a
-w=(w==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):w).w}u=y.u
+w=(w==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):w).w}u=y.u
 a7=A.qe(E.b([a6,new A.dV(o,10,o),A.m6(o,A.qe(E.b([a8,x,v,A.bm("GST No: "+w,A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.e_),a7,o,o,o,D.rt,1/0)],u),B.e_)
 w=this.b
 v=A.EA(E.b([A.bm("Invoice No: "+w.b,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o),A.bm("Date: "+E.j6("dd-MMM-yyyy").cD(w.c),A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o),A.bm("Place of Supply: "+w.at,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o)],u),B.e_,B.od)
@@ -67,13 +67,13 @@ x=E.a9([0,D.mh,1,D.mh],y.e,y.a)
 a8=A.bm("Supplier Details",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o)
 a6=a5.c
 if(!(a6.length!==0)){a6=a5.a
-a6=(a6==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):a6).c}a6=A.bm(a6,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,B.aA,o,!0,o,o,o,o),o,o)
+a6=(a6==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):a6).c}a6=A.bm(a6,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,B.aA,o,!0,o,o,o,o),o,o)
 t=a5.d
 if(!(t.length!==0)){t=a5.a
-t=(t==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):t).d}t=A.bm(t,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o)
+t=(t==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):t).d}t=A.bm(t,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o)
 s=a5.at
 if(!(s.length!==0)){s=a5.a
-s=(s==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):s).w}r=y.m
+s=(s==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):s).w}r=y.m
 x=A.a5q(o,E.b([new A.h6(E.b([A.m6(o,A.qe(E.b([a8,new A.dV(o,4,o),a6,t,A.bm("GSTIN: "+s,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o)],u),B.fK),o,o,D.xO,o,D.d3,o),A.m6(o,A.qe(E.b([A.bm("Bill To (Buyer Details)",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o),new A.dV(o,4,o),A.bm(w.x,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,B.aA,o,!0,o,o,o,o),o,o),A.bm(w.y,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o),A.bm("GSTIN: "+w.z,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o),A.bm("State: "+w.Q+" ("+w.as+")",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,9,o,o,o,!0,o,o,o,o),o,o)],u),B.fK),o,o,D.xO,o,D.d3,o)],u),!1,o)],r),x,B.jp,B.pp,B.j2)
 s=A.nH(n)
 s=A.m6(o,A.bm("Invoice Items",A.bd(o,B.ez,o,o,o,o,o,o,o,B.a4,o,o,11,o,B.aA,o,!0,o,o,o,o),o,o),s,o,o,D.a3F,D.a41,1/0)
@@ -93,14 +93,14 @@ p=A.m6(o,A.EA(E.b([A.bm("Amount in Words: ",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o
 q=A.bm("Terms & Conditions",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o)
 t=a5.z
 if(!(t.length!==0)){t=a5.a
-t=(t==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):t).gMk()}t=A.qe(E.b([q,new A.dV(o,4,o),A.bm(t,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,8,o,o,o,!0,o,o,o,o),o,o)],u),B.fK)
+t=(t==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):t).gMk()}t=A.qe(E.b([q,new A.dV(o,4,o),A.bm(t,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,8,o,o,o,!0,o,o,o,o),o,o)],u),B.fK)
 q=A.bm("Reverse Charge: ",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o)
 w=w.ch?"Yes":"No"
 w=A.EA(E.b([q,A.bm(w,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.e_,B.oc)
 r=a5.c
 if(r.length!==0)a5=r
 else{a5=a5.a
-a5=(a5==null?E.aQ(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.w,"",C.w,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.w,C.Y,o,C.D):a5).c}return E.b([a7,new A.dV(o,12,o),v,new A.dV(o,10,o),x,new A.dV(o,10,o),s,a6,new A.dV(o,10,o),a8,new A.dV(o,10,o),p,new A.dV(o,10,o),t,new A.dV(o,8,o),w,new A.dV(o,30,o),A.EA(E.b([new A.dV(o,o,o),A.qe(E.b([A.bm("For "+a5,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o),new A.dV(o,20,o),A.bm("Authorized Signature",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.e_)],u),B.e_,B.od)],u)},
+a5=(a5==null?E.aO(C.V,C.Z,"",m,l,k,j,i,h,g,f,e,d,a0,65,18,!1,a1,"","",!0,"","","",C.u,"",C.u,"",a2,"","",C.X,C.W,"",C.D,"",C.U,"",a3,a4,C.u,C.Y,o,C.D):a5).c}return E.b([a7,new A.dV(o,12,o),v,new A.dV(o,10,o),x,new A.dV(o,10,o),s,a6,new A.dV(o,10,o),a8,new A.dV(o,10,o),p,new A.dV(o,10,o),t,new A.dV(o,8,o),w,new A.dV(o,30,o),A.EA(E.b([new A.dV(o,o,o),A.qe(E.b([A.bm("For "+a5,A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,B.aA,o,!0,o,o,o,o),o,o),new A.dV(o,20,o),A.bm("Authorized Signature",A.bd(o,o,o,o,o,o,o,o,o,B.a4,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.e_)],u),B.e_,B.od)],u)},
 $S:z+1}
 F.b52.prototype={
 $1(d){var x=this.a.ok[d],w=this.b
@@ -125,4 +125,4 @@ D.Af=new A.eB(2)
 D.a8U=new A.eB(4)
 D.a8V=new A.eB(1.2)
 D.a8W=new A.eB(0.8)})()};
-(a=>{a["loyn9LBVfyp5ZqfX6t9uToeQ2aA="]=a.current})($__dart_deferred_initializers__);
+(a=>{a["7UQdau+duoLN67QZ7zH0pAiOSEE="]=a.current})($__dart_deferred_initializers__);

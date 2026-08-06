@@ -10,7 +10,7 @@ var $async$Ba=D.B(function(a5,a6){if(a5===1)return D.x(a6,v)
 for(;;)switch(w){case 0:n=A.bfC()
 m=D.Mp(null,"en_IN","Rs. ")
 l=a4.a
-if(l==null)l=D.aQ(B.V,B.Z,"","UPVC Quotation Maker","A/C No : 178511100000061","Union Bank, Hastinapuram","IFSC Code : UBIN0817856","VENKATESHWARA WELDING WORKS","default",y.f,"9246588692, 9441888131","jvenkateshupvc@gmail.com","Venkateshwara UPVC Windows & Doors","J.Venkateshwarlu",65,18,!1,"36AKDPJ7245B2ZF","","",!0,"","","",B.w,"",B.w,"","Quality UPVC solutions for your home","","",B.X,B.W,"",B.D,"",B.U,"",y.n,"https://effxrwrbsjduvhmorvrq.supabase.co",B.w,B.Y,null,B.D)
+if(l==null)l=D.aO(B.V,B.Z,"","UPVC Quotation Maker","A/C No : 178511100000061","Union Bank, Hastinapuram","IFSC Code : UBIN0817856","VENKATESHWARA WELDING WORKS","default",y.f,"9246588692, 9441888131","jvenkateshupvc@gmail.com","Venkateshwara UPVC Windows & Doors","J.Venkateshwarlu",65,18,!1,"36AKDPJ7245B2ZF","","",!0,"","","",B.u,"",B.u,"","Quality UPVC solutions for your home","","",B.X,B.W,"",B.D,"",B.U,"",y.n,"https://effxrwrbsjduvhmorvrq.supabase.co",B.u,B.Y,null,B.D)
 t=l.ch
 s=t.length!==0
 r=s?t:y.e
@@ -187,18 +187,18 @@ $S:z+1}
 E.b73.prototype={
 $1(b0){var w,v,u,t,s,r,q,p,o,n=this,m=null,l="UPVC Quotation Maker",k="A/C No : 178511100000061",j="Union Bank, Hastinapuram",i="IFSC Code : UBIN0817856",h="VENKATESHWARA WELDING WORKS",g="default",f=y.f,e="9246588692, 9441888131",d="jvenkateshupvc@gmail.com",a0="Venkateshwara UPVC Windows & Doors",a1="J.Venkateshwarlu",a2="36AKDPJ7245B2ZF",a3="Quality UPVC solutions for your home",a4=y.n,a5="https://effxrwrbsjduvhmorvrq.supabase.co",a6=n.b,a7=A.beS(A.bgF(n.a,C.xQ,80)),a8=A.nH("#1e3a5f"),a9=a6.c
 if(!(a9.length!==0)){a9=a6.a
-a9=(a9==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):a9).c}a9=A.bm(a9,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,16,m,C.aA,m,!0,m,m,m,m),m,m)
+a9=(a9==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):a9).c}a9=A.bm(a9,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,16,m,C.aA,m,!0,m,m,m,m),m,m)
 w=a6.d
 if(!(w.length!==0)){w=a6.a
-w=(w==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):w).d}w=A.bm(w,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,10,m,m,m,!0,m,m,m,m),m,m)
+w=(w==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):w).d}w=A.bm(w,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,10,m,m,m,!0,m,m,m,m),m,m)
 v=a6.as
 if(!(v.length!==0)){v=a6.a
-v=(v==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):v).r}u=a6.e
+v=(v==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):v).r}u=a6.e
 if(!(u.length!==0)){u=a6.a
-u=(u==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):u).e}u=A.bm("Prop: "+v+"   Contact: "+u,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,10,m,m,m,!0,m,m,m,m),m,m)
+u=(u==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):u).e}u=A.bm("Prop: "+v+"   Contact: "+u,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,10,m,m,m,!0,m,m,m,m),m,m)
 v=a6.at
 if(!(v.length!==0)){v=a6.a
-v=(v==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):v).w}t=x.u
+v=(v==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):v).w}t=x.u
 a8=A.qe(D.b([a7,new A.dV(m,10,m),A.m6(m,A.qe(D.b([a9,w,u,A.bm("GST No: "+v,A.bd(m,C.ez,m,m,m,m,m,m,m,C.a4,m,m,10,m,m,m,!0,m,m,m,m),m,m)],t),C.e_),a8,m,m,m,new A.d7(8,8,8,8),1/0)],t),C.e_)
 v=n.c
 u=A.EA(D.b([A.bm("Quotation No: "+v.b,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,10,m,C.aA,m,!0,m,m,m,m),m,m),A.bm("Date: "+D.j6("dd-MMM-yyyy").cD(v.c),A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,10,m,C.aA,m,!0,m,m,m,m),m,m)],t),C.e_,C.od)
@@ -228,23 +228,23 @@ a8.push(A.m6(m,A.a5q(u,D.b([new A.h6(s,!1,m),new A.h6(p,!1,m),new A.h6(a9,!1,m),
 a8.push(E.b54("Bank Details"))
 a7=a6.c
 if(!(a7.length!==0)){a7=a6.a
-a7=(a7==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):a7).c}a7=A.bm("Company Name : "+a7,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
+a7=(a7==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):a7).c}a7=A.bm("Company Name : "+a7,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
 a9=a6.r
 if(!(a9.length!==0)){a9=a6.a
-a9=(a9==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):a9).x}w=a6.w
+a9=(a9==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):a9).x}w=a6.w
 if(!(w.length!==0)){w=a6.a
-w=(w==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):w).y}w=A.bm("Bank Name & Branch : "+a9+" - "+w,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
+w=(w==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):w).y}w=A.bm("Bank Name & Branch : "+a9+" - "+w,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
 a9=a6.x
 if(!(a9.length!==0)){a9=a6.a
-a9=(a9==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):a9).z}a9=A.bm(a9,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
+a9=(a9==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):a9).z}a9=A.bm(a9,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)
 v=a6.y
 if(!(v.length!==0)){v=a6.a
-v=(v==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):v).Q}v=A.qe(D.b([a7,w,a9,A.bm(v,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)],t),C.fK)
+v=(v==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):v).Q}v=A.qe(D.b([a7,w,a9,A.bm(v,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,9,m,m,m,!0,m,m,m,m),m,m)],t),C.fK)
 a9=A.bm("Terms & Conditions",A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,10,m,C.aA,m,!0,m,m,m,m),m,m)
 a7=a6.z
 if(a7.length!==0)a6=a7
 else{a6=a6.a
-a6=(a6==null?D.aQ(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.w,"",B.w,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.w,B.Y,m,B.D):a6).gMk()}a8.push(A.EA(D.b([new A.no(1,C.t8,v),new A.dV(10,m,m),new A.no(1,C.t8,A.qe(D.b([a9,A.bm(a6,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,7.5,m,m,m,!0,m,m,m,m),m,m)],t),C.fK))],t),C.fK,C.oc))
+a6=(a6==null?D.aO(B.V,B.Z,"",l,k,j,i,h,g,f,e,d,a0,a1,65,18,!1,a2,"","",!0,"","","",B.u,"",B.u,"",a3,"","",B.X,B.W,"",B.D,"",B.U,"",a4,a5,B.u,B.Y,m,B.D):a6).gMk()}a8.push(A.EA(D.b([new A.no(1,C.t8,v),new A.dV(10,m,m),new A.no(1,C.t8,A.qe(D.b([a9,A.bm(a6,A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,7.5,m,m,m,!0,m,m,m,m),m,m)],t),C.fK))],t),C.fK,C.oc))
 a8.push(new A.dV(m,40,m))
 a8.push(A.EA(D.b([A.bm("Authorised Signature",A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,10,m,C.aA,m,!0,m,m,m,m),m,m),A.bm("Customer Signature",A.bd(m,m,m,m,m,m,m,m,m,C.a4,m,m,10,m,C.aA,m,!0,m,m,m,m),m,m)],t),C.e_,C.od))
 return a8},
@@ -263,4 +263,4 @@ v(D.m4,[E.b75,E.b74,E.b73,E.b53,E.b55])})()
 D.agN(b.typeUniverse,JSON.parse('{"CV":{"f_":[],"dW":[]},"a1x":{"f_":[],"dW":[]}}'))
 var y={f:"Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD \u2013 500074",e:"https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg",n:"sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN"}
 var x={m:D.a6("L8"),x:D.a6("w<h>"),d:D.a6("w<h6>"),u:D.a6("w<dW>"),B:D.a6("C<h>"),f:D.a6("c3"),a:D.a6("zQ"),o:D.a6("df"),e:D.a6("l")}};
-(a=>{a["Nj6/j6pOa0Wf1//oDk5LXOfQ5GI="]=a.current})($__dart_deferred_initializers__);
+(a=>{a["qUVbS5r9LRsX2x/LE0n8U0/sah0="]=a.current})($__dart_deferred_initializers__);
