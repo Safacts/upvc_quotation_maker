@@ -230,8 +230,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = kIsWeb
-          ? '${Uri.base.origin}/review/${appState.clientConfig.clientId}'
-          : 'https://app.vitharn.com/review/${appState.clientConfig.clientId}';
+        ? '${Uri.base.origin}/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}'
+        : 'https://app.vitharn.com/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}';
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
@@ -363,6 +363,56 @@ class _QuotationScreenState extends State<QuotationScreen> {
     );
   }
 
+  Color _statusColor(QuotationStatus s) {
+    switch (s) {
+      case QuotationStatus.draft: return Colors.grey.shade400;
+      case QuotationStatus.sent:  return Colors.blue.shade400;
+      case QuotationStatus.won:   return Colors.green.shade500;
+      case QuotationStatus.lost:  return Colors.red.shade400;
+    }
+  }
+
+  Widget _statusChip(String label, QuotationStatus status) {
+    final isSelected = data.status == status;
+    return GestureDetector(
+      onTap: () async {
+        if (data.status != status) {
+          setState(() => data.status = status);
+          await _updateStatus(data, status);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? _statusColor(status) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _statusColor(status), width: 1.5),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : _statusColor(status),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateStatus(QuotationData q, QuotationStatus newStatus) async {
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      await SupabaseConfig.client
+          .from('quotations')
+          .update({'status': newStatus.value})
+          .eq('id', q.id!)
+          .eq('client_id', clientId);
+    } catch (e) {
+      debugPrint('Status update error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -414,9 +464,34 @@ class _QuotationScreenState extends State<QuotationScreen> {
               ),
             ).animate().fade().slideY(begin: -0.1),
 
+            // Status selector
+            if (widget.existingData != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    const Text('Status: ', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _statusChip('Draft', QuotationStatus.draft),
+                            const SizedBox(width: 6),
+                            _statusChip('Sent', QuotationStatus.sent),
+                            const SizedBox(width: 6),
+                            _statusChip('Won', QuotationStatus.won),
+                            const SizedBox(width: 6),
+                            _statusChip('Lost', QuotationStatus.lost),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fade().slideY(begin: -0.1),
 
-            
-            _buildSectionTitle('Customer Details').animate().fade(delay: 100.ms),
+            _buildSectionTitle('Customer Details').animate().fade().fade(delay: 100.ms),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -501,11 +576,39 @@ class _QuotationScreenState extends State<QuotationScreen> {
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.done,
                               decoration: const InputDecoration(labelText: 'Email (Optional)'),
-                              onChanged: (val) { data.email = val; _onDataChanged(); }
+                               onChanged: (val) { data.email = val; _onDataChanged(); }
                             )
                           ),
                         ],
                       ),
+                     if (Provider.of<AppState>(context, listen: false).clientConfig.clientId == 'kprupvc' &&
+                         Provider.of<AppState>(context, listen: false).supplierCompanies.isNotEmpty) ...[
+                       const SizedBox(height: 12),
+                       DropdownButtonFormField<String>(
+                         initialValue: data.supplierCompany.isEmpty ? null : data.supplierCompany,
+                         decoration: InputDecoration(
+                           labelText: 'Supplier Company',
+                           labelStyle: TextStyle(color: Theme.of(context).primaryColor),
+                           border: const OutlineInputBorder(),
+                         ),
+                         isExpanded: true,
+                         items: [
+                           const DropdownMenuItem<String>(
+                             value: null,
+                             child: Text('-- Select Supplier --'),
+                           ),
+                           ...Provider.of<AppState>(context, listen: false).supplierCompanies.map((c) {
+                             return DropdownMenuItem<String>(value: c, child: Text(c));
+                           }),
+                         ],
+                         onChanged: (val) {
+                           setState(() {
+                             data.supplierCompany = val ?? '';
+                           });
+                           _onDataChanged();
+                         },
+                       ),
+                     ],
                   ],
                 ),
               ),
