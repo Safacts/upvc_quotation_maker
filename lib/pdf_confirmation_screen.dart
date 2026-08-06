@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -94,6 +96,19 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     return '$origin/$clientId/review?q=${Uri.encodeComponent(widget.data.quotationNo)}';
   }
 
+  String _quoteLink() {
+    final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
+    final token = _generateQuoteToken(widget.data.id!);
+    return '$origin/quote/${widget.data.id}?token=$token';
+  }
+
+  String _generateQuoteToken(String id) {
+    const secret = "dev-secret";
+    final hmac = Hmac(sha256, utf8.encode(secret));
+    final digest = hmac.convert(utf8.encode(id));
+    return digest.toString().substring(0, 16);
+  }
+
   Future<void> _markAsSent() async {
     final d = widget.data;
     if (d.status != QuotationStatus.sent && d.id != null) {
@@ -109,7 +124,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   }
 
   Future<void> _sharePdf() async {
-    final text = 'Here is your quotation ${widget.data.quotationNo}.\n\nWe value your feedback! Please rate your experience here: ${_reviewUrl()}';
+    final text = 'Here is your quotation ${widget.data.quotationNo}.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your experience here: ${_reviewUrl()}';
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
     } else {
@@ -125,14 +140,14 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
     await _markAsSent();
   }
 
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     await _shareViaXFiles(text);
     await _markAsSent();
   }
