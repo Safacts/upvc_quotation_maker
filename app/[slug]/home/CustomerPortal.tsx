@@ -20,7 +20,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "app" | "catalog" | "market" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "app" | "catalog" | "market" | "market-settings" | "settings">("overview");
 
   const [brand, setBrand] = useState("Loading...");
   const [infoFields, setInfoFields] = useState<InfoField[]>([]);
@@ -253,6 +253,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
     app: "Quotation Maker",
     catalog: "Product Catalog",
     market: "Market Page Preview",
+    "market-settings": "Market Page Settings",
     settings: "Business Settings"
   };
 
@@ -515,6 +516,30 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
               </svg>
             </button>
             <h1 className="header-title">{tabTitles[activeTab]}</h1>
+            {(activeTab === "market" || activeTab === "market-settings") && client.id.toLowerCase() === "kprupvc" && (
+              <div style={{ display: "flex", gap: 4, marginLeft: 12 }}>
+                <button
+                  onClick={() => setActiveTab("market")}
+                  style={{
+                    padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                    background: activeTab === "market" ? "#6366f1" : "#f1f5f9",
+                    color: activeTab === "market" ? "white" : "#64748b",
+                  }}
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => setActiveTab("market-settings")}
+                  style={{
+                    padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                    background: activeTab === "market-settings" ? "#6366f1" : "#f1f5f9",
+                    color: activeTab === "market-settings" ? "white" : "#64748b",
+                  }}
+                >
+                  Testimonials
+                </button>
+              </div>
+            )}
           </div>
           <div className="header-user">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1129,12 +1154,14 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
-            {activeTab === "market" && client.id.toLowerCase() === "kprupvc" && (
-              <div style={{ marginTop: 24 }}>
-                <MarketPageSettings clientId={client.id} />
-              </div>
-            )}
           </div>
+
+          {/* Market Settings Tab (Testimonials Management) */}
+          {activeTab === "market-settings" && client.id.toLowerCase() === "kprupvc" && (
+            <div style={{ padding: 24 }}>
+              <MarketPageSettings clientId={client.id} />
+            </div>
+          )}
 
           {/* iOS "Add to Home Screen" instructions */}
           {showA2hsModal && (
