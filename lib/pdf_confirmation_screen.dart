@@ -124,7 +124,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   }
 
   Future<void> _sharePdf() async {
-    final text = 'Here is your quotation ${widget.data.quotationNo}.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your experience here: ${_reviewUrl()}';
+    final companyName = Provider.of<AppState>(context, listen: false).companyName;
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     if (kIsWeb) {
       await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
     } else {
