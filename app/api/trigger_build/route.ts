@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const config = parseClientConfig(clientData.config || {}, client_id);
-    const lastTriggered = config.lastBuildTriggeredAt;
+    const rawConfig = clientData.config || {};
+    const lastTriggered = rawConfig.lastBuildTriggeredAt;
 
     if (lastTriggered) {
       const now = new Date().getTime();
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save timestamp to prevent spam
-    const updatedConfig = { ...config, lastBuildTriggeredAt: new Date().toISOString() };
+    const updatedConfig = { ...rawConfig, lastBuildTriggeredAt: new Date().toISOString() };
     await supaPatch("clients", { id: `eq.${client_id}` }, { config: updatedConfig });
 
     return NextResponse.json({ success: true, message: `APK build triggered for ${client_id}` });
