@@ -176,6 +176,17 @@ export async function POST(request: NextRequest) {
         if (client.is_active === false) {
           return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
         }
+        
+        // 7-DAY TRIAL LOCKOUT SYSTEM
+        const cfg = client.config || {};
+        if (!cfg.isPaid && cfg.trialEndsAt) {
+          const now = new Date();
+          const trialEnd = new Date(cfg.trialEndsAt);
+          if (now > trialEnd) {
+             return json({ error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account." }, 403);
+          }
+        }
+
         await createSession({ role: "customer", email, client_id: client.id });
         return json({ role: "customer", email, client_id: client.id }, 200);
       }
@@ -218,6 +229,17 @@ export async function POST(request: NextRequest) {
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
+      
+      // 7-DAY TRIAL LOCKOUT SYSTEM
+      const cfg = client.config || {};
+      if (!cfg.isPaid && cfg.trialEndsAt) {
+        const now = new Date();
+        const trialEnd = new Date(cfg.trialEndsAt);
+        if (now > trialEnd) {
+           return json({ error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account." }, 403);
+        }
+      }
+
       await backfillPortalHash(client);
       await createSession({ role: "customer", email, client_id: client.id });
       return json({ role: "customer", email, client_id: client.id }, 200);

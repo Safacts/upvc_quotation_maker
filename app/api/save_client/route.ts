@@ -164,6 +164,14 @@ export async function POST(request: NextRequest) {
     if (Array.isArray(existing) && existing.length > 0) {
       await supaPatch("clients", { id: "eq." + cid }, body);
     } else {
+      // 7-DAY TRIAL SYSTEM INJECTION
+      body.config.isPaid = false;
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 7);
+      const trialIso = trialEnd.toISOString();
+      body.config.trialEndsAt = trialIso;
+      body.trial_expires_at = trialIso; // Native PostgreSQL column sync
+      
       body.id = cid;
       await supaPost("clients", body);
     }

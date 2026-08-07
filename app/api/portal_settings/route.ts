@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       "companyName", "companyProprietor", "companyContact", "companyEmail",
       "companyAddress", "gstNumber", "defaultGstPercentage", "cost_margin_percent",
       "enablePricePresets", "pricePresets", "measuredPresets", "unmeasuredPresets",
-      "supplierCompanies"
+      "supplierCompanies", "bankName", "bankBranch", "bankAccountNo", "bankIfsc", "termsAndConditions"
     ];
 
     let hasChanges = false;

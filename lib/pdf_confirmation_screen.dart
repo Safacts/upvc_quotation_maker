@@ -125,7 +125,15 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _sharePdf() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    
+    await Share.share(text);
+    await _markAsSent();
+  }
+
+  Future<void> _shareToWhatsApp() async {
+    final companyName = Provider.of<AppState>(context, listen: false).companyName;
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
@@ -141,19 +149,6 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
         await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
         await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
       }
-    }
-    await _markAsSent();
-  }
-
-  Future<void> _shareToWhatsApp() async {
-    final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    
-    final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(text)}");
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      await Share.share(text);
     }
     await _markAsSent();
   }

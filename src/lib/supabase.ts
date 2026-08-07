@@ -1,7 +1,6 @@
 const SUPABASE_URL =
   process.env.SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
-const SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || "";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const AUTH_HEADERS = {
   apikey: SERVICE_ROLE_KEY,
