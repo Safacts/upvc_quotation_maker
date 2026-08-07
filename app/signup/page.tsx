@@ -216,7 +216,7 @@ export default function SignupPage() {
               Thanks — your signup is with our team. We&apos;ll review your details and set up
               your account soon. If you have questions, email us at
               {" "}
-              <a href="mailto:vitharn@rubixitsolution.com">vitharn@rubixitsolution.com</a>.
+              <a href="mailto:vitarn.dev@gmail.com">vitarn.dev@gmail.com</a>.
             </p>
             {status === "rejected" && (
               <p className="signup-rejected-note">
