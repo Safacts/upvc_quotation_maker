@@ -52,12 +52,6 @@ To ensure uninterrupted service, please make your payment by the due date.
 - **UPI ID:** `[your-upi@oksbi]`
 - **Name:** Aadi (Proprietor, Vitharn ERP Services)
 
-### Bank Transfer (Alternative)
-- **Bank Name:** `[Bank Name]`
-- **Account Number:** `[Account Number]`
-- **IFSC / Routing:** `[IFSC Code]`
-- **Name on Account:** `[Your Name]`
-
 *Late payments may be subject to the fee outlined in your Vitharn Client Services Agreement.*
 
 <br>

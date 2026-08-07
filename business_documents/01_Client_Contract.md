@@ -50,13 +50,16 @@ Upon full payment, the specific deliverables provided directly to the Client tra
 ### 2.7 Termination & Data Deletion
 Either party may end this Agreement with written notice if the other party breaches a material term and does not resolve it within **15 days**. Upon termination, Vitharn ERP Services guarantees the complete and permanent deletion of all Client data from its servers within **30 days**.
 
-### 2.8 Limitation of Liability
-Vitharn ERP Services will not be liable for indirect, incidental, or consequential damages arising from the software services provided. The software is provided with automated daily backups to ensure maximum stability.
+### 2.8 Warranty Disclaimer & Limitation of Liability
+The Service is provided "AS IS" and "AS AVAILABLE" without warranties of any kind, express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose. Vitharn ERP Services will not be liable for indirect, incidental, special, or consequential damages arising from the software services provided.
 
-### 2.9 Force Majeure
+### 2.9 Indemnification
+The Client agrees to indemnify and hold harmless Vitharn ERP Services from any claims, damages, or expenses arising from the Client's use of the Service in violation of applicable law or infringement of third-party rights.
+
+### 2.10 Force Majeure
 Neither party shall be liable for failure to perform due to unforeseen events beyond their reasonable control, including natural disasters, internet backbone outages, or government actions.
 
-### 2.10 Dispute Resolution & Governing Law
+### 2.11 Dispute Resolution & Governing Law
 Any disputes arising under this agreement will be resolved through arbitration in **Hyderabad, Telangana**, before escalating to local courts. This Agreement is governed strictly by the laws of **Telangana, India**.
 
 ---
