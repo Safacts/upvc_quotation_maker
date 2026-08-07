@@ -1,7 +1,10 @@
 -- Part 10: Secure client_public view to prevent password leaks
 
+-- Drop the view first to avoid column order mismatch errors
+DROP VIEW IF EXISTS client_public;
+
 -- Recreate the client_public view but explicitly strip portalPasswordHash from the config jsonb
-CREATE OR REPLACE VIEW client_public AS
+CREATE VIEW client_public AS
 SELECT 
     id, 
     config - 'portalPasswordHash' AS config, 

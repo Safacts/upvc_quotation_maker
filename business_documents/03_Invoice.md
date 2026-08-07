@@ -26,7 +26,7 @@
 | :---: | :--- | :--- | :---: | :--- |
 | **01** | **Vitharn ERP Setup** | Initial instance creation, database provisioning, tenant isolation setup. | `1` | `₹[0.00]` |
 | **02** | **Quotation Engine Setup** | Configuration of dynamic UPVC formulas, glass logic, hardware grids. | `1` | `₹[0.00]` |
-| **03** | **Client Customizations** | Custom PDF generation mapping, GST configuration, Bank Details entry. | `1` | `₹[0.00]` |
+| **03** | **Client Customizations** | Custom PDF generation mapping, Bank Details entry, branding setup. | `1` | `₹[0.00]` |
 | **04** | **Maintenance Subscription** | Early Adopter Waived / Monthly Recurring Fee. | `1` | `₹[0.00]` |
 
 <br>
@@ -35,9 +35,10 @@
 
 | **SUMMARY** | |
 | :--- | :--- |
-| **Subtotal** | `₹[0.00]` |
-| **GST (`[X]%`)** | `₹[0.00]` |
+| **Amount** | `₹[0.00]` |
 | **TOTAL DUE** | **`₹[0.00]`** |
+
+> **Note:** GST not applicable — turnover below ₹20L threshold (Section 22, CGST Act, 2017).
 
 </div>
 
@@ -47,18 +48,19 @@
 
 To ensure uninterrupted service, please make your payment by the due date.
 
-### Bank Transfer
-- **Bank Name:** `[Vitharn Bank Name]`
+### UPI (Primary)
+- **UPI ID:** `[your-upi@oksbi]`
+- **Name:** Aadi (Proprietor, Vitharn ERP Services)
+
+### Bank Transfer (Alternative)
+- **Bank Name:** `[Bank Name]`
 - **Account Number:** `[Account Number]`
 - **IFSC / Routing:** `[IFSC Code]`
-- **Name on Account:** `[Vitharn ERP Services]`
-
-### Alternative Options
-- **UPI:** `[UPI ID]`
+- **Name on Account:** `[Your Name]`
 
 *Late payments may be subject to the fee outlined in your Vitharn Client Services Agreement.*
 
 <br>
 <div align="center">
-  <strong>Vitharn ERP Services | vitharn@rubixitsolution.com</strong>
+  <strong>Vitharn ERP Services | vitarn.dev@gmail.com</strong>
 </div>

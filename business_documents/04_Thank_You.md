@@ -49,5 +49,5 @@ If you have any questions in the meantime, we are just a WhatsApp message away.
 
 <br>
 <div align="center">
-  <strong>Vitharn ERP Services | vitharn@rubixitsolution.com</strong>
+  <strong>Vitharn ERP Services | vitarn.dev@gmail.com</strong>
 </div>

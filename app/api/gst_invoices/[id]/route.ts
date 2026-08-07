@@ -6,6 +6,7 @@ import {
   supaDelete,
   isServiceKeyConfigured,
 } from "@/lib/supabase";
+import { getSession } from "@/lib/session";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const { id } = await params;
@@ -33,6 +39,10 @@ export async function GET(
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return json({ error: "not found" }, 404);
+    }
+    
+    if (session.role === "customer" && session.client_id !== rows[0].client_id) {
+      return json({ error: "Forbidden" }, 403);
     }
 
     const items = await supaGet("gst_invoice_items", {
@@ -52,11 +62,24 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const { id } = await params;
     const p = await request.json();
-
+    
+    const existingRows = await supaGet("gst_invoices", { id: "eq." + id, select: "client_id" });
+    if (!Array.isArray(existingRows) || existingRows.length === 0) {
+      return json({ error: "not found" }, 404);
+    }
+    if (session.role === "customer" && session.client_id !== existingRows[0].client_id) {
+      return json({ error: "Forbidden" }, 403);
+    }
+    
     const updateBody: Record<string, any> = {};
     const fields = [
       "invoice_number", "invoice_date", "supplier_company_name",
@@ -107,9 +130,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const { id } = await params;
+    
+    const existingRows = await supaGet("gst_invoices", { id: "eq." + id, select: "client_id" });
+    if (!Array.isArray(existingRows) || existingRows.length === 0) {
+      return json({ error: "not found" }, 404);
+    }
+    if (session.role === "customer" && session.client_id !== existingRows[0].client_id) {
+      return json({ error: "Forbidden" }, 403);
+    }
 
     await supaDelete("gst_invoice_items", { invoice_id: "eq." + id });
     await supaDelete("gst_invoices", { id: "eq." + id });

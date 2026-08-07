@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
+import { getSession } from "@/lib/session";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -14,10 +15,19 @@ function json(data: any, status = 200) {
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const clientId = request.nextUrl.searchParams.get("client_id");
     if (!clientId) return json({ error: "missing client_id" }, 400);
+    
+    if (session.role === "customer" && session.client_id !== clientId) {
+      return json({ error: "Forbidden" }, 403);
+    }
 
     const invoices = await supaGet("gst_invoices", {
       client_id: "eq." + clientId,
@@ -33,11 +43,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const p = await request.json();
     const clientId = p.client_id || "";
     if (!clientId) return json({ error: "missing client_id" }, 400);
+    
+    if (session.role === "customer" && session.client_id !== clientId) {
+      return json({ error: "Forbidden" }, 403);
+    }
 
     const items: any[] = Array.isArray(p.items) ? p.items : [];
 

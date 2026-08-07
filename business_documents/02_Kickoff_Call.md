@@ -54,5 +54,5 @@ You’ll receive a written summary via WhatsApp with action items. Once we have 
 
 <br>
 <div align="center">
-  <strong>Vitharn ERP Services | vitharn@rubixitsolution.com</strong>
+  <strong>Vitharn ERP Services | vitarn.dev@gmail.com</strong>
 </div>

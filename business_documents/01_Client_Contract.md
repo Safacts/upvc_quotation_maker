@@ -17,10 +17,10 @@ This Agreement is made between **Vitharn ERP Services** (“Agency”) and the C
 
 | AGENCY | CLIENT |
 | :--- | :--- |
-| **Name:** Vitharn ERP Services (Incubated under Rubix IT Solutions) | **Name / Company:** `[Client Name / Company Name]` |
+| **Name:** Vitharn ERP Services | **Name / Company:** `[Client Name / Company Name]` |
 | **Address:** Hyderabad, Telangana, India | **Address:** `[Client Address]` |
-| **Email:** `[vitharn@rubixitsolution.com]` | **Email:** `[Client Email]` |
-| **Phone:** `[Vitharn Phone Number]` | **Phone:** `[Client Phone Number]` |
+| **Email:** `vitarn.dev@gmail.com` | **Email:** `[Client Email]` |
+| **Phone:** `[Your Phone Number]` | **Phone:** `[Client Phone Number]` |
 
 ---
 
@@ -36,7 +36,7 @@ This Agreement begins on `[Start Date]` and continues indefinitely unless ended 
 The Client agrees to pay the fees set out in the initial proposal. 
 - **Early Adopter Clause:** For the first 25 clients, a strict one-time setup fee is applied with **zero monthly maintenance subscriptions**.
 - Invoices are due within **7 days** of the invoice date. Late payments will incur a **1.5%** monthly penalty fee.
-- **GST Registration:** If applicable, GST will be added to the invoice at the standard 18% software services rate under Rubix IT Solutions.
+- **No GST Applicable:** Vitharn ERP Services is not GST-registered as turnover is below the statutory threshold (Section 22, CGST Act). No GST will be charged on invoices.
 
 ### 2.4 Client Responsibilities
 The Client agrees to provide the information, materials, and access Vitharn reasonably needs to deploy the ERP instance, and to give timely feedback during the setup phase.
