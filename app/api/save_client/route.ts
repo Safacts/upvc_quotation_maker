@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       select: "email,password_hash",
     });
     if (Array.isArray(admins) && admins.length > 0) {
-      if (phash && admins[0].password_hash !== phash) {
+      if (!phash) return json({ error: "password hash required" }, 403);
+      if (admins[0].password_hash !== phash) {
         return json({ error: "hash mismatch" }, 403);
       }
     } else {
@@ -57,7 +58,12 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      
+      // STRICTURE: Ensure client authentication requires the correct portal hash
       if (!clientMatch) return json({ error: "not authorized" }, 403);
+      if (!phash) return json({ error: "password hash required" }, 403);
+      if (clientMatch.password_hash !== phash) return json({ error: "hash mismatch" }, 403);
+      
       isCustomer = true;
       if (cid !== clientMatch.id) {
         return json({ error: "can only manage own client" }, 403);

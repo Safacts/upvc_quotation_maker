@@ -256,9 +256,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final reviewUrl = kIsWeb
         ? '${Uri.base.origin}/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}'
         : 'https://app.vitharn.com/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}';
+      final token = await _fetchQuoteToken(data.id!);
       final quoteLink = kIsWeb
-        ? '${Uri.base.origin}/quote/${data.id}?token=${_generateQuoteToken(data.id!)}'
-        : 'https://app.vitharn.com/quote/${data.id}?token=${_generateQuoteToken(data.id!)}';
+        ? '${Uri.base.origin}/quote/${data.id}?token=$token'
+        : 'https://app.vitharn.com/quote/${data.id}?token=$token';
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
@@ -329,11 +330,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
     }
   }
 
-  String _generateQuoteToken(String id) {
-    const secret = "dev-secret";
-    final hmac = Hmac(sha256, utf8.encode(secret));
-    final digest = hmac.convert(utf8.encode(id));
-    return digest.toString().substring(0, 16);
+  Future<String> _fetchQuoteToken(String id) async {
+    try {
+      final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
+      final res = await http.get(Uri.parse('$origin/api/quotation/$id/token'));
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body);
+        return json['token'] ?? '';
+      }
+    } catch (_) {}
+    return '';
   }
 
   Future<void> _manualEmailPrompt() async {

@@ -96,17 +96,22 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     return '$origin/$clientId/review?q=${Uri.encodeComponent(widget.data.quotationNo)}';
   }
 
-  String _quoteLink() {
+  Future<String> _quoteLink() async {
     final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-    final token = _generateQuoteToken(widget.data.id!);
+    final token = await _fetchQuoteToken(widget.data.id!);
     return '$origin/quote/${widget.data.id}?token=$token';
   }
 
-  String _generateQuoteToken(String id) {
-    const secret = "dev-secret";
-    final hmac = Hmac(sha256, utf8.encode(secret));
-    final digest = hmac.convert(utf8.encode(id));
-    return digest.toString().substring(0, 16);
+  Future<String> _fetchQuoteToken(String id) async {
+    try {
+      final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
+      final res = await http.get(Uri.parse('$origin/api/quotation/$id/token'));
+      if (res.statusCode == 200) {
+        final json = jsonDecode(res.body);
+        return json['token'] ?? '';
+      }
+    } catch (_) {}
+    return '';
   }
 
   Future<void> _markAsSent() async {
@@ -125,7 +130,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _sharePdf() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final link = await _quoteLink();
+    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     
     await Share.share(text);
     await _markAsSent();
@@ -133,7 +139,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final link = await _quoteLink();
+    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
@@ -155,9 +162,10 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _shareToTelegram() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: ${_quoteLink()}\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    final link = await _quoteLink();
+    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     
-    final url = Uri.parse("https://t.me/share/url?url=${Uri.encodeComponent(_quoteLink())}&text=${Uri.encodeComponent(text)}");
+    final url = Uri.parse("https://t.me/share/url?url=${Uri.encodeComponent(link)}&text=${Uri.encodeComponent(text)}");
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {

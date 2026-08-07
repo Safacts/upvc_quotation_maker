@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
     }
     const latest = sent[0];
     const body = latest.body || "";
-    if (!body.includes(otp)) return json({ error: "invalid OTP" }, 403);
+    const match = body.match(/OTP:\s*(\d{6})/);
+    if (!match || match[1] !== otp) return json({ error: "invalid OTP" }, 403);
     const created = latest.created_at;
     if (created) {
       try {

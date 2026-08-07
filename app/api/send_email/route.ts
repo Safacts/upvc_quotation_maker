@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mail";
+import { getSession } from "@/lib/session";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,11 @@ function json(data: any, status = 200) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session || !session.email) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     const raw = await request.text();
     if (raw.length > MAX_BODY) {
       return json({ error: "Payload too large" }, 413);
