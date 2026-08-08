@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'app_state.dart';
 import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
 import 'client_logo.dart';
+import 'google_signin.dart';
 import 'umami_tracker.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String _errorMessage = '';
+  StreamSubscription<GoogleSignInResult>? _googleSub;
+  bool _googleReady = false;
 
   Future<String?> _readSession() async {
     if (kIsWeb) {
@@ -59,6 +63,66 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _checkExistingSession();
+    _initGoogleSignIn();
+  }
+
+  @override
+  void dispose() {
+    _googleSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initGoogleSignIn() async {
+    try {
+      _googleSub = googleSignInResults.listen(_handleGoogleResult);
+      await ensureGoogleSignInReady();
+      if (mounted) setState(() => _googleReady = true);
+    } catch (_) {}
+  }
+
+  Future<void> _onNativeGooglePressed() async {
+    if (_isLoading) return;
+    final r = await startGoogleSignIn();
+    if (r != null) _handleGoogleResult(r);
+  }
+
+  void _handleGoogleResult(GoogleSignInResult r) {
+    if (!r.succeeded) {
+      if (r.error != null && r.error!.isNotEmpty) {
+        setState(() => _errorMessage = r.error!);
+      }
+      return;
+    }
+    _loginWithGoogleEmail(r.email!);
+  }
+
+  Future<void> _loginWithGoogleEmail(String email) async {
+    setState(() { _isLoading = true; _errorMessage = ''; });
+    try {
+      final res = await http.post(
+        Uri.parse('/api/portal_auth'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mode': 'google', 'email': email}),
+      );
+      final data = _decodeJson(res);
+      if (data == null) {
+        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        return;
+      }
+      if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
+        umamiTrack('login_success');
+        await _writeSession('true');
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+      } else if (res.statusCode == 200 && data['role'] == 'signup') {
+        setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
+      } else {
+        umamiTrack('login_failed');
+        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'This Google account is not registered. Please use your email and password instead.'; });
+      }
+    } catch (e) {
+      setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
+    }
   }
 
   Future<void> _checkExistingSession() async {
@@ -301,6 +365,55 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Sign in to manage quotations', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)).animate().fade(delay: 400.ms),
               const SizedBox(height: 40),
               
+              if (_googleReady) ...[
+                if (googleSignInUsesWebButton)
+                  IgnorePointer(
+                    ignoring: _isLoading,
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: HtmlElementView(viewType: googleSignInViewType),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _onNativeGooglePressed,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1F1F1F),
+                        side: const BorderSide(color: Color(0xFFDADCE0)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                      ),
+                      icon: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CustomPaint(painter: GoogleGLogoPainter()),
+                      ),
+                      label: const Text(
+                        'Sign in with Google',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('or'),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+
               Card(
                 elevation: 4,
                 shadowColor: Colors.black12,
@@ -350,4 +463,78 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+/// Draws the official 4-color Google "G" (24x24 viewBox paths from the
+/// public-domain Google G logo SVG). Used as the icon inside the native
+/// "Sign in with Google" button.
+class GoogleGLogoPainter extends CustomPainter {
+  const GoogleGLogoPainter();
+
+  static final Path _bluePath = Path()
+    ..moveTo(22.56, 12.25)
+    ..cubicTo(22.56, 11.47, 22.49, 10.72, 22.36, 10.0)
+    ..lineTo(12.0, 10.0)
+    ..lineTo(12.0, 14.26)
+    ..lineTo(17.92, 14.26)
+    ..cubicTo(17.66, 15.63, 16.88, 16.79, 15.71, 17.57)
+    ..lineTo(15.71, 20.34)
+    ..lineTo(19.28, 20.34)
+    ..cubicTo(21.36, 18.42, 22.56, 15.6, 22.56, 12.25)
+    ..close();
+
+  static final Path _greenPath = Path()
+    ..moveTo(12.0, 23.0)
+    ..cubicTo(14.97, 23.0, 17.46, 22.02, 19.28, 20.34)
+    ..lineTo(15.71, 17.57)
+    ..cubicTo(14.73, 18.23, 13.48, 18.63, 12.0, 18.63)
+    ..cubicTo(9.14, 18.63, 6.71, 16.7, 5.84, 14.1)
+    ..lineTo(2.18, 14.1)
+    ..lineTo(2.18, 16.94)
+    ..cubicTo(3.99, 20.53, 7.7, 23.0, 12.0, 23.0)
+    ..close();
+
+  static final Path _yellowPath = Path()
+    ..moveTo(5.84, 14.09)
+    ..cubicTo(5.62, 13.43, 5.49, 12.73, 5.49, 12.0)
+    ..cubicTo(5.49, 11.27, 5.62, 10.57, 5.84, 9.91)
+    ..lineTo(5.84, 7.07)
+    ..lineTo(2.18, 7.07)
+    ..cubicTo(1.43, 8.55, 1.0, 10.22, 1.0, 12.0)
+    ..cubicTo(1.0, 13.78, 1.43, 15.45, 2.18, 16.93)
+    ..lineTo(5.03, 14.71)
+    ..lineTo(5.84, 14.09)
+    ..close();
+
+  static final Path _redPath = Path()
+    ..moveTo(12.0, 5.38)
+    ..cubicTo(13.62, 5.38, 15.06, 5.94, 16.21, 7.02)
+    ..lineTo(19.36, 3.87)
+    ..cubicTo(17.45, 2.09, 14.97, 1.0, 12.0, 1.0)
+    ..cubicTo(7.7, 1.0, 3.99, 3.47, 2.18, 7.07)
+    ..lineTo(5.84, 9.91)
+    ..cubicTo(6.71, 7.31, 9.14, 5.38, 12.0, 5.38)
+    ..close();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..isAntiAlias = true;
+    final scale = size.width / 24;
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawPath(_bluePath, paint);
+    paint.color = const Color(0xFF34A853);
+    canvas.drawPath(_greenPath, paint);
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawPath(_yellowPath, paint);
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawPath(_redPath, paint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

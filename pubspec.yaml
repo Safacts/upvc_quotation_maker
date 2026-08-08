@@ -54,6 +54,7 @@ dependencies:
   excel: ^4.0.6
 
   path_provider: any
+  google_sign_in: ^7.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
