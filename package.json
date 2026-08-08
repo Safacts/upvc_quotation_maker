@@ -11,6 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:isolation": "vitest run tests/client-isolation.test.ts",
+    "test:auth": "vitest run tests/portal-auth.test.ts tests/auth-session.test.ts",
+    "test:coverage": "vitest run --coverage",
+    "smoke": "node scripts/e2e-smoke.mjs",
     "sync-hashes": "node scripts/sync_portal_hashes.mjs"
   },
   "dependencies": {
@@ -33,6 +39,8 @@
     "@types/react": "19.2.14",
     "pg": "^8.22.0",
     "tailwindcss": "4.2.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.7"
   }
 }
