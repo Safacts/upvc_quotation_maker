@@ -1,5 +1,5 @@
--- ============================================================================
--- Migration 009 — Phase 0 masters (audit_logs, quotations.customer_id, indexes)
+﻿-- ============================================================================
+-- Migration 009 â€” Phase 0 masters (audit_logs, quotations.customer_id, indexes)
 -- ============================================================================
 --
 -- RENUMBERING NOTICE (read before you go looking for `007_masters.sql`):
@@ -20,9 +20,9 @@
 --   (b) provide defense-in-depth for direct REST access. They match the
 --   convention established in 006_secure_quotations.sql.
 --
--- IDEMPOTENT — safe to re-run. Apply via the pooler
+-- IDEMPOTENT â€” safe to re-run. Apply via the pooler
 --   host aws-1-ap-south-1.pooler.supabase.com:5432
---   user postgres.effxrwrbsjduvhmorvrq
+--   user postgres.gumpmnbjdtzajhysnnaz
 -- then run:  NOTIFY pgrst, 'reload schema';
 --
 -- TAKE A BACKUP FIRST:  scripts\run_backup.bat
@@ -46,7 +46,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Rationale (Nexy's call, and I agree): triggers are invisible to application
 -- code. Scribe needs a user-visible "History" panel, which means the app must be
 -- able to read, filter and paginate these rows and attach a meaningful `actor`.
--- A trigger only ever sees the database role (`service_role`) — it cannot know
+-- A trigger only ever sees the database role (`service_role`) â€” it cannot know
 -- WHICH human clicked the button. Writing the row from the API layer, where the
 -- session is known, is the only way `actor` carries real information.
 --
@@ -97,7 +97,7 @@ CREATE POLICY "client_isolation_audit_logs"
 
 
 -- ---------------------------------------------------------------------------
--- 2. quotations.customer_id — ADDITIVE ONLY
+-- 2. quotations.customer_id â€” ADDITIVE ONLY
 -- ---------------------------------------------------------------------------
 -- HARD REQUIREMENT: `customer_name` / `contact_no` stay exactly as they are.
 --
@@ -112,7 +112,7 @@ CREATE POLICY "client_isolation_audit_logs"
 -- for display of historical values.
 --
 -- ON DELETE SET NULL: `customers` supports soft-delete, so a hard delete should
--- be rare — but if one ever happens it must NOT cascade into the quotation
+-- be rare â€” but if one ever happens it must NOT cascade into the quotation
 -- ledger. Losing the link is survivable; losing the quotation is not.
 ALTER TABLE public.quotations
   ADD COLUMN IF NOT EXISTS customer_id uuid NULL;
@@ -135,7 +135,7 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- 3. Legacy status normalisation
 -- ---------------------------------------------------------------------------
--- VERIFIED AGAINST LIVE DATA 08-08-2026 — `quotations.status` currently holds:
+-- VERIFIED AGAINST LIVE DATA 08-08-2026 â€” `quotations.status` currently holds:
 --     'draft' = 20,  'Draft' = 20,  'sent' = 6,  'won' = 1
 --
 -- The canonical values are LOWERCASE ('draft' | 'sent' | 'won' | 'lost'), per
@@ -145,7 +145,7 @@ END $$;
 -- This is not cosmetic. The Flutter app survives it only because
 -- `QuotationStatusX.fromString` falls through to `draft` for anything it does
 -- not recognise, and portal_stats/route.ts re-capitalises in JS. But ANY SQL
--- filter of the form `status = 'draft'` silently MISSES 20 of 47 rows — that is
+-- filter of the form `status = 'draft'` silently MISSES 20 of 47 rows â€” that is
 -- half the table vanishing from the Quotations grid and every report.
 --
 -- Normalising the stored data is safe and information-preserving: 'Draft' and
@@ -197,7 +197,7 @@ CREATE INDEX IF NOT EXISTS quotations_client_contact_idx
 -- THE SPEC PREDICATE AS WRITTEN CANNOT BE CREATED ON THIS DATABASE.
 -- `customers.phone` is NOT NULL DEFAULT '' (migration 007), so `phone IS NOT
 -- NULL` is true for every row. Live data has 8 rows with an EMPTY phone, 7 of
--- them under client_id 'kprupvc' — verified 08-08-2026. Creating that index
+-- them under client_id 'kprupvc' â€” verified 08-08-2026. Creating that index
 -- would abort with a duplicate key error on ''.
 --
 -- `phone <> ''` is the predicate that expresses the actual intent ("customers

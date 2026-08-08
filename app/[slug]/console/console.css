@@ -1,0 +1,1275 @@
+/* ==========================================================================
+   console.css — Vitharn Desktop Ops Console
+   ==========================================================================
+
+   PLAIN CSS, NOT TAILWIND. This is not a style preference, it is a hard
+   constraint verified in the repo on 08-08-2026:
+
+     - `tailwindcss@4.2.1` and `@tailwindcss/postcss` sit in devDependencies,
+     - there is NO postcss.config.* and NO tailwind.config.* anywhere,
+     - `app/globals.css` contains no `@import "tailwindcss"`.
+
+   Tailwind is INSTALLED BUT NOT WIRED. Utility classes compile to nothing and
+   render as unstyled plain text — this already shipped once as the review-page
+   bug. Any agent who writes `className="flex gap-2"` in this route tree ships a
+   broken screen. Wiring Tailwind is its own isolated ticket; it must not happen
+   in parallel with this one.
+
+   Class names are prefixed `vc-` (vitharn console) so they cannot collide with
+   the 3,100 lines of existing hand-rolled CSS (admin.css 1226L, landing.css
+   735L, dashboard.css 529L, portal.css 386L) that share the same global scope.
+   ========================================================================== */
+
+.vc-root {
+  /* Tokens are scoped to .vc-root rather than :root. portal.css already owns
+     `--primary` on :root and CustomerPortal.tsx overwrites it at runtime from
+     the tenant's brand colour — leaking that into the console would repaint the
+     grid a different colour per client. */
+  --vc-bg: #f6f7f9;
+  --vc-surface: #ffffff;
+  --vc-surface-2: #fbfcfd;
+  --vc-border: #dfe3e8;
+  --vc-border-strong: #c4cbd4;
+  --vc-text: #14181f;
+  --vc-text-dim: #5b6673;
+  --vc-text-faint: #8a94a1;
+  --vc-accent: #d89b25;
+  --vc-accent-dim: #f5ecd8;
+  --vc-blue: #2563eb;
+  --vc-blue-dim: #e8f0fe;
+  --vc-green: #128a4b;
+  --vc-green-dim: #e3f5eb;
+  --vc-red: #c62828;
+  --vc-red-dim: #fdeaea;
+  --vc-amber: #b26a00;
+  --vc-amber-dim: #fdf1dd;
+
+  --vc-sidebar: 232px;
+  --vc-sidebar-collapsed: 60px;
+  --vc-topbar: 52px;
+  --vc-statusbar: 34px;
+
+  --vc-radius: 6px;
+  --vc-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  --vc-sans: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--vc-sidebar) 1fr;
+  grid-template-rows: var(--vc-topbar) 1fr var(--vc-statusbar);
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar main"
+    "sidebar statusbar";
+  background: var(--vc-bg);
+  color: var(--vc-text);
+  font-family: var(--vc-sans);
+  /* 13px, not 16px. This is a DENSITY tool: the whole premise is seeing the
+     header, every line item, the running totals and the document preview at
+     once. Tally's information density is the feature we are copying, not its
+     colour scheme. */
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+
+.vc-root.vc-collapsed {
+  grid-template-columns: var(--vc-sidebar-collapsed) 1fr;
+}
+
+.vc-root * {
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar
+   -------------------------------------------------------------------------- */
+
+.vc-sidebar {
+  grid-area: sidebar;
+  background: #101722;
+  color: #cfd6e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid #0a0f17;
+}
+
+.vc-brand {
+  height: var(--vc-topbar);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.vc-brand img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: contain;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.vc-brand-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: var(--vc-accent);
+  color: #101722;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.vc-brand-text {
+  min-width: 0;
+}
+
+.vc-brand-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vc-brand-sub {
+  font-size: 10px;
+  color: #7c8798;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vc-nav {
+  flex: 1;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.vc-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--vc-radius);
+  color: #b3bccb;
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.vc-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.vc-nav-item.vc-active {
+  background: var(--vc-accent);
+  color: #101722;
+  font-weight: 700;
+}
+
+.vc-nav-item svg {
+  flex-shrink: 0;
+}
+
+/* The shortcut hint on each nav item. Tally teaches its key map by showing it
+   permanently next to the action, never in a help page nobody opens. */
+.vc-nav-key {
+  margin-left: auto;
+  font-family: var(--vc-mono);
+  font-size: 9.5px;
+  color: #6b7686;
+  letter-spacing: 0.02em;
+}
+
+.vc-nav-item.vc-active .vc-nav-key {
+  color: rgba(16, 23, 34, 0.6);
+}
+
+.vc-collapsed .vc-nav-label,
+.vc-collapsed .vc-nav-key,
+.vc-collapsed .vc-brand-text,
+.vc-collapsed .vc-nav-section {
+  display: none;
+}
+
+.vc-collapsed .vc-nav-item {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.vc-nav-section {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5d6877;
+  padding: 12px 10px 4px;
+}
+
+.vc-sidebar-foot {
+  padding: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Topbar
+   -------------------------------------------------------------------------- */
+
+.vc-topbar {
+  grid-area: topbar;
+  background: var(--vc-surface);
+  border-bottom: 1px solid var(--vc-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+.vc-crumb {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.vc-crumb span {
+  color: var(--vc-text-faint);
+  font-weight: 400;
+}
+
+.vc-topbar-spacer {
+  flex: 1;
+}
+
+/* The Ctrl+K affordance. A command palette nobody can see is a command palette
+   nobody uses; this is a visible button that also states its shortcut. */
+.vc-goto {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface-2);
+  color: var(--vc-text-dim);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vc-goto:hover {
+  border-color: var(--vc-border-strong);
+  background: #fff;
+}
+
+.vc-kbd {
+  font-family: var(--vc-mono);
+  font-size: 10px;
+  padding: 1.5px 4px;
+  border: 1px solid var(--vc-border);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--vc-text-dim);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Main + status bar
+   -------------------------------------------------------------------------- */
+
+.vc-main {
+  grid-area: main;
+  overflow: auto;
+  position: relative;
+}
+
+.vc-pad {
+  padding: 14px;
+}
+
+/* The status bar is LOAD-BEARING, not decoration. Tally's bottom button bar is
+   how users learn the key map, and it must show the shortcuts valid for THIS
+   screen — a static list trains nothing. */
+.vc-statusbar {
+  grid-area: statusbar;
+  background: var(--vc-surface);
+  border-top: 1px solid var(--vc-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  font-size: 11.5px;
+  color: var(--vc-text-dim);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.vc-status-metric {
+  font-family: var(--vc-mono);
+  font-size: 11.5px;
+  color: var(--vc-text);
+}
+
+.vc-status-metric b {
+  font-weight: 700;
+}
+
+.vc-status-spacer {
+  flex: 1;
+}
+
+.vc-status-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--vc-text-faint);
+}
+
+.vc-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--vc-amber);
+  font-weight: 600;
+}
+
+.vc-dirty::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vc-amber);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.vc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.vc-btn:hover:not(:disabled) {
+  background: var(--vc-surface-2);
+  border-color: var(--vc-border-strong);
+}
+
+.vc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vc-btn-primary {
+  background: var(--vc-accent);
+  border-color: #c08a1d;
+  color: #101722;
+}
+
+.vc-btn-primary:hover:not(:disabled) {
+  background: #e5a933;
+  border-color: #c08a1d;
+}
+
+.vc-btn-danger {
+  color: var(--vc-red);
+  border-color: #eccaca;
+}
+
+.vc-btn-danger:hover:not(:disabled) {
+  background: var(--vc-red-dim);
+}
+
+.vc-btn-sm {
+  height: 24px;
+  padding: 0 7px;
+  font-size: 11.5px;
+}
+
+/* --------------------------------------------------------------------------
+   Inputs
+   -------------------------------------------------------------------------- */
+
+.vc-input,
+.vc-select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface);
+  color: var(--vc-text);
+  font-size: 12.5px;
+  font-family: inherit;
+  width: 100%;
+  min-width: 0;
+}
+
+.vc-input:focus,
+.vc-select:focus {
+  outline: none;
+  border-color: var(--vc-accent);
+  box-shadow: 0 0 0 2px var(--vc-accent-dim);
+}
+
+.vc-input.vc-invalid {
+  border-color: var(--vc-red);
+  background: var(--vc-red-dim);
+}
+
+textarea.vc-input {
+  height: auto;
+  padding: 6px 8px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.vc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.vc-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+}
+
+.vc-label .vc-req {
+  color: var(--vc-red);
+}
+
+.vc-err {
+  font-size: 11px;
+  color: var(--vc-red);
+}
+
+/* --------------------------------------------------------------------------
+   Card / panel
+   -------------------------------------------------------------------------- */
+
+.vc-card {
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  overflow: hidden;
+}
+
+.vc-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+}
+
+.vc-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+}
+
+/* --------------------------------------------------------------------------
+   Data grid (TanStack Table v8 renders into this markup)
+   -------------------------------------------------------------------------- */
+
+.vc-grid-wrap {
+  overflow: auto;
+  position: relative;
+  background: var(--vc-surface);
+}
+
+.vc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+
+.vc-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--vc-surface-2);
+  border-bottom: 1px solid var(--vc-border);
+  padding: 6px 9px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.vc-th-sortable {
+  cursor: pointer;
+}
+
+.vc-th-sortable:hover {
+  color: var(--vc-text);
+}
+
+.vc-sort-ind {
+  margin-left: 4px;
+  color: var(--vc-accent);
+}
+
+.vc-table tbody td {
+  padding: 5px 9px;
+  border-bottom: 1px solid #eef0f3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.vc-table tbody tr {
+  cursor: pointer;
+}
+
+.vc-table tbody tr:hover {
+  background: var(--vc-surface-2);
+}
+
+/* Keyboard row focus. Distinct from :hover — the whole point is driving the
+   grid without a mouse, so the focused row must be obvious with the pointer
+   parked somewhere else entirely. */
+.vc-table tbody tr.vc-row-focus {
+  background: var(--vc-blue-dim);
+  box-shadow: inset 2px 0 0 var(--vc-blue);
+}
+
+.vc-num {
+  text-align: right;
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.vc-table th.vc-num {
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Status pill
+   -------------------------------------------------------------------------- */
+
+.vc-pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.vc-pill-draft {
+  background: #eef0f3;
+  color: var(--vc-text-dim);
+}
+.vc-pill-sent {
+  background: var(--vc-blue-dim);
+  color: var(--vc-blue);
+}
+.vc-pill-won {
+  background: var(--vc-green-dim);
+  color: var(--vc-green);
+}
+.vc-pill-lost {
+  background: var(--vc-red-dim);
+  color: var(--vc-red);
+}
+
+/* --------------------------------------------------------------------------
+   Toolbar / pager
+   -------------------------------------------------------------------------- */
+
+.vc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  flex-wrap: wrap;
+}
+
+.vc-search {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+  max-width: 340px;
+}
+
+.vc-pager {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border-top: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+  font-size: 11.5px;
+  color: var(--vc-text-dim);
+}
+
+/* --------------------------------------------------------------------------
+   Split-view editor — THE product. Entry grid left, live preview right.
+   -------------------------------------------------------------------------- */
+
+.vc-split {
+  display: grid;
+  /* minmax(0,...) on BOTH tracks. Without it a wide table forces the column to
+     its intrinsic width, the grid never scrolls internally, and the preview
+     pane gets shoved off-screen — which is the exact "can't see what I entered"
+     complaint this screen exists to fix. */
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 10px;
+  height: 100%;
+  padding: 10px;
+  align-items: start;
+}
+
+.vc-split-left,
+.vc-split-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  max-height: 100%;
+}
+
+.vc-split-right {
+  position: sticky;
+  top: 0;
+}
+
+/* Header fields: 3 columns, everything visible at once. No accordion, no
+   wizard, no "next step" — the single-column mobile form is the problem. */
+.vc-hdr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
+  padding: 11px;
+}
+
+.vc-span-2 {
+  grid-column: span 2;
+}
+.vc-span-3 {
+  grid-column: span 3;
+}
+
+/* Editable item grid */
+.vc-item-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.vc-item-grid thead th {
+  background: var(--vc-surface-2);
+  border-bottom: 1px solid var(--vc-border);
+  padding: 5px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.vc-item-grid td {
+  border-bottom: 1px solid #eef0f3;
+  padding: 0;
+}
+
+.vc-item-grid td.vc-cell-pad {
+  padding: 4px 6px;
+}
+
+/* Cell inputs are borderless so the grid reads as a spreadsheet, which is the
+   interaction model fabricators already know from Excel. */
+.vc-cell-input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 5px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--vc-text);
+  outline: none;
+  min-width: 0;
+}
+
+.vc-cell-input:focus {
+  border-color: var(--vc-accent);
+  background: #fffdf7;
+  box-shadow: inset 0 0 0 1px var(--vc-accent-dim);
+}
+
+.vc-cell-input.vc-num {
+  text-align: right;
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Computed columns are read-only by construction: sqft and amount come from
+   pricing.ts and are never accepted from the client. Rendering them as inputs
+   would imply they are editable and invite a client-supplied price. */
+.vc-cell-calc {
+  padding: 5px 6px;
+  text-align: right;
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--vc-text-dim);
+  background: var(--vc-surface-2);
+  white-space: nowrap;
+}
+
+.vc-cell-calc.vc-amt {
+  color: var(--vc-text);
+  font-weight: 600;
+}
+
+.vc-row-num {
+  width: 30px;
+  text-align: center;
+  color: var(--vc-text-faint);
+  font-family: var(--vc-mono);
+  font-size: 11px;
+  background: var(--vc-surface-2);
+}
+
+.vc-row-del {
+  width: 28px;
+  text-align: center;
+}
+
+.vc-icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--vc-text-faint);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-icon-btn:hover {
+  background: var(--vc-red-dim);
+  color: var(--vc-red);
+}
+
+/* Totals strip — always visible, never revealed "at the end". */
+.vc-totals {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 11px;
+  background: var(--vc-surface-2);
+  border-top: 1px solid var(--vc-border);
+  flex-wrap: wrap;
+}
+
+.vc-total-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.vc-total-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+}
+
+.vc-total-value {
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vc-total-grand .vc-total-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--vc-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Live preview — a client-side render of the document, NOT a PDF round trip.
+   -------------------------------------------------------------------------- */
+
+.vc-preview {
+  background: #fff;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 16px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: calc(100vh - var(--vc-topbar) - var(--vc-statusbar) - 30px);
+}
+
+.vc-pv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  border-bottom: 2px solid var(--vc-accent);
+  padding-bottom: 9px;
+  margin-bottom: 10px;
+}
+
+.vc-pv-co {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--vc-text);
+}
+
+.vc-pv-meta {
+  color: var(--vc-text-dim);
+  font-size: 10.5px;
+}
+
+.vc-pv-title {
+  text-align: right;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+}
+
+.vc-pv-to {
+  margin-bottom: 10px;
+}
+
+.vc-pv-to-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+}
+
+.vc-pv-to-name {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.vc-pv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-bottom: 9px;
+}
+
+.vc-pv-table th {
+  background: #f3f4f6;
+  border: 1px solid #e2e5e9;
+  padding: 3px 5px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--vc-text-dim);
+}
+
+.vc-pv-table td {
+  border: 1px solid #e9ebee;
+  padding: 3px 5px;
+  vertical-align: top;
+}
+
+.vc-pv-empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--vc-text-faint);
+  font-size: 11px;
+  border: 1px dashed var(--vc-border);
+  border-radius: var(--vc-radius);
+  margin-bottom: 9px;
+}
+
+.vc-pv-tot {
+  margin-left: auto;
+  width: 62%;
+  font-size: 11px;
+}
+
+.vc-pv-tot tr td {
+  padding: 2.5px 5px;
+}
+
+.vc-pv-tot tr td:last-child {
+  text-align: right;
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.vc-pv-tot tr.vc-pv-grand td {
+  border-top: 2px solid var(--vc-text);
+  font-weight: 800;
+  font-size: 13px;
+  padding-top: 5px;
+}
+
+/* --------------------------------------------------------------------------
+   KPI cards
+   -------------------------------------------------------------------------- */
+
+.vc-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.vc-kpi {
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 11px 12px;
+}
+
+.vc-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+  margin-bottom: 4px;
+}
+
+.vc-kpi-value {
+  font-family: var(--vc-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.vc-kpi-sub {
+  font-size: 11px;
+  color: var(--vc-text-dim);
+  margin-top: 2px;
+}
+
+.vc-up {
+  color: var(--vc-green);
+}
+.vc-down {
+  color: var(--vc-red);
+}
+
+/* Bar chart */
+.vc-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 110px;
+  padding: 12px 12px 0;
+}
+
+.vc-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.vc-bar {
+  width: 100%;
+  max-width: 42px;
+  background: var(--vc-accent);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 0.25s ease;
+}
+
+.vc-bar-label {
+  font-size: 9.5px;
+  color: var(--vc-text-faint);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Command palette (Ctrl+K / Alt+G)
+   -------------------------------------------------------------------------- */
+
+.vc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 23, 34, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 1000;
+}
+
+.vc-palette {
+  width: min(560px, 92vw);
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border-strong);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgba(16, 23, 34, 0.3);
+  overflow: hidden;
+}
+
+.vc-palette-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--vc-border);
+  padding: 13px 15px;
+  font-size: 14.5px;
+  font-family: inherit;
+  outline: none;
+  color: var(--vc-text);
+}
+
+.vc-palette-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.vc-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: var(--vc-radius);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.vc-palette-item.vc-sel {
+  background: var(--vc-accent-dim);
+}
+
+.vc-palette-hint {
+  margin-left: auto;
+  font-size: 10.5px;
+  color: var(--vc-text-faint);
+}
+
+.vc-palette-empty {
+  padding: 22px;
+  text-align: center;
+  color: var(--vc-text-faint);
+  font-size: 12.5px;
+}
+
+/* --------------------------------------------------------------------------
+   Shortcut cheatsheet (?)
+   -------------------------------------------------------------------------- */
+
+.vc-sheet {
+  width: min(640px, 92vw);
+  max-height: 74vh;
+  overflow-y: auto;
+  background: var(--vc-surface);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgba(16, 23, 34, 0.3);
+  padding: 18px 20px;
+}
+
+.vc-sheet h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+
+.vc-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px 22px;
+  margin-top: 14px;
+}
+
+.vc-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+
+.vc-sheet-row .vc-kbd {
+  min-width: 74px;
+  text-align: center;
+}
+
+.vc-sheet-note {
+  margin-top: 14px;
+  padding: 9px 11px;
+  background: var(--vc-amber-dim);
+  border-left: 3px solid var(--vc-amber);
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: #7a4a00;
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   Misc
+   -------------------------------------------------------------------------- */
+
+.vc-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--vc-text-faint);
+}
+
+.vc-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--vc-text-dim);
+  margin-bottom: 5px;
+}
+
+.vc-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--vc-border);
+  border-top-color: var(--vc-accent);
+  border-radius: 50%;
+  animation: vc-spin 0.65s linear infinite;
+  display: inline-block;
+}
+
+@keyframes vc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vc-toast {
+  position: fixed;
+  bottom: calc(var(--vc-statusbar) + 12px);
+  right: 14px;
+  z-index: 1200;
+  padding: 9px 13px;
+  border-radius: var(--vc-radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(16, 23, 34, 0.18);
+  background: var(--vc-text);
+  color: #fff;
+}
+
+.vc-toast-ok {
+  background: var(--vc-green);
+}
+.vc-toast-err {
+  background: var(--vc-red);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------
+   1024-1279px: the preview pane stacks below the entry grid instead of
+   disappearing. Hiding it would remove the one thing this screen exists to
+   provide. Below 1024px the client component redirects to /<slug>/home — the
+   mobile portal is the correct surface there, and this layout is not usable at
+   that width. */
+
+@media (max-width: 1279px) {
+  .vc-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vc-split-right {
+    position: static;
+  }
+  .vc-hdr-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vc-span-3 {
+    grid-column: span 2;
+  }
+}
+
+/* Print: the document preview only. Nobody wants the sidebar on paper. */
+@media print {
+  .vc-sidebar,
+  .vc-topbar,
+  .vc-statusbar,
+  .vc-toolbar,
+  .vc-split-left,
+  .vc-pager {
+    display: none !important;
+  }
+  .vc-root {
+    position: static;
+    display: block;
+    overflow: visible;
+  }
+  .vc-preview {
+    border: none;
+    max-height: none;
+    padding: 0;
+  }
+}

@@ -21,7 +21,7 @@ async function requireAdmin() {
 }
 
 const SUPABASE_URL =
-  process.env.SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
+  process.env.SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
 
 /** Calls the FY-counter RPC. Falls back to a timestamp number if the RPC is absent. */
 async function nextInvoiceNumber(): Promise<string> {

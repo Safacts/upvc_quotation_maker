@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
+  // Defaults to ".next" — identical behaviour on Vercel and in CI, where the env
+  // var is never set. The override exists for Windows: `next build` deletes and
+  // recreates .next, but a running `npm run start` holds a lock on
+  // .next\serve.log and the build dies with EBUSY. Verify without killing the
+  // dev server:  set NEXT_DIST_DIR=.next-verify&& npm run build
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
   async rewrites() {
     if (isDev) {
