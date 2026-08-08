@@ -137,7 +137,7 @@ export default function LoginPage() {
       const res = await fetch("/api/portal_auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "google", email: gEmail }),
+        body: JSON.stringify({ mode: "google", email: gEmail, credential: response.credential }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "not authorized");
