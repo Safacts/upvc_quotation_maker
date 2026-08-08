@@ -28,7 +28,7 @@ const tools = [
     type: "function",
     function: {
       name: "create_client",
-      description: "Creates a new client account and returns the client ID.",
+      description: "Creates a new client account and returns the client ID. You can pass a full config template via additionalConfig.",
       parameters: {
         type: "object",
         properties: {
@@ -37,8 +37,23 @@ const tools = [
           companyName: { type: "string", description: "The full business name of the client." },
           email: { type: "string", description: "The login email for the client." },
           password: { type: "string", description: "The plaintext password for the client." },
+          additionalConfig: { type: "object", description: "Optional object containing any additional full configuration (e.g., GST details, terms, branding) to store in the client's config." }
         },
         required: ["clientId", "appName", "companyName", "email", "password"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_client",
+      description: "Reads the full JSON configuration of an existing client.",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "string", description: "The client ID to read." }
+        },
+        required: ["clientId"],
       },
     },
   },
@@ -67,7 +82,7 @@ export async function POST(request: NextRequest) {
       return json({ error: "not authorized" }, 403);
     }
 
-    const { prompt } = await request.json();
+    const { prompt, history = [] } = await request.json();
     if (!prompt) {
       return json({ error: "prompt is required" }, 400);
     }
@@ -82,11 +97,12 @@ export async function POST(request: NextRequest) {
       {
         role: "system",
         content: `You are an AI assistant for the Vitharn UPVC Quotation Maker platform admin.
-Your job is to help the admin automatically create client accounts and send emails.
-When the user asks you to create a client, always use the create_client tool. Ensure you generate a reasonable clientId if they don't provide one.
+Your job is to help the admin automatically create client accounts, read existing clients as templates, and send emails.
+When the user asks you to create a client based on another, first use get_client to fetch the existing config, then use create_client and pass that config (minus any overwrites) into additionalConfig.
 After creating a client, you can use the send_email tool to send them their credentials if the user asks you to.
-Never try to modify or access protected clients: venkateshwara, akshaya upvc, kprupvc.`,
+Never try to modify protected clients: venkateshwara, akshaya upvc, kprupvc. You are permitted to use get_client to read them to use as templates.`,
       },
+      ...history,
       { role: "user", content: prompt },
     ];
 
@@ -110,8 +126,17 @@ Never try to modify or access protected clients: venkateshwara, akshaya upvc, kp
         const args = JSON.parse(toolCall.function.arguments);
         let result = "";
 
-        if (functionName === "create_client") {
-          const { clientId, appName, companyName, email, password } = args;
+        if (functionName === "get_client") {
+          const { clientId } = args;
+          const existing = await supaGet("clients", { id: "eq." + clientId });
+          if (existing && existing.length > 0) {
+            result = JSON.stringify(existing[0].config || {});
+            actionLogs.push(`Read client: ${clientId}`);
+          } else {
+            result = "Error: Client not found.";
+          }
+        } else if (functionName === "create_client") {
+          const { clientId, appName, companyName, email, password, additionalConfig = {} } = args;
           if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
             result = "Error: Cannot modify protected client.";
           } else {
@@ -123,6 +148,7 @@ Never try to modify or access protected clients: venkateshwara, akshaya upvc, kp
               const hash = sha256(password);
               // Insert client
               const config = {
+                ...additionalConfig,
                 clientId,
                 appName,
                 companyName,

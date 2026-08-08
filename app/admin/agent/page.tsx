@@ -25,10 +25,11 @@ export default function AgentPage() {
     setLoading(true);
 
     try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
       const res = await fetch("/api/admin/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage }),
+        body: JSON.stringify({ prompt: userMessage, history }),
       });
       const data = await res.json();
       
