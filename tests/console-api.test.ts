@@ -39,14 +39,18 @@ function record(op: Call["op"], table: string, qs: any, body?: any) {
   return fixtures[table] ?? [];
 }
 
+const supaGetSpy = async (t: string, qs: any = {}) => record("get", t, qs);
+const supaPostSpy = async (t: string, body: any) => {
+  record("post", t, {}, body);
+  return fixtures[t + ":insert"] ?? [{ id: "new-quote-id", quote_no: "Q-1" }];
+};
+const supaPatchSpy = async (t: string, qs: any, body: any) => record("patch", t, qs, body);
+
 vi.mock("@/lib/supabase", () => ({
   isServiceKeyConfigured: () => true,
-  supaGet: async (t: string, qs: any = {}) => record("get", t, qs),
-  supaPost: async (t: string, body: any) => {
-    record("post", t, {}, body);
-    return fixtures[t + ":insert"] ?? [{ id: "new-quote-id", quote_no: "Q-1" }];
-  },
-  supaPatch: async (t: string, qs: any, body: any) => record("patch", t, qs, body),
+  supaGet: supaGetSpy,
+  supaPost: supaPostSpy,
+  supaPatch: supaPatchSpy,
   supaDelete: async (t: string, qs: any = {}) => record("delete", t, qs),
   supaCount: async (t: string, qs: any = {}) => {
     record("get", t, qs);
@@ -56,6 +60,12 @@ vi.mock("@/lib/supabase", () => ({
     record("get", t, qs);
     return { rows: fixtures[t] ?? [], truncated: false };
   },
+  // The safe wrappers delegate to the underlying functions in tests (the mock
+  // DB has every column, so the missing-column retry never fires). This keeps
+  // the behavioural assertions on `calls` working unchanged.
+  supaGetSafe: supaGetSpy,
+  supaPostSafe: supaPostSpy,
+  supaPatchSafe: supaPatchSpy,
 }));
 
 let currentSession: any = null;

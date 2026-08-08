@@ -1,8 +1,8 @@
--- Phase 0 Migration 008 — `products` table
+﻿-- Phase 0 Migration 008 â€” `products` table
 -- Master data for the desktop dashboard (product catalogue, rate cards, etc.)
 --
--- Idempotent — safe to re-run. Apply via the pooler
--- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.effxrwrbsjduvhmorvrq),
+-- Idempotent â€” safe to re-run. Apply via the pooler
+-- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.gumpmnbjdtzajhysnnaz),
 -- then run: NOTIFY pgrst, 'reload schema';
 
 CREATE TABLE IF NOT EXISTS products (
@@ -25,7 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_products_name          ON products(name);
 CREATE INDEX IF NOT EXISTS idx_products_category      ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_soft_deleted  ON products(soft_deleted);
 
--- RLS — same pattern as customers / quotations
+-- RLS â€” same pattern as customers / quotations
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 -- Drop then create (idempotent re-run support)

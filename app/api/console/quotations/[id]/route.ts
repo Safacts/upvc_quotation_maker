@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
-import { supaGet, supaPatch, supaPost, supaDelete } from "@/lib/supabase";
+import { supaGet, supaPatch, supaPost, supaDelete, supaGetSafe, supaPatchSafe } from "@/lib/supabase";
 import { quotationTotals } from "@/lib/pricing";
 import { quotationWriteSchema, formatZodError } from "@/lib/console-schemas";
 
@@ -58,7 +58,7 @@ export async function GET(
     if (!gate.ok) return gate.error;
     const { id } = await params;
 
-    const rows = await supaGet("quotations", {
+    const rows = await supaGetSafe("quotations", {
       id: "eq." + id,
       // Both predicates on the SAME request: the row must exist AND be ours.
       client_id: "eq." + gate.clientId,
@@ -145,7 +145,7 @@ export async function PATCH(
       }
     }
 
-    await supaPatch(
+    await supaPatchSafe(
       "quotations",
       { id: "eq." + id, client_id: "eq." + clientId },
       {

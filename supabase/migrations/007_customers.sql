@@ -1,11 +1,11 @@
--- Phase 0 Migration 007 — `customers` table
+﻿-- Phase 0 Migration 007 â€” `customers` table
 -- Master data for the desktop dashboard (Customer Ledger, dropdowns, etc.)
 --
 -- Columns match the existing `quotations` free-text fields (customer_name, contact_no,
 -- email, address) so backfill is a straight INSERT...SELECT DISTINCT.
 --
--- Idempotent — safe to re-run. Apply via the pooler
--- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.effxrwrbsjduvhmorvrq),
+-- Idempotent â€” safe to re-run. Apply via the pooler
+-- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.gumpmnbjdtzajhysnnaz),
 -- then run: NOTIFY pgrst, 'reload schema';
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -33,7 +33,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_client_phone
   ON customers(client_id, phone)
   WHERE phone <> '' AND soft_deleted = false;
 
--- RLS — same pattern as quotations / measured_items / unmeasured_items
+-- RLS â€” same pattern as quotations / measured_items / unmeasured_items
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 
 -- Drop then create (idempotent re-run support)

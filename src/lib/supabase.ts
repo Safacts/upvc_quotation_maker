@@ -209,6 +209,124 @@ export function uploadLogoFile(
   return uploadToStorage(filename, binary, mime);
 }
 
+/**
+ * Call a Supabase PostgreSQL RPC by name with a JSON params object.
+ *
+ * RPCs take a single JSON argument: PostgREST resolves `rpc/foo` against
+ * `CREATE FUNCTION foo(json)` and forwards the body as that one parameter.
+ * We send the params object directly so named keys inside it match the PG args.
+ *
+ * Throws on non-2xx — callers decide whether to fall back (e.g. migration not
+ * yet applied) or propagate.
+ */
+export async function supabaseRpc(name: string, params: Record<string, any> = {}): Promise<any> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      ...AUTH_HEADERS,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(params),
+  });
+  return parseResponse(res);
+}
+
 export function isServiceKeyConfigured(): boolean {
   return !!SERVICE_ROLE_KEY;
+}
+
+// ============================================================================
+//  Missing-column fallback
+// ============================================================================
+// PostgREST returns HTTP 400 with code 42703 when a query references a column
+// that does not exist in the live schema. Migration 009 adds `customer_id` to
+// `quotations`; until it is applied, every route that touches the column 400s.
+//
+// Rather than hard-coding "skip customer_id until further notice", this helper
+// makes every supabase call self-healing: it tries the request as written, and
+// ONLY on a 42703 does it strip the offending column from the select/body and
+// retry. Once the migration lands, the first attempt succeeds and the fallback
+// never fires. This keeps the column references in the routes (so they start
+// working the moment the DDL is applied) while keeping the console usable today.
+
+const UNDEFINED_COLUMN = /column [\w.]+\.(\w+) does not exist/;
+
+function extractMissingColumn(err: any): string | null {
+  const m = err?.message?.match(UNDEFINED_COLUMN);
+  return m ? m[1] : null;
+}
+
+function stripColumnFromSelect(select: string, col: string): string {
+  return select
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s !== col && s !== "")
+    .join(",");
+}
+
+function stripColumnFromRecord(body: Record<string, any>, col: string): Record<string, any> {
+  const next: Record<string, any> = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (k !== col) next[k] = v;
+  }
+  return next;
+}
+
+/**
+ * Like supaGet, but transparently retries without a column that does not exist.
+ */
+export async function supaGetSafe(
+  path: string,
+  qs: Record<string, QsValue> = {},
+): Promise<any> {
+  try {
+    return await supaGet(path, qs);
+  } catch (err) {
+    const col = extractMissingColumn(err);
+    if (!col || !qs.select) throw err;
+    const cleaned = stripColumnFromSelect(String(qs.select), col);
+    if (!cleaned) throw err;
+    return await supaGet(path, { ...qs, select: cleaned });
+  }
+}
+
+/**
+ * Like supaPost, but transparently retries without a column that does not exist.
+ * Handles both single-object and array (bulk insert) bodies.
+ */
+export async function supaPostSafe(
+  path: string,
+  body: Record<string, any> | Record<string, any>[],
+): Promise<any> {
+  try {
+    return await supaPost(path, body);
+  } catch (err) {
+    const col = extractMissingColumn(err);
+    if (!col) throw err;
+    if (Array.isArray(body)) {
+      return await supaPost(
+        path,
+        body.map((row) => stripColumnFromRecord(row, col)),
+      );
+    }
+    return await supaPost(path, stripColumnFromRecord(body, col));
+  }
+}
+
+/**
+ * Like supaPatch, but transparently retries without a column that does not exist.
+ */
+export async function supaPatchSafe(
+  path: string,
+  qs: Record<string, QsValue>,
+  body: Record<string, any>,
+): Promise<any> {
+  try {
+    return await supaPatch(path, qs, body);
+  } catch (err) {
+    const col = extractMissingColumn(err);
+    if (!col) throw err;
+    return await supaPatch(path, qs, stripColumnFromRecord(body, col));
+  }
 }

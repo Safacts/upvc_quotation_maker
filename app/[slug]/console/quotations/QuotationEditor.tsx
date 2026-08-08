@@ -377,7 +377,7 @@ export default function QuotationEditor({
       toast("Save the quotation first to generate a PDF", "info");
       return;
     }
-    window.open(`/${slug}/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
+    window.open(`/api/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
   }, [savedId, slug, toast]);
 
   // ---- Email the quotation -------------------------------------------------
@@ -394,7 +394,7 @@ export default function QuotationEditor({
       return;
     }
     try {
-      const pdfRes = await fetch(`/${slug}/console/quotations/${savedId}/pdf`, {
+      const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf`, {
         credentials: "same-origin",
       });
       if (!pdfRes.ok) {
@@ -499,29 +499,40 @@ export default function QuotationEditor({
    */
   const onGridKeyDown = useCallback(
     (e: React.KeyboardEvent, rowIndex: number, colName: string) => {
+      // In the description textarea, let Enter insert a newline naturally — do
+      // NOT preventDefault or we break multiline descriptions. Arrow keys still
+      // navigate between rows, and Shift+Enter also works for newlines.
+      if (e.key === "Enter" && colName === "description") {
+        return;
+      }
       if (e.key === "Enter") {
         e.preventDefault();
         if (rowIndex === measured.length - 1) {
           addMeasured();
           return;
         }
-        const el = gridRef.current?.querySelector<HTMLInputElement>(
-          `tr[data-r="${rowIndex + 1}"] input[data-c="${colName}"]`,
+        // The description column is a textarea, not an input — broaden the
+        // selector so arrow/Enter navigation from description lands on the
+        // next row's description textarea (or any other cell) correctly.
+        const el = gridRef.current?.querySelector<HTMLElement>(
+          `tr[data-r="${rowIndex + 1}"] [data-c="${colName}"]`,
         );
         el?.focus();
-        el?.select();
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+          el.select();
+        }
         setFocusedMeasured(rowIndex + 1);
       } else if (e.key === "ArrowDown" && rowIndex < measured.length - 1) {
         e.preventDefault();
-        const el = gridRef.current?.querySelector<HTMLInputElement>(
-          `tr[data-r="${rowIndex + 1}"] input[data-c="${colName}"]`,
+        const el = gridRef.current?.querySelector<HTMLElement>(
+          `tr[data-r="${rowIndex + 1}"] [data-c="${colName}"]`,
         );
         el?.focus();
         setFocusedMeasured(rowIndex + 1);
       } else if (e.key === "ArrowUp" && rowIndex > 0) {
         e.preventDefault();
-        const el = gridRef.current?.querySelector<HTMLInputElement>(
-          `tr[data-r="${rowIndex - 1}"] input[data-c="${colName}"]`,
+        const el = gridRef.current?.querySelector<HTMLElement>(
+          `tr[data-r="${rowIndex - 1}"] [data-c="${colName}"]`,
         );
         el?.focus();
         setFocusedMeasured(rowIndex - 1);
@@ -757,7 +768,7 @@ export default function QuotationEditor({
                         />
                       </td>
                       <td>
-                        <input
+                        <textarea
                           className="vc-cell-input"
                           data-c="description"
                           value={row.description}
@@ -765,7 +776,7 @@ export default function QuotationEditor({
                           onChange={(e) => updateMeasured(i, "description", e.target.value)}
                           onKeyDown={(e) => onGridKeyDown(e, i, "description")}
                         />
-                      </td>
+                       </td>
                       <td>
                         <input
                           className="vc-cell-input vc-num"

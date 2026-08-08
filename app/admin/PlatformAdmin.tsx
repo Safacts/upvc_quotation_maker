@@ -6,8 +6,11 @@ import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
 import "./admin.css";
 
-const API = "https://effxrwrbsjduvhmorvrq.supabase.co/rest/v1";
-const KEY = "sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN";
+// Supabase project `gumpmnbjdtzajhysnnaz` (migrated 08-08-2026).
+// This is the PUBLIC anon key — safe in client bundles; RLS is the boundary.
+const API = "https://gumpmnbjdtzajhysnnaz.supabase.co/rest/v1";
+const KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs";
 const headers = {
   apikey: KEY,
   Authorization: "Bearer " + KEY,

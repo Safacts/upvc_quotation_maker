@@ -1,8 +1,8 @@
-import psycopg2
+﻿import psycopg2
 import os
 
 SUPABASE_DB_PASSWORD = os.environ['SUPABASE_DB_PASSWORD']
-DB_URL = f"postgresql://postgres:{SUPABASE_DB_PASSWORD}@db.effxrwrbsjduvhmorvrq.supabase.co:5432/postgres"
+DB_URL = f"postgresql://postgres:{SUPABASE_DB_PASSWORD}@db.gumpmnbjdtzajhysnnaz.supabase.co:5432/postgres"
 
 SQL = """
 ALTER TABLE quotations

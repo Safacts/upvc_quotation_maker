@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getCachedClients, findClientBySlug, slugify } from "@/lib/slug";
 
 // Serves the Flutter web app at /upvc/<slug> with a per-client branded splash
@@ -49,8 +49,8 @@ export async function GET(
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="${esc(splashName)}">
-  <link rel="preconnect" href="https://effxrwrbsjduvhmorvrq.supabase.co">
-  <link rel="dns-prefetch" href="https://effxrwrbsjduvhmorvrq.supabase.co">
+  <link rel="preconnect" href="https://gumpmnbjdtzajhysnnaz.supabase.co">
+  <link rel="dns-prefetch" href="https://gumpmnbjdtzajhysnnaz.supabase.co">
   <link rel="preload" href="flutter_bootstrap.js" as="script">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,7 +77,7 @@ export async function GET(
   <div id="loading">
     <img src="${esc(splashIcon)}" alt="${esc(splashName)}">
     <h2>${esc(splashName)}</h2>
-    <p>Loading…</p>
+    <p>Loadingâ€¦</p>
     <div class="spinner"></div>
   </div>
   <script src="flutter_bootstrap.js" async></script>

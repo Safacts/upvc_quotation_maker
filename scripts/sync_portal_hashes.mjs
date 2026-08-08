@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 // Syncs clients.config.portalPasswordHash from clients.password_hash.
 // Requires `pg`: run `npm install pg` in the project root first.
 import { readFileSync } from "node:fs";
@@ -25,7 +25,7 @@ if (!dbPassword) {
 }
 
 const client = new pg.Client({
-  host: "db.effxrwrbsjduvhmorvrq.supabase.co",
+  host: "db.gumpmnbjdtzajhysnnaz.supabase.co",
   port: 5432,
   user: "postgres",
   database: "postgres",

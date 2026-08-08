@@ -6,7 +6,7 @@ import {
   PDFPage,
 } from "pdf-lib";
 import { hexToRgb } from "./brand";
-import { quotationTotals, measuredLineSqft } from "./pricing";
+import { quotationTotals, measuredLineSqft, sqft, measuredLineTotal, unmeasuredLineTotal } from "./pricing";
 import type { QuotationTotals } from "./pricing";
 
 // Server-side uPVC QUOTATION PDF.
@@ -337,8 +337,12 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     for (let idx = 0; idx < data.measured.length; idx++) {
       const m = data.measured[idx];
       if (y < 100) { page = doc.addPage(A4); y = H; }
-      const sft = measuredLineSqft({ width: m.width, height: m.height, units: m.units });
-      const totalSftVal = (m.width / 304.8) * (m.height / 304.8) * m.units;
+      // Dart parity: sft = (w/304.8)*(h/304.8); totalSft = sft*units; total = totalSft*rate.
+      // Column 7 "SFT" must show per-unit sqft — using measuredLineSqft() here would
+      // double-multiply by units and make it identical to column 8 "T.SFT".
+      const unitSqft = sqft(m.width, m.height);
+      const totalSqft = measuredLineSqft({ width: m.width, height: m.height, units: m.units });
+      const lineTotal = measuredLineTotal({ width: m.width, height: m.height, units: m.units, rate: m.rate });
       const cells = [
         String(idx + 1),
         m.code,
@@ -347,10 +351,10 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
         String(m.height),
         String(m.units),
         m.glass,
-        sft.toFixed(2),
-        totalSftVal.toFixed(2),
+        unitSqft.toFixed(2),
+        totalSqft.toFixed(2),
         inr(m.rate),
-        inr(sft * m.rate),
+        inr(lineTotal),
       ];
       y = drawRow(cells, y);
       page.drawRectangle({ x: M, y, width: contentW, height: 0.5, color: C.line });
@@ -376,7 +380,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     for (let idx = 0; idx < data.unmeasured.length; idx++) {
       const u = data.unmeasured[idx];
       if (y < 100) { page = doc.addPage(A4); y = H; }
-      const cells = [String(idx + 1), u.description, String(u.units), inr(u.rate), inr(u.units * u.rate)];
+      const cells = [String(idx + 1), u.description, String(u.units), inr(u.rate), inr(unmeasuredLineTotal({ units: u.units, rate: u.rate }))];
       let x = M;
       for (let i = 0; i < cells.length; i++) {
         const cw = colWidths[i];

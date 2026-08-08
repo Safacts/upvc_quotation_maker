@@ -740,18 +740,28 @@ textarea.vc-input {
   padding: 4px 6px;
 }
 
-/* Cell inputs are borderless so the grid reads as a spreadsheet, which is the
-   interaction model fabricators already know from Excel. */
+/* Cell inputs have visible borders so fields are clearly distinguishable from
+    labels and computed values. The previous "borderless spreadsheet" look made
+    inputs invisible until focused — indistinguishable from plain text. */
 .vc-cell-input {
   width: 100%;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
   padding: 5px 6px;
   font-size: 12px;
   font-family: inherit;
   color: var(--vc-text);
   outline: none;
   min-width: 0;
+  border-radius: 3px;
+}
+
+/* Description column uses a textarea so Enter inserts a newline. */
+textarea.vc-cell-input {
+  resize: vertical;
+  min-height: 32px;
+  line-height: 1.4;
+  font-family: inherit;
 }
 
 .vc-cell-input:focus {
@@ -767,8 +777,12 @@ textarea.vc-input {
 }
 
 /* Computed columns are read-only by construction: sqft and amount come from
-   pricing.ts and are never accepted from the client. Rendering them as inputs
-   would imply they are editable and invite a client-supplied price. */
+    pricing.ts and are never accepted from the client. Rendering them as inputs
+    would imply they are editable and invite a client-supplied price.
+
+    Visual language: NO border (unlike editable cells), dimmer background,
+    "not-allowed" cursor, and `user-select: none` — so the eye reads them as
+    OUTPUT, not INPUT, even at a glance. */
 .vc-cell-calc {
   padding: 5px 6px;
   text-align: right;
@@ -776,7 +790,10 @@ textarea.vc-input {
   font-variant-numeric: tabular-nums;
   color: var(--vc-text-dim);
   background: var(--vc-surface-2);
+  border: 1px solid #e8eaed;
   white-space: nowrap;
+  cursor: not-allowed;
+  user-select: none;
 }
 
 .vc-cell-calc.vc-amt {

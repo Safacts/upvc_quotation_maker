@@ -102,7 +102,7 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     lastBuildTriggeredAt: cfg.lastBuildTriggeredAt ? String(cfg.lastBuildTriggeredAt) : undefined,
     lastBuildCompletedAt: cfg.lastBuildCompletedAt ? String(cfg.lastBuildCompletedAt) : undefined,
     isActive: cfg.isActive !== false,
-    supabaseUrl: String(cfg.supabaseUrl || "https://effxrwrbsjduvhmorvrq.supabase.co"),
+    supabaseUrl: String(cfg.supabaseUrl || "https://gumpmnbjdtzajhysnnaz.supabase.co"),
     supabaseAnonKey: String(cfg.supabaseAnonKey || ""),
     adminEmails: Array.isArray(cfg.adminEmails) ? cfg.adminEmails.map(String) : [],
     landingHeroTitle: String(cfg.landingHeroTitle || ""),

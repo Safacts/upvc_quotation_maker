@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+﻿import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
@@ -13,11 +13,11 @@ for (const arg of args) {
 }
 
 if (!clientId) {
-  console.error("❌ Please specify a client ID. Example: node scripts/build-client-apk.mjs --client=venkateshwara");
+  console.error("âŒ Please specify a client ID. Example: node scripts/build-client-apk.mjs --client=venkateshwara");
   process.exit(1);
 }
 
-console.log(`🚀 Starting White-Labeled APK Build for Client: ${clientId}...`);
+console.log(`ðŸš€ Starting White-Labeled APK Build for Client: ${clientId}...`);
 
 const rootDir = process.cwd();
 const manifestPath = path.join(rootDir, "android", "app", "src", "main", "AndroidManifest.xml");
@@ -31,8 +31,8 @@ if (!fs.existsSync(outputsDir)) {
 const originalManifest = fs.readFileSync(manifestPath, "utf8");
 
 try {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_GmfOXLriCvXdppszTkF6Mg_FuLXt6PN";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs";
 
   let appName = clientId.toUpperCase() + " UPVC Quote";
   
@@ -45,31 +45,31 @@ try {
       appName = data[0].config.appName;
     }
   } catch (e) {
-    console.warn("⚠️ Could not fetch client config from Supabase, using fallback app name.");
+    console.warn("âš ï¸ Could not fetch client config from Supabase, using fallback app name.");
   }
 
-  console.log(`📱 Customizing App Title: "${appName}"`);
+  console.log(`ðŸ“± Customizing App Title: "${appName}"`);
 
   // Patch AndroidManifest.xml
   let updatedManifest = originalManifest.replace(/android:label="[^"]*"/, `android:label="${appName}"`);
   fs.writeFileSync(manifestPath, updatedManifest, "utf8");
 
   // Run Flutter Build
-  console.log("🔨 Executing Flutter release build...");
+  console.log("ðŸ”¨ Executing Flutter release build...");
   execSync("flutter build apk --release", { stdio: "inherit" });
 
   const apkSource = path.join(rootDir, "build", "app", "outputs", "flutter-apk", "app-release.apk");
   const apkTarget = path.join(outputsDir, `${clientId}-upvc-quote.apk`);
 
   fs.copyFileSync(apkSource, apkTarget);
-  console.log(`✅ Build complete! APK saved to: ${apkTarget}`);
+  console.log(`âœ… Build complete! APK saved to: ${apkTarget}`);
 
   const downloadUrl = `/downloads/${clientId}-upvc-quote.apk`;
-  console.log(`🔗 App Download URL ready: ${downloadUrl}`);
-  console.log("🎉 Successfully completed Pro APK Build Process!");
+  console.log(`ðŸ”— App Download URL ready: ${downloadUrl}`);
+  console.log("ðŸŽ‰ Successfully completed Pro APK Build Process!");
 
 } catch (err) {
-  console.error("❌ Build failed:", err.message);
+  console.error("âŒ Build failed:", err.message);
 } finally {
   // Restore original manifest
   fs.writeFileSync(manifestPath, originalManifest, "utf8");

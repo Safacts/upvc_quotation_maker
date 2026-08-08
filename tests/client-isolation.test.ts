@@ -667,6 +667,21 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
       join("app", "api", "save_client", "route.ts"), // body-hash auth (tracked ISO-06)
     ]);
 
+    /**
+     * Recognised authentication entry points.
+     *
+     * `getSession` is the raw primitive. `requireConsoleSession` is the
+     * `/api/console/*` guard in src/lib/console-auth.ts, which calls
+     * `getSession()` and then `resolveTenant()` — a STRICTLY STRONGER check than
+     * a bare `getSession()`, because it also fails closed on the `signup` role
+     * that `/api/portal_auth` will mint for any unrecognised email.
+     *
+     * This list is deliberately short and must stay that way. Adding a name here
+     * asserts that the named function cannot return a usable tenant id to an
+     * unauthenticated caller. Do not add a helper that merely *reads* a session.
+     */
+    const AUTH_ENTRYPOINTS = ["getSession", "requireConsoleSession"];
+
     const offenders: string[] = [];
     for (const file of files) {
       const rel = file.slice(process.cwd().length + 1);
@@ -675,8 +690,8 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
       const touchesTenant = TENANT_TABLES.some(
         (t) => src.includes(`"${t}"`) || src.includes(`'${t}'`),
       );
-      if (touchesTenant && !src.includes("getSession")) {
-        offenders.push(`${rel} → queries a tenant table with no getSession() import`);
+      if (touchesTenant && !AUTH_ENTRYPOINTS.some((fn) => src.includes(fn))) {
+        offenders.push(`${rel} → queries a tenant table with no session guard`);
       }
     }
 

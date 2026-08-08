@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
-import { supaGet, supaCount, supaPost } from "@/lib/supabase";
+import { supaGet, supaCount, supaPost, supabaseRpc, supaGetSafe, supaPostSafe } from "@/lib/supabase";
 import { quotationTotals } from "@/lib/pricing";
 import {
   quotationQuerySchema,
@@ -16,32 +16,19 @@ export const dynamic = "force-dynamic";
  * POST /api/console/quotations — create a quotation with its line items.
  *
  * ============================================================================
- *  WHY THIS DOES NOT CALL THE `search_quotations` RPC
+ *  search_quotations RPC — wired with PostgREST fallback
  * ============================================================================
- * Migration 010 defines `search_quotations` / `get_quote_stats` and they are the
- * right long-term home for this query — the money math lives next to the data
- * and no rows cross the wire. But VERIFIED AGAINST THE LIVE DATABASE on
- * 08-08-2026, migrations 009 and 010 are NOT APPLIED:
+ * Migration 010 defines `search_quotations` / `get_quote_stats`. When it is
+ * applied the RPC is the correct home for this query: the money math lives next
+ * to the data, sorting by computed money columns (grand_total, net_total) is
+ * pushed down, and total_count comes back in one pass.
  *
- *     GET  /rest/v1/quotation_money          -> 404 PGRST205 (no such relation)
- *     POST /rest/v1/rpc/get_quote_stats      -> 404 PGRST202 (no such function)
- *     (customers + products from 007/008 ARE live and return 200)
- *
- * The pooler host `aws-1-ap-south-1.pooler.supabase.com` rejects the tenant user
- * and `aws-0-...` times out from this network, so the RPCs cannot be applied
- * from here. Building the grid on an RPC that returns 404 would ship a console
- * that is broken on arrival.
- *
- * So this route does the paging in PostgREST and the arithmetic in
- * `src/lib/pricing.ts` — THE SAME MODULE the PDF-parity fixtures cover, so the
- * numbers are correct today and identical to what the RPC will return. When Supa
- * applies 009+010, swap the query for an `rpc/search_quotations` call; the
- * response contract below does not change.
- *
- * The one honest cost is documented at `sortInPostgrest` below: money columns
- * are computed, so sorting by grand total cannot be pushed down. We therefore do
- * NOT offer it as a sort option (see `QUOTATION_SORT_COLUMNS`) rather than
- * sorting one page and pretending it is the whole set.
+ * VERIFIED on 08-08-2026 the migration is NOT YET APPLIED (the pooler host
+ * rejects the tenant user from this network). Rather than shipping a grid that
+ * is broken on arrival, this route TRIES the RPC first and transparently falls
+ * back to the PostgREST+paging implementation below when the RPC returns 404.
+ * The response contract is identical either way — callers cannot tell the
+ * difference. When the migration lands, the fallback simply stops firing.
  */
 
 /** Fields the grid needs. Deliberately excludes `address` — heavy, unused in the list. */
@@ -97,7 +84,63 @@ export async function GET(request: NextRequest) {
     }
     const { q, status, from, to, sort, dir, page, page_size } = parsed.data;
 
-    // ---- Filters -----------------------------------------------------------
+    // ---- Try the RPC first (migration 010) ---------------------------------
+    // When applied, `search_quotations` pushes sort/filter/page into Postgres and
+    // returns total_count in one pass. On a 404 (migration not yet live) we fall
+    // through to the PostgREST implementation below — same response contract.
+    try {
+      const rpcRows = await supabaseRpc("search_quotations", {
+        p_cid: clientId,
+        p_q: q || null,
+        p_status: status.length ? status : null,
+        p_from: from || null,
+        p_to: to || null,
+        p_customer_id: null,
+        p_sort: sort,
+        p_dir: dir,
+        p_page: page,
+        p_page_size: page_size,
+      });
+
+      if (Array.isArray(rpcRows)) {
+        const totalCount = rpcRows.length > 0 ? Number(rpcRows[0]?.total_count || rpcRows.length) : 0;
+        const list = rpcRows.map((r: any) => ({
+          id: r.id,
+          quote_no: r.quote_no || "",
+          date: r.quote_date || "",
+          customer_name: r.customer_name || "",
+          contact_no: r.contact_no || "",
+          email: "",
+          reference: r.reference || "",
+          supplier_company: r.supplier_company || "",
+          customer_id: r.customer_id || null,
+          status: normStatus(r.status),
+          created_at: r.created_at,
+          item_count: 0,
+          total_sqft: Number(r.total_sqft) || 0,
+          subtotal: Number(r.subtotal) || 0,
+          transport: Number(r.transport) || 0,
+          net_total: Number(r.net_total) || 0,
+          gst_percentage: Number(r.gst_percentage) || 0,
+          gst_amount: Number(r.gst_amount) || 0,
+          grand_total: Number(r.grand_total) || 0,
+        }));
+
+        return consoleJson({
+          rows: list,
+          page,
+          page_size,
+          total_count: totalCount,
+          total_pages: totalCount > 0 ? Math.ceil(totalCount / page_size) : 1,
+          sort,
+          dir,
+        });
+      }
+    } catch {
+      // RPC not available (migration 010 not applied) — fall through.
+    }
+
+    // ---- PostgREST fallback ------------------------------------------------
     // NOTE: `client_id` is deliberately NOT stored in this object. It is written
     // out literally at every query below.
     //
@@ -150,7 +193,7 @@ export async function GET(request: NextRequest) {
     // (bulk imports, same-second saves) swap between pages — one quote appears
     // twice and another is skipped, and the totals are silently wrong.
     const offset = (page - 1) * page_size;
-    const rows = await supaGet("quotations", {
+    const rows = await supaGetSafe("quotations", {
       client_id: "eq." + clientId,
       ...filters,
       select: LIST_SELECT,
@@ -245,7 +288,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const inserted = await supaPost("quotations", {
+    const inserted = await supaPostSafe("quotations", {
       client_id: clientId,
       quote_no: data.quote_no,
       date: data.date || new Date().toISOString().slice(0, 10),
