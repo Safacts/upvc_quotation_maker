@@ -162,30 +162,65 @@ export function useUnsavedChangesWarning(isDirty: boolean): void {
  * the actual bindings cannot drift apart. A cheatsheet that lists a shortcut
  * nobody implemented is exactly the "product feels broken" failure we are
  * trying to avoid.
+ *
+ * `group` drives the section headings in the ? overlay. A flat list of twenty
+ * shortcuts is a wall of text nobody reads; grouped by task, a user scans to
+ * "Entry" and finds the three keys they actually needed.
  */
+export type KeymapGroup =
+  | "Navigate"
+  | "Entry"
+  | "Records"
+  | "View"
+  | "Output";
+
 export const CONSOLE_KEYMAP: Array<{
   keys: string;
   action: string;
+  group: KeymapGroup;
   tally?: string;
   note?: string;
 }> = [
-  { keys: "Ctrl+K", action: "Go To / command palette", tally: "Alt+G" },
-  { keys: "Alt+G", action: "Go To (Tally muscle memory)", tally: "Alt+G" },
-  { keys: "Ctrl+S", action: "Save", tally: "Ctrl+A", note: "Ctrl+A is browser select-all" },
-  { keys: "Ctrl+Enter", action: "Save (alternate)", tally: "Ctrl+A" },
-  { keys: "Esc", action: "Back / close (asks if unsaved)", tally: "Ctrl+Q" },
-  { keys: "Alt+N", action: "New quotation", tally: "Alt+C", note: "Ctrl+N is browser new-window" },
-  { keys: "Alt+C", action: "Create master on the fly", tally: "Alt+C" },
-  { keys: "Alt+I", action: "Insert line item row", tally: "Alt+I" },
-  { keys: "Alt+X", action: "Delete focused row", tally: "Alt+X" },
-  { keys: "Alt+D", action: "Duplicate as new draft", tally: "Alt+2" },
-  { keys: "Enter", action: "Drill down / open row", tally: "Enter" },
-  { keys: "↑ / ↓", action: "Move row focus", tally: "↑ / ↓" },
-  { keys: "Ctrl+F", action: "Focus search" },
-  { keys: "Ctrl+E", action: "Export (CSV on grids, PDF in editor)", tally: "Ctrl+E" },
-  { keys: "Ctrl+P", action: "Print", tally: "Ctrl+P" },
-  { keys: "F2", action: "Period selector", tally: "F2" },
-  { keys: "Ctrl+,", action: "Screen config", tally: "F12", note: "F12 is DevTools" },
-  { keys: "PgUp / PgDn", action: "Previous / next page", tally: "PgUp / PgDn" },
-  { keys: "?", action: "This cheatsheet" },
+  // ---- Navigate ----
+  { keys: "Ctrl+K", action: "Go To / command palette", group: "Navigate", tally: "Alt+G" },
+  { keys: "Alt+G", action: "Go To (Tally muscle memory)", group: "Navigate", tally: "Alt+G" },
+  { keys: "Ctrl+F", action: "Focus search", group: "Navigate" },
+  { keys: "Enter", action: "Drill down / open row", group: "Navigate", tally: "Enter" },
+  { keys: "↑ / ↓", action: "Move row focus", group: "Navigate", tally: "↑ / ↓" },
+  { keys: "Esc", action: "Back / close (asks if unsaved)", group: "Navigate", tally: "Ctrl+Q" },
+
+  // ---- Entry ----
+  { keys: "Ctrl+S", action: "Save", group: "Entry", tally: "Ctrl+A", note: "Ctrl+A is browser select-all" },
+  { keys: "Ctrl+Enter", action: "Save (alternate)", group: "Entry", tally: "Ctrl+A" },
+  { keys: "Alt+N", action: "New quotation", group: "Entry", tally: "Alt+C", note: "Ctrl+N is browser new-window" },
+  { keys: "Alt+C", action: "Create customer / product on the fly", group: "Entry", tally: "Alt+C" },
+  { keys: "Alt+I", action: "Insert line item row", group: "Entry", tally: "Alt+I" },
+  { keys: "Alt+X", action: "Delete focused row", group: "Entry", tally: "Alt+X" },
+  { keys: "Alt+D", action: "Duplicate as new draft", group: "Entry", tally: "Alt+2" },
+  { keys: "Ctrl+/", action: "Calculator in the focused amount field", group: "Entry", tally: "Ctrl+N calc pane" },
+
+  // ---- Records ----
+  // PgUp/PgDn move between RECORDS (Tally's next-voucher), not between pages.
+  // On a grid they page the list; in the editor they open the prev/next
+  // quotation without returning to the list at all.
+  { keys: "PgUp", action: "Previous record (previous page on a list)", group: "Records", tally: "PgUp" },
+  { keys: "PgDn", action: "Next record (next page on a list)", group: "Records", tally: "PgDn" },
+
+  // ---- View ----
+  { keys: "F2", action: "Change period", group: "View", tally: "F2" },
+  { keys: "Ctrl+,", action: "Configure columns & density", group: "View", tally: "F12", note: "F12 is DevTools" },
+  { keys: "?", action: "This cheatsheet", group: "View" },
+
+  // ---- Output ----
+  { keys: "Ctrl+E", action: "Export (CSV on grids, PDF in editor)", group: "Output", tally: "Ctrl+E" },
+  { keys: "Ctrl+P", action: "Print", group: "Output", tally: "Ctrl+P" },
+];
+
+/** Group order for the cheatsheet. Explicit so it does not follow array order. */
+export const KEYMAP_GROUPS: KeymapGroup[] = [
+  "Navigate",
+  "Entry",
+  "Records",
+  "View",
+  "Output",
 ];
