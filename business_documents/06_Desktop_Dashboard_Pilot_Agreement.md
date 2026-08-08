@@ -40,7 +40,7 @@ The Dashboard is an **evolving product under active development**. Features, lay
 - This is a **one-time setup fee with zero monthly maintenance subscription**, consistent with Vitharn's Early Adopter commitment.
 - The invoice is raised on `[Invoice Trigger — e.g. Pilot commencement / Pilot acceptance]` and is **due within 14 (fourteen) days** of the invoice date.
 - **No GST applicable** — Vitharn ERP Services is not GST-registered as turnover is below the statutory threshold (Section 22, CGST Act, 2017).
-- Payment by **UPI** to `[your-upi@oksbi]` (Name: Aadi, Proprietor, Vitharn ERP Services).
+- Payment by **UPI** to `6304562779@nyes` (Name: Aadi, Proprietor, Vitharn ERP Services).
 - Amounts unpaid beyond 14 days attract a **1.5% per month** late fee, and Vitharn may suspend Dashboard access after **7 days' written notice**.
 
 ### 2.4 Confidentiality

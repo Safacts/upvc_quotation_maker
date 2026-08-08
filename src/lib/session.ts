@@ -1,7 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secretKey = process.env.JWT_SECRET || "default_super_secret_key_change_me_in_production";
+const secretKey = process.env.JWT_SECRET;
+if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
 const encodedKey = new TextEncoder().encode(secretKey);
 
 export type SessionPayload = {

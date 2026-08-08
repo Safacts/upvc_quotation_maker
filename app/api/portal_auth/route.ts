@@ -192,14 +192,12 @@ export async function POST(request: NextRequest) {
     const admin = await findAdmin(email);
 
     if (mode === "google") {
-      let googleEmail = email;
-      if (p.credential) {
-        const verified = await verifyGoogleCredential(String(p.credential));
-        if (!verified) {
-          return json({ error: "Google sign-in could not be verified. Please try again." }, 401);
-        }
-        googleEmail = verified;
+      if (!p.credential) return json({ error: "missing Google credential" }, 400);
+      const verified = await verifyGoogleCredential(String(p.credential));
+      if (!verified) {
+        return json({ error: "Google sign-in could not be verified. Please try again." }, 401);
       }
+      const googleEmail = verified;
       const gAdmin = await findAdmin(googleEmail);
       if (gAdmin) {
         await createSession({ role: "admin", email: gAdmin.email });

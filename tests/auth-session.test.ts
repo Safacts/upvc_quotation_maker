@@ -311,22 +311,10 @@ describe("JWT_SECRET configuration", () => {
     await expect(rotated.decrypt(token)).resolves.toBeNull();
   });
 
-  it("KNOWN WEAKNESS: falls back to a hard-coded default secret when JWT_SECRET is unset", async () => {
-    // session.ts:4 — `process.env.JWT_SECRET || "default_super_secret_key_change_me_in_production"`.
-    // That default string is committed to a public-ish repo. If JWT_SECRET is
-    // ever missing from a Vercel environment, ANYONE who can read the source can
-    // mint an admin session. It should throw at boot instead of falling back.
-    // Logged in troubleshooting/. This test proves the fallback is real.
+  it("FIXED ISO-10: throws an error at boot if JWT_SECRET is missing instead of falling back to a public key", async () => {
     vi.resetModules();
     delete process.env.JWT_SECRET;
-    const mod = await import("@/lib/session");
-    const attackerToken = await new SignJWT({ role: "admin", email: "attacker@evil.com" })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("7d")
-      .sign(key("default_super_secret_key_change_me_in_production"));
-    const payload = await mod.decrypt(attackerToken);
-    expect(payload?.role).toBe("admin"); // <-- the bypass, demonstrated
+    await expect(import("@/lib/session")).rejects.toThrow("JWT_SECRET environment variable is missing");
     process.env.JWT_SECRET = TEST_SECRET;
   });
 });

@@ -68,6 +68,14 @@ vi.mock("@/lib/mail", () => ({
   sendSignupNotification: async () => {},
 }));
 
+vi.mock("jose", async () => ({
+  createRemoteJWKSet: () => ({}),
+  jwtVerify: async (token: string) => {
+    if (token === "invalid-token") throw new Error("bad token");
+    return { payload: { email: token, email_verified: true } };
+  }
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers + fixture builders
 // ---------------------------------------------------------------------------
@@ -155,7 +163,7 @@ const lastMinted = () => minted[minted.length - 1];
 describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
   it("lets a registered ADMIN email in via Google (role admin + session)", async () => {
     seedAdmin(await sha256("whatever")); // google mode ignores the hash
-    const res = await authReq({ mode: "google", email: ADMIN_EMAIL });
+    const res = await authReq({ mode: "google", email: ADMIN_EMAIL, credential: ADMIN_EMAIL });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ role: "admin", email: ADMIN_EMAIL });
     expect(lastMinted()).toMatchObject({ role: "admin", email: ADMIN_EMAIL });
@@ -163,7 +171,7 @@ describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
 
   it("lets a registered CLIENT email in via Google (role customer + client_id + session)", async () => {
     seedClientA();
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A });
+    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "customer", email: CLIENT_EMAIL_A, client_id: CLIENT_A });
@@ -171,7 +179,7 @@ describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
   });
 
   it("creates a signup row + session for an UNKNOWN email (prebooking flow)", async () => {
-    const res = await authReq({ mode: "google", email: "brand-new-client@gmail.com" });
+    const res = await authReq({ mode: "google", email: "brand-new-client@gmail.com", credential: "brand-new-client@gmail.com" });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "signup", status: "pending" });
@@ -185,14 +193,14 @@ describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
     fixtures.signup_requests = [
       { id: 42, email: "waiting@example.com", auth_method: "google", status: "pending" },
     ];
-    const res = await authReq({ mode: "google", email: "waiting@example.com" });
+    const res = await authReq({ mode: "google", email: "waiting@example.com", credential: "waiting@example.com" });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ role: "signup", status: "pending", signup_request_id: "42" });
   });
 
   it("LOCKS OUT a client whose trial has expired (403, no session minted)", async () => {
     trialClient(new Date(Date.now() - 24 * 3600 * 1000).toISOString());
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A });
+    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
     expect(res.status).toBe(403);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining("trial") });
     expect(minted).toHaveLength(0);
@@ -200,14 +208,14 @@ describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
 
   it("admits a client whose trial is still active", async () => {
     trialClient(new Date(Date.now() + 24 * 3600 * 1000).toISOString());
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A });
+    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ role: "customer", client_id: CLIENT_A });
   });
 
   it("blocks a deactivated client (403)", async () => {
     inactiveClient();
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A });
+    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
     expect(res.status).toBe(403);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining("deactivated") });
     expect(minted).toHaveLength(0);

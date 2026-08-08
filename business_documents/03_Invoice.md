@@ -50,7 +50,7 @@
 To ensure uninterrupted service, please make your payment by the due date.
 
 ### UPI (Primary)
-- **UPI ID:** `[your-upi@oksbi]`
+- **UPI ID:** `6304562779@nyes`
 - **Name:** Aadi (Proprietor, Vitharn ERP Services)
 
 *Late payments may be subject to the fee outlined in your Vitharn Client Services Agreement.*
