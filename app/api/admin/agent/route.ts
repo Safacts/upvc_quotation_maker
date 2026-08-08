@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supaGet, supaPost, supaPatch } from "@/lib/supabase";
+import { supaGet, supaPost, supaPatch, supaDelete } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { sendAdminCompose } from "@/lib/mail";
 import Groq from "groq-sdk";
@@ -60,6 +60,20 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "delete_client",
+      description: "Deletes a client account completely.",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "string", description: "The client ID to delete." }
+        },
+        required: ["clientId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "send_email",
       description: "Sends an email to a user.",
       parameters: {
@@ -97,10 +111,10 @@ export async function POST(request: NextRequest) {
       {
         role: "system",
         content: `You are an AI assistant for the Vitharn UPVC Quotation Maker platform admin.
-Your job is to help the admin automatically create client accounts, read existing clients as templates, and send emails.
-When the user asks you to create a client based on another, first use get_client to fetch the existing config, then use create_client and pass that config (minus any overwrites) into additionalConfig.
-After creating a client, you can use the send_email tool to send them their credentials if the user asks you to.
-Never try to modify protected clients: venkateshwara, akshaya upvc, kprupvc. You are permitted to use get_client to read them to use as templates.`,
+Your job is to help the admin automatically create client accounts, read existing clients as templates, delete clients, and send emails.
+When creating a client, you can set "aiCanDelete": true in additionalConfig if it is meant to be a test/deletable client.
+When deleting a client, you MUST respect the "aiCanDelete" flag. If it is false, you cannot delete them.
+Never try to modify or delete protected clients: venkateshwara, akshaya upvc, kprupvc. You are permitted to use get_client to read them to use as templates.`,
       },
       ...history,
       { role: "user", content: prompt },
@@ -135,6 +149,31 @@ Never try to modify protected clients: venkateshwara, akshaya upvc, kprupvc. You
           } else {
             result = "Error: Client not found.";
           }
+        } else if (functionName === "delete_client") {
+          const { clientId } = args;
+          if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
+            result = "Error: Cannot delete protected client.";
+            actionLogs.push(`Error: Blocked deletion of protected client ${clientId}`);
+          } else {
+            const existing = await supaGet("clients", { id: "eq." + clientId });
+            if (!existing || existing.length === 0) {
+              result = "Error: Client not found.";
+            } else {
+              const config = existing[0].config || {};
+              if (config.aiCanDelete === false) {
+                result = "Error: This client is locked by the 'aiCanDelete: false' security flag and cannot be deleted by the AI agent.";
+                actionLogs.push(`Error: Security lock prevented deletion of ${clientId}`);
+              } else {
+                try {
+                  await supaDelete("clients", { id: "eq." + clientId });
+                  result = `Success: Deleted client ${clientId}.`;
+                  actionLogs.push(`Deleted client: ${clientId}`);
+                } catch (e: any) {
+                  result = "DB Error: " + String(e.message);
+                }
+              }
+            }
+          }
         } else if (functionName === "create_client") {
           const { clientId, appName, companyName, email, password, additionalConfig = {} } = args;
           if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
@@ -146,6 +185,12 @@ Never try to modify protected clients: venkateshwara, akshaya upvc, kprupvc. You
               result = "Error: Client ID already exists.";
             } else {
               const hash = sha256(password);
+              
+              // Ensure aiCanDelete is true by default for new clients, unless explicitly passed as false
+              if (additionalConfig.aiCanDelete === undefined) {
+                additionalConfig.aiCanDelete = true;
+              }
+
               // Insert client
               const config = {
                 ...additionalConfig,
