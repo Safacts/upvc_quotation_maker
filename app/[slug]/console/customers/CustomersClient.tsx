@@ -245,6 +245,7 @@ export default function CustomersClient() {
                 className="vc-input"
                 value={draft.company}
                 onChange={(e) => setDraft({ ...draft, company: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && void createCustomer()}
               />
             </div>
             <div className="vc-field">
@@ -253,6 +254,7 @@ export default function CustomersClient() {
                 className="vc-input"
                 value={draft.email}
                 onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && void createCustomer()}
               />
             </div>
             <div style={{ display: "flex", gap: 6 }}>

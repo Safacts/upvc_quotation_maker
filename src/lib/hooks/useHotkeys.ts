@@ -182,7 +182,7 @@ export const CONSOLE_KEYMAP: Array<{
   { keys: "Enter", action: "Drill down / open row", tally: "Enter" },
   { keys: "↑ / ↓", action: "Move row focus", tally: "↑ / ↓" },
   { keys: "Ctrl+F", action: "Focus search" },
-  { keys: "Ctrl+E", action: "Export current grid to CSV", tally: "Ctrl+E" },
+  { keys: "Ctrl+E", action: "Export (CSV on grids, PDF in editor)", tally: "Ctrl+E" },
   { keys: "Ctrl+P", action: "Print", tally: "Ctrl+P" },
   { keys: "F2", action: "Period selector", tally: "F2" },
   { keys: "Ctrl+,", action: "Screen config", tally: "F12", note: "F12 is DevTools" },

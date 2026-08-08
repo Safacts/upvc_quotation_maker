@@ -12,6 +12,11 @@ import QuotationEditor, { blankHeader } from "../QuotationEditor";
  * mind must not leave an empty draft behind. The row is created by the first
  * successful save (POST), after which the editor replaces the URL with the real
  * id so a second Ctrl+S updates rather than duplicating.
+ *
+ * The editor fetches and pre-fills a draft quote number on mount if the field
+ * is blank — see QuotationEditor's useEffect. Doing it client-side avoids a
+ * fragile SSR-to-self fetch and works identically for the new and duplicate
+ * entry points.
  */
 export const dynamic = "force-dynamic";
 

@@ -75,7 +75,8 @@ export type ConsoleActionName =
   | "deleteRow"
   | "export"
   | "back"
-  | "search";
+  | "search"
+  | "duplicate";
 
 const Ctx = createContext<ConsoleCtx | null>(null);
 
@@ -181,10 +182,15 @@ export default function ConsoleShell({
     return () => window.removeEventListener("resize", check);
   }, [router, slug]);
 
-  // Sidebar auto-collapses in the 1024-1279 band so the content keeps its width.
+  // Sidebar auto-collapses in the 1024-1279 band so the content keeps its
+  // width. A ref tracks whether the user has manually toggled the sidebar;
+  // if they have, we respect their choice and do NOT override it on resize.
+  // Without this, a user who collapses the sidebar on a wide monitor finds
+  // it snapping back to expanded on the next pixel of window resize.
+  const manuallyToggled = useRef(false);
   useEffect(() => {
     function onResize() {
-      setCollapsed(window.innerWidth < 1280);
+      if (!manuallyToggled.current) setCollapsed(window.innerWidth < 1280);
     }
     onResize();
     window.addEventListener("resize", onResize);
@@ -273,7 +279,11 @@ export default function ConsoleShell({
         ctrl: true,
         allowInInput: true,
         description: "Save",
-        handler: () => actions.current.save?.(),
+        handler: () => {
+          const fn = actions.current.save;
+          if (fn) fn();
+          else toast("Nothing to save on this screen", "info");
+        },
       },
       {
         // Tally's Alt+C. Ctrl+N is a browser new-window at OS level — the page
@@ -330,12 +340,26 @@ export default function ConsoleShell({
         key: "e",
         ctrl: true,
         allowInInput: true,
-        description: "Export CSV",
+        // The action is per-screen: grids register "export" as CSV, the
+        // editor registers it as PDF download. The shortcut sheet lists
+        // "Export" (not "CSV") so the label matches both.
+        description: "Export",
         handler: () => {
           const fn = actions.current.export;
           if (fn) fn();
           else toast("Nothing to export on this screen", "info");
         },
+      },
+      {
+        // Tally's Alt+2. Bound as Alt+D (the mnemonic) AND registered in
+        // CONSOLE_KEYMAP so the ? cheatsheet and the actual binding agree.
+        // Screens that can duplicate (the editor) register the action; on
+        // screens that cannot, nothing happens — no toast, no false promise.
+        key: "d",
+        alt: true,
+        allowInInput: true,
+        description: "Duplicate",
+        handler: () => actions.current.duplicate?.(),
       },
       {
         key: "escape",
@@ -444,11 +468,14 @@ export default function ConsoleShell({
             <button
               type="button"
               className="vc-nav-item"
-              onClick={() => setCollapsed((v) => !v)}
+              onClick={() => {
+                manuallyToggled.current = true;
+                setCollapsed((v) => !v);
+              }}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
-              <span className="vc-nav-label">Collapse</span>
+              <span className="vc-nav-label">{collapsed ? "Expand" : "Collapse"}</span>
             </button>
             <button type="button" className="vc-nav-item" onClick={() => void logout()}>
               <LogOut size={15} strokeWidth={2} />

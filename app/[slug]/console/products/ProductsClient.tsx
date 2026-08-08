@@ -259,6 +259,7 @@ export default function ProductsClient() {
                 className="vc-input"
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && void createProduct()}
               />
             </div>
             <div className="vc-field">
@@ -277,6 +278,7 @@ export default function ProductsClient() {
                 className="vc-input"
                 value={draft.unit}
                 onChange={(e) => setDraft({ ...draft, unit: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && void createProduct()}
               />
             </div>
             <div style={{ display: "flex", gap: 6 }}>

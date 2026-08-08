@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Save, ArrowLeft, Printer, UserPlus } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
 import {
@@ -173,6 +173,34 @@ export default function QuotationEditor({
   // "Save" — the in-app prompt is the good path.
   useUnsavedChangesWarning(dirty);
 
+  // ---- Auto-fill a draft quote number for new quotations -----------------
+  // Only fires when the field is blank AND this is a new (unsaved) quotation.
+  // The number is a DRAFT — it is not reserved, and the user can edit or clear
+  // it before saving. Skipped entirely when editing an existing quotation.
+  useEffect(() => {
+    if (quotationId !== null) return;
+    if (header.quote_no.trim()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/console/quotations/number", {
+          credentials: "same-origin",
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data?.quote_no) {
+          setHeader((h) => (h.quote_no ? h : { ...h, quote_no: data.quote_no }));
+        }
+      } catch {
+        // Non-fatal: blank field means the user types one.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [quotationId, header.quote_no]);
+
   const markDirty = useCallback(() => setDirty(true), []);
 
   const setHeaderField = useCallback(
@@ -341,11 +369,112 @@ export default function QuotationEditor({
     router.push(`/${slug}/console/quotations`);
   }, [dirty, router, slug]);
 
+  // ---- PDF download --------------------------------------------------------
+  // Opens the PDF route in a new tab. The route re-reads the stored row, so the
+  // download always reflects the last saved state — never the unsaved draft.
+  const downloadPdf = useCallback(() => {
+    if (!savedId) {
+      toast("Save the quotation first to generate a PDF", "info");
+      return;
+    }
+    window.open(`/${slug}/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
+  }, [savedId, slug, toast]);
+
+  // ---- Email the quotation -------------------------------------------------
+  // Sends the customer-facing PDF as an attachment via /api/send_email. The
+  // quotation's own `email` field is used as the default recipient.
+  const emailQuote = useCallback(async () => {
+    if (!savedId) {
+      toast("Save the quotation before emailing", "info");
+      return;
+    }
+    const to = header.email.trim();
+    if (!to) {
+      toast("Add a customer email first", "info");
+      return;
+    }
+    try {
+      const pdfRes = await fetch(`/${slug}/console/quotations/${savedId}/pdf`, {
+        credentials: "same-origin",
+      });
+      if (!pdfRes.ok) {
+        toast("Could not generate PDF — save first?", "err");
+        return;
+      }
+      const pdfBlob = await pdfRes.arrayBuffer();
+      // Chunked base64: String.fromCharCode(...bytes) throws
+      // "Maximum call stack size exceeded" past ~65k elements in V8. A
+      // quotation with 30+ measured lines can easily exceed that, silently
+      // breaking the Email button on exactly the big jobs.
+      const bytes = new Uint8Array(pdfBlob);
+      let binary = "";
+      const chunk = 0x8000; // 32k chars per call, safely under every engine limit
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const b64 = btoa(binary);
+      const res = await fetch("/api/send_email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          to,
+          subject: `Quotation ${header.quote_no || ""} from ${companyName}`,
+          html: `<p>Dear ${header.customer_name || "Sir/Madam"},</p>` +
+            `<p>Please find the quotation attached.</p>` +
+            `<p>Regards,<br/>${companyName}</p>`,
+          attachments: [
+            {
+              filename: `quotation_${header.quote_no || savedId}.pdf`,
+              content: b64,
+            },
+          ],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data?.error || "Email failed", "err");
+        return;
+      }
+      toast(`Quotation emailed to ${to}`, "ok");
+    } catch (e: any) {
+      toast(String(e?.message ?? e), "err");
+    }
+  }, [savedId, slug, header.email, header.quote_no, header.customer_name, companyName, toast]);
+
   // ---- Wire into the shell's global key map -------------------------------
   useConsoleAction("save", save);
   useConsoleAction("back", goBack);
   useConsoleAction("insertRow", addMeasured);
   useConsoleAction("deleteRow", () => removeMeasured(focusedMeasured));
+  useConsoleAction("export", downloadPdf);
+  useConsoleAction("duplicate", () => void duplicate());
+
+  // ---- Duplicate (Tally's Alt+2) ------------------------------------------
+  // Clones this quotation as a fresh draft, then navigates to the new row so
+  // the edit never lands on the original.
+  const duplicate = useCallback(async () => {
+    const sourceId = savedId;
+    if (!sourceId) {
+      toast("Save the quotation first, then duplicate", "info");
+      return;
+    }
+    try {
+      const res = await fetch(`/${slug}/console/quotations/${sourceId}/duplicate`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data?.error || "Could not duplicate", "err");
+        return;
+      }
+      toast("Duplicated as new draft — edit the number, then save", "ok");
+      router.push(`/${slug}/console/quotations/${data.id}`);
+    } catch (e: any) {
+      toast(String(e?.message ?? e), "err");
+    }
+  }, [savedId, slug, router, toast]);
 
   useConsoleStatus({
     busy: saving,
@@ -414,6 +543,16 @@ export default function QuotationEditor({
               {savedId ? "Edit Quotation" : "New Quotation"}
             </span>
             <div style={{ flex: 1 }} />
+            {savedId && (
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => void duplicate()}
+                title="Duplicate as new draft (Alt+D)"
+              >
+                <FileText size={12} /> Duplicate <span className="vc-kbd">Alt D</span>
+              </button>
+            )}
             <button
               type="button"
               className="vc-btn vc-btn-sm"
@@ -421,6 +560,22 @@ export default function QuotationEditor({
               title="Print preview"
             >
               <Printer size={12} /> <span className="vc-kbd">Ctrl P</span>
+            </button>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              onClick={() => void emailQuote()}
+              title="Email the saved quotation as a PDF"
+            >
+              <Mail size={12} /> Email
+            </button>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              onClick={() => void downloadPdf()}
+              title="Download as PDF (Ctrl+E)"
+            >
+              <Download size={12} /> PDF <span className="vc-kbd">Ctrl E</span>
             </button>
             <button
               type="button"
