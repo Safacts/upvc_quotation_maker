@@ -60,6 +60,17 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "list_clients",
+      description: "Lists all clients currently in the database, including their IDs, names, and whether they can be deleted.",
+      parameters: {
+        type: "object",
+        properties: {},
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "delete_client",
       description: "Deletes a client account completely.",
       parameters: {
@@ -140,7 +151,20 @@ Never try to modify or delete protected clients: venkateshwara, akshaya upvc, kp
         const args = JSON.parse(toolCall.function.arguments);
         let result = "";
 
-        if (functionName === "get_client") {
+        if (functionName === "list_clients") {
+          const clients = await supaGet("clients", { select: "id,config" });
+          if (clients && clients.length > 0) {
+            const summary = clients.map((c: any) => ({
+              id: c.id,
+              companyName: c.config?.companyName || "Unknown",
+              aiCanDelete: c.config?.aiCanDelete ?? true
+            }));
+            result = JSON.stringify(summary);
+            actionLogs.push(`Listed ${clients.length} clients`);
+          } else {
+            result = "No clients found.";
+          }
+        } else if (functionName === "get_client") {
           const { clientId } = args;
           const existing = await supaGet("clients", { id: "eq." + clientId });
           if (existing && existing.length > 0) {
