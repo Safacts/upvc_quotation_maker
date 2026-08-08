@@ -59,7 +59,7 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async 
           _buildSectionTitle('Customer Details'),
           _buildCustomerDetails(data),
           _buildSectionTitle('Quotation Details'),
-          if (data.measuredItems.isNotEmpty) _buildMeasuredTable(data, currency),
+          if (data.measuredItems.isNotEmpty) _buildMeasuredTable(data, currency, kprSimplified: clientConfig.clientId == 'kprupvc'),
           if (data.unmeasuredItems.isNotEmpty) ...[
             _buildSectionTitle('Add Items without Measurements (Only Quantity)'),
             _buildUnmeasuredTable(data, currency),
@@ -164,7 +164,36 @@ pw.Widget _buildCustomerDetails(QuotationData data) {
   );
 }
 
-pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency) {
+pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool kprSimplified = false}) {
+  if (kprSimplified) {
+    return pw.TableHelper.fromTextArray(
+      headers: ['S.No', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'Rate', 'Total'],
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+      headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#dce6f1')),
+      cellStyle: pw.TextStyle(fontSize: 9),
+      cellAlignment: pw.Alignment.center,
+      border: pw.TableBorder.all(color: PdfColors.grey800),
+      columnWidths: {
+        0: pw.FlexColumnWidth(1),
+        1: pw.FlexColumnWidth(6),
+        2: pw.FlexColumnWidth(1.2),
+        3: pw.FlexColumnWidth(1.2),
+        4: pw.FlexColumnWidth(1.5),
+        5: pw.FlexColumnWidth(2),
+        6: pw.FlexColumnWidth(1.5),
+        7: pw.FlexColumnWidth(2),
+        8: pw.FlexColumnWidth(2.5),
+      },
+      data: List<List<String>>.generate(data.measuredItems.length, (index) {
+        final item = data.measuredItems[index];
+        return [
+          '${index + 1}', item.description, item.width.toStringAsFixed(0), item.height.toStringAsFixed(0),
+          item.units.toString(), item.glass, item.sft.toStringAsFixed(2),
+          currency.format(item.rate), currency.format(item.total),
+        ];
+      }),
+    );
+  }
   return pw.TableHelper.fromTextArray(
     headers: ['S.No', 'Code', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'T.SFT', 'Rate', 'Total'],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
