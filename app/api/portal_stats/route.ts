@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supaGet, isServiceKeyConfigured } from "@/lib/supabase";
+import { supaGetAllPaged, supaCount, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { quotationTotals } from "@/lib/pricing";
+
+/**
+ * Hard ceiling on how many quotations a single stats request will aggregate.
+ *
+ * This endpoint sums the entire history for a client in a JS loop inside a Vercel
+ * function with a 10s wall clock. Previously it issued one unbounded SELECT with
+ * two embedded child tables — fine at 47 rows, a guaranteed timeout/OOM later.
+ * 5000 quotations is far beyond any realistic uPVC fabricator's lifetime volume
+ * (KPR is at ~23), so in practice nothing truncates; the cap exists so that a
+ * runaway client cannot take the dashboard down. When it IS hit we say so in the
+ * response rather than quietly reporting a partial total as a complete one.
+ */
+const MAX_QUOTATIONS_SCANNED = 5000;
+
+/** Rows per PostgREST round trip while paging. */
+const PAGE_SIZE = 500;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -24,26 +41,42 @@ export async function GET(request: NextRequest) {
     }
 
     const clientId = session.client_id;
-    
-    // Fetch all quotations for this client. 
-    // In upvc_quotation_maker, we prefix quote_no or use client_id.
-    // Wait, earlier the user showed schema.sql:
-    // quotations table has `id`, `quote_no`, `date`, `customer_name`, `status`, `transport_cost`, `created_at`
-    // And actually, if it's a multi-tenant DB, quotations must have a `client_id`?
-    // Let me check if `client_id` was added to quotations.
-    // 1. Fetch quotations matching client_id
-    let quotes = await supaGet("quotations", {
-      client_id: "eq." + clientId,
-      select: "id,quote_no,customer_name,contact_no,status,transport_cost,created_at,measured_items(rate,width,height,units),unmeasured_items(rate,units)",
-    });
 
-    if (!Array.isArray(quotes)) {
-      quotes = [];
+    // Tenant scope comes from the HttpOnly session cookie, never from the query
+    // string — the service-role key bypasses RLS, so this filter IS the isolation.
+    const scope = {
+      client_id: "eq." + clientId,
+      select:
+        "id,quote_no,customer_name,contact_no,status,transport_cost,include_gst,gst_percentage,created_at,measured_items(rate,width,height,units),unmeasured_items(rate,units)",
+      // `id` is a tiebreaker, NOT decoration. Offset pagination re-runs the query
+      // for every page, so a non-deterministic sort lets rows with identical
+      // created_at values swap between pages — the same quote gets counted twice
+      // while another is skipped entirely, silently corrupting the totals. Bulk
+      // imports and same-second saves make ties genuinely likely.
+      order: "created_at.desc,id.desc",
+    } as const;
+
+    // Bounded, paged read. Newest-first ordering means that if a tenant ever does
+    // exceed the cap, the rows we keep are the ones that matter for recent-period
+    // stats (this month / last month / 8-week bars) rather than an arbitrary slice.
+    const { rows: quotes, truncated } = await supaGetAllPaged(
+      "quotations",
+      scope,
+      PAGE_SIZE,
+      MAX_QUOTATIONS_SCANNED,
+    );
+
+    // When truncated, the honest lifetime count still comes from the database
+    // rather than from the number of rows we happened to load.
+    let scannedCount = quotes.length;
+    let totalCountExact = scannedCount;
+    if (truncated) {
+      const exact = await supaCount("quotations", { client_id: "eq." + clientId });
+      if (exact >= 0) totalCountExact = exact;
     }
 
     let totalQuoted = 0;
     let wonQuoted = 0;
-    let totalCount = quotes.length;
     let wonCount = 0;
 
     let thisMonthTotal = 0;
@@ -79,27 +112,13 @@ export async function GET(request: NextRequest) {
     }
 
     for (const q of quotes) {
-      let qTotal = parseFloat(q.transport_cost || "0");
-      if (Array.isArray(q.measured_items)) {
-        for (const item of q.measured_items) {
-          const w = parseFloat(item.width || "0");
-          const h = parseFloat(item.height || "0");
-          const r = parseFloat(item.rate || "0");
-          const u = parseInt(item.units || "1", 10);
-          
-          // Width and height are in millimeters. Rate is per Square Foot.
-          // Convert mm to square feet: (w / 304.8) * (h / 304.8)
-          const sft = (w / 304.8) * (h / 304.8);
-          qTotal += (sft * r * u);
-        }
-      }
-      if (Array.isArray(q.unmeasured_items)) {
-        for (const item of q.unmeasured_items) {
-          const r = parseFloat(item.rate || "0");
-          const u = parseInt(item.units || "1", 10);
-          qTotal += (r * u);
-        }
-      }
+      // Single source of truth — see src/lib/pricing.ts. This endpoint reports the
+      // pre-GST business value (net of transport), which is what a fabricator means
+      // by "quoted value"; GST is a pass-through, not revenue. `netTotal` is used
+      // deliberately instead of `grandTotal` so these figures stay comparable across
+      // quotes regardless of whether GST was enabled on any individual quote.
+      const totals = quotationTotals(q, q.measured_items, q.unmeasured_items);
+      const qTotal = totals.netTotal;
 
       totalQuoted += qTotal;
       
@@ -153,7 +172,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const winRate = totalCount > 0 ? (wonCount / totalCount) * 100 : 0;
+    // Win rate is computed over the SCANNED set so that numerator and denominator
+    // always describe the same population. Mixing a scanned wonCount with an exact
+    // lifetime total would understate the rate whenever truncation kicks in.
+    const winRate = scannedCount > 0 ? (wonCount / scannedCount) * 100 : 0;
     
     let monthChangePercent = 0;
     if (lastMonthTotal > 0) {
@@ -163,7 +185,11 @@ export async function GET(request: NextRequest) {
     }
 
     return json({
-      totalCount,
+      totalCount: totalCountExact,
+      // Present only so the UI can caption aggregates honestly when a tenant's
+      // history exceeds MAX_QUOTATIONS_SCANNED. Existing consumers ignore these.
+      scannedCount,
+      truncated,
       wonCount,
       totalQuoted,
       wonQuoted,

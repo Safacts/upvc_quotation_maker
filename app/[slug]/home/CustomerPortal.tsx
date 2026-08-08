@@ -13,19 +13,36 @@ interface InfoField {
   value: string;
 }
 
-export default function CustomerPortal({ client }: { client: ClientRow; slug: string }) {
+export default function CustomerPortal({ client, slug }: { client: ClientRow; slug: string }) {
   const router = useRouter();
   const config = useMemo(() => parseClientConfig(client.config || {}, client.id), [client.config, client.id]);
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "app" | "catalog" | "market" | "market-settings" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "catalog" | "market" | "market-settings" | "settings">("overview");
 
   const [brand, setBrand] = useState("Loading...");
   const [infoFields, setInfoFields] = useState<InfoField[]>([]);
-  const [appUrl, setAppUrl] = useState("");
   const [marketUrl, setMarketUrl] = useState("");
+
+  // The Flutter quotation app is NEVER iframed — it is opened in a new tab so it
+  // gets its own full-screen browsing context (fixes PDF download / share / file
+  // picker breakage that sandboxed iframes cause). Same-origin, so the HttpOnly
+  // portal_auth cookie rides along and `auto_login=true` signs the user straight in.
+  const appUrl = useMemo(() => {
+    const appSlug = slugify(slug) || slugify(config.appName) || slugify(client.id);
+    return "/upvc/" + appSlug + "?client=" + encodeURIComponent(client.id) + "&auto_login=true";
+  }, [slug, config.appName, client.id]);
+
+  const openApp = useCallback(
+    (openQuoteId?: string) => {
+      const url = openQuoteId ? appUrl + "&open_quote=" + encodeURIComponent(openQuoteId) : appUrl;
+      window.open(url, "_blank", "noopener,noreferrer");
+      setSidebarOpen(false);
+    },
+    [appUrl],
+  );
 
   const [stats, setStats] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
@@ -118,10 +135,8 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
         setBrand(config.companyName || client.id);
         
-        const appSlug = slugify(config.appName) || slugify(client.id);
         const marketSlug = slugify(config.companyName) || slugify(client.id);
-        
-        setAppUrl("/upvc/" + appSlug + "?client=" + encodeURIComponent(client.id) + "&auto_login=true");
+
         setMarketUrl("/" + marketSlug);
 
         setInfoFields(
@@ -206,9 +221,10 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
   };
 
   const handleLiteMode = async () => {
-    // Already running as an installed app → jump straight to the app.
+    // Already running as an installed app → jump straight to the app (same window,
+    // a standalone PWA has no tab strip to open into).
     if (isStandalone) {
-      if (appUrl) window.location.href = appUrl;
+      window.location.href = appUrl;
       return;
     }
     // Android / desktop Chrome: show the native install prompt.
@@ -229,8 +245,8 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
       setShowA2hsModal(true);
       return;
     }
-    // Fallback: open the app inside the portal.
-    setActiveTab("app");
+    // Fallback: open the app in a new tab.
+    openApp();
   };
 
   if (status === "error") {
@@ -251,7 +267,6 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
 
   const tabTitles = {
     overview: "Business Overview",
-    app: "Quotation Maker",
     catalog: "Product Catalog",
     market: "Market Page Preview",
     "market-settings": "Market Page Settings",
@@ -324,16 +339,32 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
             </svg>
             Overview
           </button>
-          <button 
-            className={`nav-item ${activeTab === "app" ? "active" : ""}`}
-            onClick={() => { setActiveTab("app"); setSidebarOpen(false); }}
+          <a
+            className="nav-item"
+            href={appUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setSidebarOpen(false)}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <path d="M3 9h18M9 21V9" />
             </svg>
             Quotation App
-          </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ marginLeft: "auto", opacity: 0.6 }}
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
           <button 
             className={`nav-item ${activeTab === "catalog" ? "active" : ""}`}
             onClick={() => { setActiveTab("catalog"); setSidebarOpen(false); }}
@@ -575,8 +606,10 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   Here is your real-time business summary. Keep closing orders!
                 </p>
               </div>
-              <button 
-                onClick={() => setActiveTab("app")}
+              <a
+                href={appUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   background: 'var(--primary-gradient)',
                   color: 'white',
@@ -586,6 +619,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   fontWeight: '700',
                   fontSize: '15px',
                   cursor: 'pointer',
+                  textDecoration: 'none',
                   boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
                   display: 'flex',
                   alignItems: 'center',
@@ -597,7 +631,7 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
                 Create New Quotation
-              </button>
+              </a>
             </div>
 
             {/* Hero Stats */}
@@ -777,12 +811,10 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                             📞 Call Client
                           </a>
                         )}
-                        <button 
-                          onClick={() => {
-                            const newAppUrl = "/upvc/" + slugify(config.appName || client.id) + "?client=" + encodeURIComponent(client.id) + "&auto_login=true&open_quote=" + encodeURIComponent(item.id);
-                            setAppUrl(newAppUrl);
-                            setActiveTab("app");
-                          }} 
+                        <a
+                          href={appUrl + "&open_quote=" + encodeURIComponent(item.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{ 
                             padding: '8px 14px', 
                             borderRadius: '8px', 
@@ -790,11 +822,13 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
                             border: '1px solid #cbd5e1', 
                             fontSize: '13px', 
                             fontWeight: '600',
+                            color: '#334155',
+                            textDecoration: 'none',
                             cursor: 'pointer' 
                           }}
                         >
                           View Quote
-                        </button>
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -1200,11 +1234,8 @@ export default function CustomerPortal({ client }: { client: ClientRow; slug: st
             </div>
           </div>
 
-          {/* iFrame Tabs for App and Market */}
-          <div className={`iframe-container ${activeTab === "app" ? "active" : ""}`}>
-            {appUrl && <iframe src={appUrl} className="tab-iframe" title="Quotation Maker" />}
-          </div>
-
+          {/* Market Page preview iframe. The Quotation App is deliberately NOT
+              iframed — it opens in a new tab (see `openApp` / `appUrl`). */}
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
           </div>

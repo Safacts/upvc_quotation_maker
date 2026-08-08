@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPatch, supaDelete } from "@/lib/supabase";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Tenant guard for the review MANAGEMENT surface.
+ *
+ * This route is the owner-facing moderation API: it exposes hidden reviews and
+ * allows edit/delete. The public, read-only feed lives at
+ * `/api/reviews/[clientId]` — that one is meant to be anonymous, this one is NOT.
+ *
+ * `clientId` arrives in the URL PATH, which is entirely attacker-controlled, and
+ * every write below goes through the service-role key (RLS bypassed). Until
+ * 08-08-2026 there was no session check here at all, so any anonymous caller
+ * could enumerate, rewrite or delete any tenant's testimonials just by putting a
+ * different slug in the URL. This function is that missing boundary.
+ *
+ * Returns the offending NextResponse on failure, or null when the caller is
+ * allowed to act on `clientId`.
+ */
+async function guard(clientId: string): Promise<NextResponse | null> {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  // Admins legitimately moderate on behalf of any tenant; a customer is confined
+  // to the client_id baked into their signed cookie.
+  if (session.role === "customer" && session.client_id !== clientId) {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
+  if (session.role !== "customer" && session.role !== "admin") {
+    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
 
 export async function GET(
   req: Request,
@@ -11,6 +44,9 @@ export async function GET(
   if (!clientId || !clientId.trim()) {
     return NextResponse.json({ reviews: [] });
   }
+  // Gated: this returns is_visible=false rows the public feed deliberately hides.
+  const denied = await guard(clientId);
+  if (denied) return denied;
   const rows = await supaGet("service_reviews", {
     select: "id,customer_name,role,rating,review_text,is_visible,source,created_at",
     client_id: "eq." + clientId,
@@ -27,6 +63,8 @@ export async function PATCH(
   if (!clientId || !clientId.trim()) {
     return NextResponse.json({ ok: false, error: "clientId required" }, { status: 400 });
   }
+  const denied = await guard(clientId);
+  if (denied) return denied;
 
   let body: any = {};
   try {
@@ -88,6 +126,8 @@ export async function DELETE(
   if (!clientId || !clientId.trim()) {
     return NextResponse.json({ ok: false, error: "clientId required" }, { status: 400 });
   }
+  const denied = await guard(clientId);
+  if (denied) return denied;
 
   let body: any = {};
   try {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { resolveTenant } from "@/lib/tenant";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,12 +23,11 @@ export async function GET(request: NextRequest) {
     
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
-    const clientId = request.nextUrl.searchParams.get("client_id");
-    if (!clientId) return json({ error: "missing client_id" }, 400);
-    
-    if (session.role === "customer" && session.client_id !== clientId) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    // Invoice numbers must be gapless and per-tenant. Letting an unauthorised
+    // caller advance another tenant's counter creates permanent audit gaps.
+    const t = resolveTenant(session, request.nextUrl.searchParams.get("client_id"));
+    if (!t.ok) return json({ error: t.error }, t.status);
+    const clientId = t.clientId;
 
     const result = await supaPost("rpc/get_next_gst_invoice_number", {
       p_client_id: clientId,

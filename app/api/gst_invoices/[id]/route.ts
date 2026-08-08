@@ -7,6 +7,7 @@ import {
   isServiceKeyConfigured,
 } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { authorizeOwnedTenant } from "@/lib/tenant";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -41,9 +42,10 @@ export async function GET(
       return json({ error: "not found" }, 404);
     }
     
-    if (session.role === "customer" && session.client_id !== rows[0].client_id) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    // Ownership, not just comparison: a `signup` role holds no tenant and is
+    // rejected here rather than falling through the old customer-only check.
+    const auth = authorizeOwnedTenant(session, rows[0].client_id);
+    if (!auth.ok) return json({ error: auth.error }, auth.status);
 
     const items = await supaGet("gst_invoice_items", {
       invoice_id: "eq." + id,
@@ -76,10 +78,12 @@ export async function PUT(
     if (!Array.isArray(existingRows) || existingRows.length === 0) {
       return json({ error: "not found" }, 404);
     }
-    if (session.role === "customer" && session.client_id !== existingRows[0].client_id) {
-      return json({ error: "Forbidden" }, 403);
-    }
-    
+    const auth = authorizeOwnedTenant(session, existingRows[0].client_id);
+    if (!auth.ok) return json({ error: auth.error }, auth.status);
+    // The verified owner of this invoice. Child rows are re-stamped with THIS,
+    // never with anything the caller sent.
+    const ownerClientId = auth.clientId;
+
     const updateBody: Record<string, any> = {};
     const fields = [
       "invoice_number", "invoice_date", "supplier_company_name",
@@ -106,7 +110,12 @@ export async function PUT(
       if (p.items.length > 0) {
         const itemRows = p.items.map((item: any, idx: number) => ({
           invoice_id: id,
-          client_id: p.client_id || null,
+          // Always the tenant VERIFIED against the stored parent row above.
+          // Previously `p.client_id || null` — a body-supplied value. That let a
+          // caller stamp child rows with a foreign tenant, or with NULL, which
+          // orphans them from every `client_id=eq.` filter and silently corrupts
+          // a tax document that must stay auditable.
+          client_id: ownerClientId,
           sno: item.sno ?? idx + 1,
           hsn_code: item.hsn_code || null,
           description: item.description || null,
@@ -143,9 +152,8 @@ export async function DELETE(
     if (!Array.isArray(existingRows) || existingRows.length === 0) {
       return json({ error: "not found" }, 404);
     }
-    if (session.role === "customer" && session.client_id !== existingRows[0].client_id) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    const auth = authorizeOwnedTenant(session, existingRows[0].client_id);
+    if (!auth.ok) return json({ error: auth.error }, auth.status);
 
     await supaDelete("gst_invoice_items", { invoice_id: "eq." + id });
     await supaDelete("gst_invoices", { id: "eq." + id });

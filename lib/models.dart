@@ -137,6 +137,19 @@ class QuotationData {
   }
 }
 
+/// PRICING PARITY CONTRACT — read before editing any getter in this class.
+///
+/// This class is the AUTHORITATIVE uPVC pricing implementation because it renders
+/// the customer-facing PDF. It is mirrored in TypeScript at `src/lib/pricing.ts`,
+/// which is the single source of truth for every web/API surface (the formula used
+/// to be copy-pasted into 4 places and had already drifted).
+///
+/// If you change `sft`, `totalSft`, `total`, `igst` or `grandTotal` here, you MUST
+/// make the identical change in `src/lib/pricing.ts` in the SAME commit, and re-run
+/// the parity fixtures (`PRICING_PARITY_FIXTURES` in that file). Preserve the
+/// multiplication ORDER exactly — float multiplication is not associative, and a
+/// reordering can move the result by a paisa. The mobile PDF and the web dashboard
+/// disagreeing on a total is a trust-killer with the client.
 class MeasuredItem {
   String? id;
   Key cardKey = UniqueKey();
@@ -147,6 +160,7 @@ class MeasuredItem {
   int units = 1;
   String glass = '';
   double rate = 0;
+  /// Mirrored by `sqft()` in src/lib/pricing.ts. 304.8 mm = 1 foot.
   double get sft => (width / 304.8) * (height / 304.8);
   double get totalSft => sft * units;
   double get total => totalSft * rate;

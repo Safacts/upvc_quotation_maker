@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { measuredLineTotal, unmeasuredLineTotal, quotationTotals } from "@/lib/pricing";
 import "./dashboard.css";
 
 const SUPABASE_URL = "https://effxrwrbsjduvhmorvrq.supabase.co";
@@ -20,6 +21,17 @@ function authHeaders() {
   };
 }
 
+/**
+ * Row ceilings for this legacy admin log screen.
+ *
+ * It renders every quotation into one un-virtualised <table> and holds all child
+ * items in memory, so an unbounded fetch would hang the browser long before the
+ * network gave up. These caps keep the page responsive; the desktop console
+ * (server-side paged) is the real answer for large datasets.
+ */
+const MAX_QUOTATIONS = 1000;
+const MAX_ITEMS = 10000;
+
 async function supabaseFetch(path: string): Promise<any[]> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: authHeaders(),
@@ -28,37 +40,31 @@ async function supabaseFetch(path: string): Promise<any[]> {
   return res.json();
 }
 
+/**
+ * BEHAVIOUR CHANGE 08-08-2026 — GST is now per-quote, not a blanket 18%.
+ *
+ * This function used to inline its own copy of the pricing formula AND apply a
+ * flat `* 0.18` IGST to every quotation unconditionally. That disagreed with
+ * lib/models.dart (which only charges GST when `include_gst` is set, at the
+ * quote's own `gst_percentage`) and therefore disagreed with the PDF the customer
+ * actually received. This admin log now reports the same grand total as the PDF.
+ *
+ * Consequence: quotations saved with `include_gst = false` will show ₹0.00 in the
+ * IGST column where they previously showed an invented 18%. Those older figures
+ * were wrong; these are right.
+ */
 function computeQuote(q: any, mItems: any[], umItems: any[]) {
-  let totalMeasured = 0;
-  mItems.forEach((item) => {
-    const w = Number(item.width || 0);
-    const h = Number(item.height || 0);
-    const u = Number(item.units || 1);
-    const r = Number(item.rate || 0);
-    const sft = (w / 304.8) * (h / 304.8);
-    totalMeasured += sft * u * r;
-  });
-
-  let totalUnmeasured = 0;
-  umItems.forEach((item) => {
-    const u = Number(item.units || 1);
-    const r = Number(item.rate || 0);
-    totalUnmeasured += u * r;
-  });
-
-  const subtotal = totalMeasured + totalUnmeasured;
-  const transport = Number(q.transport_cost || 0);
-  const igst = (subtotal + transport) * 0.18;
-  const grandTotal = subtotal + transport + igst;
+  const totals = quotationTotals(q, mItems, umItems);
 
   return {
     ...q,
     mItems,
     umItems,
-    subtotal,
-    transport,
-    igst,
-    grandTotal,
+    subtotal: totals.subtotal,
+    transport: totals.transport,
+    igst: totals.gstAmount,
+    gstPercentage: totals.gstPercentage,
+    grandTotal: totals.grandTotal,
     dateStr: q.date
       ? new Date(q.date).toLocaleDateString("en-IN", {
           day: "2-digit",
@@ -122,9 +128,11 @@ export default function DashboardPage() {
     setError("");
     try {
       const [quotes, mItems, umItems] = await Promise.all([
-        supabaseFetch("quotations?select=*&order=created_at.desc"),
-        supabaseFetch("measured_items?select=*"),
-        supabaseFetch("unmeasured_items?select=*"),
+        supabaseFetch(
+          `quotations?select=*&order=created_at.desc&limit=${MAX_QUOTATIONS}`,
+        ),
+        supabaseFetch(`measured_items?select=*&limit=${MAX_ITEMS}`),
+        supabaseFetch(`unmeasured_items?select=*&limit=${MAX_ITEMS}`),
       ]);
 
       const mItemsMap: Record<string, any[]> = {};
@@ -403,7 +411,9 @@ export default function DashboardPage() {
                     <th>Date</th>
                     <th>Subtotal</th>
                     <th>Transport</th>
-                    <th>IGST (18%)</th>
+                    {/* Rate is per-quote (include_gst / gst_percentage), so the
+                        header can no longer hard-code 18%. */}
+                    <th>IGST</th>
                     <th>Grand Total</th>
                     <th>Actions</th>
                   </tr>
@@ -480,8 +490,8 @@ export default function DashboardPage() {
                     const h = Number(item.height || 0);
                     const u = Number(item.units || 1);
                     const r = Number(item.rate || 0);
-                    const sft = (w / 304.8) * (h / 304.8);
-                    const total = sft * u * r;
+                    // Single source of truth — see src/lib/pricing.ts.
+                    const total = measuredLineTotal(item);
                     return (
                       <div className="item-grid" key={item.id || i}>
                         <div className="item-detail">
@@ -511,7 +521,8 @@ export default function DashboardPage() {
                   {selected.umItems.map((item: any, i: number) => {
                     const u = Number(item.units || 1);
                     const r = Number(item.rate || 0);
-                    const total = u * r;
+                    // Single source of truth — see src/lib/pricing.ts.
+                    const total = unmeasuredLineTotal(item);
                     return (
                       <div className="item-grid" key={item.id || i}>
                         <div

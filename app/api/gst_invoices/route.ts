@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { resolveTenant } from "@/lib/tenant";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,12 +23,12 @@ export async function GET(request: NextRequest) {
     
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
-    const clientId = request.nextUrl.searchParams.get("client_id");
-    if (!clientId) return json({ error: "missing client_id" }, 400);
-    
-    if (session.role === "customer" && session.client_id !== clientId) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    // Tenant is DERIVED from the signed cookie for customers. The old code read
+    // it from searchParams and only compared it when role === "customer", so a
+    // self-issued `signup` session read any tenant's invoices. See src/lib/tenant.ts.
+    const t = resolveTenant(session, request.nextUrl.searchParams.get("client_id"));
+    if (!t.ok) return json({ error: t.error }, t.status);
+    const clientId = t.clientId;
 
     const invoices = await supaGet("gst_invoices", {
       client_id: "eq." + clientId,
@@ -51,12 +52,9 @@ export async function POST(request: NextRequest) {
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const p = await request.json();
-    const clientId = p.client_id || "";
-    if (!clientId) return json({ error: "missing client_id" }, 400);
-    
-    if (session.role === "customer" && session.client_id !== clientId) {
-      return json({ error: "Forbidden" }, 403);
-    }
+    const t = resolveTenant(session, p.client_id);
+    if (!t.ok) return json({ error: t.error }, t.status);
+    const clientId = t.clientId;
 
     const items: any[] = Array.isArray(p.items) ? p.items : [];
 
