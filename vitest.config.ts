@@ -4,38 +4,55 @@ import tsconfigPaths from "vite-tsconfig-paths";
 /**
  * Vitest configuration — owned by Bugsy (QA).
  *
- * WHY `environment: "node"`:
- * Everything under test here is server-side (Next.js route handlers, pricing
- * math, JWT session helpers). Loading jsdom would be slower and would let a
- * server module accidentally depend on `window` without the suite catching it.
- * When we start testing React components, add a SEPARATE project entry with
- * `environment: "jsdom"` rather than flipping this global — server code must
- * keep failing loudly if it touches browser globals.
+ * TWO PROJECTS, SPLIT BY FILE EXTENSION:
  *
- * WHY the narrow `include`:
+ *   `server`  tests/**\/*.test.ts   environment: node
+ *   `client`  tests/**\/*.test.tsx  environment: jsdom
+ *
+ * WHY SPLIT BY EXTENSION AND NOT BY AN EXPLICIT FILE LIST:
+ * The first attempt named `tests/console-ui.test.tsx` literally in the client
+ * project and excluded it from the server one. That looks tidy and is a trap —
+ * `extends: true` merges the ROOT `include` into each project, so every `.ts`
+ * suite was collected by BOTH projects and ran twice (96 "passing" tests for a
+ * 48-test file). Doubling the runtime is the mild symptom; the real one is that
+ * a node-only suite silently gained a jsdom run where `window` exists, so a
+ * server module that accidentally touches a browser global would still pass.
+ *
+ * Extension is the honest discriminator: a `.tsx` test renders components and
+ * needs a DOM, a `.ts` test does not. The root config therefore declares NO
+ * `include` at all — each project owns its own, with no merge to reason about.
+ *
+ * WHY `environment: node` is the default for server tests:
+ * Route handlers, pricing math and JWT helpers are server-side. Loading jsdom
+ * would be slower and would let a server module depend on `window` without the
+ * suite catching it. That failure must stay loud.
+ *
+ * WHY the exclusions:
  * The repo is a Flutter + Next.js hybrid. `test/widget_test.dart` and anything
- * under `build/`, `android/`, `ios/` etc. must never be picked up. Vitest is
- * scoped to `tests/**` only; Dart tests run via `flutter test`.
+ * under `build/`, `android/`, `ios/` must never be picked up — Dart tests run
+ * via `flutter test`.
  */
+
+/** Shared by both projects; `test/` is Flutter's Dart folder, not ours. */
+const SHARED_EXCLUDE = [
+  "node_modules/**",
+  "build/**",
+  ".next/**",
+  ".next-verify/**",
+  "android/**",
+  "ios/**",
+  "windows/**",
+  "linux/**",
+  "macos/**",
+  "web/**",
+  "public/**",
+  "test/**",
+];
+
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
-    environment: "node",
     globals: false,
-    include: ["tests/**/*.test.ts"],
-    exclude: [
-      "node_modules/**",
-      "build/**",
-      ".next/**",
-      "android/**",
-      "ios/**",
-      "windows/**",
-      "linux/**",
-      "macos/**",
-      "web/**",
-      "public/**",
-      "test/**", // Flutter's Dart test folder
-    ],
     // Route-handler tests mutate module-level env and rely on vi.mock; isolate
     // them so one suite cannot leak a mocked Supabase client into another.
     isolate: true,
@@ -45,5 +62,26 @@ export default defineConfig({
       include: ["src/lib/**/*.ts", "app/api/**/*.ts"],
       exclude: ["**/*.d.ts"],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "server",
+          environment: "node",
+          include: ["tests/**/*.test.ts"],
+          exclude: SHARED_EXCLUDE,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "client",
+          environment: "jsdom",
+          include: ["tests/**/*.test.tsx"],
+          exclude: SHARED_EXCLUDE,
+          setupFiles: ["tests/console-ui-setup.ts"],
+        },
+      },
+    ],
   },
 });

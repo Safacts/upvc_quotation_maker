@@ -52,3 +52,4 @@ troubleshooting/
 *.pyc
 *.swp
 migrate_working_dir/
+send_tg.js  

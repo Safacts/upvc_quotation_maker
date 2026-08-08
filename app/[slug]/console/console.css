@@ -1863,3 +1863,613 @@ textarea.vc-cell-input {
 .vc-root[data-ui-active] .vc-row-del {
   width: calc(var(--vc-input-h) + 2px);
 }
+
+/* ==========================================================================
+   PHASE 3 — the keyboard layer
+   ==========================================================================
+   Inline calculator (Ctrl+/), period selector (F2), screen config (Ctrl+,),
+   quick-create (Alt+C), record navigation (PgUp/PgDn) and grid density.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Inline calculator (Ctrl+/)
+   --------------------------------------------------------------------------
+   NOT inside .vc-root: it is `position: fixed` against the viewport and
+   anchored to a field's bounding rect, so it must not inherit the grid
+   layout. z-index sits above the overlay (1000) but below the toast (1200) —
+   an error toast from a bad expression must be readable over the popover that
+   produced it. */
+
+.vc-calc-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  /* Invisible: this only exists to catch the click-away. A dimming scrim would
+     be wrong — the calculator is a field affordance, not a modal, and the user
+     must keep seeing the row they are editing. */
+  background: transparent;
+}
+
+.vc-calc {
+  position: fixed;
+  z-index: 1101;
+  background: var(--vc-surface, #fff);
+  border: 1px solid var(--vc-border-strong, #c4cbd4);
+  border-radius: 8px;
+  box-shadow: 0 12px 34px rgba(16, 23, 34, 0.22);
+  font-family: var(--vc-sans, "Outfit", sans-serif);
+  font-size: 12.5px;
+  overflow: hidden;
+}
+
+.vc-calc-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--vc-surface-2, #fbfcfd);
+  border-bottom: 1px solid var(--vc-border, #dfe3e8);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim, #5b6673);
+}
+
+.vc-calc-target {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--vc-text-faint, #8a94a1);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vc-calc-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--vc-border, #dfe3e8);
+  padding: 9px 11px;
+  /* Monospace: an expression is easier to scan when digits and operators line
+     up, and it distinguishes the calculator from the proportional-font form
+     behind it. */
+  font-family: var(--vc-mono, monospace);
+  font-size: 14px;
+  outline: none;
+  color: var(--vc-text, #14181f);
+}
+
+.vc-calc-result {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 11px;
+  font-family: var(--vc-mono, monospace);
+  font-size: 15px;
+  color: var(--vc-green, #128a4b);
+  min-height: 34px;
+}
+
+.vc-calc-result b {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.vc-calc-eq {
+  color: var(--vc-text-faint, #8a94a1);
+}
+
+.vc-calc-error {
+  color: var(--vc-red, #c62828);
+  font-family: var(--vc-sans, sans-serif);
+  font-size: 12px;
+}
+
+.vc-calc-muted {
+  color: var(--vc-text-faint, #8a94a1);
+  font-family: var(--vc-sans, sans-serif);
+  font-size: 12px;
+}
+
+.vc-calc-examples {
+  border-top: 1px solid var(--vc-border, #dfe3e8);
+  padding: 5px;
+}
+
+.vc-calc-example {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--vc-text-dim, #5b6673);
+  text-align: left;
+}
+
+.vc-calc-example:hover {
+  background: var(--vc-accent-dim, #f5ecd8);
+}
+
+.vc-calc-example code {
+  font-family: var(--vc-mono, monospace);
+  color: var(--vc-text, #14181f);
+  font-weight: 600;
+}
+
+.vc-calc-example span {
+  margin-left: auto;
+  color: var(--vc-text-faint, #8a94a1);
+}
+
+.vc-calc-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-top: 1px solid var(--vc-border, #dfe3e8);
+  background: var(--vc-surface-2, #fbfcfd);
+}
+
+.vc-calc-hint {
+  font-size: 10.5px;
+  color: var(--vc-text-faint, #8a94a1);
+}
+
+/* --------------------------------------------------------------------------
+   Period selector (F2)
+   -------------------------------------------------------------------------- */
+
+.vc-period {
+  width: min(620px, 94vw);
+  background: var(--vc-surface);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgba(16, 23, 34, 0.3);
+  outline: none;
+  overflow: hidden;
+}
+
+.vc-period-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-period-head h3 {
+  font-size: 14.5px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vc-period-head .vc-kbd {
+  margin-left: auto;
+}
+
+.vc-period-body {
+  display: grid;
+  /* Presets left, custom range right. Both visible at once — a picker that
+     hides the custom fields behind a "Custom…" tab makes the second-most
+     common action a two-step. */
+  grid-template-columns: minmax(0, 1fr) 220px;
+}
+
+.vc-period-list {
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 6px;
+  border-right: 1px solid var(--vc-border);
+}
+
+.vc-period-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 7px 9px;
+  border-radius: var(--vc-radius);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--vc-text);
+  text-align: left;
+}
+
+.vc-period-item.vc-sel {
+  background: var(--vc-surface-2);
+}
+
+.vc-period-item.vc-active {
+  background: var(--vc-accent-dim);
+  font-weight: 700;
+}
+
+.vc-period-label {
+  flex: 1;
+}
+
+.vc-period-hint {
+  opacity: 0.75;
+}
+
+.vc-period-custom {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--vc-surface-2);
+}
+
+.vc-period-custom-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+}
+
+.vc-period-note {
+  font-size: 10.5px;
+  color: var(--vc-text-faint);
+  margin-top: 3px;
+}
+
+.vc-period-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--vc-border);
+}
+
+.vc-period-preview {
+  font-size: 12px;
+  color: var(--vc-text-dim);
+}
+
+/* The always-visible period chip in the topbar. */
+.vc-period-chip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Screen config (Ctrl+,)
+   -------------------------------------------------------------------------- */
+
+.vc-config {
+  width: min(560px, 94vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--vc-surface);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgba(16, 23, 34, 0.3);
+  outline: none;
+  overflow: hidden;
+}
+
+.vc-config-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-config-head h3 {
+  font-size: 14.5px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vc-config-head .vc-kbd {
+  margin-left: auto;
+}
+
+.vc-config-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.vc-config-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+  margin-bottom: 8px;
+}
+
+.vc-config-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2px 14px;
+}
+
+.vc-config-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.vc-config-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  font-size: 12.5px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.vc-config-check input:disabled {
+  cursor: not-allowed;
+}
+
+.vc-config-check span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vc-config-req {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vc-text-faint);
+  flex: none;
+}
+
+.vc-config-move {
+  display: flex;
+  gap: 1px;
+  flex: none;
+}
+
+/* The move buttons are navigation, not deletion — override .vc-icon-btn's
+   red destructive hover, which would otherwise imply "remove column". */
+.vc-config-move .vc-icon-btn:hover:not(:disabled) {
+  background: var(--vc-blue-dim);
+  color: var(--vc-blue);
+}
+
+.vc-config-move .vc-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.vc-config-hint {
+  font-size: 11px;
+  color: var(--vc-text-faint);
+  margin-top: 7px;
+}
+
+.vc-config-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+}
+
+/* --------------------------------------------------------------------------
+   Quick create (Alt+C)
+   -------------------------------------------------------------------------- */
+
+.vc-quick {
+  width: min(600px, 94vw);
+  background: var(--vc-surface);
+  border-radius: 9px;
+  box-shadow: 0 18px 50px rgba(16, 23, 34, 0.3);
+  outline: none;
+  overflow: hidden;
+}
+
+.vc-quick-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-quick-head h3 {
+  font-size: 14.5px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.vc-quick-head .vc-kbd {
+  margin-left: auto;
+}
+
+.vc-quick-body {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px 13px;
+}
+
+.vc-quick-body .vc-span-2 {
+  grid-column: span 2;
+}
+
+.vc-quick-choose {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.vc-quick-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--vc-border);
+  border-radius: 8px;
+  background: var(--vc-surface-2);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: var(--vc-text);
+}
+
+.vc-quick-choice:hover,
+.vc-quick-choice:focus-visible {
+  border-color: var(--vc-accent);
+  background: var(--vc-accent-dim);
+  outline: none;
+}
+
+.vc-quick-choice-label {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.vc-quick-choice-desc {
+  font-size: 11px;
+  color: var(--vc-text-dim);
+}
+
+.vc-quick-error {
+  margin: 0 16px 10px;
+  padding: 7px 10px;
+  background: var(--vc-red-dim);
+  border-left: 3px solid var(--vc-red);
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: var(--vc-red);
+}
+
+.vc-quick-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+}
+
+/* Small "Add" affordance beside a field label (Alt+C discoverability). */
+.vc-inline-add {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--vc-blue);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.vc-inline-add:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Record navigation (PgUp / PgDn)
+   -------------------------------------------------------------------------- */
+
+.vc-recnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 10px;
+  padding: 2px 4px;
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  background: var(--vc-surface-2);
+}
+
+/* These arrows move between records — not the destructive red of a row delete. */
+.vc-recnav .vc-icon-btn:hover:not(:disabled) {
+  background: var(--vc-blue-dim);
+  color: var(--vc-blue);
+}
+
+.vc-recnav .vc-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.vc-recnav-label {
+  font-family: var(--vc-mono);
+  font-size: 10.5px;
+  color: var(--vc-text-dim);
+  padding: 0 3px;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Grid density (Ctrl+, → Row density)
+   --------------------------------------------------------------------------
+   Driven by the `data-density` attribute DataGrid puts on its scroll
+   container, so the rules can reach both header and body cells without the
+   component knowing anything about spacing. `normal` deliberately has no rule
+   — it is the base stylesheet, so the default costs nothing. */
+
+.vc-grid-wrap[data-density="compact"] .vc-table tbody td {
+  padding: 2px 7px;
+}
+
+.vc-grid-wrap[data-density="compact"] .vc-table thead th {
+  padding: 4px 7px;
+}
+
+.vc-grid-wrap[data-density="relaxed"] .vc-table tbody td {
+  padding: 9px 11px;
+}
+
+.vc-grid-wrap[data-density="relaxed"] .vc-table thead th {
+  padding: 9px 11px;
+}
+
+/* --------------------------------------------------------------------------
+   Cheatsheet sections (?)
+   -------------------------------------------------------------------------- */
+
+.vc-sheet-section {
+  margin-top: 16px;
+}
+
+.vc-sheet-group {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vc-accent);
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-sheet-section .vc-sheet-grid {
+  margin-top: 9px;
+}
+

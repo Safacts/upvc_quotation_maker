@@ -3,9 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Plus, Search, Download, RefreshCw } from "lucide-react";
+import { Plus, Search, Download, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { DataGrid, StatusPill } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
+import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
+import { filterSignature, saveCursor } from "@/lib/record-nav";
+import { applyPeriodParams, describePeriod } from "@/lib/period";
+import type { ColumnSpec } from "@/lib/screen-config";
 import {
   formatAmount,
   formatDate,
@@ -15,6 +20,31 @@ import {
   downloadFile,
 } from "@/lib/console-format";
 import { QUOTATION_STATUSES } from "@/lib/console-schemas";
+
+/**
+ * Column catalogue for Ctrl+, (the column chooser).
+ *
+ * Ids MUST match the `accessorKey` of the TanStack columns below — that is what
+ * `applyConfigToColumns` matches on, and a typo means a column that can never
+ * be shown. `customer_name` is `required` because a quotation list without the
+ * customer is not a customisation, it is a broken screen.
+ */
+const COLUMN_SPECS: ColumnSpec[] = [
+  { id: "quote_no", label: "Quote No" },
+  { id: "customer_name", label: "Customer", required: true },
+  { id: "contact_no", label: "Phone" },
+  { id: "date", label: "Date" },
+  { id: "status", label: "Status" },
+  { id: "item_count", label: "Items" },
+  { id: "total_sqft", label: "Sqft" },
+  { id: "net_total", label: "Net" },
+  // Off by default: GST is only meaningful for the subset of quotes that carry
+  // it, and an always-zero column is noise on the screen people live in.
+  { id: "gst_amount", label: "GST", defaultHidden: true },
+  { id: "grand_total", label: "Grand Total" },
+];
+
+const SCREEN_ID = "quotations";
 
 /**
  * Quotations grid — server-paged, server-sorted, server-filtered.
@@ -43,12 +73,11 @@ interface Row {
 
 export default function QuotationsClient() {
   const router = useRouter();
-  const { slug, toast } = useConsole();
+  const { slug, clientId, toast, period, openQuickCreate } = useConsole();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
@@ -56,6 +85,13 @@ export default function QuotationsClient() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([{ id: "created_at", desc: true }]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [configOpen, setConfigOpen] = useState(false);
+
+  // Ctrl+, — column visibility/order, density and page size, persisted per
+  // tenant + screen. `ready` gates the first fetch so a user configured for 200
+  // rows does not get a wasted 50-row request first.
+  const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
+  const pageSize = screen.config.pageSize;
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -68,12 +104,16 @@ export default function QuotationsClient() {
   }, [search]);
 
   // Any filter change must reset to page 1. Staying on page 4 after filtering to
-  // 12 results shows an empty grid and looks like data loss.
+  // 12 results shows an empty grid and looks like data loss. The PERIOD counts
+  // as a filter — changing it with F2 while on page 6 has the same problem.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, sorting]);
+  }, [debouncedSearch, statusFilter, sorting, period.from, period.to, pageSize]);
 
   useEffect(() => {
+    // Wait for the stored page size before the first request — see useScreenConfig.
+    if (!screen.ready) return;
+
     let cancelled = false;
     setLoading(true);
 
@@ -87,6 +127,9 @@ export default function QuotationsClient() {
     });
     if (debouncedSearch) params.set("q", debouncedSearch);
     if (statusFilter) params.set("status", statusFilter);
+    // F2's period. `from`/`to` are half-open and already in the exact form the
+    // API expects — see src/lib/period.ts.
+    applyPeriodParams(params, period);
 
     (async () => {
       try {
@@ -103,9 +146,30 @@ export default function QuotationsClient() {
           setRows([]);
           return;
         }
-        setRows(data.rows || []);
+        const loaded: Row[] = data.rows || [];
+        setRows(loaded);
         setTotalCount(data.total_count || 0);
         setTotalPages(data.total_pages || 1);
+
+        // Publish the PgUp/PgDn rail for the editor. This is the handoff that
+        // lets a user open one quotation and walk the whole filtered list with
+        // one key, never returning here. It is a navigation hint only — every
+        // id is still re-authorised server-side. See src/lib/record-nav.ts.
+        saveCursor(clientId, SCREEN_ID, {
+          ids: loaded.map((r) => r.id),
+          page,
+          totalPages: data.total_pages || 1,
+          totalCount: data.total_count || 0,
+          signature: filterSignature({
+            q: debouncedSearch,
+            status: statusFilter,
+            sort,
+            dir,
+            from: period.from,
+            to: period.to,
+            pageSize,
+          }),
+        });
       } catch (e: any) {
         if (!cancelled) toast(String(e?.message ?? e), "err");
       } finally {
@@ -116,7 +180,10 @@ export default function QuotationsClient() {
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, debouncedSearch, statusFilter, sorting, reloadKey, toast]);
+  }, [
+    page, pageSize, debouncedSearch, statusFilter, sorting, reloadKey, toast,
+    period.from, period.to, clientId, screen.ready,
+  ]);
 
   const pageTotal = useMemo(
     () => rows.reduce((sum, r) => sum + (Number(r.net_total) || 0), 0),
@@ -184,20 +251,47 @@ export default function QuotationsClient() {
     el.select();
   });
 
+  // Ctrl+, — this screen's column chooser.
+  useConsoleAction("config", () => setConfigOpen(true));
+
+  // Alt+C from a list screen means "add a customer", not "add a product":
+  // there is no item grid here to imply otherwise.
+  useConsoleAction("quickCreate", () => openQuickCreate("customer", search.trim()));
+
+  /**
+   * PgUp / PgDn on a LIST mean previous/next PAGE.
+   *
+   * There is no open record here, so "next record" degenerates to "next page" —
+   * the same intent (show me the neighbouring data) resolved for this screen.
+   * In the editor the identical keys move between quotations. Guarded on
+   * `loading` so holding the key does not queue a stack of requests.
+   */
+  useConsoleAction("prevRecord", () => {
+    if (loading || page <= 1) return;
+    setPage((p) => Math.max(1, p - 1));
+  });
+  useConsoleAction("nextRecord", () => {
+    if (loading || page >= totalPages) return;
+    setPage((p) => Math.min(totalPages, p + 1));
+  });
+
   useConsoleStatus({
     busy: loading,
-    count: `${rows.length} of ${totalCount} quotations`,
+    count: `${rows.length} of ${totalCount} quotations · ${describePeriod(period)}`,
     total: formatMoney(pageTotal) + " on this page",
     hints: [
       { keys: "↑↓", label: "Move" },
       { keys: "Enter", label: "Open" },
+      { keys: "PgUp/PgDn", label: "Page" },
       { keys: "Ctrl+F", label: "Search" },
+      { keys: "F2", label: "Period" },
       { keys: "Alt+N", label: "New" },
+      { keys: "Ctrl+," , label: "Columns" },
       { keys: "Ctrl+E", label: "Export" },
     ],
   });
 
-  const columns = useMemo<ColumnDef<Row, any>[]>(
+  const allColumns = useMemo<ColumnDef<Row, any>[]>(
     () => [
       {
         accessorKey: "quote_no",
@@ -249,6 +343,13 @@ export default function QuotationsClient() {
         cell: (c) => formatAmount(c.getValue()),
       },
       {
+        accessorKey: "gst_amount",
+        header: "GST",
+        enableSorting: false,
+        meta: { align: "right" },
+        cell: (c) => formatAmount(c.getValue()),
+      },
+      {
         accessorKey: "grand_total",
         header: "Grand Total",
         enableSorting: false,
@@ -257,6 +358,12 @@ export default function QuotationsClient() {
       },
     ],
     [],
+  );
+
+  // Ctrl+, applied: filter to the visible set and put them in the saved order.
+  const visibleColumns = useMemo(
+    () => screen.applyTo(allColumns),
+    [allColumns, screen],
   );
 
   return (
@@ -309,6 +416,14 @@ export default function QuotationsClient() {
 
           <div style={{ flex: 1 }} />
 
+          <button
+            type="button"
+            className="vc-btn"
+            onClick={() => setConfigOpen(true)}
+            title="Configure columns and density (Ctrl+,)"
+          >
+            <SlidersHorizontal size={13} /> <span className="vc-kbd">Ctrl ,</span>
+          </button>
           <button type="button" className="vc-btn" onClick={exportCsv}>
             <Download size={13} /> CSV <span className="vc-kbd">Ctrl E</span>
           </button>
@@ -323,7 +438,8 @@ export default function QuotationsClient() {
 
         <DataGrid<Row>
           data={rows}
-          columns={columns}
+          columns={visibleColumns}
+          density={screen.config.density}
           getRowId={(r) => r.id}
           onRowActivate={openRow}
           sorting={sorting}
@@ -361,6 +477,16 @@ export default function QuotationsClient() {
           </button>
         </div>
       </div>
+
+      {configOpen && (
+        <ScreenConfigDialog
+          title="Quotations"
+          columns={COLUMN_SPECS}
+          config={screen.config}
+          onChange={screen.setConfig}
+          onClose={() => setConfigOpen(false)}
+        />
+      )}
     </div>
   );
 }

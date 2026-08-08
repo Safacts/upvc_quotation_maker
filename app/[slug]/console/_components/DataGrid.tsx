@@ -50,6 +50,14 @@ export interface DataGridProps<T> {
   emptyHint?: string;
   /** Height for the scroll container, e.g. "calc(100vh - 210px)". */
   maxHeight?: string;
+  /**
+   * Row density from the screen's Ctrl+, config.
+   *
+   * Applied as a `data-density` attribute and styled in console.css rather than
+   * as inline padding, so the compact/relaxed rules can also reach the header
+   * cells and the pills without this component knowing about either.
+   */
+  density?: "compact" | "normal" | "relaxed";
 }
 
 export function DataGrid<T>({
@@ -63,6 +71,7 @@ export function DataGrid<T>({
   emptyTitle = "Nothing here yet",
   emptyHint,
   maxHeight = "calc(100vh - 210px)",
+  density = "normal",
 }: DataGridProps<T>) {
   const [focusIndex, setFocusIndex] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -149,6 +158,7 @@ export function DataGrid<T>({
     <div
       className="vc-grid-wrap"
       style={{ maxHeight }}
+      data-density={density}
       ref={wrapRef}
       // tabIndex makes the grid itself focusable so arrow keys work after a
       // click on the container rather than only after clicking a row.

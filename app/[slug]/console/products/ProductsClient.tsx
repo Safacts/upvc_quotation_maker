@@ -2,10 +2,25 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, Search, Download } from "lucide-react";
+import { Plus, Search, Download, SlidersHorizontal } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
+import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
+import type { ColumnSpec } from "@/lib/screen-config";
 import { formatAmount, formatDate, toCsv, downloadFile } from "@/lib/console-format";
+
+/** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
+const COLUMN_SPECS: ColumnSpec[] = [
+  { id: "name", label: "Product", required: true },
+  { id: "category", label: "Category" },
+  { id: "description", label: "Description" },
+  { id: "price", label: "Rate" },
+  { id: "unit", label: "Unit" },
+  { id: "created_at", label: "Added", defaultHidden: true },
+];
+
+const SCREEN_ID = "products";
 
 /**
  * Products / rate card.
@@ -31,7 +46,7 @@ interface Row {
 }
 
 export default function ProductsClient() {
-  const { toast } = useConsole();
+  const { clientId, toast } = useConsole();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +64,10 @@ export default function ProductsClient() {
     unit: "SFT",
   });
 
+  const [configOpen, setConfigOpen] = useState(false);
+  const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
+  const pageSize = screen.config.pageSize;
+
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,12 +77,14 @@ export default function ProductsClient() {
 
   useEffect(() => {
     setPage(1);
-  }, [debounced]);
+  }, [debounced, pageSize]);
 
   const load = useCallback(async () => {
+    // Wait for the stored page size, or the first visit fires twice.
+    if (!screen.ready) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), page_size: "50" });
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (debounced) params.set("q", debounced);
       const res = await fetch(`/api/console/products?${params}`, { credentials: "same-origin" });
       const data = await res.json();
@@ -80,7 +101,7 @@ export default function ProductsClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, debounced, toast]);
+  }, [page, pageSize, debounced, toast, screen.ready]);
 
   useEffect(() => {
     void load();
@@ -148,18 +169,30 @@ export default function ProductsClient() {
     el.focus();
     el.select();
   });
+  useConsoleAction("config", () => setConfigOpen(true));
+  useConsoleAction("quickCreate", () => setCreating(true));
+  useConsoleAction("prevRecord", () => {
+    if (loading || page <= 1) return;
+    setPage((p) => Math.max(1, p - 1));
+  });
+  useConsoleAction("nextRecord", () => {
+    if (loading || page >= totalPages) return;
+    setPage((p) => Math.min(totalPages, p + 1));
+  });
 
   useConsoleStatus({
     busy: loading,
     count: `${rows.length} of ${totalCount} products`,
     hints: [
+      { keys: "PgUp/PgDn", label: "Page" },
       { keys: "Ctrl+F", label: "Search" },
       { keys: "Alt+N", label: "New" },
+      { keys: "Ctrl+,", label: "Columns" },
       { keys: "Ctrl+E", label: "Export" },
     ],
   });
 
-  const columns = useMemo<ColumnDef<Row, any>[]>(
+  const allColumns = useMemo<ColumnDef<Row, any>[]>(
     () => [
       {
         accessorKey: "name",
@@ -184,6 +217,8 @@ export default function ProductsClient() {
     [],
   );
 
+  const columns = useMemo(() => screen.applyTo(allColumns), [allColumns, screen]);
+
   return (
     <div className="vc-pad">
       <div className="vc-card">
@@ -203,6 +238,14 @@ export default function ProductsClient() {
             />
           </div>
           <div style={{ flex: 1 }} />
+          <button
+            type="button"
+            className="vc-btn"
+            onClick={() => setConfigOpen(true)}
+            title="Configure columns and density (Ctrl+,)"
+          >
+            <SlidersHorizontal size={13} /> <span className="vc-kbd">Ctrl ,</span>
+          </button>
           <button type="button" className="vc-btn" onClick={exportCsv}>
             <Download size={13} /> CSV
           </button>
@@ -295,6 +338,7 @@ export default function ProductsClient() {
         <DataGrid<Row>
           data={rows}
           columns={columns}
+          density={screen.config.density}
           getRowId={(r) => r.id}
           loading={loading}
           emptyTitle={debounced ? "No matching products" : "Your rate card is empty"}
@@ -329,6 +373,16 @@ export default function ProductsClient() {
           </button>
         </div>
       </div>
+
+      {configOpen && (
+        <ScreenConfigDialog
+          title="Products"
+          columns={COLUMN_SPECS}
+          config={screen.config}
+          onChange={screen.setConfig}
+          onClose={() => setConfigOpen(false)}
+        />
+      )}
     </div>
   );
 }

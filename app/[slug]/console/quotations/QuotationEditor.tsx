@@ -2,9 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText } from "lucide-react";
+import {
+  Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
+  ChevronLeft, ChevronRight,
+} from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
+import { loadCursor, locate, type RecordCursor } from "@/lib/record-nav";
 import {
   measuredLineSqft,
   measuredLineTotal,
@@ -153,7 +157,7 @@ export default function QuotationEditor({
   gstNumber?: string;
 }) {
   const router = useRouter();
-  const { slug, toast } = useConsole();
+  const { slug, clientId, toast, openQuickCreate } = useConsole();
 
   const [header, setHeader] = useState<QuotationHeader>(initial.header);
   const [measured, setMeasured] = useState<MeasuredRow[]>(
@@ -369,6 +373,93 @@ export default function QuotationEditor({
     router.push(`/${slug}/console/quotations`);
   }, [dirty, router, slug]);
 
+  // ---- PgUp / PgDn: walk the list without returning to it -----------------
+  //
+  // THE point of this feature: in Tally you open a voucher, press PgDn, and you
+  // are in the next one. Reviewing thirty quotations is thirty keystrokes, not
+  // ninety navigations. The grid published the ordered id list it was showing
+  // (see record-nav.ts); we read it once on mount and resolve neighbours
+  // locally, so moving between records costs ONE request — the next record's.
+  //
+  // Read in an effect, not in a `useState` initialiser: sessionStorage does not
+  // exist during SSR, and touching it there is an immediate crash.
+  const [cursor, setCursor] = useState<RecordCursor | null>(null);
+  useEffect(() => {
+    setCursor(loadCursor(clientId, "quotations"));
+  }, [clientId]);
+
+  const nav = useMemo(
+    // Page size is only used to caption "record 74 of 210"; navigation itself
+    // does not depend on it. The cursor stores the page it came from.
+    () => locate(cursor, savedId || "", 50),
+    [cursor, savedId],
+  );
+
+  const goToRecord = useCallback(
+    (id: string | null) => {
+      if (!id) return;
+      // The unsaved-changes prompt applies here exactly as it does to Esc —
+      // paging to the next quotation is still leaving this one.
+      if (dirty && !window.confirm("Discard unsaved changes?")) return;
+      router.push(`/${slug}/console/quotations/${id}`);
+    },
+    [dirty, router, slug],
+  );
+
+  // ---- Alt+C: create a master from inside the form ------------------------
+  //
+  // The editor is the screen where this shortcut earns its keep, and it is also
+  // the only screen with enough context to choose WHICH master: if the caret is
+  // in the item grid the user means a product, otherwise a customer. Getting
+  // that right is the difference between one keystroke and backing out of the
+  // wrong dialog.
+  const quickCreateFromContext = useCallback(() => {
+    const active = document.activeElement as HTMLElement | null;
+    const inItemGrid = !!active && !!gridRef.current?.contains(active);
+
+    if (inItemGrid) {
+      // Seed from the description cell the user is filling in.
+      const rowEl = active?.closest("tr");
+      const desc = rowEl?.querySelector<HTMLTextAreaElement>('[data-c="description"]');
+      openQuickCreate("product", (desc?.value || "").trim(), (row) => {
+        // Write the new product straight into the focused row so the user does
+        // not have to retype what they just typed into the dialog.
+        const idx = Number(rowEl?.getAttribute("data-r"));
+        if (!Number.isFinite(idx)) return;
+        setMeasured((rows) =>
+          rows.map((r, i) =>
+            i === idx
+              ? {
+                  ...r,
+                  description: row.description || row.name || r.description,
+                  code: r.code || row.name || "",
+                  rate: r.rate || (row.price != null ? String(row.price) : ""),
+                }
+              : r,
+          ),
+        );
+        markDirty();
+      });
+      return;
+    }
+
+    openQuickCreate("customer", header.customer_name.trim(), (row) => {
+      // Fill the header from the new master. Blank fields only — never
+      // overwrite something the user has already typed with master data.
+      setHeader((h) => ({
+        ...h,
+        customer_name: row.name || h.customer_name,
+        contact_no: h.contact_no || row.phone || "",
+        email: h.email || row.email || "",
+        address: h.address || row.address || "",
+        // The FK link. `customer_name` still stays as the historical snapshot
+        // printed on the PDF — see console-schemas.ts.
+        customer_id: row.id || h.customer_id,
+      }));
+      markDirty();
+    });
+  }, [openQuickCreate, header.customer_name, markDirty]);
+
   // ---- PDF download --------------------------------------------------------
   // Opens the PDF route in a new tab. The route re-reads the stored row, so the
   // download always reflects the last saved state — never the unsaved draft.
@@ -449,6 +540,12 @@ export default function QuotationEditor({
   useConsoleAction("deleteRow", () => removeMeasured(focusedMeasured));
   useConsoleAction("export", downloadPdf);
   useConsoleAction("duplicate", () => void duplicate());
+  useConsoleAction("quickCreate", quickCreateFromContext);
+  // PgUp/PgDn = previous/next QUOTATION. Registered as null when there is no
+  // rail (a deep link, or a brand-new unsaved quotation) so the shell does
+  // nothing rather than pretending — see the "declared but unused" lesson.
+  useConsoleAction("prevRecord", nav.prevId ? () => goToRecord(nav.prevId) : null);
+  useConsoleAction("nextRecord", nav.nextId ? () => goToRecord(nav.nextId) : null);
 
   // ---- Duplicate (Tally's Alt+2) ------------------------------------------
   // Clones this quotation as a fresh draft, then navigates to the new row so
@@ -479,12 +576,21 @@ export default function QuotationEditor({
   useConsoleStatus({
     busy: saving,
     dirty,
-    count: `${measured.length} measured · ${unmeasured.length} other`,
+    count:
+      `${measured.length} measured · ${unmeasured.length} other` +
+      // "Record 74 of 210" is the Tally caption that tells a reviewer how far
+      // through the batch they are. Only shown when a rail actually exists.
+      (nav.index >= 0 ? ` · record ${nav.position} of ${nav.total}` : ""),
     total: formatMoney(totals.grandTotal),
     hints: [
       { keys: "Ctrl+S", label: "Save" },
       { keys: "Alt+I", label: "Add row" },
       { keys: "Alt+X", label: "Delete row" },
+      { keys: "Alt+C", label: "New master" },
+      { keys: "Ctrl+/", label: "Calculator" },
+      ...(nav.index >= 0
+        ? [{ keys: "PgUp/PgDn", label: "Prev/next quote" }]
+        : []),
       { keys: "Esc", label: "Back" },
     ],
   });
@@ -553,6 +659,49 @@ export default function QuotationEditor({
             <span className="vc-card-title">
               {savedId ? "Edit Quotation" : "New Quotation"}
             </span>
+
+            {/* The PgUp/PgDn rail, made visible. The keyboard is the fast path,
+                but a user who does not yet know the shortcut needs to see that
+                stepping through records is possible at all — and the caption is
+                where they learn the key. */}
+            {nav.index >= 0 && (
+              <div className="vc-recnav">
+                <button
+                  type="button"
+                  className="vc-icon-btn"
+                  onClick={() => goToRecord(nav.prevId)}
+                  disabled={!nav.prevId}
+                  title={
+                    nav.prevId
+                      ? "Previous quotation (PgUp)"
+                      : nav.atPageStart
+                        ? "Start of this page — go back to the list for earlier records"
+                        : "First record"
+                  }
+                >
+                  <ChevronLeft size={12} />
+                </button>
+                <span className="vc-recnav-label">
+                  {nav.position} / {nav.total}
+                </span>
+                <button
+                  type="button"
+                  className="vc-icon-btn"
+                  onClick={() => goToRecord(nav.nextId)}
+                  disabled={!nav.nextId}
+                  title={
+                    nav.nextId
+                      ? "Next quotation (PgDn)"
+                      : nav.atPageEnd
+                        ? "End of this page — go back to the list for more"
+                        : "Last record"
+                  }
+                >
+                  <ChevronRight size={12} />
+                </button>
+              </div>
+            )}
+
             <div style={{ flex: 1 }} />
             {savedId && (
               <button
@@ -604,12 +753,25 @@ export default function QuotationEditor({
             <div className="vc-field vc-span-2">
               <label className="vc-label">
                 Customer <span className="vc-req">*</span>
+                {/* Alt+C is the whole point of this affordance: the user is
+                    already typing a name that is not on file, and this saves
+                    them abandoning the quotation to go and create it. */}
+                <button
+                  type="button"
+                  className="vc-inline-add"
+                  onClick={quickCreateFromContext}
+                  title="Add this customer to the master (Alt+C)"
+                >
+                  <UserPlus size={11} /> Add <span className="vc-kbd">Alt C</span>
+                </button>
               </label>
               <input
                 className={"vc-input" + (fieldErrors.customer_name ? " vc-invalid" : "")}
                 value={header.customer_name}
                 onChange={(e) => setHeaderField("customer_name", e.target.value)}
                 placeholder="Customer name"
+                // Not arithmetic — keep Ctrl+/ out of a name field.
+                data-calc="off"
                 autoFocus
               />
               {fieldErrors.customer_name && (
@@ -706,6 +868,9 @@ export default function QuotationEditor({
                 value={header.transport_cost}
                 onChange={(e) => setHeaderField("transport_cost", e.target.value)}
                 inputMode="decimal"
+                // Names the field in the calculator's header so the popover
+                // says what it will write into.
+                data-calc-label="Transport"
               />
             </div>
           </div>
@@ -818,6 +983,7 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="rate"
+                          data-calc-label={`Rate, row ${i + 1}`}
                           inputMode="decimal"
                           value={row.rate}
                           onFocus={() => setFocusedMeasured(i)}
@@ -943,6 +1109,12 @@ export default function QuotationEditor({
                   onChange={(e) => setHeaderField("gst_percentage", e.target.value)}
                   disabled={!header.include_gst}
                   inputMode="decimal"
+                  // Calculator OFF here deliberately: in a GST-percent box
+                  // "18" already means 18%, so the calculator's contextual `+
+                  // 18%` semantics would mean something different from what
+                  // the field says. Ambiguity in a tax field is not worth the
+                  // convenience.
+                  data-calc="off"
                 />
                 <span className="vc-total-value">{formatAmount(totals.gstAmount)}</span>
               </span>

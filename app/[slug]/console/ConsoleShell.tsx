@@ -23,10 +23,28 @@ import {
   Search,
   Keyboard,
   ExternalLink,
+  CalendarRange,
+  Calculator,
+  SlidersHorizontal,
+  UserPlus,
+  PackagePlus,
 } from "lucide-react";
-import { useHotkeys, CONSOLE_KEYMAP, type HotkeyBinding } from "@/lib/hooks/useHotkeys";
+import {
+  useHotkeys,
+  CONSOLE_KEYMAP,
+  KEYMAP_GROUPS,
+  type HotkeyBinding,
+} from "@/lib/hooks/useHotkeys";
 import { UIProvider, useUI } from "@/lib/hooks/useUI";
 import { UISettingsPanel } from "./_components/UISettingsPanel";
+import { InlineCalculator, useInlineCalculator } from "./_components/InlineCalculator";
+import { PeriodSelector } from "./_components/PeriodSelector";
+import { QuickCreate, type QuickCreateKind } from "./_components/QuickCreate";
+import {
+  defaultPeriod,
+  describePeriod,
+  type PeriodRange,
+} from "@/lib/period";
 import "./console.css";
 
 /**
@@ -69,6 +87,28 @@ interface ConsoleCtx {
   toast: (message: string, type?: "ok" | "err" | "info") => void;
   /** Registered by the active screen so global keys can reach it. */
   registerAction: (name: ConsoleActionName, fn: (() => void) | null) => void;
+
+  /**
+   * The console-wide reporting period (F2).
+   *
+   * Held in the SHELL, not per screen, so moving from the quotations grid to a
+   * report keeps the period the user just set. A per-screen period would mean
+   * "This Month" on one screen and "This FY" on the next, and two screens
+   * silently describing different businesses.
+   */
+  period: PeriodRange;
+  setPeriod: (p: PeriodRange) => void;
+  openPeriodSelector: () => void;
+
+  /**
+   * Ask the shell to open the Alt+C master-create dialog. `initialName` seeds
+   * the form with whatever the user had already typed into the field.
+   */
+  openQuickCreate: (
+    kind: QuickCreateKind,
+    initialName?: string,
+    onCreated?: (row: any, existing: boolean) => void,
+  ) => void;
 }
 
 export type ConsoleActionName =
@@ -79,7 +119,22 @@ export type ConsoleActionName =
   | "export"
   | "back"
   | "search"
-  | "duplicate";
+  | "duplicate"
+  /** Ctrl+, — the screen opens its own column/density dialog. */
+  | "config"
+  /** Alt+C — the screen decides WHICH master to create from the focused field. */
+  | "quickCreate"
+  /**
+   * PgUp / PgDn.
+   *
+   * Named "record", not "page", because that is the promise: in the EDITOR they
+   * open the previous/next quotation without returning to the list. On a grid
+   * there is no open record, so the screen registers them as page navigation
+   * instead — the same key, the same intent ("show me the neighbouring data"),
+   * resolved per screen.
+   */
+  | "prevRecord"
+  | "nextRecord";
 
 const Ctx = createContext<ConsoleCtx | null>(null);
 
@@ -157,8 +212,31 @@ export default function ConsoleShell({
   const [status, setStatus] = useState<StatusInfo>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: string } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The Alt+C dialog's request. `null` when closed.
+   *
+   * `onCreated` is carried in state rather than read from a ref at close time
+   * because the caller that OPENED the dialog is the one that knows what to do
+   * with the new row — the quotation editor fills its customer fields, the
+   * item grid fills a rate. A single shell-level callback could not tell them
+   * apart.
+   */
+  const [quickCreate, setQuickCreate] = useState<{
+    kind: QuickCreateKind;
+    initialName: string;
+    onCreated?: (row: any, existing: boolean) => void;
+  } | null>(null);
+
+  /**
+   * The reporting period, owned by the shell so it survives navigation between
+   * screens. Defaults to the current Indian financial year — see period.ts for
+   * why there is no calendar-year option at all.
+   */
+  const [period, setPeriodState] = useState<PeriodRange>(() => defaultPeriod());
 
   const actions = useRef<Partial<Record<ConsoleActionName, (() => void) | null>>>({});
 
@@ -178,6 +256,29 @@ export default function ConsoleShell({
     setToastMsg({ text, type });
     window.setTimeout(() => setToastMsg(null), 3200);
   }, []);
+
+  // ---- Inline calculator (Ctrl+/) -----------------------------------------
+  // ONE calculator for the whole console, anchored at press time to whichever
+  // numeric field has focus. Mounting one per input would put dozens of
+  // popovers on a 30-line item grid, all listening for the same key.
+  const calc = useInlineCalculator(toast);
+
+  const setPeriod = useCallback((p: PeriodRange) => {
+    setPeriodState(p);
+  }, []);
+
+  const openPeriodSelector = useCallback(() => setPeriodOpen(true), []);
+
+  const openQuickCreate = useCallback(
+    (
+      kind: QuickCreateKind,
+      initialName = "",
+      onCreated?: (row: any, existing: boolean) => void,
+    ) => {
+      setQuickCreate({ kind, initialName, onCreated });
+    },
+    [],
+  );
 
   // ---- Viewport gate -------------------------------------------------------
   // A phone reaching /console must land on the portal instead. This runs in an
@@ -233,9 +334,33 @@ export default function ConsoleShell({
         run: () => router.push(`${base}/quotations/new`),
       },
       {
-        label: "Reports",
-        hint: "5",
-        run: () => router.push(`${base}/reports`),
+        label: "New Customer",
+        hint: "Alt+C",
+        run: () => openQuickCreate("customer"),
+      },
+      {
+        label: "New Product / Rate",
+        hint: "Alt+C",
+        run: () => openQuickCreate("product"),
+      },
+      {
+        label: "Change Period",
+        hint: "F2",
+        run: () => setPeriodOpen(true),
+      },
+      {
+        label: "Configure Screen (columns, density)",
+        hint: "Ctrl+,",
+        run: () => {
+          const fn = actions.current.config;
+          if (fn) fn();
+          else toast("This screen has nothing to configure", "info");
+        },
+      },
+      {
+        label: "Calculator",
+        hint: "Ctrl+/",
+        run: () => calc.openForActiveField(),
       },
       {
         label: "Keyboard Shortcuts",
@@ -255,7 +380,7 @@ export default function ConsoleShell({
       { label: "Client Portal (lite view)", hint: "Go to", run: () => router.push(`/${slug}/home`) },
       { label: "Log out", hint: "", run: () => void logout() },
     ],
-    [base, router, slug, clientId, logout],
+    [base, router, slug, clientId, logout, openQuickCreate, calc, toast],
   );
 
   // ---- Global key map ------------------------------------------------------
@@ -379,12 +504,100 @@ export default function ConsoleShell({
         handler: () => actions.current.duplicate?.(),
       },
       {
+        // Tally's Alt+C — create master on the fly, kept on its ORIGINAL key
+        // because it is the one Tally users reach for without thinking.
+        //
+        // The screen gets first refusal: the quotation editor registers
+        // "quickCreate" so it can decide between a customer and a product from
+        // which field has focus, and so it can write the new row straight back
+        // into the form. Screens that do not register it fall back to the
+        // customer dialog, which is the overwhelmingly common case.
+        key: "c",
+        alt: true,
+        allowInInput: true,
+        description: "Create master on the fly",
+        handler: () => {
+          const fn = actions.current.quickCreate;
+          if (fn) fn();
+          // No screen context (Overview, Reports) — let the user pick rather
+          // than guessing and making them back out of the wrong form.
+          else openQuickCreate("ask");
+        },
+      },
+      {
+        // Tally's F2, on its real key — the browser does not reserve it.
+        //
+        // `allowInInput` is TRUE deliberately: an operator halfway through
+        // typing a customer name still expects F2 to change the period, and
+        // making them click out of the field first breaks exactly the muscle
+        // memory this layer exists to preserve. It is a function key, so it can
+        // never be mistaken for text the user meant to type.
+        key: "f2",
+        allowInInput: true,
+        description: "Change period",
+        handler: () => setPeriodOpen((v) => !v),
+      },
+      {
+        // Tally's F12 (Configure). F12 is DevTools in Chrome and is never
+        // delivered to the page, so this is the documented substitution — the
+        // ? sheet says so in as many words rather than leaving a dead key.
+        key: ",",
+        ctrl: true,
+        allowInInput: true,
+        description: "Configure screen",
+        handler: () => {
+          const fn = actions.current.config;
+          if (fn) fn();
+          else toast("This screen has nothing to configure", "info");
+        },
+      },
+      {
+        // Inline calculator, anchored to the focused amount field.
+        //
+        // Ctrl+/ and not Ctrl+? : the latter needs Shift and collides with
+        // browser help. `allowInInput` MUST be true — the entire point is to
+        // fire while the caret is sitting in a rate box.
+        key: "/",
+        ctrl: true,
+        allowInInput: true,
+        description: "Calculator",
+        handler: () => calc.openForActiveField(),
+      },
+      {
+        // PgUp / PgDn — Tally's next/previous voucher.
+        //
+        // `allowInInput` is FALSE. In the editor these keys sit inside a
+        // spreadsheet grid full of inputs, and stealing PgDn from a focused
+        // textarea would stop the user scrolling a long description. Outside a
+        // field they mean "show me the neighbouring record", which is what the
+        // editor and the grids register.
+        key: "pageup",
+        allowInInput: false,
+        description: "Previous record",
+        handler: () => actions.current.prevRecord?.(),
+      },
+      {
+        key: "pagedown",
+        allowInInput: false,
+        description: "Next record",
+        handler: () => actions.current.nextRecord?.(),
+      },
+      {
         key: "escape",
         allowInInput: true,
         description: "Back / close",
         handler: () => {
           // Innermost layer first: a modal's Escape must not also trigger the
           // editor's discard prompt behind it.
+          //
+          // The calculator, the period dialog and the quick-create dialog all
+          // stop keydown propagation themselves, so in practice they never
+          // reach this handler — these checks are the belt to that braces, for
+          // the case where focus has escaped the dialog (e.g. the user clicked
+          // the scrim). Order matches visual stacking.
+          if (calc.open) return calc.close();
+          if (quickCreate) return setQuickCreate(null);
+          if (periodOpen) return setPeriodOpen(false);
           if (sheetOpen) return setSheetOpen(false);
           if (paletteOpen) return setPaletteOpen(false);
           const fn = actions.current.back;
@@ -405,7 +618,17 @@ export default function ConsoleShell({
         handler: () => setSheetOpen((v) => !v),
       },
     ],
-    [base, router, toast, sheetOpen, paletteOpen],
+    [
+      base,
+      router,
+      toast,
+      sheetOpen,
+      paletteOpen,
+      periodOpen,
+      quickCreate,
+      calc,
+      openQuickCreate,
+    ],
   );
 
   useHotkeys(bindings);
@@ -421,7 +644,20 @@ export default function ConsoleShell({
   }, [activeKey]);
 
   return (
-    <Ctx.Provider value={{ slug, clientId, companyName, setStatus, toast, registerAction }}>
+    <Ctx.Provider
+      value={{
+        slug,
+        clientId,
+        companyName,
+        setStatus,
+        toast,
+        registerAction,
+        period,
+        setPeriod,
+        openPeriodSelector,
+        openQuickCreate,
+      }}
+    >
       <div
         ref={rootRef}
         className={"vc-root" + (collapsed ? " vc-collapsed" : "")}
@@ -511,6 +747,21 @@ export default function ConsoleShell({
             {crumb}
           </div>
           <div className="vc-topbar-spacer" />
+
+          {/* The active period is ALWAYS on screen. A report is meaningless
+              without knowing the window it covers, and a user who forgets they
+              set "Last Month" three screens ago will misread every total. */}
+          <button
+            type="button"
+            className="vc-goto vc-period-chip"
+            onClick={() => setPeriodOpen(true)}
+            title="Change period (F2)"
+          >
+            <CalendarRange size={13} />
+            {describePeriod(period)}
+            <span className="vc-kbd">F2</span>
+          </button>
+
           <button type="button" className="vc-goto" onClick={() => setPaletteOpen(true)}>
             <Search size={13} />
             Go To…
@@ -554,6 +805,42 @@ export default function ConsoleShell({
           <CommandPalette items={paletteItems} onClose={() => setPaletteOpen(false)} />
         )}
         {sheetOpen && <ShortcutSheet onClose={() => setSheetOpen(false)} />}
+
+        {periodOpen && (
+          <PeriodSelector
+            value={period}
+            onApply={setPeriod}
+            onClose={() => setPeriodOpen(false)}
+          />
+        )}
+
+        {quickCreate && (
+          <QuickCreate
+            kind={quickCreate.kind}
+            initialName={quickCreate.initialName}
+            onCreated={(row, existing) => {
+              quickCreate.onCreated?.(row, existing);
+              toast(
+                existing
+                  ? `${(row as any).name} was already on file — linked`
+                  : `${(row as any).name} created`,
+                "ok",
+              );
+            }}
+            onClose={() => setQuickCreate(null)}
+          />
+        )}
+
+        {/* The calculator is rendered LAST of the dialogs and positioned
+            absolutely against its anchor field, so it can float over an open
+            editor without an overlay scrim stealing the grid's focus. */}
+        <InlineCalculator
+          open={calc.open}
+          anchor={calc.anchor}
+          onClose={calc.close}
+          onToast={toast}
+        />
+
         {toastMsg && (
           <div
             className={
@@ -565,7 +852,9 @@ export default function ConsoleShell({
           </div>
         )}
 
-        {/* Floating display settings */}
+        {/* Global display preferences (font/element size). Distinct from Ctrl+,
+            which configures the CURRENT SCREEN's columns — see screen-config.ts
+            for why those two axes are deliberately separate stores. */}
         <UISettingsPanel />
       </div>
     </Ctx.Provider>
@@ -669,24 +958,53 @@ function CommandPalette({
 function ShortcutSheet({ onClose }: { onClose: () => void }) {
   return (
     <div className="vc-overlay" onMouseDown={onClose}>
-      <div className="vc-sheet" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="vc-sheet"
+        onMouseDown={(e) => e.stopPropagation()}
+        // Owns the keyboard while open, so "?" does not re-toggle it and Escape
+        // is handled once. Focused on mount so the user can scroll with arrows.
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Escape" || e.key === "?") {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        tabIndex={-1}
+        ref={(el) => el?.focus()}
+      >
         <h3>Keyboard Shortcuts</h3>
         <div style={{ fontSize: 12, color: "#5b6673" }}>
-          Tally equivalents shown where the meaning is the same.
+          Tally equivalents shown where the meaning is the same. Grouped by task —
+          every key listed here is implemented.
         </div>
-        <div className="vc-sheet-grid">
-          {CONSOLE_KEYMAP.map((k) => (
-            <div className="vc-sheet-row" key={k.keys + k.action}>
-              <span className="vc-kbd">{k.keys}</span>
-              <span>
-                {k.action}
-                {k.tally && (
-                  <span style={{ color: "#8a94a1", fontSize: 11 }}> · Tally {k.tally}</span>
-                )}
-              </span>
+
+        {/* Grouped, not one flat list of twenty. A wall of shortcuts is a wall
+            nobody reads; grouped by task a user scans to "Entry" and finds the
+            three keys they came for. Sections are driven by KEYMAP_GROUPS so
+            the sheet and the bindings cannot drift. */}
+        {KEYMAP_GROUPS.map((group) => {
+          const rows = CONSOLE_KEYMAP.filter((k) => k.group === group);
+          if (!rows.length) return null;
+          return (
+            <div key={group} className="vc-sheet-section">
+              <div className="vc-sheet-group">{group}</div>
+              <div className="vc-sheet-grid">
+                {rows.map((k) => (
+                  <div className="vc-sheet-row" key={k.keys + k.action}>
+                    <span className="vc-kbd">{k.keys}</span>
+                    <span>
+                      {k.action}
+                      {k.tally && (
+                        <span style={{ color: "#8a94a1", fontSize: 11 }}> · Tally {k.tally}</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
         {/* Stating the browser limitation openly is deliberate. A user who
             presses Ctrl+A expecting Tally's save and gets select-all will
             conclude the app is broken; told once, they adapt in a day. */}
@@ -701,3 +1019,4 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+

@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   FileCode,
 } from "lucide-react";
-import { useConsole, useConsoleStatus } from "../ConsoleShell";
+import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+import { customPeriod, describePeriod, toInclusiveEnd } from "@/lib/period";
 import { DataGrid, type DataGridProps } from "../_components/DataGrid";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
@@ -66,11 +67,25 @@ const STATUSES = [
 
 export default function ReportsClient() {
   const router = useRouter();
-  const { slug, toast } = useConsole();
+  const { slug, toast, period, setPeriod, openPeriodSelector } = useConsole();
 
   const [report, setReport] = useState<ReportType>("sales_register");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  /**
+   * The date range comes from the SHELL's F2 period, not from local state.
+   *
+   * Reports is the screen where a wrong period does the most damage — these
+   * numbers get read to an accountant. Sourcing the range from the same place
+   * the topbar chip displays means the caption and the query can never
+   * disagree, and the range survives navigating away and back.
+   *
+   * The two date inputs below still work; they write THROUGH to the shell via
+   * `customPeriod`, so typing a date and pressing F2 show the same thing.
+   */
+  const from = period.from;
+  // `period.to` is EXCLUSIVE (see period.ts); the input must show the
+  // inclusive day the user actually means.
+  const toIncl = toInclusiveEnd(period.to);
+  const to = period.to;
   const [status, setStatus] = useState("");
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +121,9 @@ export default function ReportsClient() {
 
   // ---- Status bar -----------------------------------------------------------
   useConsoleStatus({
-    count: data ? `${data.rows?.length ?? 0} rows` : undefined,
+    count: data
+      ? `${data.rows?.length ?? 0} rows · ${describePeriod(period)}`
+      : describePeriod(period),
     total: data?.summary?.total_grand != null ? formatMoneyCompact(data.summary.total_grand)
       : data?.summary?.total_revenue != null ? formatMoneyCompact(data.summary.total_revenue)
       : data?.summary?.total_net != null ? formatMoneyCompact(data.summary.total_net)
@@ -166,6 +183,15 @@ export default function ReportsClient() {
     },
     [data, report, toast],
   );
+
+  // Ctrl+E on this screen means CSV — the most portable of the three formats
+  // and the one an accountant can open anywhere. XLSX and Tally XML stay as
+  // explicit buttons because they are deliberate choices, not defaults.
+  //
+  // Registered AFTER handleExport is declared: `const` is in the temporal dead
+  // zone until its initialiser runs, and referencing it above would throw on
+  // first render.
+  useConsoleAction("export", () => void handleExport("csv"));
 
   // ---- Drill-down -----------------------------------------------------------
   const onRowActivate = useCallback(
@@ -255,13 +281,16 @@ export default function ReportsClient() {
 
         {/* Filters */}
         <div className="vc-reports-filters">
+          {/* F2 is the fast path; these two inputs are the discoverable one.
+              Both write to the same shell-level period, so they can never
+              disagree with the chip in the topbar. */}
           <div className="vc-field">
             <label className="vc-label"><Calendar size={12} /> From</label>
             <input
               type="date"
               className="vc-input"
               value={toDateInputValue(from)}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => setPeriod(customPeriod(e.target.value, toIncl))}
             />
           </div>
           <div className="vc-field">
@@ -269,9 +298,21 @@ export default function ReportsClient() {
             <input
               type="date"
               className="vc-input"
-              value={toDateInputValue(to)}
-              onChange={(e) => setTo(e.target.value)}
+              value={toIncl}
+              onChange={(e) => setPeriod(customPeriod(from, e.target.value))}
             />
+          </div>
+          <div className="vc-field">
+            <label className="vc-label">Period</label>
+            <button
+              type="button"
+              className="vc-btn"
+              onClick={openPeriodSelector}
+              title="Change period (F2)"
+            >
+              <Calendar size={12} /> {describePeriod(period)}{" "}
+              <span className="vc-kbd">F2</span>
+            </button>
           </div>
           <div className="vc-field">
             <label className="vc-label">Status</label>

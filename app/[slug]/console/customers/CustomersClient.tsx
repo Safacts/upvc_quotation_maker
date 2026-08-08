@@ -3,10 +3,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, Search, Download } from "lucide-react";
+import { Plus, Search, Download, SlidersHorizontal } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
+import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
+import type { ColumnSpec } from "@/lib/screen-config";
 import { formatDate, toCsv, downloadFile } from "@/lib/console-format";
+
+/** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
+const COLUMN_SPECS: ColumnSpec[] = [
+  { id: "name", label: "Name", required: true },
+  { id: "phone", label: "Phone" },
+  { id: "company", label: "Company" },
+  { id: "email", label: "Email" },
+  // Most fabricators quote unregistered retail customers; GSTIN is empty for
+  // the majority of rows, so it stays off until asked for.
+  { id: "gst_number", label: "GSTIN", defaultHidden: true },
+  { id: "created_at", label: "Added" },
+];
+
+const SCREEN_ID = "customers";
 
 /**
  * Customers master grid.
@@ -34,7 +51,7 @@ interface Row {
 
 export default function CustomersClient() {
   const router = useRouter();
-  const { slug, toast } = useConsole();
+  const { slug, clientId, toast } = useConsole();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +61,11 @@ export default function CustomersClient() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [draft, setDraft] = useState({ name: "", phone: "", email: "", company: "" });
+
+  const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
+  const pageSize = screen.config.pageSize;
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -55,12 +76,14 @@ export default function CustomersClient() {
 
   useEffect(() => {
     setPage(1);
-  }, [debounced]);
+  }, [debounced, pageSize]);
 
   const load = useCallback(async () => {
+    // Wait for the stored page size, or the first visit fires twice.
+    if (!screen.ready) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), page_size: "50" });
+      const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (debounced) params.set("q", debounced);
       const res = await fetch(`/api/console/customers?${params}`, {
         credentials: "same-origin",
@@ -79,7 +102,7 @@ export default function CustomersClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, debounced, toast]);
+  }, [page, pageSize, debounced, toast, screen.ready]);
 
   useEffect(() => {
     void load();
@@ -143,19 +166,34 @@ export default function CustomersClient() {
     el.focus();
     el.select();
   });
+  useConsoleAction("config", () => setConfigOpen(true));
+  // Alt+C on the customers screen opens the same inline row the New button
+  // does — a modal on top of a screen whose whole job is creating customers
+  // would be a dialog for the sake of consistency, not usability.
+  useConsoleAction("quickCreate", () => setCreating(true));
+  useConsoleAction("prevRecord", () => {
+    if (loading || page <= 1) return;
+    setPage((p) => Math.max(1, p - 1));
+  });
+  useConsoleAction("nextRecord", () => {
+    if (loading || page >= totalPages) return;
+    setPage((p) => Math.min(totalPages, p + 1));
+  });
 
   useConsoleStatus({
     busy: loading,
     count: `${rows.length} of ${totalCount} customers`,
     hints: [
       { keys: "↑↓", label: "Move" },
+      { keys: "PgUp/PgDn", label: "Page" },
       { keys: "Ctrl+F", label: "Search" },
       { keys: "Alt+N", label: "New" },
+      { keys: "Ctrl+,", label: "Columns" },
       { keys: "Ctrl+E", label: "Export" },
     ],
   });
 
-  const columns = useMemo<ColumnDef<Row, any>[]>(
+  const allColumns = useMemo<ColumnDef<Row, any>[]>(
     () => [
       {
         accessorKey: "name",
@@ -174,6 +212,8 @@ export default function CustomersClient() {
     ],
     [],
   );
+
+  const columns = useMemo(() => screen.applyTo(allColumns), [allColumns, screen]);
 
   return (
     <div className="vc-pad">
@@ -194,6 +234,14 @@ export default function CustomersClient() {
             />
           </div>
           <div style={{ flex: 1 }} />
+          <button
+            type="button"
+            className="vc-btn"
+            onClick={() => setConfigOpen(true)}
+            title="Configure columns and density (Ctrl+,)"
+          >
+            <SlidersHorizontal size={13} /> <span className="vc-kbd">Ctrl ,</span>
+          </button>
           <button type="button" className="vc-btn" onClick={exportCsv}>
             <Download size={13} /> CSV
           </button>
@@ -271,6 +319,7 @@ export default function CustomersClient() {
         <DataGrid<Row>
           data={rows}
           columns={columns}
+          density={screen.config.density}
           getRowId={(r) => r.id}
           onRowActivate={(r) =>
             // Drill down: open the quotations grid filtered to this customer's
@@ -312,6 +361,16 @@ export default function CustomersClient() {
           </button>
         </div>
       </div>
+
+      {configOpen && (
+        <ScreenConfigDialog
+          title="Customers"
+          columns={COLUMN_SPECS}
+          config={screen.config}
+          onChange={screen.setConfig}
+          onClose={() => setConfigOpen(false)}
+        />
+      )}
     </div>
   );
 }
