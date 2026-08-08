@@ -144,5 +144,5 @@ GoogleSignInResult _decodeCredential(String credential) {
   if (payload['email_verified'] != true) {
     return const GoogleSignInResult(error: 'Google account email is not verified.');
   }
-  return GoogleSignInResult(email: email);
+  return GoogleSignInResult(email: email, credential: credential);
 }

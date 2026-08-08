@@ -2,8 +2,9 @@ export 'google_signin_native.dart'
     if (dart.library.js_interop) 'google_signin_web.dart';
 
 class GoogleSignInResult {
-  const GoogleSignInResult({this.email, this.error});
+  const GoogleSignInResult({this.email, this.credential, this.error});
   final String? email;
+  final String? credential;
   final String? error;
   bool get succeeded => email != null && email!.isNotEmpty;
 }

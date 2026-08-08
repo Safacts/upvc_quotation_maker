@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { sha256 } from "@/lib/auth";
 import { sendSignupNotification } from "@/lib/mail";
+
+const GOOGLE_CLIENT_ID =
+  "726482519803-od8lidratsv0du7jtaeopj29khmn6meb.apps.googleusercontent.com";
+
+const GOOGLE_JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/oauth2/v3/certs")
+);
+
+// Verifies a Google ID token (issued by the browser GSI or native plugin) and
+// returns the email it was issued to, or null when the signature/aud/iss/exp
+// check fails. The email in the token is what the app trusts — never the body.
+async function verifyGoogleCredential(credential: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(credential, GOOGLE_JWKS, {
+      issuer: ["accounts.google.com", "https://accounts.google.com"],
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const email = String(payload.email || "").trim().toLowerCase();
+    if (!email || payload.email_verified !== true) return null;
+    return email;
+  } catch {
+    return null;
+  }
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -167,11 +192,20 @@ export async function POST(request: NextRequest) {
     const admin = await findAdmin(email);
 
     if (mode === "google") {
-      if (admin) {
-        await createSession({ role: "admin", email: admin.email });
-        return json({ role: "admin", email: admin.email }, 200);
+      let googleEmail = email;
+      if (p.credential) {
+        const verified = await verifyGoogleCredential(String(p.credential));
+        if (!verified) {
+          return json({ error: "Google sign-in could not be verified. Please try again." }, 401);
+        }
+        googleEmail = verified;
       }
-      const client = await findClientByEmail(email);
+      const gAdmin = await findAdmin(googleEmail);
+      if (gAdmin) {
+        await createSession({ role: "admin", email: gAdmin.email });
+        return json({ role: "admin", email: gAdmin.email }, 200);
+      }
+      const client = await findClientByEmail(googleEmail);
       if (client) {
         if (client.is_active === false) {
           return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
@@ -187,32 +221,32 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        await createSession({ role: "customer", email, client_id: client.id });
-        return json({ role: "customer", email, client_id: client.id }, 200);
+        await createSession({ role: "customer", email: googleEmail, client_id: client.id });
+        return json({ role: "customer", email: googleEmail, client_id: client.id }, 200);
       }
-      const inactive = await findInactiveClientByEmail(email);
+      const inactive = await findInactiveClientByEmail(googleEmail);
       if (inactive) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
-      const signup = await findSignupByEmail(email);
+      const signup = await findSignupByEmail(googleEmail);
       if (signup) {
         await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
         return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
       }
       let newRow: any;
       try {
-        newRow = await supaPost("signup_requests", { email, auth_method: "google" });
+        newRow = await supaPost("signup_requests", { email: googleEmail, auth_method: "google" });
       } catch (e: any) {
         return json({ error: String(e?.message ?? e) }, 500);
       }
       const newSignupId =
         Array.isArray(newRow) && newRow.length > 0 ? String(newRow[0].id) : undefined;
       try {
-        await sendSignupNotification("new", { email });
+        await sendSignupNotification("new", { email: googleEmail });
       } catch {
       }
-      await createSession({ role: "signup", email, signup_request_id: newSignupId });
-      return json({ role: "signup", email, status: "pending", signup_request_id: newSignupId }, 200);
+      await createSession({ role: "signup", email: googleEmail, signup_request_id: newSignupId });
+      return json({ role: "signup", email: googleEmail, status: "pending", signup_request_id: newSignupId }, 200);
     }
 
     const password = p.password || "";

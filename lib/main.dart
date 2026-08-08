@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upvc_quotation_maker/config/client_config.dart';
 import 'login_screen.dart';
 import 'trial_gate.dart';
@@ -22,8 +24,18 @@ void main() async {
 
   // Load client config
   ClientConfig? initialConfig;
+  String? sessionClientId;
   try {
-    initialConfig = await ClientLoader.loadConfig();
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getString('session_active') == 'true') {
+        sessionClientId = prefs.getString('session_client_id');
+      }
+    }
+  } catch (_) {}
+
+  try {
+    initialConfig = await ClientLoader.loadConfig(clientId: sessionClientId);
   } catch (e) {
     debugPrint('Config load error: $e');
   }

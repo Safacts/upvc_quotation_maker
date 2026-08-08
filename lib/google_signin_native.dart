@@ -60,7 +60,11 @@ Future<GoogleSignInResult?> startGoogleSignIn() async {
     if (email.isEmpty) {
       return const GoogleSignInResult(error: 'Google account has no email.');
     }
-    return GoogleSignInResult(email: email);
+    String? idToken;
+    try {
+      idToken = account.authentication.idToken;
+    } catch (_) {}
+    return GoogleSignInResult(email: email, credential: idToken);
   } on GoogleSignInException catch (e) {
     if (e.code == GoogleSignInExceptionCode.canceled ||
         e.code == GoogleSignInExceptionCode.interrupted) {

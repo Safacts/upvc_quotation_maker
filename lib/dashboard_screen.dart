@@ -87,13 +87,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
+      await prefs.remove('session_client_id');
     } else {
       try {
         const storage = FlutterSecureStorage();
         await storage.delete(key: 'session_active');
+        await storage.delete(key: 'session_client_id');
       } catch (_) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('session_active');
+        await prefs.remove('session_client_id');
       }
     }
     if (!mounted) return;

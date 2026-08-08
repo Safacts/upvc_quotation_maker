@@ -14,6 +14,8 @@ import 'crafted_widget.dart';
 import 'client_logo.dart';
 import 'google_signin.dart';
 import 'umami_tracker.dart';
+import 'supabase_config.dart';
+import 'config/client_loader.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -93,16 +95,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       return;
     }
-    _loginWithGoogleEmail(r.email!);
+    _loginWithGoogleEmail(r.email!, credential: r.credential);
   }
 
-  Future<void> _loginWithGoogleEmail(String email) async {
+  Future<void> _loginWithGoogleEmail(String email, {String? credential}) async {
     setState(() { _isLoading = true; _errorMessage = ''; });
     try {
       final res = await http.post(
         Uri.parse('/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'google', 'email': email}),
+        body: jsonEncode({'mode': 'google', 'email': email, 'credential': credential ?? ''}),
       );
       final data = _decodeJson(res);
       if (data == null) {
@@ -112,6 +114,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
+        final clientId = (data['client_id'] as String?)?.trim();
+        if (clientId != null && clientId.isNotEmpty) {
+          await _applyTenant(clientId);
+        }
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
       } else if (res.statusCode == 200 && data['role'] == 'signup') {
@@ -122,6 +128,31 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
+    }
+  }
+
+  Future<void> _applyTenant(String clientId) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+    try {
+      final config = await ClientLoader.loadConfig(clientId: clientId);
+      SupabaseConfig.client.headers['x-client-id'] = config.clientId;
+      appState.applyClientConfig(config);
+      await _writeSessionClientId(config.clientId);
+    } catch (_) {}
+  }
+
+  Future<void> _writeSessionClientId(String clientId) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_client_id', clientId);
+      return;
+    }
+    try {
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'session_client_id', value: clientId);
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_client_id', clientId);
     }
   }
 
@@ -213,6 +244,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
+        final clientId = (data['client_id'] as String?)?.trim();
+        if (clientId != null && clientId.isNotEmpty) {
+          await _applyTenant(clientId);
+        }
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
       } else if (res.statusCode == 200 && data['role'] == 'signup') {
