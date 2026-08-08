@@ -91,7 +91,7 @@ Never try to modify or access protected clients: venkateshwara, akshaya upvc, kp
     ];
 
     const runner = await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       messages,
       tools: tools as any,
       tool_choice: "auto",
