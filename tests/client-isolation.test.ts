@@ -607,6 +607,12 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
         "child rows keyed by verified invoice_id",
       [join("app", "api", "gst_invoices", "items", "route.ts")]:
         "child rows keyed by verified invoice_id",
+      // PDF generation: parent read is by-pk-then-verify (same pattern as
+      // gst_invoices/[id]/route.ts). Child rows NOW carry client_id defensively
+      // (added 08-08-2026) but the parent read cannot filter by client_id before
+      // the owner is known — it must read the row first to obtain client_id.
+      [join("app", "api", "gst_invoices", "[id]", "pdf", "route.ts")]:
+        "parent read by-pk-then-verify; child rows filter by verified client_id",
       // Vitharn's OWN receivables. Not tenant data; admin-only.
       [join("app", "api", "invoice", "route.ts")]: "Vitharn internal AR, admin-only",
       [join("app", "api", "invoice", "[id]", "route.ts")]: "Vitharn internal AR, admin-only",

@@ -26,7 +26,7 @@ We use Google Meet (or your preferred video tool) for our kickoff calls, allowin
 | :---: | :--- | :--- |
 | **01** | **Introductions** | Meet the Vitharn technical and account team. |
 | **02** | **Business Overview** | Discuss your specific UPVC / manufacturing operations. |
-| **03** | **Scope & Customization** | Review key ERP features, your pricing margins, and GST logic. |
+| **03** | **Scope & Customization** | Review key ERP features, your pricing margins, GST logic, and **Desktop Dashboard** requirements (reports, data exports, Tally XML). |
 | **04** | **Timeline & Deployment** | Walk through our automated setup process and deployment timeline. |
 | **05** | **Next Steps** | Define action items for both Vitharn and your team. |
 
@@ -44,13 +44,14 @@ We use Google Meet (or your preferred video tool) for our kickoff calls, allowin
 - Any existing quotation formats, pricing spreadsheets, or mockups you currently use.
 - A list of your required UPVC profiles, hardware lists, and supplier margins.
 - Your official GST Number, Bank Details, and Company Logo for the system configuration.
+- **For Desktop Dashboard onboarding:** a list of named users who need login access, and whether your accountant uses Tally (so we can enable Tally XML export).
 
 ---
 
 <br>
 
 ### 🚀 AFTER THE CALL
-You’ll receive a written summary via WhatsApp with action items. Once we have your raw pricing data, we will immediately configure your isolated instance on `app.vitharn.com`. Let’s build something incredibly efficient together.
+You’ll receive a written summary via WhatsApp with action items. Once we have your raw pricing data, we will immediately configure your isolated instance on `app.vitharn.com` and (if applicable) provision your **Desktop Dashboard** console. Let’s build something incredibly efficient together.
 
 <br>
 <div align="center">

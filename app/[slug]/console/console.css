@@ -68,10 +68,19 @@
   /* 13px, not 16px. This is a DENSITY tool: the whole premise is seeing the
      header, every line item, the running totals and the document preview at
      once. Tally's information density is the feature we are copying, not its
-     colour scheme. */
+     colour scheme.
+     --vc-font-size overrides this when the user has set a custom size. */
   font-size: 13px;
   line-height: 1.45;
   overflow: hidden;
+}
+
+/* When the user has active UI customisations, drive sizing from the
+   CSS variables set by the useUI hook. The [data-ui-active] attribute
+   is set once preferences have been applied. */
+.vc-root[data-ui-active] {
+  font-size: var(--vc-font-size);
+  grid-template-rows: var(--vc-topbar-h) 1fr var(--vc-statusbar-h);
 }
 
 .vc-root.vc-collapsed {
@@ -1269,6 +1278,179 @@ textarea.vc-cell-input {
   }
 }
 
+/* --------------------------------------------------------------------------
+   Reports
+   -------------------------------------------------------------------------- */
+
+.vc-reports {
+  display: flex;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.vc-reports-rail {
+  width: 180px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.vc-reports-rail-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+  padding: 6px 8px 8px;
+}
+
+.vc-reports-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--vc-radius);
+  background: transparent;
+  color: var(--vc-text);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.vc-reports-rail-item:hover {
+  background: var(--vc-surface);
+}
+
+.vc-reports-rail-item.vc-active {
+  background: var(--vc-accent-dim);
+  color: var(--vc-text);
+  font-weight: 600;
+}
+
+.vc-reports-rail-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vc-reports-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.vc-reports-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.vc-reports-head-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vc-reports-head-desc {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--vc-text-faint);
+  margin-left: 6px;
+}
+
+.vc-reports-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.vc-reports-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.vc-reports-range {
+  font-size: 11px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.vc-reports-summary {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.vc-summary-tile {
+  flex: 1;
+  min-width: 110px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border);
+  border-radius: var(--vc-radius);
+  padding: 8px 10px;
+}
+
+.vc-summary-tile-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+}
+
+.vc-summary-tile-value {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 2px;
+  color: var(--vc-text);
+}
+
+.vc-summary-tile-sub {
+  font-size: 10.5px;
+  margin-top: 1px;
+}
+
+.vc-tone-accent { color: var(--vc-accent); }
+.vc-tone-ok { color: var(--vc-green); }
+.vc-tone-err { color: var(--vc-red); }
+.vc-muted { color: var(--vc-text-faint); }
+
+.vc-spin {
+  animation: vc-spin 0.65s linear infinite;
+}
+
+.vc-error {
+  background: var(--vc-red-dim);
+  border: 1px solid #eccaca;
+  color: var(--vc-red);
+  padding: 8px 10px;
+  border-radius: var(--vc-radius);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 /* Print: the document preview only. Nobody wants the sidebar on paper. */
 @media print {
   .vc-sidebar,
@@ -1289,4 +1471,395 @@ textarea.vc-cell-input {
     max-height: none;
     padding: 0;
   }
+}
+
+/* --------------------------------------------------------------------------
+   UI customisation — floating gear + panel
+   -------------------------------------------------------------------------- */
+
+.vc-ui-gear {
+  position: fixed;
+  right: 16px;
+  bottom: 48px;
+  z-index: 1100;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--vc-border);
+  background: var(--vc-surface);
+  color: var(--vc-text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 23, 34, 0.15);
+  transition: all 0.15s ease;
+}
+
+.vc-ui-gear:hover {
+  background: var(--vc-accent);
+  color: #101722;
+  border-color: var(--vc-accent);
+  transform: scale(1.05);
+}
+
+.vc-ui-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 90px;
+  z-index: 1100;
+  width: 260px;
+  background: var(--vc-surface);
+  border: 1px solid var(--vc-border-strong);
+  border-radius: 9px;
+  box-shadow: 0 12px 40px rgba(16, 23, 34, 0.22);
+  overflow: hidden;
+  animation: vc-ui-in 0.15s ease;
+}
+
+@keyframes vc-ui-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vc-ui-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--vc-border);
+  background: var(--vc-surface-2);
+}
+
+.vc-ui-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vc-text-dim);
+}
+
+.vc-ui-close {
+  border: none;
+  background: transparent;
+  color: var(--vc-text-faint);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-ui-close:hover {
+  background: var(--vc-border);
+  color: var(--vc-text);
+}
+
+.vc-ui-group {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--vc-border);
+}
+
+.vc-ui-group:last-of-type {
+  border-bottom: none;
+}
+
+.vc-ui-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vc-text-faint);
+  margin-bottom: 8px;
+}
+
+.vc-ui-seg {
+  display: flex;
+  gap: 4px;
+  background: var(--vc-surface-2);
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.vc-ui-seg-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s ease;
+}
+
+.vc-ui-seg-btn:hover {
+  background: var(--vc-surface);
+}
+
+.vc-ui-seg-btn.vc-ui-seg-active {
+  background: var(--vc-accent);
+  color: #101722;
+}
+
+.vc-ui-seg-label {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.vc-ui-seg-desc {
+  font-size: 9.5px;
+  color: var(--vc-text-faint);
+}
+
+.vc-ui-seg-btn.vc-ui-seg-active .vc-ui-seg-desc {
+  color: rgba(16, 23, 34, 0.6);
+}
+
+.vc-ui-footer {
+  padding: 9px 13px;
+}
+
+.vc-ui-reset {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  justify-content: center;
+  padding: 6px;
+  border: 1px dashed var(--vc-border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--vc-text-faint);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.vc-ui-reset:hover {
+  border-color: var(--vc-accent);
+  color: var(--vc-accent);
+  background: var(--vc-accent-dim);
+}
+
+/* --------------------------------------------------------------------------
+   Variable-driven element sizing
+   When [data-ui-active] is present, these rules override the fixed px values
+   above with values derived from the user's font + element size prefs.
+   -------------------------------------------------------------------------- */
+
+/* Nav item padding scales with element size. */
+.vc-root[data-ui-active] .vc-nav-item {
+  padding: var(--vc-nav-pad);
+}
+
+/* Sidebar brand height tracks the topbar. */
+.vc-root[data-ui-active] .vc-brand {
+  height: var(--vc-topbar-h);
+}
+
+/* Topbar height. */
+.vc-root[data-ui-active] .vc-topbar {
+  height: var(--vc-topbar-h);
+}
+
+/* Status bar height + font size. */
+.vc-root[data-ui-active] .vc-statusbar {
+  height: var(--vc-statusbar-h);
+  font-size: calc(var(--vc-font-size) * 0.88);
+}
+
+/* Status metrics font size. */
+.vc-root[data-ui-active] .vc-status-metric {
+  font-size: calc(var(--vc-font-size) * 0.88);
+}
+
+/* Buttons scale with element size. */
+.vc-root[data-ui-active] .vc-btn {
+  height: var(--vc-btn-h);
+}
+
+.vc-root[data-ui-active] .vc-btn-sm {
+  height: var(--vc-btn-sm-h);
+}
+
+/* Topbar "Go To" button. */
+.vc-root[data-ui-active] .vc-goto {
+  height: var(--vc-btn-h);
+}
+
+/* Inputs + selects scale with element size. */
+.vc-root[data-ui-active] .vc-input,
+.vc-root[data-ui-active] .vc-select {
+  height: var(--vc-input-h);
+}
+
+/* Grid cell padding scales with element size. */
+.vc-root[data-ui-active] .vc-table thead th {
+  padding: var(--vc-cell-pad);
+  font-size: calc(var(--vc-font-size) * 0.81);
+}
+
+.vc-root[data-ui-active] .vc-table tbody td {
+  padding: var(--vc-cell-pad);
+}
+
+/* Item grid (quotation editor) padding. */
+.vc-root[data-ui-active] .vc-item-grid thead th {
+  padding: calc(var(--vc-font-size) * 0.46) calc(var(--vc-font-size) * 0.5);
+  font-size: calc(var(--vc-font-size) * 0.77);
+}
+
+.vc-root[data-ui-active] .vc-item-grid td.vc-cell-pad {
+  padding: calc(var(--vc-font-size) * 0.36) calc(var(--vc-font-size) * 0.5);
+}
+
+/* Cell inputs in the item grid. */
+.vc-root[data-ui-active] .vc-cell-input {
+  padding: calc(var(--vc-font-size) * 0.42) calc(var(--vc-font-size) * 0.5);
+  font-size: calc(var(--vc-font-size) * 0.92);
+}
+
+/* Cell calc values. */
+.vc-root[data-ui-active] .vc-cell-calc {
+  padding: calc(var(--vc-font-size) * 0.42) calc(var(--vc-font-size) * 0.5);
+}
+
+/* Card head padding. */
+.vc-root[data-ui-active] .vc-card-head {
+  padding: calc(var(--vc-font-size) * 0.69) calc(var(--vc-font-size) * 0.92);
+}
+
+/* Toolbar padding. */
+.vc-root[data-ui-active] .vc-toolbar {
+  padding: calc(var(--vc-font-size) * 0.69) calc(var(--vc-font-size) * 0.92);
+}
+
+/* Pager padding. */
+.vc-root[data-ui-active] .vc-pager {
+  padding: calc(var(--vc-font-size) * 0.54) calc(var(--vc-font-size) * 0.92);
+  font-size: calc(var(--vc-font-size) * 0.88);
+}
+
+/* KPI value font size. */
+.vc-root[data-ui-active] .vc-kpi-value {
+  font-size: calc(var(--vc-font-size) * 1.46);
+}
+
+.vc-root[data-ui-active] .vc-kpi-label {
+  font-size: calc(var(--vc-font-size) * 0.77);
+}
+
+.vc-root[data-ui-active] .vc-kpi-sub {
+  font-size: calc(var(--vc-font-size) * 0.85);
+}
+
+/* Totals strip. */
+.vc-root[data-ui-active] .vc-totals {
+  padding: calc(var(--vc-font-size) * 0.69) calc(var(--vc-font-size) * 0.92);
+}
+
+.vc-root[data-ui-active] .vc-total-value {
+  font-size: var(--vc-font-size);
+}
+
+.vc-root[data-ui-active] .vc-total-grand .vc-total-value {
+  font-size: calc(var(--vc-font-size) * 1.23);
+}
+
+/* Preview font size. */
+.vc-root[data-ui-active] .vc-preview {
+  font-size: calc(var(--vc-font-size) * 0.85);
+  max-height: calc(100vh - var(--vc-topbar-h) - var(--vc-statusbar-h) - 30px);
+}
+
+/* Preview table cells. */
+.vc-root[data-ui-active] .vc-pv-table th,
+.vc-root[data-ui-active] .vc-pv-table td {
+  padding: calc(var(--vc-font-size) * 0.27) calc(var(--vc-font-size) * 0.42);
+}
+
+/* Split layout gap + padding. */
+.vc-root[data-ui-active] .vc-split {
+  gap: calc(var(--vc-pad-rem) * 0.71);
+  padding: calc(var(--vc-pad-rem) * 0.71);
+}
+
+.vc-root[data-ui-active] .vc-split-left,
+.vc-root[data-ui-active] .vc-split-right {
+  gap: calc(var(--vc-pad-rem) * 0.71);
+}
+
+/* Header grid gap. */
+.vc-root[data-ui-active] .vc-hdr-grid {
+  gap: calc(var(--vc-pad-rem) * 0.57) calc(var(--vc-pad-rem) * 0.71);
+  padding: calc(var(--vc-pad-rem) * 0.79);
+}
+
+/* Reports rail. */
+.vc-root[data-ui-active] .vc-reports-rail {
+  padding: calc(var(--vc-pad-rem) * 0.71) calc(var(--vc-pad-rem) * 0.57);
+}
+
+.vc-root[data-ui-active] .vc-reports-main {
+  padding: calc(var(--vc-pad-rem) * 0.86) calc(var(--vc-pad-rem) * 1);
+  gap: calc(var(--vc-pad-rem) * 0.71);
+}
+
+/* Report summary tiles. */
+.vc-root[data-ui-active] .vc-summary-tile {
+  padding: calc(var(--vc-pad-rem) * 0.57) calc(var(--vc-pad-rem) * 0.71);
+}
+
+.vc-root[data-ui-active] .vc-summary-tile-value {
+  font-size: calc(var(--vc-font-size) * 1.31);
+}
+
+/* Crumb. */
+.vc-root[data-ui-active] .vc-crumb {
+  font-size: var(--vc-font-size);
+}
+
+/* Field label. */
+.vc-root[data-ui-active] .vc-label {
+  font-size: calc(var(--vc-font-size) * 0.81);
+}
+
+/* Keyboard shortcut badge. */
+.vc-root[data-ui-active] .vc-kbd {
+  font-size: calc(var(--vc-font-size) * 0.77);
+}
+
+/* Toast. */
+.vc-root[data-ui-active] .vc-toast {
+  font-size: calc(var(--vc-font-size) * 0.96);
+}
+
+/* Spinner size. */
+.vc-root[data-ui-active] .vc-spinner {
+  width: calc(var(--vc-font-size) * 1.15);
+  height: calc(var(--vc-font-size) * 1.15);
+}
+
+/* Row number column. */
+.vc-root[data-ui-active] .vc-row-num {
+  font-size: calc(var(--vc-font-size) * 0.85);
+}
+
+/* Row delete button column. */
+.vc-root[data-ui-active] .vc-row-del {
+  width: calc(var(--vc-input-h) + 2px);
 }

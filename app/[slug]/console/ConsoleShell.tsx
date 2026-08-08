@@ -16,6 +16,7 @@ import {
   FileText,
   Users,
   Package,
+  BarChart3,
   PanelLeftClose,
   PanelLeft,
   LogOut,
@@ -24,6 +25,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useHotkeys, CONSOLE_KEYMAP, type HotkeyBinding } from "@/lib/hooks/useHotkeys";
+import { UIProvider, useUI } from "@/lib/hooks/useUI";
+import { UISettingsPanel } from "./_components/UISettingsPanel";
 import "./console.css";
 
 /**
@@ -127,6 +130,7 @@ const NAV = [
   { key: "quotations", label: "Quotations", icon: FileText, hint: "2" },
   { key: "customers", label: "Customers", icon: Users, hint: "3" },
   { key: "products", label: "Products", icon: Package, hint: "4" },
+  { key: "reports", label: "Reports", icon: BarChart3, hint: "5" },
 ] as const;
 
 /** Minimum width for the console. Below this, the mobile portal is the right surface. */
@@ -147,16 +151,24 @@ export default function ConsoleShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { applyTo } = useUI();
 
   const [collapsed, setCollapsed] = useState(false);
   const [status, setStatus] = useState<StatusInfo>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: string } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const actions = useRef<Partial<Record<ConsoleActionName, (() => void) | null>>>({});
 
   const base = `/${slug}/console`;
+
+  // Apply UI preferences (font size, element size) onto the .vc-root div
+  // whenever preferences change. The effect runs after the ref is attached.
+  useEffect(() => {
+    if (rootRef.current) applyTo(rootRef.current);
+  }, [applyTo]);
 
   const registerAction = useCallback((name: ConsoleActionName, fn: (() => void) | null) => {
     actions.current[name] = fn;
@@ -219,6 +231,11 @@ export default function ConsoleShell({
         label: "New Quotation",
         hint: "Alt+N",
         run: () => router.push(`${base}/quotations/new`),
+      },
+      {
+        label: "Reports",
+        hint: "5",
+        run: () => router.push(`${base}/reports`),
       },
       {
         label: "Keyboard Shortcuts",
@@ -405,7 +422,10 @@ export default function ConsoleShell({
 
   return (
     <Ctx.Provider value={{ slug, clientId, companyName, setStatus, toast, registerAction }}>
-      <div className={"vc-root" + (collapsed ? " vc-collapsed" : "")}>
+      <div
+        ref={rootRef}
+        className={"vc-root" + (collapsed ? " vc-collapsed" : "")}
+      >
         {/* ---- Sidebar ---- */}
         <aside className="vc-sidebar">
           <div className="vc-brand">
@@ -544,6 +564,9 @@ export default function ConsoleShell({
             {toastMsg.text}
           </div>
         )}
+
+        {/* Floating display settings */}
+        <UISettingsPanel />
       </div>
     </Ctx.Provider>
   );

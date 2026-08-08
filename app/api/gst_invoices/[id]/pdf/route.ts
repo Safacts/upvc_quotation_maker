@@ -36,6 +36,10 @@ export async function GET(
     if (!isServiceKeyConfigured()) return new NextResponse(JSON.stringify({ error: "no service key" }), { status: 500 });
 
     const { id } = await params;
+    // Read the parent row by primary key. At this point we do NOT yet know the
+    // owner — that is what the ownership check below establishes. The static audit
+    // in tests/client-isolation.test.ts flags this read; it is the read-by-pk-then-
+    // verify pattern and is listed in that test's ALLOWED table with a justification.
     const rows = await supaGet("gst_invoices", { id: "eq." + id, select: "*" });
     if (!Array.isArray(rows) || rows.length === 0) {
       return new NextResponse(JSON.stringify({ error: "not found" }), { status: 404 });
@@ -45,8 +49,14 @@ export async function GET(
     const auth = authorizeOwnedTenant(session, inv.client_id);
     if (!auth.ok) return new NextResponse(JSON.stringify({ error: auth.error }), { status: auth.status });
 
+    // Child rows carry their OWN client_id column and their own RLS policy. Even
+    // though the parent's ownership was just verified above, we add client_id to
+    // this query too — a service-role key bypasses RLS, so a DELETE/SELECT that
+    // relies only on "the check above already covered it" can never reach another
+    // tenant's rows regardless of how `id` was obtained. Defence in depth.
     const itemRows = await supaGet("gst_invoice_items", {
       invoice_id: "eq." + id,
+      client_id: "eq." + inv.client_id,
       select: "*",
       order: "sno.asc",
     });

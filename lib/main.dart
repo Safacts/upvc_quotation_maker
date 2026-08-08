@@ -77,8 +77,16 @@ class QuotationApp extends StatelessWidget {
 
     return MaterialApp(
       title: appState.appName,
-      theme: AppTheme.lightTheme(appState.clientConfig),
-      darkTheme: AppTheme.darkTheme(appState.clientConfig),
+      theme: AppTheme.lightTheme(
+        appState.clientConfig,
+        fontScale: appState.fontScale,
+        densityMultiplier: appState.elementDensity.multiplier,
+      ),
+      darkTheme: AppTheme.darkTheme(
+        appState.clientConfig,
+        fontScale: appState.fontScale,
+        densityMultiplier: appState.elementDensity.multiplier,
+      ),
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
       home: TrialGate(child: LoginScreen()),

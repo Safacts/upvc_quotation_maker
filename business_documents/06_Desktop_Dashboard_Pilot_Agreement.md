@@ -51,7 +51,7 @@ All intellectual property in the Dashboard — source code, architecture, design
 
 ### 2.6 Data Export on Termination
 Either party may end this Agreement at any time with **7 (seven) days' written notice**; the Pilot otherwise ends automatically on the End Date unless extended in writing. On termination or expiry, for any reason including non-payment:
-1. Vitharn will provide a **complete one-time data export in CSV format within 7 (seven) days** of termination, at no additional cost, covering all Client quotations, customers and products;
+1. Vitharn will provide a **complete one-time data export within 7 (seven) days** of termination, at no additional cost, covering all Client quotations, customers and products. The export will be provided in **CSV and Tally XML formats** at the Client's choice;
 2. Vitharn will then **permanently delete all Client data** from its servers within **30 (thirty) days** and confirm deletion in writing on request.
 
 ### 2.7 Warranty Disclaimer & Limitation of Liability
@@ -60,7 +60,16 @@ The Dashboard is provided **"AS IS"** and **"AS AVAILABLE"** during the Pilot Pe
 ### 2.8 Relationship to Existing Agreement
 This Agreement supplements, and does not replace, the Client Services Agreement between the parties dated `[DD-MMM-YYYY]`. In the event of a conflict regarding the Dashboard specifically, this Agreement prevails.
 
-### 2.9 Governing Law & Disputes
+### 2.9 Tally XML Export Terms
+The Dashboard generates Tally XML export files formatted for import into Tally accounting software. The Client acknowledges and agrees that:
+
+1. **No affiliation.** "Tally" is a trademark of **Tally Solutions Pvt. Ltd.** Vitharn ERP Services is not affiliated with, endorsed by, or sponsored by Tally Solutions Pvt. Ltd. The XML export is provided for interoperability purposes only.
+2. **Compatibility not guaranteed.** Vitharn makes no warranty that Tally XML exports will import successfully into any specific version of Tally software. Tally's XML import behaviour, schema requirements and version compatibility are determined solely by Tally Solutions Pvt. Ltd. and are beyond Vitharn's control.
+3. **Client responsibility.** The Client is solely responsible for verifying that imported data is accurate, complete and correctly reflected in their Tally installation before relying on it for accounting, tax filing, statutory compliance or any other purpose.
+4. **No liability for import failures.** Vitharn shall not be liable for any loss, damage, cost or expense arising from a Tally XML import failure, data corruption during import, or discrepancy between Dashboard data and Tally-imported data.
+5. **Best-effort format.** Vitharn will use reasonable efforts to maintain the Tally XML export format in line with Tally's published XML schema as of the export date, and will notify the Client of any known format changes that may affect import compatibility.
+
+### 2.10 Governing Law & Disputes
 This Agreement is governed by the laws of **Telangana, India**. Disputes shall first be referred to arbitration in **Hyderabad, Telangana**, before escalating to the courts of Hyderabad.
 
 ---

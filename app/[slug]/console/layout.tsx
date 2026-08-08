@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import { requireConsoleAccess } from "@/lib/console-auth";
+import { UIProvider } from "@/lib/hooks/useUI";
 import ConsoleShell from "./ConsoleShell";
 
 /**
@@ -52,13 +53,15 @@ export default async function ConsoleLayout({
   const config = parseClientConfig(client.config || {}, client.id);
 
   return (
-    <ConsoleShell
-      slug={slug}
-      clientId={client.id}
-      companyName={config.companyName || config.appName || client.id}
-      logoUrl={config.logoUrl}
-    >
-      {children}
-    </ConsoleShell>
+    <UIProvider clientId={client.id}>
+      <ConsoleShell
+        slug={slug}
+        clientId={client.id}
+        companyName={config.companyName || config.appName || client.id}
+        logoUrl={config.logoUrl}
+      >
+        {children}
+      </ConsoleShell>
+    </UIProvider>
   );
 }
