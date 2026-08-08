@@ -165,7 +165,7 @@ Never try to modify or access protected clients: venkateshwara, akshaya upvc, kp
 
       // Second request to get the final answer from the model
       const secondResponse = await groq.chat.completions.create({
-        model: "llama3-70b-8192",
+        model: "llama-3.3-70b-versatile",
         messages,
       });
 
