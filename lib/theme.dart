@@ -30,6 +30,34 @@ class AppTheme {
     }
   }
 
+  /// Scales a TextTheme's font sizes by [scale], safely handling null sizes.
+  /// TextTheme.apply() asserts all font sizes are non-null, but Google Fonts
+  /// can produce TextStyles with null fontSize — so we scale manually.
+  static TextTheme scaleTextTheme(TextTheme base, double scale) {
+    if (scale == 1.0) return base;
+    TextStyle? scaleStyle(TextStyle? style) {
+      if (style == null || style.fontSize == null) return style;
+      return style.copyWith(fontSize: style.fontSize! * scale);
+    }
+    return base.copyWith(
+      displayLarge: scaleStyle(base.displayLarge),
+      displayMedium: scaleStyle(base.displayMedium),
+      displaySmall: scaleStyle(base.displaySmall),
+      headlineLarge: scaleStyle(base.headlineLarge),
+      headlineMedium: scaleStyle(base.headlineMedium),
+      headlineSmall: scaleStyle(base.headlineSmall),
+      titleLarge: scaleStyle(base.titleLarge),
+      titleMedium: scaleStyle(base.titleMedium),
+      titleSmall: scaleStyle(base.titleSmall),
+      bodyLarge: scaleStyle(base.bodyLarge),
+      bodyMedium: scaleStyle(base.bodyMedium),
+      bodySmall: scaleStyle(base.bodySmall),
+      labelLarge: scaleStyle(base.labelLarge),
+      labelMedium: scaleStyle(base.labelMedium),
+      labelSmall: scaleStyle(base.labelSmall),
+    );
+  }
+
   static TextStyle _safeOutfit({double? fontSize, FontWeight? fontWeight, double? letterSpacing}) {
     if (kIsWeb) return TextStyle(fontSize: fontSize, fontWeight: fontWeight, letterSpacing: letterSpacing);
     try {
@@ -41,7 +69,7 @@ class AppTheme {
 
 
 
-  static ThemeData lightTheme(ClientConfig config) {
+  static ThemeData lightTheme(ClientConfig config, {double fontScale = 1.0, double densityMultiplier = 1.0}) {
     return ThemeData(
       brightness: Brightness.light,
       primaryColor: config.primaryColor,
@@ -52,7 +80,7 @@ class AppTheme {
         surface: Colors.white,
         error: Colors.redAccent,
       ),
-      textTheme: _safeTextTheme(ThemeData.light().textTheme),
+      textTheme: scaleTextTheme(_safeTextTheme(ThemeData.light().textTheme), fontScale),
       cardTheme: CardThemeData(
         elevation: 12,
         shadowColor: config.primaryColor.withValues(alpha: 0.15),
@@ -77,7 +105,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(color: config.accentColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        contentPadding: EdgeInsets.symmetric(horizontal: 24 * densityMultiplier, vertical: 18 * densityMultiplier),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -86,8 +114,8 @@ class AppTheme {
           backgroundColor: config.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
+          padding: EdgeInsets.symmetric(horizontal: 24 * densityMultiplier, vertical: 14 * densityMultiplier),
+          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16 * fontScale, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -99,7 +127,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData darkTheme(ClientConfig config) {
+  static ThemeData darkTheme(ClientConfig config, {double fontScale = 1.0, double densityMultiplier = 1.0}) {
     return ThemeData(
       brightness: Brightness.dark,
       primaryColor: config.primaryColor,
@@ -110,7 +138,7 @@ class AppTheme {
         surface: const Color(0xFF1E293B),
         error: Colors.redAccent,
       ),
-      textTheme: _safeTextTheme(ThemeData.dark().textTheme),
+      textTheme: scaleTextTheme(_safeTextTheme(ThemeData.dark().textTheme), fontScale),
       cardTheme: const CardThemeData(
         elevation: 16,
         shadowColor: Color(0x99000000), // Colors.black.withOpacity(0.6)
@@ -135,7 +163,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(color: config.accentColor, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        contentPadding: EdgeInsets.symmetric(horizontal: 24 * densityMultiplier, vertical: 18 * densityMultiplier),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -144,8 +172,8 @@ class AppTheme {
           backgroundColor: config.primaryColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 1.2),
+          padding: EdgeInsets.symmetric(horizontal: 24 * densityMultiplier, vertical: 14 * densityMultiplier),
+          textStyle: _safeOutfit(fontWeight: FontWeight.w700, fontSize: 16 * fontScale, letterSpacing: 1.2),
         ),
       ),
       appBarTheme: const AppBarTheme(

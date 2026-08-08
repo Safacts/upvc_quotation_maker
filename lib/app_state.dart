@@ -4,6 +4,34 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
 
+/// Element density options for UI customization.
+enum ElementDensity { compact, comfortable, spacious }
+
+extension ElementDensityLabel on ElementDensity {
+  String get label {
+    switch (this) {
+      case ElementDensity.compact:
+        return 'Compact';
+      case ElementDensity.comfortable:
+        return 'Comfortable';
+      case ElementDensity.spacious:
+        return 'Spacious';
+    }
+  }
+
+  /// Multiplier applied to padding/spacing values.
+  double get multiplier {
+    switch (this) {
+      case ElementDensity.compact:
+        return 0.7;
+      case ElementDensity.comfortable:
+        return 1.0;
+      case ElementDensity.spacious:
+        return 1.4;
+    }
+  }
+}
+
 class AppState extends ChangeNotifier {
   ClientConfig? _clientConfig;
   bool _isDarkMode = false;
@@ -21,6 +49,11 @@ class AppState extends ChangeNotifier {
   String _gstNumber = '';
   List<String> _supplierCompanies = [];
 
+  // UI customization state
+  double _fontScale = 1.0;
+  ElementDensity _elementDensity = ElementDensity.comfortable;
+  bool _loaded = false;
+
   ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
 
   String get companyName => _companyName.isNotEmpty ? _companyName : clientConfig.companyName;
@@ -37,6 +70,8 @@ class AppState extends ChangeNotifier {
   String get gstNumber => _gstNumber.isNotEmpty ? _gstNumber : clientConfig.gstNumber;
   List<String> get supplierCompanies => _supplierCompanies.isNotEmpty ? _supplierCompanies : clientConfig.supplierCompanies;
   bool get isDarkMode => _isDarkMode;
+  double get fontScale => _fontScale;
+  ElementDensity get elementDensity => _elementDensity;
   String get appName => clientConfig.appName;
   String get quotePrefix => clientConfig.quotePrefix;
   List<String> get adminEmails => clientConfig.adminEmails;
@@ -85,13 +120,41 @@ class AppState extends ChangeNotifier {
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
     _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
-    notifyListeners();
+    // BUGFIX: Only apply loaded values if no explicit update has been made
+    // since the constructor fired _loadSettings. Without this guard, a late-
+    // completing _loadSettings could overwrite user changes made via
+    // updateUiPreferences before the async load finished.
+    if (!_loaded) {
+      _fontScale = prefs.getDouble('fontScale') ?? 1.0;
+      final densityStr = prefs.getString('elementDensity');
+      _elementDensity = ElementDensity.values.firstWhere(
+        (e) => e.name == densityStr,
+        orElse: () => ElementDensity.comfortable,
+      );
+      _loaded = true;
+      notifyListeners();
+    }
   }
 
   void toggleTheme() async {
     _isDarkMode = !_isDarkMode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDarkMode', _isDarkMode);
+    notifyListeners();
+  }
+
+  /// Updates UI customization preferences (font scale + element density).
+  /// These are local-only — not pushed to server.
+  Future<void> updateUiPreferences({
+    required double fontScale,
+    required ElementDensity elementDensity,
+  }) async {
+    _fontScale = fontScale;
+    _elementDensity = elementDensity;
+    _loaded = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('fontScale', fontScale);
+    await prefs.setString('elementDensity', elementDensity.name);
     notifyListeners();
   }
 

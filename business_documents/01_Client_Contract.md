@@ -27,7 +27,7 @@ This Agreement is made between **Vitharn ERP Services** (“Agency”) and the C
 ## 2. TERMS & CONDITIONS
 
 ### 2.1 Scope of Services
-Vitharn ERP Services will provide the automated quotation, ERP management, and software services described in the attached proposal or statement of work, including any agreed deliverables and timelines. 
+Vitharn ERP Services will provide the automated quotation, ERP management, and software services described in the attached proposal or statement of work, including any agreed deliverables and timelines. **The Service includes the Vitharn Desktop Dashboard** — a desktop-optimised console for quotations, customers, products, reports, bulk operations and data exports (including Tally XML), provided in addition to the Vitharn mobile/web application. Separate Dashboard-specific terms (if any) are set out in the applicable Pilot Evaluation Agreement, which prevails for Dashboard matters per its conflict clause.
 
 ### 2.2 Term
 This Agreement begins on `[Start Date]` and continues indefinitely unless ended by either party with a **30-day** written notice.
@@ -47,11 +47,17 @@ Both parties agree to keep confidential any non-public information shared. Vitha
 ### 2.6 Ownership
 Upon full payment, the specific deliverables provided directly to the Client transfer to their ownership. Core architecture, intellectual property, and source code of Vitharn ERP remain the exclusive property of Vitharn ERP Services.
 
-### 2.7 Termination & Data Deletion
-Either party may end this Agreement with written notice if the other party breaches a material term and does not resolve it within **15 days**. Upon termination, Vitharn ERP Services guarantees the complete and permanent deletion of all Client data from its servers within **30 days**.
+### 2.7 Termination, Data Export & Deletion
+Either party may end this Agreement with written notice if the other party breaches a material term and does not resolve it within **15 days**. Upon termination:
+1. **Data export before deletion.** Vitharn ERP Services will provide the Client with a **complete one-time data export in CSV format** (covering all quotations, customers and products) **before** initiating deletion. The Client may also request the export in **Tally XML format** for accounting migration purposes;
+2. Vitharn ERP Services then guarantees the complete and permanent deletion of all Client data from its servers within **30 days**, with written confirmation on request.
 
 ### 2.8 Warranty Disclaimer & Limitation of Liability
 The Service is provided "AS IS" and "AS AVAILABLE" without warranties of any kind, express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose. Vitharn ERP Services will not be liable for indirect, incidental, special, or consequential damages arising from the software services provided.
+
+**Financial Accuracy Disclaimer.** Reports, registers, ledgers, summaries and totals produced by the Service — including the Desktop Dashboard's Sales Register, Customer Ledger and GST Summary — are **operational aids and are not certified financial, accounting, tax or statutory records**. The Client remains solely responsible for verifying all figures and for its own statutory compliance and filings.
+
+**Liability Cap.** Vitharn ERP Services' total aggregate liability under this Agreement shall not exceed the fees actually paid by the Client hereunder.
 
 ### 2.9 Indemnification
 The Client agrees to indemnify and hold harmless Vitharn ERP Services from any claims, damages, or expenses arising from the Client's use of the Service in violation of applicable law or infringement of third-party rights.
@@ -59,7 +65,13 @@ The Client agrees to indemnify and hold harmless Vitharn ERP Services from any c
 ### 2.10 Force Majeure
 Neither party shall be liable for failure to perform due to unforeseen events beyond their reasonable control, including natural disasters, internet backbone outages, or government actions.
 
-### 2.11 Dispute Resolution & Governing Law
+### 2.11 Multi-User Accountability
+The Client designates an **Owner** (the primary account holder) who is responsible for managing user access, permissions and all activity under the Client's account. Vitharn ERP Services is not liable for actions taken by the Client's authorised users, staff or delegates. The Owner is responsible for ensuring that all users comply with this Agreement.
+
+### 2.12 Data Backup Responsibility
+Vitharn ERP Services maintains regular backups of Client data. **However, the Client is strongly advised to export their data at least monthly** using the Dashboard's built-in export feature. Vitharn ERP Services is not liable for data loss due to infrastructure failure, third-party service outages, or events beyond its reasonable control. The Client acknowledges that exports are the Client's safety net.
+
+### 2.13 Dispute Resolution & Governing Law
 Any disputes arising under this agreement will be resolved through arbitration in **Hyderabad, Telangana**, before escalating to local courts. This Agreement is governed strictly by the laws of **Telangana, India**.
 
 ---

@@ -33,6 +33,14 @@ android/key.properties
 # --- DB migration scripts with hardcoded credentials (never commit) ---
 scripts/apply_migration_007_008.js
 scripts/verify_007_008.js
+scripts/apply_migration_009.js
+scripts/apply_migration_009_010.js
+scripts/apply_migration_011.js
+# --- Scratch / junk files (never commit) ---
+scratch_patch.js
+business_documents.tar.gz
+'cacheControl'
+troubleshooting/
 
 # --- Logs / misc ---
 *.log
@@ -44,3 +52,4 @@ scripts/verify_007_008.js
 *.pyc
 *.swp
 migrate_working_dir/
+send_tg.js  

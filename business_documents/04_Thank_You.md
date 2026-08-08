@@ -38,6 +38,7 @@ Best Regards,
 - **Speed:** Instant PDF generation and WhatsApp integration for your customers.
 - **Data Security:** Absolute transparency and strict Row-Level Security for your pricing data.
 - **Continuous Optimization:** As Vitharn grows, your ERP instance gets faster and smarter.
+- **Desktop Dashboard & Data Portability:** Access your full business console on desktop and export your data anytime — CSV, XLSX or Tally XML. Your data is always yours.
 
 ---
 

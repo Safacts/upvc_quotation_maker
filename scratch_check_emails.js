@@ -1,8 +1,8 @@
-const { Client } = require('pg');
+﻿const { Client } = require('pg');
 
 async function run() {
   const client = new Client({
-    connectionString: 'postgresql://postgres:AADISHESHu1.@db.effxrwrbsjduvhmorvrq.supabase.co:5432/postgres'
+    connectionString: 'postgresql://postgres:AADISHESHu1.@db.gumpmnbjdtzajhysnnaz.supabase.co:5432/postgres'
   });
   await client.connect();
   console.log('Connected to PG!');

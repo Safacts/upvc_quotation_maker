@@ -1,6 +1,8 @@
 import { sendMail, escapeHtml, MAIL_FROM_EMAIL } from "./mail";
 import { BRAND, ORANGE, GST_NOTE } from "./brand";
 import { buildInvoicePdf, inr, fmtDate, type InvoiceData } from "./invoice-pdf";
+import { buildQuotationPdf, type QuotationPdfData } from "./quotation-pdf";
+import { quotationTotals } from "./pricing";
 
 // Vitharn transactional email service (Brevo SMTP relay).
 //
@@ -327,6 +329,125 @@ export async function sendPaymentReceivedEmail(opts: {
         }),
       }),
     `payment-receipt ${invoiceNumber} -> ${to}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 5. Quotation email (PDF attached)
+// ---------------------------------------------------------------------------
+
+function num(v: unknown, fallback = 0): number {
+  if (v === null || v === undefined || v === "") return fallback;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/**
+ * Emails a quotation with the branded PDF attached.
+ *
+ * Used by both the single-quotation "Email" action and the bulk email endpoint.
+ * The quotation PDF is generated server-side from the SAME `src/lib/pricing.ts`
+ * the on-screen preview uses, so the numbers the customer receives match what
+ * the fabricator saw.
+ */
+export async function sendQuotationEmail(opts: {
+  /** Full quotation row with measured_items + unmeasured_items embedded. */
+  quotation: any;
+  /** The client.config branding block (company name, logo, bank, terms...). */
+  config: Record<string, any>;
+  /** Optional override subject. */
+  subject?: string;
+  /** Optional override message body (plain text, rendered as one paragraph). */
+  message?: string;
+}): Promise<MailResult> {
+  const { quotation: q, config, message } = opts;
+
+  const measured = (q.measured_items || []).map((m: any) => ({
+    code: String(m.code || ""),
+    description: String(m.description || ""),
+    glass: String(m.glass || ""),
+    width: num(m.width),
+    height: num(m.height),
+    units: num(m.units, 1),
+    rate: num(m.rate),
+  }));
+  const unmeasured = (q.unmeasured_items || []).map((u: any) => ({
+    description: String(u.description || ""),
+    units: num(u.units, 1),
+    rate: num(u.rate),
+  }));
+
+  const totals = quotationTotals(q, measured, unmeasured);
+
+  const pdfData: QuotationPdfData = {
+    quoteNo: String(q.quote_no || ""),
+    date: q.date || q.created_at || new Date(),
+    customerName: String(q.customer_name || ""),
+    contactNo: String(q.contact_no || ""),
+    email: String(q.email || ""),
+    address: String(q.address || ""),
+    reference: String(q.reference || ""),
+    supplierCompany: String(q.supplier_company || ""),
+    measured,
+    unmeasured,
+    totals,
+    companyName: String(config.companyName || config.appName || ""),
+    companyAddress: String(config.companyAddress || ""),
+    companyProprietor: String(config.companyProprietor || ""),
+    companyContact: String(config.companyContact || ""),
+    gstNumber: String(config.gstNumber || ""),
+    bankName: String(config.bankName || ""),
+    bankBranch: String(config.bankBranch || ""),
+    bankAccountNo: String(config.bankAccountNo || ""),
+    bankIfsc: String(config.bankIfsc || ""),
+    termsAndConditions: Array.isArray(config.termsAndConditions)
+      ? config.termsAndConditions.map(String)
+      : [],
+    logoUrl: String(config.logoUrl || ""),
+    watermarkUrl: String(config.invoiceBackgroundLogoUrl || config.logoUrl || ""),
+  };
+
+  const pdf = await buildQuotationPdf(pdfData);
+  const filename = `Quotation-${q.quote_no || q.id || ""}.pdf`;
+
+  const who = q.customer_name || "there";
+  const body = `
+    ${paragraph(`Hi ${escapeHtml(who)},`)}
+    ${paragraph(
+      message
+        ? escapeHtml(message)
+        : `Please find attached quotation <strong>${escapeHtml(q.quote_no || "")}</strong> from ${escapeHtml(config.companyName || "Vitharn ERP Services")}.`,
+    )}
+    ${factBox([
+      ["Quote No", q.quote_no || "-"],
+      ["Date", fmtDate(q.date || q.created_at)],
+      ["Total", inr(totals.grandTotal)],
+    ])}
+    ${paragraph(
+      `This quotation is valid for the period mentioned in the PDF. Reply to this email with any questions or to proceed.`,
+    )}
+    ${paragraph("— Team Vitharn")}
+  `;
+
+  return safeSend(
+    () =>
+      sendMail({
+        to: q.email,
+        subject: opts.subject || `Quotation ${q.quote_no || ""} from ${config.companyName || "Vitharn ERP Services"}`,
+        html: shell({
+          heading: `Quotation ${escapeHtml(q.quote_no || "")}`,
+          preheader: `Quotation for ${inr(totals.grandTotal)} attached`,
+          body,
+        }),
+        attachments: [
+          {
+            filename,
+            content: Buffer.from(pdf),
+            contentType: "application/pdf",
+          },
+        ],
+      }),
+    `quotation ${q.quote_no || q.id} -> ${q.email}`,
   );
 }
 

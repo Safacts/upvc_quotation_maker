@@ -607,6 +607,12 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
         "child rows keyed by verified invoice_id",
       [join("app", "api", "gst_invoices", "items", "route.ts")]:
         "child rows keyed by verified invoice_id",
+      // PDF generation: parent read is by-pk-then-verify (same pattern as
+      // gst_invoices/[id]/route.ts). Child rows NOW carry client_id defensively
+      // (added 08-08-2026) but the parent read cannot filter by client_id before
+      // the owner is known — it must read the row first to obtain client_id.
+      [join("app", "api", "gst_invoices", "[id]", "pdf", "route.ts")]:
+        "parent read by-pk-then-verify; child rows filter by verified client_id",
       // Vitharn's OWN receivables. Not tenant data; admin-only.
       [join("app", "api", "invoice", "route.ts")]: "Vitharn internal AR, admin-only",
       [join("app", "api", "invoice", "[id]", "route.ts")]: "Vitharn internal AR, admin-only",
@@ -667,6 +673,21 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
       join("app", "api", "save_client", "route.ts"), // body-hash auth (tracked ISO-06)
     ]);
 
+    /**
+     * Recognised authentication entry points.
+     *
+     * `getSession` is the raw primitive. `requireConsoleSession` is the
+     * `/api/console/*` guard in src/lib/console-auth.ts, which calls
+     * `getSession()` and then `resolveTenant()` — a STRICTLY STRONGER check than
+     * a bare `getSession()`, because it also fails closed on the `signup` role
+     * that `/api/portal_auth` will mint for any unrecognised email.
+     *
+     * This list is deliberately short and must stay that way. Adding a name here
+     * asserts that the named function cannot return a usable tenant id to an
+     * unauthenticated caller. Do not add a helper that merely *reads* a session.
+     */
+    const AUTH_ENTRYPOINTS = ["getSession", "requireConsoleSession"];
+
     const offenders: string[] = [];
     for (const file of files) {
       const rel = file.slice(process.cwd().length + 1);
@@ -675,8 +696,8 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
       const touchesTenant = TENANT_TABLES.some(
         (t) => src.includes(`"${t}"`) || src.includes(`'${t}'`),
       );
-      if (touchesTenant && !src.includes("getSession")) {
-        offenders.push(`${rel} → queries a tenant table with no getSession() import`);
+      if (touchesTenant && !AUTH_ENTRYPOINTS.some((fn) => src.includes(fn))) {
+        offenders.push(`${rel} → queries a tenant table with no session guard`);
       }
     }
 

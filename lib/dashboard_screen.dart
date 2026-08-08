@@ -104,11 +104,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _updateStatus(QuotationData q, QuotationStatus newStatus) async {
+    if (q.id == null) {
+      debugPrint('Status update skipped: quotation has null id');
+      return;
+    }
     try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       await SupabaseConfig.client
           .from('quotations')
           .update({'status': newStatus.value})
-          .eq('id', q.id!);
+          .eq('id', q.id!)
+          .eq('client_id', clientId);
       setState(() => q.status = newStatus);
     } catch (e) {
       debugPrint('Status update error: $e');

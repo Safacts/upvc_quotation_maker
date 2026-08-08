@@ -1,4 +1,4 @@
--- Vitharn ERP Services' OWN invoices (Vitharn -> its SaaS clients).
+﻿-- Vitharn ERP Services' OWN invoices (Vitharn -> its SaaS clients).
 --
 -- NOT to be confused with `gst_invoices` (004), which is the per-tenant module
 -- letting a UPVC fabricator invoice THEIR customers with 18% CGST/SGST.
@@ -6,8 +6,8 @@
 -- fees billed to clients like Venkateshwara / KPR, at NIL GST (turnover is
 -- below the Rs.20,00,000 threshold, Section 22 CGST Act 2017).
 --
--- Idempotent — safe to re-run. Apply via the pooler
--- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.effxrwrbsjduvhmorvrq),
+-- Idempotent â€” safe to re-run. Apply via the pooler
+-- (aws-1-ap-south-1.pooler.supabase.com:5432, user postgres.gumpmnbjdtzajhysnnaz),
 -- then run: NOTIFY pgrst, 'reload schema';
 
 CREATE TABLE IF NOT EXISTS vitharn_invoices (

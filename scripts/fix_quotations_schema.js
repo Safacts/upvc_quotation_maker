@@ -1,10 +1,10 @@
-const { Client } = require('pg');
+﻿const { Client } = require('pg');
 
 async function fixSchema() {
   const client = new Client({
     host: 'aws-1-ap-south-1.pooler.supabase.com',
     port: 5432,
-    user: 'postgres.effxrwrbsjduvhmorvrq',
+    user: 'postgres.gumpmnbjdtzajhysnnaz',
     password: process.env.SUPABASE_DB_PASSWORD,
     database: 'postgres',
     ssl: { rejectUnauthorized: false }

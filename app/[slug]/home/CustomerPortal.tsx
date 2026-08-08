@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ClientRow } from "@/lib/slug";
 import { slugify } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
@@ -396,6 +397,43 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             Settings
           </button>
         </nav>
+        {/* Desktop Console — prominent shortcut to the Tally-style desktop workspace */}
+        <div style={{ padding: '0 12px', marginTop: '8px' }}>
+          <Link
+            href={`/${slug}/console`}
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+              color: '#e2e8f0',
+              fontWeight: '600',
+              fontSize: '13px',
+              textDecoration: 'none',
+              border: '1px solid #334155',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
+              (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+              (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            <span>Desktop Console</span>
+          </Link>
+        </div>
         <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {/* Lite Mode: Instant Web App / PWA */}
           <button 

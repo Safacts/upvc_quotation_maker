@@ -22,9 +22,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _gstPercentageController;
   late TextEditingController _proprietorController;
   late TextEditingController _gstNoController;
-   double _marginPercent = 65.0;
-   List<String> _supplierCompanies = [];
-   final _supplierController = TextEditingController();
+    double _marginPercent = 65.0;
+    List<String> _supplierCompanies = [];
+    final _supplierController = TextEditingController();
+    double _fontScale = 1.0;
+    ElementDensity _elementDensity = ElementDensity.comfortable;
 
    @override
   void initState() {
@@ -44,6 +46,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _gstNoController = TextEditingController(text: appState.gstNumber);
      _marginPercent = appState.costMarginPercent;
      _supplierCompanies = List<String>.from(appState.supplierCompanies);
+     _fontScale = appState.fontScale;
+     _elementDensity = appState.elementDensity;
    }
 
    @override
@@ -121,8 +125,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _buildSectionHeader('Company Information'),
+           const SizedBox(height: 16),
+           _buildSectionHeader('Display & Layout'),
+           _buildDisplaySection(),
+           const SizedBox(height: 16),
+           _buildSectionHeader('Company Information'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -303,6 +310,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 40),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDisplaySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Font Size', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text('Adjust the text size across the app',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('A', style: TextStyle(fontSize: 14)),
+                Expanded(
+                  child: Slider(
+                    value: _fontScale,
+                    min: 0.8,
+                    max: 1.4,
+                    divisions: 6,
+                    label: '${(_fontScale * 100).toInt()}%',
+                    onChanged: (v) => setState(() => _fontScale = v),
+                  ),
+                ),
+                const Text('A', style: TextStyle(fontSize: 22)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('Layout Density', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text('Control spacing and padding of UI elements',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ElementDensity.values.map((d) {
+                final selected = _elementDensity == d;
+                return ChoiceChip(
+                  label: Text(d.label),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _elementDensity = d),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final appState = Provider.of<AppState>(context, listen: false);
+                  appState.updateUiPreferences(
+                    fontScale: _fontScale,
+                    elementDensity: _elementDensity,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Display settings saved')),
+                  );
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Apply Display Settings'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

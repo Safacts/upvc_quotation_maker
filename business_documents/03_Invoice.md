@@ -16,7 +16,7 @@
 | **Client Name:** `[Client Name]` | **Invoice No:** `[INV-0001]` |
 | **Company:** `[Client Company]` | **Invoice Date:** `[DD-MMM-YYYY]` |
 | **Address:** `[Client Address]` | **Due Date:** `[DD-MMM-YYYY]` |
-| **Email:** `[Client Email]` | **Payment Terms:** `[Due on receipt]` |
+| **Email:** `[Client Email]` | **Payment Terms:** `[As per applicable agreement — Pilot Agreement: 14 days; Standard Contract: 7 days]` |
 
 ---
 
@@ -28,6 +28,7 @@
 | **02** | **Quotation Engine Setup** | Configuration of dynamic UPVC formulas, glass logic, hardware grids. | `1` | `₹[0.00]` |
 | **03** | **Client Customizations** | Custom PDF generation mapping, Bank Details entry, branding setup. | `1` | `₹[0.00]` |
 | **04** | **Maintenance Subscription** | Early Adopter Waived / Monthly Recurring Fee. | `1` | `₹[0.00]` |
+| **05** | **Desktop Dashboard Licence (One-time)** | Desktop console access — reports, bulk operations, data exports (CSV / XLSX / Tally XML). | `1` | `₹[0.00]` |
 
 <br>
 

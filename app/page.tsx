@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -13,7 +13,7 @@ import {
 import "./landing.css";
 
 const APK_URL =
-  "https://effxrwrbsjduvhmorvrq.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
+  "https://gumpmnbjdtzajhysnnaz.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
 
 export default function Home() {
   const [isCustomer, setIsCustomer] = useState(false);
@@ -163,7 +163,7 @@ export default function Home() {
         </a>
       </div>
 
-      {/* ── HERO ── */}
+      {/* â”€â”€ HERO â”€â”€ */}
       <section className="hero">
         <div className="hero-content">
           <h1 className="hero-title">
@@ -196,7 +196,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── APP PURPOSE & OAUTH DISCLOSURE ── */}
+      {/* â”€â”€ APP PURPOSE & OAUTH DISCLOSURE â”€â”€ */}
       <section className="features" id="app-purpose" style={{ paddingBottom: 0 }}>
         <div style={{ background: "white", padding: 36, borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.04)", border: "1px solid #e2e8f0" }}>
           <h2 className="section-title" style={{ textAlign: "left", fontSize: 24, marginBottom: 16, color: "#0f172a" }}>
@@ -211,7 +211,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* â”€â”€ FEATURES â”€â”€ */}
       <section className="features" id="features">
         <h2 className="section-title">Everything Your Business Needs</h2>
         <p className="section-subtitle">
@@ -224,7 +224,7 @@ export default function Home() {
             <p>
               Input exact mm dimensions to auto-calculate SFT, transport, and
               18% IGST. Generate clean, logo-branded PDF quotes ready to print
-              or email — in seconds.
+              or email â€” in seconds.
             </p>
           </div>
           <div className="feature-card">
@@ -233,7 +233,7 @@ export default function Home() {
             <p>
               Every business on the platform gets a dedicated, SEO-friendly
               marketing website showcasing their services, gallery, and contact
-              details — at a clean URL like{" "}
+              details â€” at a clean URL like{" "}
               <span className="feature-inline-code">vitharn.com/akshaya</span>.
             </p>
           </div>
@@ -243,7 +243,7 @@ export default function Home() {
             <p>
               Your buyers get their own login to a branded portal where they can
               interact with your business, view their quotes, and request work
-              — giving them a professional, trust-building experience.
+              â€” giving them a professional, trust-building experience.
             </p>
           </div>
           <div className="feature-card">
@@ -258,13 +258,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
+      {/* â”€â”€ HOW IT WORKS â”€â”€ */}
       <section className="docs" id="how-it-works">
         <div className="docs-content">
           <h2 className="section-title">How It Works</h2>
           <p className="section-subtitle" style={{ textAlign: "center", marginBottom: 48 }}>
             Getting your business on the platform is simple. We handle the
-            setup — you just start quoting.
+            setup â€” you just start quoting.
           </p>
 
           <div className="doc-step">
@@ -286,7 +286,7 @@ export default function Home() {
               <p>
                 The moment your account is ready, your branded marketing website
                 and customer portal are live on the internet. Share your link
-                with clients immediately — no waiting, no technical setup on
+                with clients immediately â€” no waiting, no technical setup on
                 your end.
               </p>
             </div>
@@ -299,14 +299,14 @@ export default function Home() {
               <p>
                 Log in to the web admin or Android app using your registered
                 credentials. Start creating professional quotations, managing
-                client records, and sending branded PDFs — all from one place.
+                client records, and sending branded PDFs â€” all from one place.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── CTA BANNER ── */}
+      {/* â”€â”€ CTA BANNER â”€â”€ */}
       <section className="cta-banner">
         <div className="cta-content">
           <h2 className="cta-title">Ready to take your UPVC business online?</h2>
@@ -332,12 +332,12 @@ export default function Home() {
       </section>
 
       <footer>
-        <p>© 2026 Vitharn UPVC Quotation Maker. Crafted by Aadi.</p>
+        <p>Â© 2026 Vitharn UPVC Quotation Maker. Crafted by Aadi.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
           <a href="/privacy" style={{ color: "#6366f1" }}>
             Privacy Policy
           </a>{" "}
-          ·{" "}
+          Â·{" "}
           <a href="/terms" style={{ color: "#6366f1" }}>
             Terms of Service
           </a>
