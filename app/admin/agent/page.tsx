@@ -29,7 +29,7 @@ export default function AgentPage() {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("nova_chats");
+    const saved = localStorage.getItem("tara_chats");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -40,7 +40,7 @@ export default function AgentPage() {
 
   // Save to localStorage when chatSessions change
   useEffect(() => {
-    localStorage.setItem("nova_chats", JSON.stringify(chatSessions));
+    localStorage.setItem("tara_chats", JSON.stringify(chatSessions));
   }, [chatSessions]);
 
   useEffect(() => {
@@ -224,7 +224,7 @@ export default function AgentPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div className="admin-brand-icon" style={{ width: 38, height: 38, fontSize: 20 }}>✨</div>
             <div>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--text-dark)" }}>Nova - AI Client Manager</h2>
+              <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--text-dark)" }}>Tara - AI Client Manager</h2>
               <div style={{ fontSize: "12px", color: "var(--text-ghost)", fontWeight: 500 }}>Powered by Groq Agentic Automation</div>
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function AgentPage() {
           {messages.length === 0 && (
             <div className="admin-welcome" style={{ height: "100%", justifyContent: "center" }}>
               <div className="admin-welcome-icon" style={{ fontSize: 48, background: "transparent", boxShadow: "none", marginBottom: 10 }}>✨</div>
-              <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-dark)", marginBottom: 8 }}>Hi, I'm Nova!</h2>
+              <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-dark)", marginBottom: 8 }}>Hi, I'm Tara!</h2>
               <p style={{ maxWidth: 500, margin: "0 auto", color: "var(--text-mid)", lineHeight: 1.6 }}>
                 I'm your AI Assistant. I can help you create client accounts, configure them, delete test accounts, and send credential emails automatically. 
                 <br/><br/>
@@ -327,7 +327,7 @@ export default function AgentPage() {
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask Nova to create a client or manage accounts..."
+              placeholder="Ask Tara to create a client or manage accounts..."
               disabled={loading}
               style={{
                 flex: 1,
