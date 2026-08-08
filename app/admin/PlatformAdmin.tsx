@@ -957,6 +957,13 @@ export default function PlatformAdmin() {
                   >
                     ✉ Compose
                   </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => router.push("/admin/agent")}
+                    style={{ background: "#059669", color: "white" }}
+                  >
+                    🤖 AI Agent
+                  </button>
                 </div>
               </>
             )}
