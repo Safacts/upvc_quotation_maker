@@ -12,6 +12,13 @@ import 'notification_service.dart';
 import 'services/notification_center_service.dart';
 import 'config/client_loader.dart';
 import 'favicon_service.dart';
+import 'services/offline_database.dart';
+import 'services/sync_engine.dart';
+import 'services/connectivity_service.dart';
+import 'services/feature_flag_service.dart';
+import 'services/white_label_service.dart';
+import 'services/content_sync_service.dart';
+import 'services/update_checker_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +57,9 @@ void main() async {
     FaviconService.setFromUrl(initialConfig.logoUrl ?? '');
   }
 
+  // Initialize offline-first services
+  await _initializeOfflineServices(appState);
+
   runApp(
     ChangeNotifierProvider.value(
       value: appState,
@@ -71,6 +81,42 @@ void main() async {
       debugPrint('Error initializing notifications: $e');
     }
   });
+}
+
+/// Initialize offline-first services.
+Future<void> _initializeOfflineServices(AppState appState) async {
+  try {
+    // Initialize connectivity service first
+    await ConnectivityService.instance.initialize();
+
+    // Initialize offline database
+    await OfflineDatabase.instance.initialize();
+
+    final clientId = appState.clientConfig.clientId;
+
+    // Initialize sync engine. Pass the client id explicitly so the active
+    // tenant is set BEFORE the tenant-scoped services below read from it.
+    await SyncEngine.instance.initialize(clientId: clientId);
+
+    // Initialize content sync service
+    await ContentSyncService.instance.initialize();
+
+    // Initialize feature flags if client config is available
+    if (clientId.isNotEmpty) {
+      await FeatureFlagService.instance.initialize(clientId);
+      await WhiteLabelService.instance.initialize(clientId);
+
+      // Content update checker — throttled to 15 min. Kicked off without
+      // awaiting so a slow manifest fetch can never delay first paint.
+      await UpdateCheckerService.instance.initialize();
+      UpdateCheckerService.instance.checkOnStart(clientId).ignore();
+    }
+
+    debugPrint('Offline-first services initialized');
+  } catch (e) {
+    debugPrint('Error initializing offline services: $e');
+    // Don't block app startup if offline services fail
+  }
 }
 
 class QuotationApp extends StatelessWidget {

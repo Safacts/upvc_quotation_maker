@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
+import 'services/feature_flag_service.dart';
+import 'services/white_label_service.dart';
 
 /// Element density options for UI customization.
 enum ElementDensity { compact, comfortable, spacious }
@@ -76,6 +79,84 @@ class AppState extends ChangeNotifier {
   String get quotePrefix => clientConfig.quotePrefix;
   List<String> get adminEmails => clientConfig.adminEmails;
   double get costMarginPercent => clientConfig.costMarginPercent;
+
+  // ---------------------------------------------------------------------------
+  // Feature flags
+  // ---------------------------------------------------------------------------
+
+  /// Whether offline mode is enabled.
+  bool get offlineMode => FeatureFlagService.instance.offlineMode;
+
+  /// Whether product catalog is enabled.
+  bool get productCatalog => FeatureFlagService.instance.productCatalog;
+
+  /// Whether push notifications are enabled.
+  bool get pushNotifications => FeatureFlagService.instance.pushNotifications;
+
+  /// Whether customer history is enabled.
+  bool get customerHistory => FeatureFlagService.instance.customerHistory;
+
+  /// Whether site photos are enabled.
+  bool get sitePhotos => FeatureFlagService.instance.sitePhotos;
+
+  /// Whether UPI QR is enabled.
+  bool get upiQr => FeatureFlagService.instance.upiQr;
+
+  /// Whether analytics is enabled.
+  bool get analytics => FeatureFlagService.instance.analytics;
+
+  /// Whether Excel export is enabled.
+  bool get excelExport => FeatureFlagService.instance.excelExport;
+
+  /// Whether WhatsApp sharing is enabled.
+  bool get whatsappShare => FeatureFlagService.instance.whatsappShare;
+
+  /// Whether email portal is enabled.
+  bool get emailPortal => FeatureFlagService.instance.emailPortal;
+
+  /// Whether GST invoices are enabled.
+  bool get gstInvoices => FeatureFlagService.instance.gstInvoices;
+
+  /// Get the current tier.
+  String get tier => FeatureFlagService.instance.tier;
+
+  // ---------------------------------------------------------------------------
+  // White-label config
+  // ---------------------------------------------------------------------------
+
+  /// Get the dynamic logo URL (overrides static config if set).
+  String get dynamicLogoUrl {
+    final wlConfig = WhiteLabelService.instance.config;
+    return wlConfig.logoUrl.isNotEmpty ? wlConfig.logoUrl : clientConfig.logoUrl;
+  }
+
+  /// Get the dynamic primary color.
+  Color get dynamicPrimaryColor {
+    final wlConfig = WhiteLabelService.instance.config;
+    return Color(wlConfig.primaryColor);
+  }
+
+  /// Get the dynamic accent color.
+  Color get dynamicAccentColor {
+    final wlConfig = WhiteLabelService.instance.config;
+    return Color(wlConfig.accentColor);
+  }
+
+  /// Get the dynamic invoice top logo URL.
+  String get dynamicInvoiceTopLogoUrl {
+    final wlConfig = WhiteLabelService.instance.config;
+    return wlConfig.invoiceTopLogoUrl.isNotEmpty
+        ? wlConfig.invoiceTopLogoUrl
+        : clientConfig.invoiceTopLogoUrl;
+  }
+
+  /// Get the dynamic invoice background logo URL.
+  String get dynamicInvoiceBackgroundLogoUrl {
+    final wlConfig = WhiteLabelService.instance.config;
+    return wlConfig.invoiceBackgroundLogoUrl.isNotEmpty
+        ? wlConfig.invoiceBackgroundLogoUrl
+        : clientConfig.invoiceBackgroundLogoUrl;
+  }
 
   AppState() {
     _loadSettings();
