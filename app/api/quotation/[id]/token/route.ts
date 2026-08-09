@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { getSession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-client";
+import { requireTier } from "@/lib/tiers";
 
 // MUST stay byte-identical to the derivation in `../route.ts`, and MUST NOT
 // fall back to a literal. The old `|| "dev-secret"` meant that if the env var
@@ -129,6 +130,15 @@ async function issue(id: string, body: Record<string, any> | null) {
   if (quotation.client_id !== caller.clientId) {
     return json({ error: "Forbidden" }, 403);
   }
+
+  // TIER GATE — token-gated share links are the Rs.45,000 `nextplus` feature.
+  //
+  // This is checked AFTER ownership on purpose. Reversing the order would turn
+  // this endpoint into an oracle: a caller could distinguish "that quotation
+  // exists but belongs to someone else" (403) from "your plan is too low" (402)
+  // and enumerate other tenants' quotation ids.
+  const paid = await requireTier(caller.clientId, "whatsapp_share");
+  if (!paid.ok) return paid.error;
 
   return json({ token: mintToken(id) }, 200);
 }

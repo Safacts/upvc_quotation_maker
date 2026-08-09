@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { resolveTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,12 @@ export async function GET(request: NextRequest) {
     if (!t.ok) return json({ error: t.error }, t.status);
     const clientId = t.clientId;
 
+    // TIER GATE — GST invoicing is included from Rs.25,000 `base` upward.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "invoicing");
+      if (!paid.ok) return paid.error;
+    }
+
     const invoices = await supaGet("gst_invoices", {
       client_id: "eq." + clientId,
       select: "*",
@@ -55,6 +62,12 @@ export async function POST(request: NextRequest) {
     const t = resolveTenant(session, p.client_id);
     if (!t.ok) return json({ error: t.error }, t.status);
     const clientId = t.clientId;
+
+    // TIER GATE — GST invoicing is included from Rs.25,000 `base` upward.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "invoicing");
+      if (!paid.ok) return paid.error;
+    }
 
     const items: any[] = Array.isArray(p.items) ? p.items : [];
 

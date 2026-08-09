@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession, type SessionPayload } from "@/lib/session";
 import { resolveTenant, type TenantResolution } from "@/lib/tenant";
 import { isServiceKeyConfigured } from "@/lib/supabase";
+import { requireTier, hasFeature, type Feature, type Tier } from "@/lib/tiers";
 
 /**
  * console-auth.ts — THE ENTRY GATE FOR EVERY `/api/console/*` ROUTE.
@@ -78,6 +79,8 @@ export type ConsoleSession = {
   clientId?: string;
   isAdmin?: boolean;
   session?: SessionPayload;
+  /** Set only when ok === true. The tenant's verified pricing tier. */
+  tier?: Tier | null;
   /** Set only when ok === false. A ready-to-return NextResponse. */
   error?: NextResponse;
 };
@@ -91,14 +94,34 @@ export type ConsoleSession = {
  *     if (!gate.ok) return gate.error;
  *     const clientId = gate.clientId;   // trusted; derived from the cookie
  *
+ * ============================================================================
+ *  TIER ENFORCEMENT IS BUILT IN — DO NOT ADD IT PER-ROUTE
+ * ============================================================================
+ * The desktop Ops Console is the Rs.55,000 `final` tier feature. Rather than
+ * ask all twelve `/api/console/*` handlers to remember a `requireTier()` call,
+ * this single choke point enforces it for all of them.
+ *
+ * That is a deliberate structural choice, and it is the lesson from commit
+ * `e494019`: that commit patched an auth hole in `gst_invoices/route.ts`,
+ * `number` and `[id]` but MISSED `items/`, which stayed exploitable for a day.
+ * A per-route check is a checklist, and checklists get one line missed. A gate
+ * that every route must already pass through cannot be forgotten — a new
+ * console route added next month is gated the moment it calls this function.
+ *
+ * `overrideFeature` exists for the rare console route that should be available
+ * BELOW `final`. Pass the feature explicitly; there is no way to disable the
+ * tier check entirely, only to change which feature is demanded.
+ *
  * @param request        The incoming request. Used ONLY to read an admin's
  *                       `?client_id=` override — never to scope a customer.
  * @param requestedInBody An admin override supplied in a JSON body instead of
  *                       the query string (POST/PATCH). Ignored for customers.
+ * @param overrideFeature Demand a different feature than `desktop_console`.
  */
 export async function requireConsoleSession(
   request?: Request | null,
   requestedInBody?: string | null,
+  overrideFeature: Feature = "desktop_console",
 ): Promise<ConsoleSession> {
   // Fail loudly rather than returning empty grids that look like "no data yet".
   if (!isServiceKeyConfigured()) {
@@ -126,11 +149,35 @@ export async function requireConsoleSession(
     };
   }
 
+  // TIER CHECK — after authentication and tenant resolution, never before.
+  //
+  // Order matters: checking the tier first would let an UNAUTHENTICATED caller
+  // probe which tenants have paid for what, by reading the difference between a
+  // 401 and a 402.
+  //
+  // Platform admins bypass the paywall. An admin acting cross-tenant is us
+  // doing support, not a customer consuming a feature — and billing us for our
+  // own product would make every support call require an upgrade.
+  if (!tenant.isAdmin) {
+    const paid = await requireTier(tenant.clientId, overrideFeature);
+    if (!paid.ok) {
+      return { ok: false, error: paid.error };
+    }
+    return {
+      ok: true,
+      clientId: tenant.clientId,
+      isAdmin: false,
+      session,
+      tier: paid.tier,
+    };
+  }
+
   return {
     ok: true,
     clientId: tenant.clientId,
-    isAdmin: !!tenant.isAdmin,
+    isAdmin: true,
     session,
+    tier: "final",
   };
 }
 
@@ -151,6 +198,13 @@ export type ConsoleAccess = {
   isAdmin?: boolean;
   /** Set only when ok === false. */
   redirectTo?: string;
+  /**
+   * Set when the caller is authenticated and owns the tenant, but their plan
+   * does not include the console. Distinct from `redirectTo` because bouncing a
+   * PAYING customer to `/login` is a terrible experience — they are logged in;
+   * they just have not bought this. The layout renders an upgrade prompt.
+   */
+  upgradeRequired?: boolean;
 };
 
 export async function requireConsoleAccess(resolvedClientId: string): Promise<ConsoleAccess> {
@@ -166,6 +220,19 @@ export async function requireConsoleAccess(resolvedClientId: string): Promise<Co
     // Not `notFound()` — a 404 vs a redirect is itself an oracle telling the
     // caller whether the other tenant's slug exists.
     if (!own || own !== resolvedClientId) return { ok: false, redirectTo: "/login" };
+
+    // The console is a `final`-tier feature. Gate the PAGE as well as the API:
+    // without this the shell renders, then every grid inside it fires an API
+    // call that 402s, and the customer sees a dashboard full of error toasts
+    // instead of a clear "upgrade to unlock" message.
+    //
+    // This is UX, NOT security — `requireConsoleSession()` on each API route is
+    // the real boundary. Someone who bypasses this render check reaches an
+    // empty shell whose every data call is still refused.
+    if (!(await hasFeature(own, "desktop_console"))) {
+      return { ok: false, clientId: own, isAdmin: false, upgradeRequired: true };
+    }
+
     return { ok: true, clientId: own, isAdmin: false };
   }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost, supaDelete, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { resolveTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +54,15 @@ export async function POST(request: NextRequest) {
     }
     if (parent[0].client_id !== clientId) {
       return json({ error: "Forbidden" }, 403);
+    }
+
+    // TIER GATE — GST invoicing is included from Rs.25,000 `base` upward.
+    //
+    // Checked AFTER the parent-ownership check so a 402 can never be used to
+    // probe whether another tenant's invoice_id exists.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "invoicing");
+      if (!paid.ok) return paid.error;
     }
 
     const items: any[] = Array.isArray(p.items) ? p.items : [];

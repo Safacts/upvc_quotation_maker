@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendMail } from "@/lib/mail";
 import { getSession } from "@/lib/session";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,26 @@ export async function POST(request: NextRequest) {
     // "signup" is a pre-account role: it grants the signup wizard and nothing else.
     if (session.role !== "admin" && session.role !== "customer") {
       return json({ error: "Forbidden" }, 403);
+    }
+
+    // TIER GATE — outbound email is the Rs.35,000 `next` feature.
+    //
+    // Checked AFTER authentication so an anonymous caller cannot read the
+    // difference between a 401 and a 402 to learn which tenants have paid.
+    //
+    // Admins are exempt: an admin sending mail is us doing support (password
+    // resets, onboarding), not a customer consuming their plan.
+    //
+    // A customer session with no client_id is malformed — `requireTier` fails
+    // closed on an empty id, which is exactly the behaviour we want here rather
+    // than a silent allow.
+    if (session.role === "customer") {
+      const paid = await requireTier(session.client_id, "email_notifications");
+      // Re-emit through `json()` rather than returning `paid.error` as-is: the
+      // denial NextResponse carries no CORS headers, and this endpoint is called
+      // cross-origin by the Flutter web build. Without them the browser blocks
+      // the 402 and the app shows a network error instead of an upgrade prompt.
+      if (!paid.ok) return json(await paid.error.json(), paid.error.status);
     }
 
     const raw = await request.text();

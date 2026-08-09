@@ -19,6 +19,13 @@ import { sendInvoiceEmail, invoiceFilename } from "@/lib/email-service";
 // records — a tenant must never read another party's invoice, so we deliberately
 // do NOT expose a client-scoped path here. No CORS wildcard either: this route
 // is same-origin admin surface only, unlike the Flutter-facing endpoints.
+//
+// NO TIER GATE HERE, DELIBERATELY. This is Vitharn billing its own SaaS clients,
+// not a feature a tenant consumes. `requireAdmin()` already rejects every
+// `customer` and `signup` session, and platform admins bypass the paywall by
+// design — so a `requireTier()` call would be unreachable for customers and a
+// no-op for admins, i.e. dead code implying a boundary enforced one line above.
+// The tenant-facing GST module at /api/gst_invoices IS tier-gated.
 
 export const runtime = "nodejs";
 
