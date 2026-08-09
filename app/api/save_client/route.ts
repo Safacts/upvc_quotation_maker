@@ -8,6 +8,7 @@ import {
   isServiceKeyConfigured,
 } from "@/lib/supabase";
 import { sendWelcomeEmail } from "@/lib/mail";
+import { getSession } from "@/lib/session";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -65,8 +66,24 @@ export async function POST(request: NextRequest) {
       
       // STRICTURE: Ensure client authentication requires the correct portal hash
       if (!clientMatch) return json({ error: "not authorized" }, 403);
-      if (!phash) return json({ error: "password hash required" }, 403);
-      if (clientMatch.password_hash !== phash) return json({ error: "hash mismatch" }, 403);
+      
+      // Accept either a matching password_hash OR a valid session cookie.
+      // Password hash is the primary auth (proves knowledge of the secret).
+      // Session fallback handles Google-signed-in clients (no password) and
+      // Flutter web callers that rely on the HttpOnly session cookie.
+      let authedBySession = false;
+      if (phash && clientMatch.password_hash === phash) {
+        // Password hash matches — primary auth succeeded
+      } else {
+        // Password hash missing or mismatch — try session-based auth
+        const session = await getSession();
+        if (session && session.role === "customer" && session.client_id === clientMatch.id) {
+          authedBySession = true;
+        } else {
+          if (!phash) return json({ error: "password hash required" }, 403);
+          return json({ error: "hash mismatch" }, 403);
+        }
+      }
       
       isCustomer = true;
       if (cid !== clientMatch.id) {

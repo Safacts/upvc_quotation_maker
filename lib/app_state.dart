@@ -217,33 +217,43 @@ class AppState extends ChangeNotifier {
         ? '/api/save_client'
         : 'https://app.vitharn.com/api/save_client';
     try {
+      // CRITICAL FIX: Include admin_password_hash for save_client authentication.
+      // For web: hash comes from login/session response stored in secure storage.
+      // For native (APK): hash comes from client config (local password verification).
+      final prefs = await SharedPreferences.getInstance();
+      final storedHash = prefs.getString('session_password_hash') ?? '';
+      final passwordHash = storedHash.isNotEmpty ? storedHash : cfg.portalPasswordHash;
+      
+      final Map<String, dynamic> body = {
+        'admin_email': cfg.companyEmail,
+        'admin_password_hash': passwordHash,
+        'id': cfg.clientId,
+        'merge': true,
+        'config': {
+          'companyName': name,
+          'companyAddress': address,
+          'companyContact': contact,
+          'companyEmail': email,
+          'companyProprietor': proprietor,
+          'gstNumber': gstNumber,
+          'supplierCompanies': supplierCompanies,
+          'bankName': bankName,
+          'bankBranch': bankBranch,
+          'bankAccountNo': accountNo,
+          'bankIfsc': ifsc,
+          'defaultGstPercentage': gstPercentage,
+          'termsAndConditions': terms
+              .split('\n')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList(),
+        },
+      };
+      
       final res = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'admin_email': cfg.companyEmail,
-          'id': cfg.clientId,
-          'merge': true,
-          'config': {
-            'companyName': name,
-            'companyAddress': address,
-            'companyContact': contact,
-            'companyEmail': email,
-            'companyProprietor': proprietor,
-            'gstNumber': gstNumber,
-            'supplierCompanies': supplierCompanies,
-            'bankName': bankName,
-            'bankBranch': bankBranch,
-            'bankAccountNo': accountNo,
-            'bankIfsc': ifsc,
-            'defaultGstPercentage': gstPercentage,
-            'termsAndConditions': terms
-                .split('\n')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList(),
-          },
-        }),
+        body: jsonEncode(body),
       );
       return res.statusCode == 200;
     } catch (e) {

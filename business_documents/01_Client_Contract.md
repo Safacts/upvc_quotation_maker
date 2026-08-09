@@ -32,11 +32,22 @@ Vitharn ERP Services will provide the automated quotation, ERP management, and s
 ### 2.2 Term
 This Agreement begins on `[Start Date]` and continues indefinitely unless ended by either party with a **30-day** written notice.
 
-### 2.3 Payment Terms
-The Client agrees to pay the fees set out in the initial proposal. 
-- **Early Adopter Clause:** For the first 25 clients, a strict one-time setup fee is applied with **zero monthly maintenance subscriptions**.
+### 2.3 Pricing Tiers & Payment Terms
+Vitharn ERP Services offers **five (5) distinct pricing tiers**. The Client's selected tier is recorded in the invoice and the applicable Service Level Agreement (SLA). All tiers are **one-time fees with zero monthly maintenance subscriptions** for the first 25 clients (Early Adopter commitment).
+
+| Tier | Price | Best For |
+|------|-------|----------|
+| **Low** | ₹10,000 | Solo fabricators wanting offline-only quotation tool |
+| **Base** | ₹25,000 | Small fabrication shops (1–5 employees) |
+| **Next** | ₹35,000 | Growing businesses wanting online presence & SEO |
+| **Next+** | ₹45,000 | Businesses wanting customer engagement via WhatsApp |
+| **Final** | ₹55,000 | Full-service businesses wanting complete automation |
+
+**Detailed feature breakdown per tier is set out in §2.14 (Tier Service Matrix).**
+
 - Invoices are due within **7 days** of the invoice date. Late payments will incur a **1.5%** monthly penalty fee.
 - **No GST Applicable:** Vitharn ERP Services is not GST-registered as turnover is below the statutory threshold (Section 22, CGST Act). No GST will be charged on invoices.
+- **Upgrades:** The Client may upgrade to a higher tier at any time by paying the price difference. Downgrades are not permitted.
 
 ### 2.4 Client Responsibilities
 The Client agrees to provide the information, materials, and access Vitharn reasonably needs to deploy the ERP instance, and to give timely feedback during the setup phase.
@@ -73,6 +84,53 @@ Vitharn ERP Services maintains regular backups of Client data. **However, the Cl
 
 ### 2.13 Dispute Resolution & Governing Law
 Any disputes arising under this agreement will be resolved through arbitration in **Hyderabad, Telangana**, before escalating to local courts. This Agreement is governed strictly by the laws of **Telangana, India**.
+
+### 2.14 Tier Service Matrix
+The following matrix defines the services included in each pricing tier. The Client's selected tier is recorded in the invoice. All tiers include the Client's company branding (logo, name, colours) on all deliverables.
+
+| Feature | Low | Base | Next | Next+ | Final |
+|---------|:---:|:----:|:----:|:-----:|:-----:|
+| Offline quotation app (Android) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Professional PDF quotations | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Cloud sync | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Web dashboard (browser access) | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Professional invoicing with GST support | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Customer database | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Product catalog with pricing presets | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Bank details & UPI on invoices | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Quote numbering (custom prefix) | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Basic analytics (quotes sent/won/pending) | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Daily cloud backup | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Email support | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Business webpage (mobile-responsive) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| SEO-optimised (found on Google) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Customer review system (star ratings + testimonials) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Dynamic reviews displayed on webpage | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Email notifications to customers | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Review request emails (automatic) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Advanced analytics (conversion rates, popular products) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Direct WhatsApp sharing of quotations | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Review link sharing via WhatsApp | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Business optimization insights | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Product performance analytics | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Customer retention metrics | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Priority email support | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Desktop web console (split-view editor) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Keyboard shortcuts (Tally-style speed) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Payment tracking (who paid, who owes) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Auto payment status updates | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Bulk operations (status updates, exports) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Customer ledger | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Sales register & reports | ❌ | ❌ | ❌ | ❌ | ✅ |
+| GST summary reports | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Priority support (WhatsApp + email) | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+**Tier-specific notes:**
+- **Low tier:** Offline-only. No cloud sync, no web dashboard. Client is solely responsible for their own data. If the phone is lost or the app is deleted, data cannot be recovered. Upgrade to Base anytime for cloud backup.
+- **Base tier:** Target 1–5 employees, up to 50 quotations/month.
+- **Next tier:** Target 5–15 employees, up to 200 quotations/month.
+- **Next+ tier:** Target 10–20 employees, up to 500 quotations/month. WhatsApp sharing has fair-use limits to prevent spam.
+- **Final tier:** Target 15+ employees, unlimited quotations.
 
 ---
 
