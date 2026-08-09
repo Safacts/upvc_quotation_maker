@@ -166,12 +166,122 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
   return lines;
 }
 
-async function loadPng(url: string): Promise<Uint8Array | null> {
+/**
+ * Download a branding image.
+ *
+ * NEVER swallow the failure silently. A `catch { /* ignore *\/ }` here cost
+ * Venkateshwara the logo AND the watermark on every single PDF for an unknown
+ * length of time, with no error, no alert and no support ticket — the customer
+ * simply received an unbranded document. A degraded document that looks
+ * deliberate is worse than a loud failure, because nobody ever investigates it.
+ */
+async function loadImageBytes(url: string, role: string): Promise<Uint8Array | null> {
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
-    return new Uint8Array(await res.arrayBuffer());
-  } catch {
+    if (!res.ok) {
+      console.error(`[quotation-pdf] ${role} fetch failed HTTP ${res.status}: ${url}`);
+      return null;
+    }
+    const raw = new Uint8Array(await res.arrayBuffer());
+    return await downscaleIfOversized(raw, role);
+  } catch (e: any) {
+    console.error(`[quotation-pdf] ${role} fetch threw: ${String(e?.message ?? e)} url=${url}`);
+    return null;
+  }
+}
+
+/** Longest edge we ever need. The logo draws at ~100x60 pt; the watermark at
+ *  ~300 pt wide. 512 px is already 4x oversampled for 300 dpi print. */
+const MAX_IMAGE_EDGE = 512;
+
+/**
+ * Downscale a branding image before it reaches pdf-lib.
+ *
+ * WHY (09-08-2026): `kprupvc.png` was a 4,665,338-byte 2048x2048 PNG drawn at
+ * ~100x60 pt. Decoding it dominated the whole request: 3,926 ms per PDF and a
+ * 4.41 MB output, vs 5 ms / 0.09 MB with a right-sized asset — 785x slower.
+ * See troubleshooting/pdf-logo-bloat-2026-08-09.md.
+ *
+ * The offending asset has since been re-uploaded at 512x512 (44 KB) with
+ * `scripts/resize_client_logo.mjs`, but that fixes ONE file. This is the
+ * standing guard: any tenant can point `config.logoUrl` at any URL — including
+ * an external CDN we do not control — so the server must refuse to embed a
+ * multi-megapixel image no matter where it came from.
+ *
+ * Deliberate choices:
+ *  - `sharp` is imported lazily so a missing/incompatible native binary can
+ *    never break module load for the routes that never touch images.
+ *  - Any failure returns the ORIGINAL bytes. A slow, fat PDF is a performance
+ *    bug; a PDF with no logo is a customer-facing branding failure. Degrade to
+ *    the former, and log loudly either way.
+ *  - PNG stays PNG. The watermark is drawn at 8% opacity over the page, so an
+ *    alpha-less JPEG re-encode would paint a solid box across the document.
+ */
+async function downscaleIfOversized(bytes: Uint8Array, role: string): Promise<Uint8Array> {
+  try {
+    const sharpMod = (await import("sharp")).default;
+    const meta = await sharpMod(bytes).metadata();
+    const w = meta.width ?? 0;
+    const h = meta.height ?? 0;
+    if (!w || !h) return bytes;
+    if (w <= MAX_IMAGE_EDGE && h <= MAX_IMAGE_EDGE) return bytes;
+
+    const isJpeg = meta.format === "jpeg";
+    const pipeline = sharpMod(bytes).resize({
+      width: MAX_IMAGE_EDGE,
+      height: MAX_IMAGE_EDGE,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+    const out = isJpeg
+      ? await pipeline.jpeg({ quality: 82, mozjpeg: true }).toBuffer()
+      : await pipeline.png({ palette: true, compressionLevel: 9 }).toBuffer();
+
+    console.warn(
+      `[quotation-pdf] ${role} was oversized (${w}x${h}, ${bytes.length} bytes) — ` +
+        `downscaled to ${MAX_IMAGE_EDGE}px / ${out.length} bytes on the fly. ` +
+        `Re-upload it properly: node scripts/resize_client_logo.mjs <file> --apply`,
+    );
+    return new Uint8Array(out);
+  } catch (e: any) {
+    console.error(
+      `[quotation-pdf] ${role} downscale skipped: ${String(e?.message ?? e)} — embedding original bytes`,
+    );
+    return bytes;
+  }
+}
+
+/**
+ * Embed a PNG **or** a JPEG, chosen by MAGIC BYTES rather than by the file
+ * extension or the Content-Type header.
+ *
+ * WHY (found 09-08-2026): `venkateshwara.png` is not a PNG. Its first bytes are
+ * `ff d8 ff` — it is a JPEG that was uploaded with a `.png` name and is served
+ * with `Content-Type: image/png`. The old code only ever called `embedPng()`,
+ * which threw "The input is not a PNG file!", and the throw was swallowed. So
+ * the filename lies, the Content-Type lies, and the only trustworthy source of
+ * truth is the first three bytes of the payload itself.
+ */
+async function embedImage(
+  doc: PDFDocument,
+  bytes: Uint8Array,
+  role: string,
+): Promise<Awaited<ReturnType<typeof doc.embedPng>> | null> {
+  const isPng =
+    bytes.length > 8 &&
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  const isJpg = bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+
+  try {
+    if (isPng) return await doc.embedPng(bytes);
+    if (isJpg) return await doc.embedJpg(bytes);
+    console.error(
+      `[quotation-pdf] ${role} is neither PNG nor JPEG ` +
+        `(first bytes: ${Array.from(bytes.slice(0, 4)).map((b) => b.toString(16)).join(" ")})`,
+    );
+    return null;
+  } catch (e: any) {
+    console.error(`[quotation-pdf] ${role} embed failed: ${String(e?.message ?? e)}`);
     return null;
   }
 }
@@ -186,18 +296,39 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   const reg = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  // Watermark + header logo.
-  let watermarkPng: Uint8Array | null = null;
-  let logoPng: Uint8Array | null = null;
-  if (data.watermarkUrl) watermarkPng = await loadPng(data.watermarkUrl);
-  if (data.logoUrl) logoPng = await loadPng(data.logoUrl);
+  // ---- Watermark + header logo ----
+  //
+  // PERF (fixed 09-08-2026): the watermark and the header logo are usually the
+  // SAME image. The old code downloaded it once but then called `embedPng()`
+  // TWICE on those identical bytes, so pdf-lib decoded the image twice and wrote
+  // TWO copies of it into the output — doubling both the CPU cost and the file
+  // size for no visual difference whatsoever.
+  //
+  // Now: fetch each distinct URL once, embed each distinct payload once, and
+  // reuse the single embedded object for both draws. pdf-lib is happy to
+  // reference one XObject from multiple places.
+  // See troubleshooting/pdf-logo-bloat-2026-08-09.md.
+  const logoUrl = (data.logoUrl || "").trim();
+  const watermarkUrl = (data.watermarkUrl || "").trim();
   // Flutter uses the same image for both when only one is set.
-  if (!watermarkPng && data.logoUrl) watermarkPng = logoPng;
+  const effectiveWatermarkUrl = watermarkUrl || logoUrl;
+  const sameImage = !!logoUrl && effectiveWatermarkUrl === logoUrl;
 
-  let watermarkImg = null as Awaited<ReturnType<typeof doc.embedPng>> | null;
   let logoImg = null as Awaited<ReturnType<typeof doc.embedPng>> | null;
-  if (watermarkPng) try { watermarkImg = await doc.embedPng(watermarkPng); } catch { /* ignore */ }
-  if (logoPng) try { logoImg = await doc.embedPng(logoPng); } catch { /* ignore */ }
+  let watermarkImg = null as Awaited<ReturnType<typeof doc.embedPng>> | null;
+
+  if (logoUrl) {
+    const bytes = await loadImageBytes(logoUrl, "logo");
+    if (bytes) logoImg = await embedImage(doc, bytes, "logo");
+  }
+
+  if (sameImage) {
+    // One download, one decode, one embedded object, two draws.
+    watermarkImg = logoImg;
+  } else if (effectiveWatermarkUrl) {
+    const bytes = await loadImageBytes(effectiveWatermarkUrl, "watermark");
+    if (bytes) watermarkImg = await embedImage(doc, bytes, "watermark");
+  }
 
   let page: PDFPage = doc.addPage(A4);
   const W = A4[0];
