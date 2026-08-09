@@ -1,0 +1,16 @@
+{
+  "table": "audit_logs",
+  "count": 0,
+  "columns": [
+    "id",
+    "client_id",
+    "entity_type",
+    "entity_id",
+    "action",
+    "old_value",
+    "new_value",
+    "actor",
+    "created_at"
+  ],
+  "rows": []
+}

@@ -1,0 +1,182 @@
+{
+  "table": "sent_emails",
+  "count": 21,
+  "columns": [
+    "id",
+    "created_at",
+    "recipient",
+    "subject",
+    "body",
+    "client_id"
+  ],
+  "rows": [
+    {
+      "id": "bc44e03d-1c87-4e9e-88f8-a62a3d18dfe4",
+      "created_at": "2026-06-05T22:06:21.358Z",
+      "recipient": "kongaaadisheshu1@gmail.com",
+      "subject": "Thank you for choosing us!",
+      "body": "Dear Customer,\n\nThank you for choosing Venkateshwara UPVC! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\nVenkateshwara UPVC",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "c9e81167-d863-41d7-a36a-ed122eef910f",
+      "created_at": "2026-06-05T22:15:06.594Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n          <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n            <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n            <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n            <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n              185987\n            </div>\n            <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n          </div>\n        ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "047def6a-5b5d-4362-b8a5-616fe118ccab",
+      "created_at": "2026-06-05T22:15:46.430Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n          <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n            <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n            <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n            <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n              770427\n            </div>\n            <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n          </div>\n        ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "cdf4bcac-6ee5-475e-9d58-9adf1f9cdca2",
+      "created_at": "2026-06-05T22:15:51.390Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n          <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n            <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n            <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n            <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n              597237\n            </div>\n            <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n          </div>\n        ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "aec6dffa-79c0-4f20-a6f4-64adfaeb3845",
+      "created_at": "2026-06-05T22:16:41.751Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Console Test",
+      "body": "Test Body",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "9ead8f21-e399-4ce6-8e29-573af752169a",
+      "created_at": "2026-06-05T22:18:30.981Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n          <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n            <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n            <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n            <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n              770521\n            </div>\n            <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n          </div>\n        ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "98a754ef-4b56-4516-a64d-b1227c1f4866",
+      "created_at": "2026-06-05T22:23:00.287Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            788801\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "97fdc5b0-95cd-4ebb-a91b-00a31a0b2eb6",
+      "created_at": "2026-06-05T22:26:01.778Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            207707\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "c0e77cd0-9b31-44f1-88c2-d85aa02edde5",
+      "created_at": "2026-06-05T22:29:47.157Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            286992\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "510357e3-4867-4d81-bdba-2440e4006247",
+      "created_at": "2026-06-13T17:11:20.274Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Thank you for choosing us!",
+      "body": "Dear Customer,\n\nThank you for choosing Venkateshwara UPVC! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\nVenkateshwara UPVC",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "eab561fc-a5a0-42b8-8877-604fa66c889f",
+      "created_at": "2026-06-13T17:11:52.453Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Thank you for choosing us!",
+      "body": "Dear Customer,\n\nThank you for choosing Venkateshwara UPVC! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\nVenkateshwara UPVC",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "2b4ed0c1-3199-472e-87e3-c5e9004377b8",
+      "created_at": "2026-06-14T05:02:38.347Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            633463\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "80a23c8a-b1a5-45bc-90f5-bc0f7767484d",
+      "created_at": "2026-06-14T05:13:22.065Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Venkateshwara UPVC Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            918256\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "7afc0684-8f18-4ea6-ae6c-e20b5243932b",
+      "created_at": "2026-06-15T07:03:22.809Z",
+      "recipient": "kongaaadisheshu@gmail.com",
+      "subject": "Thank you for choosing us!",
+      "body": "Dear Customer,\n\nThank you for choosing Venkateshwara UPVC! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\nVenkateshwara UPVC",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "485af5b8-7e14-4855-8aa6-1916f66d6358",
+      "created_at": "2026-08-02T09:14:05.819Z",
+      "recipient": "jvenkateshupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            822696\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "1dc15960-9b53-4e47-9baa-7f07f200b58b",
+      "created_at": "2026-08-02T09:14:07.273Z",
+      "recipient": "jvenkateshupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            449753\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "f96929a3-c6cc-4391-acfc-8bb7ec058321",
+      "created_at": "2026-08-02T09:16:50.261Z",
+      "recipient": "jvenkateshupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n        <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n          <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n          <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.</p>\n          <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n            302182\n          </div>\n          <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n        </div>\n      ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "6907d434-90fc-4642-b5f7-b56b414a2445",
+      "created_at": "2026-08-02T09:23:29.493Z",
+      "recipient": "jvenkateshupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "\n         <div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;\">\n           <h2 style=\"color: #1E3A5F;\">Password Reset Request</h2>\n           <p style=\"color: #475569; font-size: 16px;\">We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.</p>\n           <div style=\"background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;\">\n             188723\n           </div>\n           <p style=\"color: #64748b; font-size: 14px;\">Enter this code in the portal to reset your password. If you didn't request this, you can safely ignore this email.</p>\n         </div>\n       ",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "8e93e0b1-d536-4856-b058-f6708d12ea50",
+      "created_at": "2026-08-02T10:25:27.954Z",
+      "recipient": "jvenkateshupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "OTP: 273784",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "ecf94b1e-f367-4226-89f8-2454e48009ab",
+      "created_at": "2026-08-02T11:00:48.668Z",
+      "recipient": "akshayaupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "OTP: 369192",
+      "client_id": "akshaya upvc"
+    },
+    {
+      "id": "30c723d0-e1fa-4de6-9eae-8c5753b83687",
+      "created_at": "2026-08-03T12:47:36.963Z",
+      "recipient": "akshayaupvc@gmail.com",
+      "subject": "Your Password Reset OTP",
+      "body": "OTP: 299075",
+      "client_id": "akshaya upvc"
+    }
+  ]
+}

@@ -134,31 +134,46 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     final link = await _quoteLink();
     final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
     
-    await Share.share(text);
+    final helper = FileHelper();
+    final dir = await helper.getTempDir();
+    if (dir != null) {
+      final fileName = 'Quotation_${widget.data.quotationNo}.pdf';
+      await helper.writeFile('$dir/$fileName', widget.pdfBytes);
+      await Share.shareXFiles([XFile('$dir/$fileName')], text: text);
+    } else {
+      await Share.share(text);
+    }
     await _markAsSent();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quotation shared successfully!')));
+    }
   }
 
   Future<void> _shareToWhatsApp() async {
     final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final link = await _quoteLink();
     final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    
-    await Clipboard.setData(ClipboardData(text: text));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copied to clipboard! Paste it when sharing.')));
-    }
 
-    if (kIsWeb) {
-      await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
+    final helper = FileHelper();
+    final dir = await helper.getTempDir();
+    if (dir != null) {
+      final fileName = 'Quotation_${widget.data.quotationNo}.pdf';
+      await helper.writeFile('$dir/$fileName', widget.pdfBytes);
+      await Share.shareXFiles([XFile('$dir/$fileName')], text: text);
     } else {
-      final helper = FileHelper();
-      final dir = await helper.getTempDir();
-      if (dir != null) {
-        await helper.writeFile('$dir/Quotation_${widget.data.quotationNo}.pdf', widget.pdfBytes);
-        await Share.shareXFiles([XFile('$dir/Quotation_${widget.data.quotationNo}.pdf')], text: text);
+      // Fallback for web or if temp dir unavailable
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copied to clipboard! Paste it when sharing.')));
+      }
+      if (kIsWeb) {
+        await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
       }
     }
     await _markAsSent();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quotation shared to WhatsApp!')));
+    }
   }
 
   Future<void> _shareToTelegram() async {
@@ -256,10 +271,10 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
                 runSpacing: 16,
                 alignment: WrapAlignment.center,
                 children: [
-                  _buildActionButton('Save', Icons.download, Colors.indigo, _savePdfToDevice, 300),
-                  _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 400),
-                  _buildActionButton('Share', Icons.share, Colors.blue, _sharePdf, 500),
-                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, _shareToWhatsApp, 600),
+                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, _shareToWhatsApp, 300),
+                  _buildActionButton('Share', Icons.share, Colors.blue, _sharePdf, 400),
+                  _buildActionButton('Save', Icons.download, Colors.indigo, _savePdfToDevice, 500),
+                  _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 600),
                   _buildActionButton('Telegram', Icons.send, Colors.lightBlue, _shareToTelegram, 700),
                 ],
               ),

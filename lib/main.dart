@@ -9,6 +9,7 @@ import 'supabase_config.dart';
 import 'theme.dart';
 import 'app_state.dart';
 import 'notification_service.dart';
+import 'services/notification_center_service.dart';
 import 'config/client_loader.dart';
 import 'favicon_service.dart';
 
@@ -62,6 +63,10 @@ void main() async {
       final notificationService = NotificationService();
       await notificationService.init();
       await notificationService.requestPermissions();
+
+      // Initialize Notification Center (realtime) after client config is set
+      final notificationCenter = NotificationCenterService();
+      await notificationCenter.initialize();
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }

@@ -182,6 +182,15 @@ export async function POST(request: NextRequest) {
           200
         );
       }
+      // CRITICAL FIX: Include password_hash for admin users
+      if (session.role === "admin") {
+        const admins = await supaGet("admins", {
+          email: "eq." + session.email,
+          select: "email,password_hash",
+        });
+        const adminHash = Array.isArray(admins) && admins.length > 0 ? admins[0].password_hash : "";
+        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: adminHash }, 200);
+      }
       return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
     }
 
@@ -253,7 +262,7 @@ export async function POST(request: NextRequest) {
 
     if (admin && admin.password_hash === inputHash) {
       await createSession({ role: "admin", email: admin.email });
-      return json({ role: "admin", email: admin.email }, 200);
+      return json({ role: "admin", email: admin.email, password_hash: admin.password_hash }, 200);
     }
 
     const client = await findClientByEmail(email);

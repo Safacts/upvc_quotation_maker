@@ -1,0 +1,90 @@
+{
+  "table": "service_reviews",
+  "count": 6,
+  "columns": [
+    "id",
+    "client_id",
+    "customer_name",
+    "role",
+    "rating",
+    "review_text",
+    "is_visible",
+    "source",
+    "created_at",
+    "quotation_no"
+  ],
+  "rows": [
+    {
+      "id": "2",
+      "client_id": "kprupvc",
+      "customer_name": "Srinivas Reddy",
+      "role": "Homeowner",
+      "rating": 5,
+      "review_text": "The noise insulation of their UPVC profiles is unbelievable. Our home on the busy Sagar Road is now completely silent. Worth every penny.",
+      "is_visible": false,
+      "source": "seed",
+      "created_at": "2026-08-06T01:45:01.839Z",
+      "quotation_no": null
+    },
+    {
+      "id": "3",
+      "client_id": "kprupvc",
+      "customer_name": "Priya Sharma",
+      "role": "Interior Designer",
+      "rating": 5,
+      "review_text": "I always recommend KPR to my premium clients. Their glass partitions and sliding doors add that perfect modern, minimal touch to any space.",
+      "is_visible": false,
+      "source": "seed",
+      "created_at": "2026-08-06T01:45:01.839Z",
+      "quotation_no": null
+    },
+    {
+      "id": "4",
+      "client_id": "kprupvc",
+      "customer_name": "Vikram Singh",
+      "role": "Commercial Developer",
+      "rating": 5,
+      "review_text": "Delivered our office facade on time and with incredible precision. The ACP cladding and spider glazing gave the building a world-class look.",
+      "is_visible": false,
+      "source": "seed",
+      "created_at": "2026-08-06T01:45:01.839Z",
+      "quotation_no": null
+    },
+    {
+      "id": "1",
+      "client_id": "kprupvc",
+      "customer_name": "Rajesh Kumar",
+      "role": "Architect, Hyderabad",
+      "rating": 5,
+      "review_text": "KPR Windows transformed our luxury villa project. Their structural glazing is flawless, and the attention to detail during installation was exceptional.",
+      "is_visible": false,
+      "source": "seed",
+      "created_at": "2026-08-06T01:45:01.839Z",
+      "quotation_no": null
+    },
+    {
+      "id": "8",
+      "client_id": "kprupvc",
+      "customer_name": "faran",
+      "role": null,
+      "rating": 5,
+      "review_text": "Excellent workmanship. Very professional team. On-time installation. High quality materials",
+      "is_visible": true,
+      "source": "quote-link",
+      "created_at": "2026-08-06T15:48:27.017Z",
+      "quotation_no": "KPRUPVC-06082026-0148"
+    },
+    {
+      "id": "9",
+      "client_id": "venkateshwara",
+      "customer_name": "test 1",
+      "role": null,
+      "rating": 5,
+      "review_text": "Excellent workmanship",
+      "is_visible": true,
+      "source": "quote-link",
+      "created_at": "2026-08-07T03:37:10.189Z",
+      "quotation_no": "JVUPVC-07082026-0108"
+    }
+  ]
+}

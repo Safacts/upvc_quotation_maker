@@ -640,6 +640,14 @@ export default function PlatformAdmin() {
 
   async function saveClient(e: React.FormEvent) {
     e.preventDefault();
+    
+    // CRITICAL FIX: Ensure admin password hash is available
+    if (!currentPasswordHash) {
+      showToast("Session expired. Please login again.", "error");
+      handleLogout();
+      return;
+    }
+    
     const isEdit = !!editingClient;
     const id = form.id.trim();
     if (!id) {
@@ -791,6 +799,13 @@ export default function PlatformAdmin() {
   async function deleteClient(confirmedId?: string) {
     const id = confirmedId || (editingClient ? editingClient.id : form.id);
     if (!id) return;
+    
+    // CRITICAL FIX: Ensure admin password hash is available
+    if (!currentPasswordHash) {
+      showToast("Session expired. Please login again.", "error");
+      handleLogout();
+      return;
+    }
     
     if (typeof confirmedId !== 'string') {
       setConfirmDialog({ id });

@@ -1,0 +1,18 @@
+{
+  "table": "gst_invoice_items",
+  "count": 0,
+  "columns": [
+    "id",
+    "invoice_id",
+    "client_id",
+    "sno",
+    "hsn_code",
+    "description",
+    "quantity",
+    "unit",
+    "rate",
+    "taxable_value",
+    "created_at"
+  ],
+  "rows": []
+}

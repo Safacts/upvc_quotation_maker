@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,11 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import 'models.dart';
+import 'models_extra.dart';
 import 'app_state.dart';
 import 'pdf_generator.dart' deferred as pdfGen;
 import 'supabase_config.dart';
@@ -19,6 +24,8 @@ import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
 import 'umami_tracker.dart';
 import 'quotation_export.dart' deferred as exportLib;
+import 'package:permission_handler/permission_handler.dart';
+import 'services/catalog_service.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -39,6 +46,15 @@ class _QuotationScreenState extends State<QuotationScreen> {
   bool _usePresets = false;
   DateTime? _lastSaved;
   String? _lastSaveError;
+
+  // Product Catalog
+  List<Product> _measuredProducts = [];
+  List<Product> _unmeasuredProducts = [];
+  bool _isLoadingCatalog = false;
+
+  // Site Photos
+  List<QuotationPhoto> _photos = [];
+  bool _isUploading = false;
 
   final _nameFocus = FocusNode();
   final _referenceFocus = FocusNode();
@@ -92,11 +108,15 @@ class _QuotationScreenState extends State<QuotationScreen> {
     if (widget.existingData != null) {
       data = widget.existingData!;
       _loadItems();
+      if (data.id != null) {
+        _loadPhotos();
+      }
     } else {
       data = QuotationData();
       _initQuoteNumber();
     }
     _fetchPastQuotations();
+    _loadCatalog();
     unawaited(_prefetchGenerationLibs());
   }
 
@@ -124,6 +144,327 @@ class _QuotationScreenState extends State<QuotationScreen> {
     } catch (e) {
       debugPrint('Failed to load past quotes: $e');
     }
+  }
+
+  Future<void> _loadCatalog({bool forceRefresh = false}) async {
+    setState(() => _isLoadingCatalog = true);
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final catalogService = CatalogService.instance;
+      
+      if (forceRefresh) {
+        catalogService.invalidate(clientId);
+      }
+      
+      final measured = await catalogService.fetchMeasuredProducts(clientId);
+      final unmeasured = await catalogService.fetchUnmeasuredProducts(clientId);
+      
+      if (mounted) {
+        setState(() {
+          _measuredProducts = measured;
+          _unmeasuredProducts = unmeasured;
+          _isLoadingCatalog = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load catalog: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingCatalog = false;
+          _measuredProducts = [];
+          _unmeasuredProducts = [];
+        });
+        toastification.show(
+          context: context,
+          title: const Text('Catalog load failed'),
+          description: Text(e.toString()),
+          type: ToastificationType.warning,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 4),
+          alignment: Alignment.bottomCenter,
+        );
+      }
+    }
+  }
+
+  // ===== SITE PHOTOS =====
+
+  Future<void> _loadPhotos() async {
+    if (data.id == null) return;
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final response = await SupabaseConfig.client
+          .from('quotation_photos')
+          .select()
+          .eq('quotation_id', data.id!)
+          .eq('client_id', clientId)
+          .order('created_at', ascending: false);
+      
+      if (mounted) {
+        setState(() {
+          _photos = (response as List).map((e) => QuotationPhoto.fromMap(e)).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load photos: $e');
+    }
+  }
+
+  Future<PermissionStatus> _requestPhotoPermission(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (status.isGranted) return status;
+      if (status.isPermanentlyDenied) {
+        await openAppSettings();
+      }
+      return status;
+    } else {
+      if (Platform.isAndroid) {
+        // Android 13+ uses READ_MEDIA_IMAGES
+        final status = await Permission.photos.request();
+        if (status.isGranted) return status;
+        if (status.isPermanentlyDenied) {
+          await openAppSettings();
+        }
+        return status;
+      } else {
+        // iOS
+        final status = await Permission.photos.request();
+        if (status.isGranted) return status;
+        if (status.isPermanentlyDenied) {
+          await openAppSettings();
+        }
+        return status;
+      }
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final permission = await _requestPhotoPermission(source);
+    if (!permission.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Permission denied for ${source == ImageSource.camera ? 'camera' : 'gallery'}')),
+        );
+      }
+      return;
+    }
+
+    final picker = ImagePicker();
+    final XFile? pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 75,
+      preferredCameraDevice: CameraDevice.rear,
+    );
+
+    if (pickedFile == null) return;
+
+    final bytes = await pickedFile.readAsBytes();
+    if (bytes.length > 200 * 1024) {
+      // If still too large, compress further
+      final compressedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 60,
+      );
+      if (compressedFile != null) {
+        final compressedBytes = await compressedFile.readAsBytes();
+        if (compressedBytes.length <= 200 * 1024) {
+          await _uploadPhoto(compressedBytes);
+        } else {
+          await _uploadPhoto(bytes); // Upload anyway, let server handle it
+        }
+      } else {
+        await _uploadPhoto(bytes);
+      }
+    } else {
+      await _uploadPhoto(bytes);
+    }
+  }
+
+  Future<void> _uploadPhoto(Uint8List imageBytes) async {
+    if (data.id == null) {
+      // Auto-save first to get an ID
+      await _autoSaveToDatabase();
+      if (data.id == null) return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final uuid = const Uuid().v4();
+      final storagePath = '$clientId/${data.id}/$uuid.jpg';
+      
+      // Upload to Supabase Storage
+      await SupabaseConfig.client.storage
+          .from('site-photos')
+          .uploadBinary(storagePath, imageBytes, fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+          ));
+
+      // Get public URL
+      final publicUrl = SupabaseConfig.client.storage
+          .from('site-photos')
+          .getPublicUrl(storagePath);
+
+      // Get image dimensions
+      int? width;
+      int? height;
+      try {
+        final codec = await instantiateImageCodec(imageBytes);
+        final frame = await codec.getNextFrame();
+        width = frame.image.width;
+        height = frame.image.height;
+      } catch (_) {}
+
+      // Insert metadata row
+      final photo = QuotationPhoto(
+        quotationId: data.id!,
+        storagePath: storagePath,
+        publicUrl: publicUrl,
+        caption: '',
+        width: width,
+        height: height,
+        bytes: imageBytes.length,
+      );
+
+      await SupabaseConfig.client
+          .from('quotation_photos')
+          .insert(photo.toMap(clientId: clientId));
+
+      // Refresh photo list
+      await _loadPhotos();
+
+      if (mounted) {
+        toastification.show(
+          context: context,
+          title: const Text('Photo uploaded'),
+          type: ToastificationType.success,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 2),
+          alignment: Alignment.bottomCenter,
+        );
+      }
+    } catch (e) {
+      debugPrint('Photo upload error: $e');
+      if (mounted) {
+        toastification.show(
+          context: context,
+          title: const Text('Upload failed'),
+          description: Text(e.toString()),
+          type: ToastificationType.error,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 5),
+          alignment: Alignment.bottomCenter,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _deletePhoto(QuotationPhoto photo) async {
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+
+      // Delete from storage
+      await SupabaseConfig.client.storage
+          .from('site-photos')
+          .remove([photo.storagePath]);
+
+      // Delete from database
+      await SupabaseConfig.client
+          .from('quotation_photos')
+          .delete()
+          .eq('id', photo.id!)
+          .eq('client_id', clientId);
+
+      // Refresh photo list
+      await _loadPhotos();
+
+      if (mounted) {
+        toastification.show(
+          context: context,
+          title: const Text('Photo deleted'),
+          type: ToastificationType.success,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 2),
+          alignment: Alignment.bottomCenter,
+        );
+      }
+    } catch (e) {
+      debugPrint('Photo delete error: $e');
+      if (mounted) {
+        toastification.show(
+          context: context,
+          title: const Text('Delete failed'),
+          description: Text(e.toString()),
+          type: ToastificationType.error,
+          style: ToastificationStyle.fillColored,
+          autoCloseDuration: const Duration(seconds: 5),
+          alignment: Alignment.bottomCenter,
+        );
+      }
+    }
+  }
+
+  void _showPhotoSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDeletePhoto(QuotationPhoto photo) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Photo'),
+        content: const Text('Are you sure you want to delete this photo? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deletePhoto(photo);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -251,7 +592,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       await pdfGen.loadLibrary();
-      final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
+      final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: _photos);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = kIsWeb
         ? '${Uri.base.origin}/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}'
@@ -391,7 +732,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     // Generate PDF bytes
     final appState = Provider.of<AppState>(context, listen: false);
     await pdfGen.loadLibrary();
-    final pdfBytes = await pdfGen.generatePdfBytes(data, appState);
+    final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: _photos);
     
     // 2. If email exists, send automatically in background
     Future<void>? emailTask;
@@ -413,10 +754,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 12),
-      child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+          if (trailing != null) trailing,
+        ],
+      ),
     );
   }
 
@@ -713,7 +1060,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
               onChanged: (val) => setState(() => _usePresets = val),
             ).animate().fade(delay: 250.ms),
 
-            _buildSectionTitle('Measured Items').animate().fade(delay: 300.ms),
+            _buildSectionTitle('Measured Items', trailing: IconButton(
+              icon: const Icon(Icons.refresh, size: 20),
+              onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
+              tooltip: 'Refresh product catalog',
+            )).animate().fade(delay: 300.ms),
             ...data.measuredItems.asMap().entries.map((entry) {
               int index = entry.key;
               MeasuredItem item = entry.value;
@@ -732,35 +1083,58 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (_usePresets) ...[
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(labelText: 'Select Preset from Catalog (Autofills fields)'),
-                          initialValue: null,
-                          isExpanded: true,
-                          items: Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets.asMap().entries.map((e) {
-                            return DropdownMenuItem<int>(
-                              value: e.key,
-                              child: Text(e.value['name']?.toString() ?? e.value['description']?.toString() ?? 'Unknown'),
-                            );
-                          }).toList(),
-                          onChanged: (idx) {
-                            if (idx != null) {
-                              final selection = Provider.of<AppState>(context, listen: false).clientConfig.measuredPresets[idx];
-                              setState(() {
-                                if (selection['code'] != null && selection['code'].toString().isNotEmpty) item.code = selection['code'].toString();
-                                if (selection['glass'] != null && selection['glass'].toString().isNotEmpty) item.glass = selection['glass'].toString();
-                                if (selection['width'] != null && selection['width'].toString().isNotEmpty) item.width = (selection['width'] as num?)?.toDouble() ?? 0;
-                                if (selection['height'] != null && selection['height'].toString().isNotEmpty) item.height = (selection['height'] as num?)?.toDouble() ?? 0;
-                                item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
-                                item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
-                                item.cardKey = UniqueKey();
-                              });
-                              _onDataChanged();
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                      ],
+if (_usePresets) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<Product>(
+                                  decoration: InputDecoration(
+                                    labelText: 'Select from Product Catalog (Autofills fields)',
+                                    prefixIcon: _isLoadingCatalog
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: Padding(
+                                              padding: EdgeInsets.all(12.0),
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  initialValue: null,
+                                  isExpanded: true,
+                                  hint: Text(_isLoadingCatalog ? 'Loading catalog...' : 'Choose a product...'),
+                                  items: _measuredProducts.map((p) {
+                                    return DropdownMenuItem<Product>(
+                                      value: p,
+                                      child: Text(p.displayLabel),
+                                    );
+                                  }).toList(),
+                                  onChanged: _isLoadingCatalog ? null : (Product? product) {
+                                    if (product != null) {
+                                      setState(() {
+                                        if (product.name.isNotEmpty) item.code = product.name;
+                                        item.description = product.description.isNotEmpty ? product.description : product.name;
+                                        item.glass = '';
+                                        item.width = 0;
+                                        item.height = 0;
+                                        item.rate = product.price;
+                                        item.cardKey = UniqueKey();
+                                      });
+                                      _onDataChanged();
+                                    }
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.refresh, size: 20),
+                                onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
+                                tooltip: 'Refresh product catalog',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       Row(children: [
                         Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
                         const SizedBox(width: 12),
@@ -799,7 +1173,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
               child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Measured Item'), onPressed: () { setState(() => data.measuredItems.add(MeasuredItem())); _onDataChanged(); }),
             ).animate().fade(delay: 400.ms),
 
-            _buildSectionTitle('Unmeasured Items').animate().fade(delay: 500.ms),
+            _buildSectionTitle('Unmeasured Items', trailing: IconButton(
+              icon: const Icon(Icons.refresh, size: 20),
+              onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
+              tooltip: 'Refresh product catalog',
+            )).animate().fade(delay: 500.ms),
             ...data.unmeasuredItems.asMap().entries.map((entry) {
               int index = entry.key;
               UnmeasuredItem item = entry.value;
@@ -818,31 +1196,54 @@ class _QuotationScreenState extends State<QuotationScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (_usePresets) ...[
-                        DropdownButtonFormField<int>(
-                          decoration: const InputDecoration(labelText: 'Select Preset from Catalog'),
-                          initialValue: null,
-                          isExpanded: true,
-                          items: Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets.asMap().entries.map((e) {
-                            return DropdownMenuItem<int>(
-                              value: e.key,
-                              child: Text(e.value['name']?.toString() ?? e.value['description']?.toString() ?? 'Unknown'),
-                            );
-                          }).toList(),
-                          onChanged: (idx) {
-                            if (idx != null) {
-                              final selection = Provider.of<AppState>(context, listen: false).clientConfig.unmeasuredPresets[idx];
-                              setState(() {
-                                item.description = selection['description']?.toString() ?? selection['name']?.toString() ?? '';
-                                item.rate = (selection['rate'] as num?)?.toDouble() ?? 0;
-                                item.cardKey = UniqueKey();
-                              });
-                              _onDataChanged();
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                      ],
+if (_usePresets) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<Product>(
+                                  decoration: InputDecoration(
+                                    labelText: 'Select from Product Catalog (Autofills fields)',
+                                    prefixIcon: _isLoadingCatalog
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: Padding(
+                                              padding: EdgeInsets.all(12.0),
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  initialValue: null,
+                                  isExpanded: true,
+                                  hint: Text(_isLoadingCatalog ? 'Loading catalog...' : 'Choose a product...'),
+                                  items: _unmeasuredProducts.map((p) {
+                                    return DropdownMenuItem<Product>(
+                                      value: p,
+                                      child: Text(p.displayLabel),
+                                    );
+                                  }).toList(),
+                                  onChanged: _isLoadingCatalog ? null : (Product? product) {
+                                    if (product != null) {
+                                      setState(() {
+                                        item.description = product.description.isNotEmpty ? product.description : product.name;
+                                        item.rate = product.price;
+                                        item.cardKey = UniqueKey();
+                                      });
+                                      _onDataChanged();
+                                    }
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.refresh, size: 20),
+                                onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
+                                tooltip: 'Refresh product catalog',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       TextFormField(
                         focusNode: _node('u_${index}_0'), 
                         initialValue: item.description, 
@@ -866,7 +1267,130 @@ class _QuotationScreenState extends State<QuotationScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Unmeasured Item'), onPressed: () { setState(() => data.unmeasuredItems.add(UnmeasuredItem())); _onDataChanged(); }),
             ).animate().fade(delay: 600.ms),
-            
+
+            // ===== SITE PHOTOS SECTION =====
+            _buildSectionTitle('Site Photos').animate().fade(delay: 650.ms),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_photos.isNotEmpty) ...[
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: _photos.length,
+                        itemBuilder: (context, index) {
+                          final photo = _photos[index];
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AspectRatio(
+                                aspectRatio: photo.aspectRatio,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    photo.publicUrl,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress.expectedTotalBytes != null
+                                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                              : null,
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              // Caption overlay
+                              if (photo.caption.isNotEmpty)
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(8),
+                                        bottomRight: Radius.circular(8),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      photo.caption,
+                                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              // Delete button
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () => _confirmDeletePhoto(photo),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    // Add Photo Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: _isUploading
+                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.add_a_photo),
+                        label: Text(_isUploading ? 'Uploading...' : 'Add Site Photo'),
+                        onPressed: _isUploading ? null : _showPhotoSourceDialog,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
+                    ),
+                    if (_photos.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_photos.length} photo(s) attached',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ).animate().fade(delay: 650.ms).slideX(begin: 0.1),
+
             _buildSectionTitle('Final Computations').animate().fade(delay: 700.ms),
             Card(
               child: Padding(

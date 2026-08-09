@@ -1,0 +1,231 @@
+{
+  "table": "unmeasured_items",
+  "count": 24,
+  "columns": [
+    "id",
+    "quotation_id",
+    "description",
+    "units",
+    "rate",
+    "created_at",
+    "client_id"
+  ],
+  "rows": [
+    {
+      "id": "142ec0aa-4ee4-4e83-9f36-8db9c89baebe",
+      "quotation_id": "b2c7b5d4-a1b6-4a0c-997a-25f0b75d1d19",
+      "description": "VL1",
+      "units": 16,
+      "rate": "1800.0",
+      "created_at": "2026-06-27T06:05:55.800Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "e8e5332c-12f8-480e-b365-18dc591e2380",
+      "quotation_id": "01246454-6ed6-4013-b454-a02747934d4b",
+      "description": "aluminium track ",
+      "units": 20,
+      "rate": "250",
+      "created_at": "2026-08-04T14:46:31.276Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "cca7c673-16b5-41d2-ac2f-313e9f8602e8",
+      "quotation_id": "1119e9eb-f65f-4a77-81cd-6d3262fb408a",
+      "description": "doors",
+      "units": 100,
+      "rate": "100.0",
+      "created_at": "2026-06-14T07:17:35.918Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "883f301c-5d8e-4ae5-b08f-614460d03ec2",
+      "quotation_id": "18cbf309-213b-4186-9101-cb4ded4d884d",
+      "description": "",
+      "units": 10,
+      "rate": "5000.0",
+      "created_at": "2026-06-22T12:57:25.296Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "6975731b-ba63-49df-a856-b4c292b9e694",
+      "quotation_id": "26da5086-8f7b-4b65-b60c-1c147b2dd75c",
+      "description": "doors",
+      "units": 50,
+      "rate": "1000.0",
+      "created_at": "2026-06-09T14:05:35.349Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "ba36fd9b-98ce-4ac4-8d07-c94406f3b7bf",
+      "quotation_id": "4f2d4555-31c5-43c7-a15c-14a25c2cab22",
+      "description": "doors",
+      "units": 100,
+      "rate": "500.0",
+      "created_at": "2026-06-09T14:08:10.757Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "ecc3829c-e386-41b3-84ca-54397dfb70b4",
+      "quotation_id": "ed0c3884-fb54-471b-bed5-cad45a616eaf",
+      "description": "ALUMINIUM TRACK ",
+      "units": 20,
+      "rate": "250",
+      "created_at": "2026-08-04T15:49:35.531Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "67dadb8b-18c7-4faa-835a-40461c83becf",
+      "quotation_id": "ebc5276d-9e6c-4555-a791-a86a69e80153",
+      "description": "doors",
+      "units": 100,
+      "rate": "500.0",
+      "created_at": "2026-06-23T11:07:15.951Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "947d4e3d-3c3f-47bc-bb7e-7373fa986675",
+      "quotation_id": "39f21da7-d381-446b-b274-3625a167f752",
+      "description": "ventilators",
+      "units": 5,
+      "rate": "1700",
+      "created_at": "2026-08-04T07:11:37.446Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "c463342c-286c-4eca-89e0-9a6ab9c4b2ee",
+      "quotation_id": "e11dc788-74d1-4066-8f77-c9fcf0f69943",
+      "description": "ventilators",
+      "units": 12,
+      "rate": "1700",
+      "created_at": "2026-08-04T07:57:46.483Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "fdd82603-88e5-4614-aea2-bd61e14712aa",
+      "quotation_id": "e11dc788-74d1-4066-8f77-c9fcf0f69943",
+      "description": "Pooja kasement Door",
+      "units": 4,
+      "rate": "2500",
+      "created_at": "2026-08-04T07:57:46.483Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "c2fea022-ef3a-420e-a60c-2450187e361c",
+      "quotation_id": "6014c78b-5393-471c-831b-79a2a66af192",
+      "description": "ALUMINIUM TRACK ",
+      "units": 20,
+      "rate": "250",
+      "created_at": "2026-08-05T03:05:58.198Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "c6809648-decf-4c90-9620-b567ec323875",
+      "quotation_id": "864b3de0-b7c4-4a93-b383-131c68a45f5c",
+      "description": "",
+      "units": 1,
+      "rate": "0.0",
+      "created_at": "2026-06-24T15:11:09.892Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "ef2660f2-3e42-4e2a-b58f-e372618d03d6",
+      "quotation_id": "f3e411b8-64ed-441f-ba01-f51117fd2a98",
+      "description": "doors",
+      "units": 10,
+      "rate": "500.0",
+      "created_at": "2026-06-13T17:08:45.927Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "a6b055a8-c61d-4541-b57d-31c7226deeb9",
+      "quotation_id": "dbde31a1-9bfa-4ee9-b152-4a408c67ab45",
+      "description": "ventilators",
+      "units": 6,
+      "rate": "1600.0",
+      "created_at": "2026-07-31T11:24:41.655Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "8d786ca4-7321-4889-8afe-344936ddfb4d",
+      "quotation_id": "26609520-95cb-46de-96ce-a9412f6dd8e5",
+      "description": "",
+      "units": 1,
+      "rate": "0",
+      "created_at": "2026-08-03T14:24:30.684Z",
+      "client_id": "akshaya upvc"
+    },
+    {
+      "id": "4a7a0b12-04d8-4bec-94a1-7f431886680b",
+      "quotation_id": "dffb9f0e-43a6-4628-bb35-167863f686f5",
+      "description": "Doors",
+      "units": 10,
+      "rate": "1000.0",
+      "created_at": "2026-06-14T04:33:12.501Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "dde1c858-8346-4406-8a57-b256c906d0c3",
+      "quotation_id": "79ebb2ff-b79d-4a6e-9e3e-8126391148a5",
+      "description": "",
+      "units": 1,
+      "rate": "0.0",
+      "created_at": "2026-07-03T10:57:21.218Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "84c4927c-201a-4b54-8059-4e30d15051d1",
+      "quotation_id": "cf7446b5-8cbf-4f9d-bd42-89734608a2ff",
+      "description": "",
+      "units": 1,
+      "rate": "0",
+      "created_at": "2026-08-04T09:55:14.877Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "de38dff3-15dc-4a47-8e5c-df556ea0f541",
+      "quotation_id": "fce05809-5d40-4a93-bb17-80c7a9f16742",
+      "description": "ventilstors",
+      "units": 3,
+      "rate": "1600",
+      "created_at": "2026-08-07T05:12:49.591Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "84902c3b-a56a-4c27-a750-f101f49a4cd0",
+      "quotation_id": "47f285b2-1563-4aea-9bce-b491b9e63472",
+      "description": "Both room VT",
+      "units": 4,
+      "rate": "1800.0",
+      "created_at": "2026-07-13T09:45:31.038Z",
+      "client_id": "venkateshwara"
+    },
+    {
+      "id": "8c9c0cb8-5db5-42a4-85c0-8e184914a782",
+      "quotation_id": "ff30ff29-3eea-4224-b869-d610f403bbf2",
+      "description": "DOOR SETS",
+      "units": 3,
+      "rate": "12500",
+      "created_at": "2026-08-07T17:43:29.168Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "2efd35fe-cde0-4947-8cd6-4f0febe97306",
+      "quotation_id": "ff30ff29-3eea-4224-b869-d610f403bbf2",
+      "description": "",
+      "units": 1,
+      "rate": "750",
+      "created_at": "2026-08-07T17:43:29.168Z",
+      "client_id": "kprupvc"
+    },
+    {
+      "id": "33e256c6-c31e-4f0c-b8d1-c51f1bae5547",
+      "quotation_id": "ff30ff29-3eea-4224-b869-d610f403bbf2",
+      "description": "MAKING CHARGE",
+      "units": 1,
+      "rate": "11000",
+      "created_at": "2026-08-07T17:43:29.168Z",
+      "client_id": "kprupvc"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "table": "gst_invoice_counters",
+  "count": 1,
+  "columns": [
+    "client_id",
+    "fy",
+    "last_number"
+  ],
+  "rows": [
+    {
+      "client_id": "kprupvc",
+      "fy": "2026-2027",
+      "last_number": 8
+    }
+  ]
+}

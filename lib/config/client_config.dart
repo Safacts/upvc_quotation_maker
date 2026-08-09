@@ -51,6 +51,16 @@ class ClientConfig {
   // Supplier company names (kprupvc only)
   final List<String> supplierCompanies;
 
+  /// UPI VPA used to collect payments, e.g. `6304562779@nyes`.
+  /// When empty, every UPI QR surface (invoice PDF, payment sheet) hides
+  /// itself rather than rendering an unscannable code.
+  final String upiId;
+
+  /// Name shown inside the customer's UPI app before they confirm payment.
+  /// Falls back to [companyName] via [upiPayeeNameOrCompany] when blank —
+  /// a QR whose payee reads "Unknown" destroys trust at the moment of payment.
+  final String upiPayeeName;
+
   const ClientConfig({
     this.clientId = 'default',
     this.appName = 'UPVC Quotation Maker',
@@ -97,9 +107,18 @@ class ClientConfig {
     this.unmeasuredPresets = const [],
     this.appDownloadUrl = '',
     this.supplierCompanies = const [],
+    this.upiId = '',
+    this.upiPayeeName = '',
   });
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
+
+  /// Payee name for UPI, never blank when a company name exists.
+  String get upiPayeeNameOrCompany =>
+      upiPayeeName.isNotEmpty ? upiPayeeName : companyName;
+
+  /// True when this client can accept UPI — drives whether QR sections render.
+  bool get hasUpi => upiId.trim().isNotEmpty && upiId.contains('@');
 
   Map<String, dynamic> toJson() => {
     'clientId': clientId,
@@ -146,6 +165,8 @@ class ClientConfig {
     'unmeasuredPresets': unmeasuredPresets,
     'appDownloadUrl': appDownloadUrl,
     'supplierCompanies': supplierCompanies,
+    'upiId': upiId,
+    'upiPayeeName': upiPayeeName,
   };
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) => ClientConfig(
@@ -193,6 +214,10 @@ class ClientConfig {
     unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
     supplierCompanies: (json['supplierCompanies'] as List?)?.cast<String>() ?? const [],
+    // Accept both camelCase (app/console config) and snake_case (raw DB row),
+    // matching the tolerance already applied to costMarginPercent above.
+    upiId: (json['upiId'] ?? json['upi_id']) as String? ?? '',
+    upiPayeeName: (json['upiPayeeName'] ?? json['upi_payee_name']) as String? ?? '',
   );
 }
 

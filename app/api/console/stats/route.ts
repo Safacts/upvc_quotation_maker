@@ -22,11 +22,16 @@ export const dynamic = "force-dynamic";
  *      the customer's PDF — for exactly the reason this whole Phase 0 existed.
  *
  * WHY THIS AGGREGATES IN JS: `get_quote_stats` (migration 010) does this in one
- * query with no row transfer and is the correct implementation. Verified live on
- * 08-08-2026 it returns 404 PGRST202 — migration 010 is not applied. Until Supa
- * applies it, the bounded pager below is the honest fallback; it uses the same
- * `pricing.ts` the RPC was proven bit-exact against, so the numbers will not
- * change when we cut over.
+ * query with no row transfer and is the correct implementation.
+ *
+ * STATUS (09-08-2026): migration 010 IS NOW APPLIED to both production and
+ * staging — the "returns 404 PGRST202" note that used to live here was true on
+ * 08-08 only and is no longer accurate. The bounded pager below is retained
+ * deliberately as the fallback rather than cut over blind: it uses the same
+ * `pricing.ts` the RPC was proven bit-exact against, so switching is a
+ * behaviour-preserving change that still needs its own verification pass
+ * against live data before it ships. Cutting over is a follow-up, not a
+ * drive-by edit during a bug-fix pass.
  */
 
 /**
@@ -49,6 +54,11 @@ export async function GET(request: NextRequest) {
       "quotations",
       {
         client_id: "eq." + clientId,
+        // Soft-deleted quotations must not reach the KPIs. Omitting this made
+        // deleted quotes contribute to lifetime revenue and win-rate, so a
+        // fabricator who deleted a cancelled ₹5L quote still saw it in their
+        // totals. Matches the grid, the RPC, and `quotations_client_live_idx`.
+        deleted: "eq.false",
         select:
           "id,quote_no,customer_name,contact_no,status,transport_cost,include_gst," +
           "gst_percentage,created_at,measured_items(width,height,units,rate)," +
@@ -65,7 +75,10 @@ export async function GET(request: NextRequest) {
     const scannedCount = rows.length;
     let totalCount = scannedCount;
     if (truncated) {
-      const exact = await supaCount("quotations", { client_id: "eq." + clientId });
+      const exact = await supaCount("quotations", {
+        client_id: "eq." + clientId,
+        deleted: "eq.false",
+      });
       if (exact >= 0) totalCount = exact;
     }
 

@@ -1,1 +1,2 @@
 [2026-07-30T13:01:19.259509] Backup saved: venkateshwara_db_backup_20260730_130119.json | admins: 2 rows, clients: 1 rows
+[2026-08-08T19:51:37.753Z] FULL BACKUP effxrwrbsjduvhmorvrq (legacy) | scripts/backup/2026-08-08T19-51-37-753Z/ | 18 tables, 350 rows, 22 files, schema.sql 58641 bytes | INTEGRITY VERIFIED

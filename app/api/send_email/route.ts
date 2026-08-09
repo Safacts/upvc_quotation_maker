@@ -22,6 +22,16 @@ export async function POST(request: NextRequest) {
     if (!session || !session.email) {
       return json({ error: "Unauthorized" }, 401);
     }
+    // BUG-SEC-005: this route was an authenticated OPEN MAIL RELAY.
+    // `/api/portal_auth` mints a valid signed session with role "signup" for ANY
+    // unrecognised email, with no verification and no approval. A stranger could
+    // POST one novel email, receive a real cookie, then send arbitrary HTML to
+    // arbitrary recipients through Vitharn's SMTP — phishing from our own domain
+    // and a fast route to having the sending domain blacklisted.
+    // "signup" is a pre-account role: it grants the signup wizard and nothing else.
+    if (session.role !== "admin" && session.role !== "customer") {
+      return json({ error: "Forbidden" }, 403);
+    }
 
     const raw = await request.text();
     if (raw.length > MAX_BODY) {
