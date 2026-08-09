@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet } from "@/lib/supabase";
+import { getSession } from "@/lib/session";
+import { resolveTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,15 +45,54 @@ const CORS_HEADERS = {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const clientId = url.searchParams.get("client_id")?.trim();
     const since = url.searchParams.get("since")?.trim();
     const contentType = url.searchParams.get("content_type")?.trim();
 
-    if (!clientId) {
+    // AUTH + TENANT. `client_id` used to be taken straight from the query string
+    // and fed to the service-role key (RLS bypassed), so any anonymous caller
+    // could dump another tenant's entire product catalogue, price list, terms
+    // and BANK DETAILS by guessing a slug. The tenant is now DERIVED from the
+    // signed cookie for customers; the query param is honoured only for an
+    // admin, who must name the tenant explicitly. See src/lib/tenant.ts.
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json(
-        { error: "client_id is required" },
-        { status: 400, headers: CORS_HEADERS },
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
       );
+    }
+    const t = resolveTenant(session, url.searchParams.get("client_id"));
+    if (!t.ok) {
+      return NextResponse.json(
+        { error: t.error },
+        { status: t.status, headers: CORS_HEADERS },
+      );
+    }
+    const clientId = t.clientId;
+
+    // TIER GATE — server-side content sync is the cloud product itself, unlocked
+    // at Rs.25,000 `base`. A `low` tenant bought a self-contained offline APK and
+    // has no server-side catalogue to pull.
+    //
+    // NOTE (deviation, logged deliberately): the brief specified
+    // `public_webpage` (`next`) for this route on the understanding that it feeds
+    // the marketing site. It does not — `lib/services/sync_engine.dart` is its
+    // only caller and it returns products / terms / bank_details /
+    // pricing_templates into the app's offline SQLite store. Gating it at `next`
+    // would 402 every Rs.25,000 `base` tenant on the cloud sync they paid for,
+    // which is precisely the over-gating failure tiers.ts warns about. Gated at
+    // `cloud_sync` instead; `public_webpage` belongs on the marketing routes.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "cloud_sync");
+      if (!paid.ok) {
+        // Re-wrapped so the denial carries this route's CORS headers — the
+        // Flutter web build calls this cross-origin and would otherwise see a
+        // blocked request instead of an upgrade prompt.
+        return NextResponse.json(await paid.error.json(), {
+          status: paid.error.status,
+          headers: CORS_HEADERS,
+        });
+      }
     }
 
     // Build filters for the manifest query

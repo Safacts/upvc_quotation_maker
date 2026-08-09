@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supabaseRpc } from "@/lib/supabase";
+import { getSession } from "@/lib/session";
+import { resolveTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -35,17 +38,40 @@ const CORS_HEADERS = {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const clientId = url.searchParams.get("client_id")?.trim();
 
-    if (!clientId) {
+    // AUTH + TENANT + TIER, identical to the paired `/api/content/sync` route
+    // and for the same reason: `client_id` was read from the query string and
+    // queried with the service-role key (RLS bypassed), so the version/checksum
+    // manifest of any tenant was readable by anyone who guessed a slug. That is
+    // a map of another company's catalogue and update cadence.
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json(
-        { error: "client_id is required" },
-        { status: 400, headers: CORS_HEADERS },
+        { error: "Unauthorized" },
+        { status: 401, headers: CORS_HEADERS },
       );
     }
+    const t = resolveTenant(session, url.searchParams.get("client_id"));
+    if (!t.ok) {
+      return NextResponse.json(
+        { error: t.error },
+        { status: t.status, headers: CORS_HEADERS },
+      );
+    }
+    const clientId = t.clientId;
 
-    // Set the x-client-id header for RLS
-    const headers = { "x-client-id": clientId };
+    // Gated at `cloud_sync` (`base`), matching `/api/content/sync`. Gating the
+    // manifest differently from the delta it describes would let a tenant see
+    // that content changed and then be refused the content itself.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "cloud_sync");
+      if (!paid.ok) {
+        return NextResponse.json(await paid.error.json(), {
+          status: paid.error.status,
+          headers: CORS_HEADERS,
+        });
+      }
+    }
 
     // Fetch all manifest rows for this client
     const manifest = await supaGet("content_manifest", {
