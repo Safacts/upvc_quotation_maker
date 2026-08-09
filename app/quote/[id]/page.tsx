@@ -2,8 +2,9 @@
 
 import "./quote.css";
 import { useCallback, useEffect, useState } from "react";
-import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert, Printer } from "lucide-react";
+import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert, Download } from "lucide-react";
 import { parseClientConfig } from "@/lib/types";
+import { measuredLineSqft, measuredLineTotal, quotationTotals } from "@/lib/pricing";
 
 interface Quotation {
   id: string;
@@ -51,6 +52,8 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
   const [error, setError] = useState("");
   const [actionDone, setActionDone] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   const fetchData = useCallback(async (id: string) => {
     const url = new URL(window.location.href);
@@ -112,6 +115,63 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
     }
   };
 
+  /**
+   * Download the real PDF file.
+   *
+   * Replaces `window.print()`, which only ever opened the browser print dialog
+   * — it produced no file, and in the WhatsApp/Instagram in-app browsers (how
+   * almost every one of these links is actually opened) it frequently does
+   * nothing at all.
+   *
+   * We fetch to a Blob first so that an error response renders as a readable
+   * message instead of dumping raw JSON into a tab the user then has to close.
+   * `URL.createObjectURL` + a synthetic <a download> is the widely-supported
+   * path; if the browser blocks it (some in-app webviews disallow blob: URLs)
+   * we fall back to a plain navigation — the endpoint already sends
+   * `Content-Disposition: attachment`, so the download still happens.
+   */
+  const handleDownload = async () => {
+    if (!quotation || downloading) return;
+    setDownloading(true);
+    setDownloadError("");
+    const href = `/api/quotation/${quotation.id}/pdf?token=${encodeURIComponent(token)}`;
+    const filename = `Quotation_${(quotation.quote_no || quotation.id).replace(/[^A-Za-z0-9._-]/g, "_")}.pdf`;
+    try {
+      const res = await fetch(href);
+      if (!res.ok) {
+        let msg = "Could not generate the PDF. Please try again.";
+        try {
+          const j = await res.json();
+          if (j?.error) msg = j.error;
+        } catch {
+          /* non-JSON error body — keep the generic message */
+        }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Revoke on the next tick — revoking synchronously can cancel the
+      // download in Safari before it has read the blob.
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+    } catch (e: any) {
+      // Last resort: let the browser handle it natively.
+      try {
+        window.location.href = href;
+      } catch {
+        setDownloadError(String(e?.message || "Download failed"));
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="status-screen">
@@ -137,15 +197,24 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
 
   if (!quotation) return null;
 
-  const items = measured.map((m) => {
-    const qty = (m.width || 0) * (m.height || 0) * (m.units || 1) / 144;
-    return { ...m, qty: Math.round(qty * 100) / 100, amount: Math.round(qty * m.rate) };
-  });
-  const measuredTotal = items.reduce((s, i) => s + i.amount, 0);
-  const unmeasuredTotal = unmeasured.reduce((s, i) => s + (i.units * i.rate), 0);
-  const subtotal = measuredTotal + unmeasuredTotal + (quotation.transport_cost || 0);
-  const gstAmount = quotation.include_gst ? subtotal * (quotation.gst_percentage || 0) / 100 : 0;
-  const grandTotal = subtotal + gstAmount;
+  // MONEY MATH COMES FROM src/lib/pricing.ts — NEVER INLINE IT HERE.
+  //
+  // This page used to compute `(w * h * units) / 144`, i.e. it treated the
+  // stored dimensions as INCHES. Every other surface in this repo (lib/models.dart,
+  // which renders the PDF the customer is sent, and pricing.ts, which drives the
+  // dashboard and all reports) treats them as MILLIMETRES: (w/304.8)*(h/304.8).
+  // The two disagree by a factor of 645.16, so the price the customer saw on the
+  // page they were asked to APPROVE bore no relation to the quotation. It also
+  // added transport into `subtotal` and then taxed it as part of the same figure
+  // while displaying transport as a separate line — double-presenting it.
+  // `quotationTotals` is the single source of truth and matches the Dart exactly.
+  const totals = quotationTotals(quotation, measured, unmeasured);
+  const items = measured.map((m) => ({
+    ...m,
+    qty: Math.round(measuredLineSqft(m) * 100) / 100,
+    amount: measuredLineTotal(m),
+  }));
+  const { netTotal, gstAmount, grandTotal } = totals;
 
   if (actionDone) {
     const isApproved = actionDone === "approved";
@@ -287,19 +356,25 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
             <div className="totals-box">
               <div className="total-row">
                 <span>Subtotal</span>
-                <span>₹{subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                <span>₹{totals.subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
               </div>
-              {quotation.include_gst && quotation.gst_percentage > 0 && (
-                <div className="total-row">
-                  <span>GST ({quotation.gst_percentage}%)</span>
-                  <span>₹{gstAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
-                </div>
-              )}
-              {quotation.transport_cost > 0 && (
+              {totals.transport > 0 && (
                 <div className="total-row">
                   <span>Transport</span>
-                  <span>₹{quotation.transport_cost.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  <span>₹{totals.transport.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
                 </div>
+              )}
+              {totals.gstPercentage > 0 && (
+                <>
+                  <div className="total-row">
+                    <span>Taxable Value</span>
+                    <span>₹{netTotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="total-row">
+                    <span>GST ({totals.gstPercentage}%)</span>
+                    <span>₹{gstAmount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </>
               )}
               <div className="total-row grand-total">
                 <span>Grand Total</span>
@@ -314,8 +389,13 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
           <h3>Customer Confirmation</h3>
           <p>Please review the details above and confirm your decision to proceed.</p>
           <div className="action-buttons">
-            <button onClick={() => window.print()} className="btn" style={{ backgroundColor: '#2d3748', color: 'white' }}>
-              <Printer size={18} /> Download / Print PDF
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="btn"
+              style={{ backgroundColor: "#2d3748", color: "white" }}
+            >
+              <Download size={18} /> {downloading ? "Preparing PDF..." : "Download PDF"}
             </button>
             <button onClick={() => handleAction("approve")} disabled={submitting} className="btn btn-approve">
               <Check size={18} /> Approve Quotation
@@ -327,6 +407,9 @@ export default function QuotationPage({ params }: { params: Promise<{ id: string
               <X size={18} /> Reject
             </button>
           </div>
+          {downloadError && (
+            <p style={{ color: "#c53030", marginTop: 12, fontSize: 14 }}>{downloadError}</p>
+          )}
         </div>
       </div>
       
