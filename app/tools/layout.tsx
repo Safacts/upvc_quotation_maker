@@ -49,17 +49,13 @@ export default async function ToolsLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         {/* Skip to content for accessibility */}
-        <a href="#tools-main" className="skip-link" style={{
-          position: "absolute", top: "-100px", left: "50%", transform: "translateX(-50%)",
-          background: "var(--primary)", color: "white", padding: "8px 16px", borderRadius: "0 0 8px 8px",
-          zIndex: 9999, fontWeight: 600, fontSize: "14px", transition: "top 0.2s",
-        }} onFocus={(e) => { e.currentTarget.style.top = "0"; }} onBlur={(e) => { e.currentTarget.style.top = "-100px"; }}>
+        <a href="#tools-main" className="skip-link">
           Skip to content
         </a>
 
         <header className="tools-header" id="tools-header">
           <Link href="/tools" className="brand">
-            <img src="/logo.png" alt="Vitharn ERP" onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%236366f1'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='white' font-size='36' font-weight='bold'%3EV%3C/text%3E%3C/svg%3E"; }} />
+            <img src="/logo.png" alt="Vitharn ERP" id="tools-brand-logo" />
             <span>Vitharn Tools</span>
           </Link>
 
@@ -115,6 +111,14 @@ export default async function ToolsLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                var logo = document.getElementById('tools-brand-logo');
+                if (logo) {
+                  logo.addEventListener('error', function() {
+                    if (logo.dataset.fallbackApplied) return;
+                    logo.dataset.fallbackApplied = '1';
+                    logo.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%236366f1'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='white' font-size='36' font-weight='bold'%3EV%3C/text%3E%3C/svg%3E";
+                  });
+                }
                 var hb = document.getElementById('hamburger-btn');
                 var mn = document.getElementById('mobile-nav');
                 var hdr = document.getElementById('tools-header');
