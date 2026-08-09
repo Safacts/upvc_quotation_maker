@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:upvc_quotation_maker/app_state.dart';
 import 'package:upvc_quotation_maker/theme.dart';
 import 'package:upvc_quotation_maker/settings_screen.dart';
+import 'package:upvc_quotation_maker/supabase_config.dart';
 
 /// Helper to wrap a widget in a Provider for testing.
 Widget _wrapWithAppState(AppState appState, Widget child) {
@@ -19,6 +21,11 @@ void main() {
   // Prevent Google Fonts from trying to fetch fonts over the network in tests.
   // In test env there's no network and no asset bundle for the fonts.
   GoogleFonts.config.allowRuntimeFetching = false;
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await SupabaseConfig.initialize();
+  });
 
   group('ElementDensity enum', () {
     test('has correct labels', () {

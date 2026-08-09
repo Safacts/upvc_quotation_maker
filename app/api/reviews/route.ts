@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost } from "@/lib/supabase";
+import { getCachedClients } from "@/lib/slug";
 
 export async function GET() {
   return NextResponse.json({ reviews: [] });
@@ -23,6 +24,16 @@ export async function POST(request: NextRequest) {
 
     if (!clientId) {
       return NextResponse.json({ ok: false, error: "clientId is required" }, { status: 400 });
+    }
+    // BUG-SEC-007: `clientId` came straight from an anonymous request body and was
+    // inserted with the service-role key (RLS bypassed) with NO existence check.
+    // A caller could create rows for a non-existent tenant, silently poisoning the
+    // table, or spray testimonials at any real tenant's public page. Reviews are
+    // deliberately anonymous (customers leave them from a quote link), so we cannot
+    // require a session — but we CAN require the tenant to actually exist.
+    const known = await getCachedClients();
+    if (!Array.isArray(known) || !known.some((c: any) => c.id === clientId)) {
+      return NextResponse.json({ ok: false, error: "Unknown client" }, { status: 404 });
     }
     if (customerName.length < 1 || customerName.length > 100) {
       return NextResponse.json(

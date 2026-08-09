@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:upvc_quotation_maker/app_state.dart';
 import 'package:upvc_quotation_maker/dashboard_screen.dart';
 import 'package:upvc_quotation_maker/config/client_config.dart';
+import 'package:upvc_quotation_maker/supabase_config.dart';
 import 'test_helpers.dart';
 
 /// Tests for the Phase 1 desktop console (DashboardScreen).
@@ -13,8 +15,10 @@ import 'test_helpers.dart';
 /// `_fetchQuotations()` will fail (caught by try/catch), and the UI will
 /// settle to the empty state. We test the UI structure, not the data.
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
+    // Initialize Supabase so NotificationCenterService can access SupabaseConfig.client
+    await SupabaseConfig.initialize();
   });
 
   group('Desktop Console — Rendering', () {
@@ -101,11 +105,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Open drawer via ScaffoldState
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-      scaffoldState.openDrawer();
+      // Open drawer by tapping the menu button in AppBar (find specifically in AppBar)
+      await tester.tap(find.descendant(of: find.byType(AppBar), matching: find.byIcon(Icons.menu)));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(find.text('GST Invoices'), findsOneWidget);
       expect(find.text('Analytics'), findsAtLeastNWidgets(1));
@@ -122,10 +125,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-      scaffoldState.openDrawer();
+      await tester.tap(find.descendant(of: find.byType(AppBar), matching: find.byIcon(Icons.menu)));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(find.text('Test Company'), findsOneWidget);
     });
@@ -138,10 +140,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-      scaffoldState.openDrawer();
+      await tester.tap(find.descendant(of: find.byType(AppBar), matching: find.byIcon(Icons.menu)));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(find.text('Market Page'), findsNothing);
     });
@@ -154,10 +155,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
-      scaffoldState.openDrawer();
+      await tester.tap(find.descendant(of: find.byType(AppBar), matching: find.byIcon(Icons.menu)));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 1000));
 
       expect(find.text('Market Page'), findsOneWidget);
     });

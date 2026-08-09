@@ -4,6 +4,41 @@ import { supabaseAdmin } from "@/lib/supabase-client";
 
 const TOKEN_SECRET = process.env.QUOTE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
+/**
+ * The ONLY `clients.config` keys this PUBLIC, UNAUTHENTICATED route may emit.
+ *
+ * This endpoint is reachable by anyone holding a share link — i.e. every
+ * customer the tenant has ever emailed a quotation to. `clients.config` is a
+ * jsonb blob that also carries CREDENTIAL MATERIAL (`portalPasswordHash`, an
+ * unsalted SHA-256 of the tenant's portal password) plus `supabaseAnonKey`,
+ * `adminEmails` and billing/trial flags. Returning the blob wholesale handed
+ * all of that to the recipient of any quote.
+ *
+ * This is an ALLOW-list on purpose: a deny-list (`config - 'portalPasswordHash'`)
+ * silently re-leaks every sensitive key added to the blob in future. The list
+ * below is exactly what `app/quote/[id]/page.tsx` renders — nothing more.
+ */
+const PUBLIC_CONFIG_KEYS = [
+  "clientId",
+  "companyName",
+  "companyProprietor",
+  "companyAddress",
+  "companyContact",
+  "companyEmail",
+  "logoUrl",
+  "landingPrimaryColor",
+] as const;
+
+function publicClientConfig(config: unknown): Record<string, unknown> {
+  if (!config || typeof config !== "object") return {};
+  const src = config as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of PUBLIC_CONFIG_KEYS) {
+    if (src[key] !== undefined && src[key] !== null) out[key] = src[key];
+  }
+  return out;
+}
+
 function generateToken(quotationId: string): string {
   return createHmac("sha256", TOKEN_SECRET).update(quotationId).digest("hex").slice(0, 16);
 }
@@ -58,7 +93,7 @@ export async function GET(
     quotation,
     measured: measured || [],
     unmeasured: unmeasured || [],
-    clientConfig: client?.config || {},
+    clientConfig: publicClientConfig(client?.config),
     token,
   });
 }
@@ -87,13 +122,28 @@ export async function POST(
   else if (action === "review") newStatus = "sent";
   else return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 
-  const { error } = await supabaseAdmin
+  // Scope the write to a LIVE row and confirm a row actually matched.
+  //
+  // `.eq("id", id)` alone is an unbounded UPDATE guarded only by a 64-bit
+  // truncated HMAC: nothing proved the target row still existed, and a
+  // soft-deleted quotation could be silently resurrected into "won"/"lost",
+  // where it would then be counted by the revenue KPIs. `deleted = false`
+  // makes the customer-facing state machine agree with every console read
+  // path, and `select("id")` turns a no-op update into an honest 404 instead
+  // of a misleading `{ ok: true }`.
+  const { data: updated, error } = await supabaseAdmin
     .from("quotations")
     .update({ status: newStatus })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("deleted", false)
+    .select("id");
 
   if (error) {
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
+
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true, status: newStatus });

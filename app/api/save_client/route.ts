@@ -40,8 +40,12 @@ export async function POST(request: NextRequest) {
         return json({ error: "hash mismatch" }, 403);
       }
     } else {
+      // BUG-FUNC-001: this selected only "id,config", then compared
+      // `clientMatch.password_hash` below — a column that was never fetched, so
+      // it was ALWAYS undefined and the compare ALWAYS failed. Every non-admin
+      // save died with "hash mismatch" (403). Fetch the column we authenticate on.
       const clients = await supaGet("clients", {
-        select: "id,config",
+        select: "id,config,password_hash",
         limit: 1000,
       });
       let clientMatch: any = null;
@@ -160,11 +164,41 @@ export async function POST(request: NextRequest) {
       return json({ success: true, deleted: cid }, 200);
     }
 
-    const existing = await supaGet("clients", { id: "eq." + cid, select: "id" });
+    const existing = await supaGet("clients", { id: "eq." + cid, select: "id,config,is_active,trial_expires_at" });
+    const prior = Array.isArray(existing) && existing.length > 0 ? existing[0] : null;
+
+    // BUG-SEC-001 (PRIVILEGE ESCALATION / BILLING BYPASS)
+    // `config` is written verbatim from the request body. A customer authenticates
+    // for their OWN client id (allowed), then posts config.isPaid = true and/or a
+    // far-future config.trialEndsAt. portal_auth's trial gate reads exactly those
+    // two fields, so the client grants themselves a permanent free licence. The
+    // same body could also set `is_active` and `trial_expires_at` directly.
+    // Billing state is ADMIN-ONLY: for a customer, always re-assert the stored values.
+    if (isCustomer) {
+      const priorCfg = (prior && prior.config) || {};
+      config.isPaid = priorCfg.isPaid ?? false;
+      config.trialEndsAt = priorCfg.trialEndsAt ?? null;
+      // portalPasswordHash is credential material. A customer changing their OWN
+      // portal password is legitimate (they send `portal_password_hash`), but a
+      // silent `config.portalPasswordHash` smuggled inside the config blob is not.
+      if (!portalHash) {
+        if (priorCfg.portalPasswordHash !== undefined) {
+          config.portalPasswordHash = priorCfg.portalPasswordHash;
+        } else {
+          delete config.portalPasswordHash;
+        }
+      }
+    }
+
     const body: Record<string, any> = {
       config,
-      is_active: p.is_active ?? true,
-      trial_expires_at: p.trial_expires_at ?? null,
+      // Customers may not flip their own activation or extend their own trial.
+      is_active: isCustomer
+        ? (prior ? prior.is_active : true)
+        : (p.is_active ?? true),
+      trial_expires_at: isCustomer
+        ? (prior ? prior.trial_expires_at : null)
+        : (p.trial_expires_at ?? null),
     };
     if (portalHash) body.password_hash = portalHash;
     if (Array.isArray(existing) && existing.length > 0) {

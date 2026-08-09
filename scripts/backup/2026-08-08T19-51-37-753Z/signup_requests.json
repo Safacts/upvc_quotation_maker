@@ -1,0 +1,123 @@
+{
+  "table": "signup_requests",
+  "count": 8,
+  "columns": [
+    "id",
+    "email",
+    "name",
+    "phone",
+    "auth_method",
+    "password_hash",
+    "status",
+    "config",
+    "created_at",
+    "updated_at"
+  ],
+  "rows": [
+    {
+      "id": "2",
+      "email": "safacts001@gmail.com",
+      "name": "yes",
+      "phone": "455547885",
+      "auth_method": "google",
+      "password_hash": null,
+      "status": "archived",
+      "config": {
+        "city": "",
+        "gstNumber": "",
+        "companyName": "yes",
+        "businessType": "",
+        "companyAddress": "",
+        "companyContact": "455547885",
+        "yearsInBusiness": "",
+        "companyProprietor": "yes"
+      },
+      "created_at": "2026-08-03T20:08:34.748Z",
+      "updated_at": "2026-08-03T20:36:16.398Z"
+    },
+    {
+      "id": "5",
+      "email": "jvenkateshupvs@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "password",
+      "password_hash": "ce32c8c1a21764ebe2dbd6fb9338ae7bb11d43feff27873d5411be986d4c5827",
+      "status": "pending",
+      "config": {},
+      "created_at": "2026-08-04T03:41:05.729Z",
+      "updated_at": "2026-08-04T03:41:05.729Z"
+    },
+    {
+      "id": "6",
+      "email": "jvenkateshwaraupvc@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "password",
+      "password_hash": "ce32c8c1a21764ebe2dbd6fb9338ae7bb11d43feff27873d5411be986d4c5827",
+      "status": "submitted",
+      "config": {},
+      "created_at": "2026-08-04T09:26:10.415Z",
+      "updated_at": "2026-08-04T09:26:21.576Z"
+    },
+    {
+      "id": "7",
+      "email": "k prabhakarreddy33@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "password",
+      "password_hash": "b734e45259181da3f7fe8180ccdb8004c60932dbe024d8dd133443a9f1289ed4",
+      "status": "pending",
+      "config": {},
+      "created_at": "2026-08-04T11:49:16.638Z",
+      "updated_at": "2026-08-04T11:49:16.638Z"
+    },
+    {
+      "id": "8",
+      "email": "venkat.welding8692@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "google",
+      "password_hash": null,
+      "status": "submitted",
+      "config": {},
+      "created_at": "2026-08-07T03:47:47.649Z",
+      "updated_at": "2026-08-07T03:48:00.962Z"
+    },
+    {
+      "id": "9",
+      "email": "totally-bogus-xyz@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "google",
+      "password_hash": null,
+      "status": "pending",
+      "config": {},
+      "created_at": "2026-08-08T04:59:53.022Z",
+      "updated_at": "2026-08-08T04:59:53.022Z"
+    },
+    {
+      "id": "10",
+      "email": "anyone.else@random.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "google",
+      "password_hash": null,
+      "status": "pending",
+      "config": {},
+      "created_at": "2026-08-08T04:59:57.156Z",
+      "updated_at": "2026-08-08T04:59:57.156Z"
+    },
+    {
+      "id": "11",
+      "email": "bogus-unknown@gmail.com",
+      "name": null,
+      "phone": null,
+      "auth_method": "google",
+      "password_hash": null,
+      "status": "pending",
+      "config": {},
+      "created_at": "2026-08-08T06:13:08.550Z",
+      "updated_at": "2026-08-08T06:13:08.550Z"
+    }
+  ]
+}

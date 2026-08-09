@@ -232,6 +232,58 @@ describe("GET /api/quotation/[id] — response contract", () => {
     expect(body.unmeasured).toEqual([]);
   });
 
+  it("NEVER leaks portalPasswordHash or other secrets in clientConfig", async () => {
+    // P0 REGRESSION. This route is PUBLIC — the only gate is a share token that
+    // every customer who was ever emailed a quote holds. It used to return
+    // `clients.config` wholesale, which carries `portalPasswordHash` (an
+    // unsalted SHA-256 of the tenant's portal password), `supabaseAnonKey` and
+    // `adminEmails`. Any recipient of any quotation could read the tenant's
+    // credentials straight out of the JSON.
+    //
+    // The route now emits a strict ALLOW-list of branding fields. This test
+    // seeds a config containing secrets and asserts none of them survive.
+    const { GET } = await loadRoute();
+    seedHappyPath();
+    tableResponses.clients = {
+      data: {
+        config: {
+          companyName: "KPR Fabricators",
+          companyEmail: "kpr@example.com",
+          logoUrl: "https://cdn.example.com/logo.png",
+          portalPasswordHash: "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265",
+          supabaseAnonKey: "eyJhbGciOiJIUzI1NiJ9.super-secret-anon-key",
+          adminEmails: ["owner@example.com"],
+          isPaid: true,
+          trialExpiresAt: "2026-09-01",
+        },
+      },
+      error: null,
+    };
+    const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
+    const { clientConfig } = await res.json();
+
+    // The branding the customer-facing page actually renders still arrives.
+    expect(clientConfig.companyName).toBe("KPR Fabricators");
+    expect(clientConfig.logoUrl).toBe("https://cdn.example.com/logo.png");
+
+    // Nothing sensitive does.
+    for (const secret of [
+      "portalPasswordHash",
+      "supabaseAnonKey",
+      "adminEmails",
+      "isPaid",
+      "trialExpiresAt",
+    ]) {
+      expect(clientConfig, `leaked ${secret}`).not.toHaveProperty(secret);
+    }
+
+    // Belt and braces: the hash must not appear ANYWHERE in the serialised
+    // payload, including nested under a key we did not think to check.
+    const raw = JSON.stringify(clientConfig);
+    expect(raw).not.toContain("8622f0f6");
+    expect(raw).not.toContain("super-secret-anon-key");
+  });
+
   it("returns {} for clientConfig when the client row is missing", async () => {
     // Orphaned client_id must degrade to default branding, not a 500.
     const { GET } = await loadRoute();
@@ -288,7 +340,10 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
 
   it("maps approve/reject/review to won/lost/sent", async () => {
     const { POST } = await loadRoute();
-    tableResponses.quotations = { data: null, error: null };
+    // The UPDATE now ends in `.select("id")` and requires a row to come back:
+    // the route must prove a LIVE row actually matched before reporting
+    // success. An empty result is a 404, not a silent `{ ok: true }`.
+    tableResponses.quotations = { data: [{ id: QUOTE_ID }], error: null };
     const token = validToken(QUOTE_ID);
     const cases: Array<[string, string]> = [
       ["approve", "won"],
@@ -302,6 +357,19 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
       await expect(res.json()).resolves.toEqual({ ok: true, status: expected });
       expect(updateCalls).toEqual([{ table: "quotations", payload: { status: expected } }]);
     }
+  });
+
+  it("returns 404 when the update matches no live row (soft-deleted or gone)", async () => {
+    // A valid token for a quotation that has since been soft-deleted must NOT
+    // resurrect it into won/lost, where the revenue KPIs would start counting
+    // it again. The write is scoped `deleted = false`, so PostgREST returns an
+    // empty set and the route must report that honestly instead of claiming
+    // success for a write that changed nothing.
+    const { POST } = await loadRoute();
+    tableResponses.quotations = { data: [], error: null };
+    const res = await POST(postReq({ action: "approve", token: validToken(QUOTE_ID) }), params);
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({ error: "Quotation not found" });
   });
 
   it("rejects any action outside the whitelist with 400 and writes nothing", async () => {

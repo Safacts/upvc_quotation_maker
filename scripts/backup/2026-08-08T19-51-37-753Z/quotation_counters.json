@@ -1,0 +1,30 @@
+{
+  "table": "quotation_counters",
+  "count": 5,
+  "columns": [
+    "client_id",
+    "next_val"
+  ],
+  "rows": [
+    {
+      "client_id": "venkateshwara-upvc-windows-doors",
+      "next_val": "105"
+    },
+    {
+      "client_id": "akshaya upvc",
+      "next_val": "101"
+    },
+    {
+      "client_id": "brand-new-co",
+      "next_val": "1"
+    },
+    {
+      "client_id": "kprupvc",
+      "next_val": "155"
+    },
+    {
+      "client_id": "venkateshwara",
+      "next_val": "112"
+    }
+  ]
+}

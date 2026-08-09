@@ -1,0 +1,14 @@
+{
+  "table": "vitharn_invoice_counters",
+  "count": 1,
+  "columns": [
+    "fy",
+    "last_number"
+  ],
+  "rows": [
+    {
+      "fy": "2026-2027",
+      "last_number": 4
+    }
+  ]
+}

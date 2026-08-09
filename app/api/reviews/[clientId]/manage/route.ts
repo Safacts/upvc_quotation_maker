@@ -115,6 +115,13 @@ export async function PATCH(
     { id: "eq." + id, client_id: "eq." + clientId },
     update,
   );
+  // BUG-FUNC-002: a PATCH for an id belonging to ANOTHER tenant matches zero rows,
+  // yet this returned `{ok:true, review: undefined}` — a silent no-op reported as
+  // success. Surface the miss so the UI cannot show "saved" for a write that
+  // never happened.
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return NextResponse.json({ ok: false, error: "Review not found" }, { status: 404 });
+  }
   return NextResponse.json({ ok: true, review: rows[0] });
 }
 

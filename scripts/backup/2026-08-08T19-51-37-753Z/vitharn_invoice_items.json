@@ -1,0 +1,15 @@
+{
+  "table": "vitharn_invoice_items",
+  "count": 0,
+  "columns": [
+    "id",
+    "invoice_id",
+    "sno",
+    "description",
+    "details",
+    "qty",
+    "amount",
+    "created_at"
+  ],
+  "rows": []
+}

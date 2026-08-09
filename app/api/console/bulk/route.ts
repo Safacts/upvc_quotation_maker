@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
 import { supaGet, supaPatch, supaGetAllPaged } from "@/lib/supabase";
-import { quotationTotals } from "@/lib/pricing";
 import { QUOTATION_STATUSES, formatZodError } from "@/lib/console-schemas";
 import { sendQuotationEmail } from "@/lib/email-service";
 
@@ -54,19 +53,6 @@ type BulkResult = {
   error?: string;
 };
 
-type QuotationOwner = { id: string; client_id: string } | null;
-
-/** Load the true owner of a quotation. Returns null if it does not exist. */
-async function loadOwner(id: string): Promise<QuotationOwner> {
-  const rows = await supaGet("quotations", {
-    id: "eq." + id,
-    select: "id,client_id",
-    limit: 1,
-  });
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  return rows[0];
-}
-
 /**
  * Re-validate that every id belongs to this tenant.
  *
@@ -74,31 +60,54 @@ async function loadOwner(id: string): Promise<QuotationOwner> {
  * tenant is dropped and reported as "not found" in the per-id results — a 404,
  * never a 403, so the existence of another tenant's quotation is not confirmed
  * (see the same note in quotations/[id]/route.ts).
+ *
+ * ONE query, not one per id. This used to call a `loadOwner(id)` helper inside
+ * the loop: at the 500-id cap that is 500 sequential HTTP round-trips to
+ * PostgREST inside a function with a 10s wall clock. At ~20ms each that is 10
+ * seconds spent purely on ownership checks before the first real write — the
+ * endpoint timed out on large batches and left a PARTIAL update the user was
+ * never told about, which is exactly the failure mode bulk rule (c) exists to
+ * prevent. `bulkEmail` 80 lines below already did the correct batched
+ * `in.(...)` load, so the codebase disagreed with itself.
+ *
+ * The tenant filter stays LITERAL and server-side (`client_id: "eq." + ...`):
+ * the returned set is the intersection of "id was requested" and "row belongs
+ * to the caller", so a foreign id simply never comes back and is reported as
+ * not found. Ids are zod-validated UUIDs, so the `in.(...)` list cannot carry
+ * a PostgREST metacharacter.
  */
 async function filterOwned(
   clientId: string,
   ids: string[],
 ): Promise<{ owned: string[]; results: BulkResult[] }> {
-  const owned: string[] = [];
   const results: BulkResult[] = [];
-  // Dedupe the input — the same id twice would otherwise be processed twice
-  // and the results array would contradict itself.
-  const seen = new Set<string>();
 
+  // Dedupe the input — the same id twice would otherwise be processed twice
+  // and the results array would contradict itself. Order is preserved so the
+  // per-id results still line up with what the user selected.
+  const unique: string[] = [];
+  const seen = new Set<string>();
   for (const id of ids) {
     if (seen.has(id)) continue;
     seen.add(id);
+    unique.push(id);
+  }
+  if (unique.length === 0) return { owned: [], results };
 
-    const owner = await loadOwner(id);
-    if (!owner) {
-      results.push({ id, ok: false, error: "not found" });
-      continue;
-    }
-    if (owner.client_id !== clientId) {
-      results.push({ id, ok: false, error: "not found" });
-      continue;
-    }
-    owned.push(id);
+  const rows = await supaGet("quotations", {
+    client_id: "eq." + clientId,
+    id: "in.(" + unique.join(",") + ")",
+    select: "id",
+    limit: unique.length,
+  });
+  const ownedSet = new Set(
+    (Array.isArray(rows) ? rows : []).map((r: any) => String(r.id)),
+  );
+
+  const owned: string[] = [];
+  for (const id of unique) {
+    if (ownedSet.has(id)) owned.push(id);
+    else results.push({ id, ok: false, error: "not found" });
   }
   return { owned, results };
 }

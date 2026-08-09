@@ -152,7 +152,18 @@ export async function GET(request: NextRequest) {
     // query, not two scrolls above it. Since the service-role key bypasses RLS
     // and this filter IS the entire tenant boundary, "go and check further up"
     // is not an acceptable answer.
-    const filters: Record<string, string | number | boolean> = {};
+    //
+    // SOFT DELETE: the RPC path (migration 010) filters `NOT q.deleted`
+    // internally; this fallback did not. Because the RPC failure above is
+    // swallowed silently, any RPC outage flipped the grid over to a fallback
+    // that RESURRECTED soft-deleted quotations — they reappeared in the list
+    // and counted toward the revenue KPIs, with no error anywhere to explain
+    // why the numbers moved. The two paths must agree on what "a quotation"
+    // means. This also activates the existing partial index
+    // `quotations_client_live_idx (client_id) WHERE deleted = false`.
+    const filters: Record<string, string | number | boolean> = {
+      deleted: "eq.false",
+    };
 
     if (status.length) {
       filters.status = "in.(" + statusFilterValues(status).join(",") + ")";

@@ -46,6 +46,10 @@ export async function GET(request: NextRequest) {
     // string — the service-role key bypasses RLS, so this filter IS the isolation.
     const scope = {
       client_id: "eq." + clientId,
+      // Soft-deleted quotations are excluded here for the same reason as the
+      // console grid and console stats: a deleted quote must not keep earning
+      // revenue in the KPIs. All three surfaces now agree on what counts.
+      deleted: "eq.false",
       select:
         "id,quote_no,customer_name,contact_no,status,transport_cost,include_gst,gst_percentage,created_at,measured_items(rate,width,height,units),unmeasured_items(rate,units)",
       // `id` is a tiebreaker, NOT decoration. Offset pagination re-runs the query
@@ -71,7 +75,10 @@ export async function GET(request: NextRequest) {
     let scannedCount = quotes.length;
     let totalCountExact = scannedCount;
     if (truncated) {
-      const exact = await supaCount("quotations", { client_id: "eq." + clientId });
+      const exact = await supaCount("quotations", {
+        client_id: "eq." + clientId,
+        deleted: "eq.false",
+      });
       if (exact >= 0) totalCountExact = exact;
     }
 

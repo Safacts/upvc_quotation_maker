@@ -1,0 +1,517 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+
+import 'package:upvc_quotation_maker/main.dart';
+import 'package:upvc_quotation_maker/app_state.dart';
+import 'package:upvc_quotation_maker/login_screen.dart';
+import 'package:upvc_quotation_maker/dashboard_screen.dart';
+import 'package:upvc_quotation_maker/quotation_screen.dart';
+import 'package:upvc_quotation_maker/models.dart';
+import 'package:upvc_quotation_maker/pdf_generator.dart';
+import 'package:upvc_quotation_maker/quotation_export.dart';
+import 'package:upvc_quotation_maker/supabase_config.dart';
+import 'package:upvc_quotation_maker/config/client_loader.dart';
+import 'package:upvc_quotation_maker/config/client_config.dart';
+import 'package:upvc_quotation_maker/services/catalog_service.dart';
+
+@GenerateMocks([http.Client, SupabaseConfig, CatalogService])
+import 'e2e_mobile_flows_test.mocks.dart';
+
+void main() {
+  group('E2E Mobile App Flows', () {
+    late MockClient mockHttpClient;
+    late AppState appState;
+
+    setUpAll(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      
+      // Mock SharedPreferences
+      SharedPreferences.setMockInitialValues({});
+      
+      // Initialize app state with test config
+      appState = AppState();
+      final testConfig = ClientConfig(
+        clientId: 'test_client',
+        companyName: 'Test UPVC Company',
+        companyProprietor: 'Test Owner',
+        companyAddress: 'Test Address',
+        companyContact: '9876543210',
+        companyEmail: 'test@example.com',
+        gstNumber: '29ABCDE1234F1Z5',
+        bankName: 'Test Bank',
+        bankBranch: 'Test Branch',
+        bankAccountNo: '1234567890',
+        bankIfsc: 'TEST0001234',
+        logoUrl: '',
+        termsAndConditions: 'Test terms',
+        adminEmails: ['admin@test.com'],
+        portalPasswordHash: '',
+        defaultGstPercentage: 18.0,
+        enablePricePresets: true,
+        hasUpi: true,
+        upiId: 'test@upi',
+        upiPayeeNameOrCompany: 'Test Company',
+        isPaid: true,
+        invoiceTopLogoUrl: '',
+        invoiceBackgroundLogoUrl: '',
+      );
+      appState.applyClientConfig(testConfig);
+    });
+
+    setUp(() {
+      mockHttpClient = MockClient();
+    });
+
+    group('Login Flow', () {
+      testWidgets('TC-MOB-001: Shows login screen on cold start', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: LoginScreen()),
+          ),
+        );
+
+        expect(find.text('Welcome Back'), findsOneWidget);
+        expect(find.text('Sign in to manage quotations'), findsOneWidget);
+        expect(find.byType(TextField).first, findsOneWidget); // Email field
+        expect(find.byType(TextField).last, findsOneWidget); // Password field
+      });
+
+      testWidgets('TC-MOB-002: Shows Google Sign-In button when ready', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: LoginScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle(const Duration(seconds: 2));
+        // Google button may or may not be ready depending on platform
+      });
+
+      testWidgets('TC-MOB-003: Shows error on invalid credentials', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: LoginScreen()),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField).first, 'invalid@test.com');
+        await tester.enterText(find.byType(TextField).last, 'wrongpassword');
+        await tester.tap(find.byType(ElevatedButton).first);
+        await tester.pumpAndSettle();
+
+        // Should show error message
+        expect(find.textContaining('Invalid'), findsOneWidget);
+      });
+    });
+
+    group('Dashboard Flow', () {
+      testWidgets('TC-MOB-004: Navigates to dashboard after login', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(
+              routes: {
+                '/': (context) => LoginScreen(),
+                '/dashboard': (context) => DashboardScreen(),
+              },
+            ),
+          ),
+        );
+
+        // Simulate successful login navigation
+        await tester.tap(find.byType(ElevatedButton).first);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('TC-MOB-005: Shows FAB for new quotation', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: DashboardScreen()),
+          ),
+        );
+
+        expect(find.byType(FloatingActionButton), findsOneWidget);
+        expect(find.text('New Quotation'), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-006: Opens new quotation screen from FAB', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(
+              home: DashboardScreen(),
+              routes: {
+                '/quotation': (context) => QuotationScreen(),
+              },
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(FloatingActionButton));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('TC-MOB-007: Shows search and filter controls', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: DashboardScreen()),
+          ),
+        );
+
+        expect(find.byType(TextField), findsOneWidget); // Search field
+        expect(find.byIcon(Icons.filter_list), findsOneWidget); // Filter button
+      });
+
+      testWidgets('TC-MOB-008: Opens drawer with navigation options', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: DashboardScreen()),
+          ),
+        );
+
+        await tester.tap(find.byIcon(Icons.menu));
+        await tester.pumpAndSettle();
+
+        expect(find.text('New Quotation'), findsOneWidget);
+        expect(find.text('GST Invoices'), findsOneWidget);
+        expect(find.text('Send Email'), findsOneWidget);
+        expect(find.text('Analytics'), findsOneWidget);
+        expect(find.text('Notifications'), findsOneWidget);
+        expect(find.text('Settings'), findsOneWidget);
+        expect(find.text('About'), findsOneWidget);
+        expect(find.text('Logout'), findsOneWidget);
+      });
+    });
+
+    group('Create Quotation Flow', () {
+      testWidgets('TC-MOB-009: Opens empty quotation screen', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        expect(find.text('New Quotation'), findsOneWidget);
+        expect(find.textContaining('Quote No'), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-010: Fills customer details', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Fill customer name
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Name'), 'Test Customer');
+        
+        // Fill reference
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Reference'), 'REF-001');
+        
+        // Fill address
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Address'), 'Test Address');
+        
+        // Fill contact
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Contact No'), '9876543210');
+        
+        // Fill email
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Email (Optional)'), 'customer@test.com');
+
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('TC-MOB-011: Adds measured items', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Add measured item
+        await tester.tap(find.text('Add Measured Item'));
+        await tester.pumpAndSettle();
+
+        // Fill item details
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Code'), 'WIN001');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Description'), 'UPVC Window');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'W (MM)'), '1200');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'H (MM)'), '1500');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Units'), '2');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Glass'), '5mm Clear');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Rate (Rs)'), '2500');
+
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('TC-MOB-012: Adds unmeasured items', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Add Unmeasured Item'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Description'), 'Installation Charges');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Units'), '1');
+        await tester.enterText(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'Rate (Rs)'), '5000');
+
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('TC-MOB-013: Shows computed totals', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Verify computation section is visible
+        expect(find.text('Final Computations'), findsOneWidget);
+        expect(find.text('Subtotal (Actual Amount)'), findsOneWidget);
+        expect(find.text('Grand Total'), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-014: Toggles GST inclusion', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Toggle GST checkbox
+        await tester.tap(find.byType(Checkbox));
+        await tester.pumpAndSettle();
+
+        // GST percentage field should appear
+        expect(find.byWidgetPredicate((widget) => 
+          widget is TextFormField && widget.decoration?.labelText == 'GST Percentage (%)'), findsOneWidget);
+      });
+    });
+
+    group('PDF Generation Flow', () {
+      testWidgets('TC-MOB-015: Generate PDF button is present', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('GENERATE PDF'), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-016: PDF confirmation screen opens after generation', (WidgetTester tester) async {
+        // This test would require mocking the PDF generation
+        // and navigation to PdfConfirmationScreen
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(
+              home: QuotationScreen(),
+              routes: {
+                '/pdf_confirmation': (context) => PdfConfirmationScreen(
+                  data: QuotationData(),
+                  pdfBytes: Uint8List(0),
+                ),
+              },
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+      });
+    });
+
+    group('Email Flow', () {
+      testWidgets('TC-MOB-017: Email button in AppBar opens email dialog', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.email));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Email Quotation'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-018: Email dialog sends to custom email', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.email));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'custom@test.com');
+        await tester.tap(find.text('Send'));
+        await tester.pumpAndSettle();
+      });
+    });
+
+    group('Export Flow', () {
+      testWidgets('TC-MOB-019: Export Excel button is present', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('EXPORT EXCEL'), findsOneWidget);
+      });
+
+      testWidgets('TC-MOB-020: Export CSV button is present', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('EXPORT CSV'), findsOneWidget);
+      });
+    });
+
+    group('Site Photos Flow', () {
+      testWidgets('TC-MOB-021: Site photos section is visible', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Site Photos'), findsOneWidget);
+        expect(find.text('Add Site Photo'), findsOneWidget);
+      });
+    });
+
+    group('Auto-save Flow', () {
+      testWidgets('TC-MOB-022: Shows save status indicator', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen()),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Should show save status (cloud_done, sync, or error)
+        expect(find.byIcon(Icons.cloud_done).or(find.byIcon(Icons.sync)).or(find.byIcon(Icons.error)), findsOneWidget);
+      });
+    });
+
+    group('Status Management', () {
+      testWidgets('TC-MOB-023: Shows status chips for existing quotations', (WidgetTester tester) async {
+        final existingData = QuotationData()
+          ..id = 'test-id'
+          ..quotationNo = 'Q-001'
+          ..customerName = 'Test Customer'
+          ..status = QuotationStatus.draft;
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(home: QuotationScreen(existingData: existingData)),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Draft'), findsOneWidget);
+        expect(find.text('Sent'), findsOneWidget);
+        expect(find.text('Won'), findsOneWidget);
+        expect(find.text('Lost'), findsOneWidget);
+      });
+    });
+
+    group('Logout Flow', () {
+      testWidgets('TC-MOB-024: Logout clears session and returns to login', (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ChangeNotifierProvider.value(
+            value: appState,
+            child: MaterialApp(
+              home: DashboardScreen(),
+              routes: {
+                '/': (context) => LoginScreen(),
+              },
+            ),
+          ),
+        );
+
+        await tester.tap(find.byIcon(Icons.menu));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Logout'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Welcome Back'), findsOneWidget);
+      });
+    });
+  });
+}

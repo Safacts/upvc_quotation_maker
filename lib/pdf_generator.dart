@@ -4,10 +4,13 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:barcode/barcode.dart';
 import 'models.dart';
+import 'models_extra.dart';
 import 'app_state.dart';
+import 'services/upi_service.dart';
 
-Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async {
+Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<QuotationPhoto> photos = const []}) async {
   final pdf = pw.Document();
   final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
   
@@ -66,8 +69,16 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState) async 
           ],
           pw.SizedBox(height: 10),
           _buildTotalsTable(data, currency),
+          if (photos.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            _buildSitePhotosSection(photos),
+          ],
           _buildSectionTitle('Bank Details'),
           _buildTermsAndBankDetails(appState),
+          if (appState.clientConfig.hasUpi) ...[
+            pw.SizedBox(height: 10),
+            _buildUpiQrSection(data, appState),
+          ],
           pw.SizedBox(height: 40),
           _buildSignatures(),
         ];
@@ -300,5 +311,132 @@ pw.Widget _buildSignatures() {
       pw.Text('Authorised Signature', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
       pw.Text('Customer Signature', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
     ]
+  );
+}
+
+pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
+  final clientConfig = appState.clientConfig;
+  final vpa = clientConfig.upiId;
+  final payeeName = clientConfig.upiPayeeNameOrCompany;
+  final amount = data.grandTotal;
+  final note = 'Quote ${data.quotationNo}';
+  final transactionRef = data.quotationNo;
+
+  final upiUri = UpiService.buildUri(
+    vpa: vpa,
+    payeeName: payeeName,
+    amount: amount,
+    note: note,
+    transactionRef: transactionRef,
+  );
+
+  if (upiUri.isEmpty) return pw.SizedBox.shrink();
+
+  final qrCode = Barcode.qrCode();
+  final qrImage = qrCode.toSvg(upiUri, width: 180, height: 180);
+
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.center,
+    children: [
+      pw.Container(
+        padding: pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          border: pw.TableBorder.all(color: PdfColors.grey300),
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        child: pw.Column(
+          children: [
+            pw.SvgImage(svg: qrImage),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              'Scan to Pay via UPI',
+              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'VPA: $vpa',
+              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Amount: ${NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ').format(amount)}',
+              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
+  // Pre-load images for PDF (synchronously not possible, so we use placeholder and note)
+  // For production, consider downloading images before PDF generation
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      _buildSectionTitle('Site Photos'),
+      pw.Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: photos.map((photo) {
+          return pw.Container(
+            width: 180,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey300),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  height: 135,
+                  width: double.infinity,
+                  decoration: pw.BoxDecoration(
+                    borderRadius: const pw.BorderRadius.only(
+                      topLeft: pw.Radius.circular(8),
+                      topRight: pw.Radius.circular(8),
+                    ),
+                    color: PdfColors.grey100,
+                  ),
+                  child: pw.Center(
+                    child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Icon(pw.IconData(0xe3f4), size: 32, color: PdfColors.grey400),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Site Photo',
+                          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                        ),
+                        pw.Text(
+                          photo.sizeLabel,
+                          style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (photo.caption.isNotEmpty)
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(8),
+                    child: pw.Text(
+                      photo.caption,
+                      style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                      maxLines: 2,
+                      overflow: pw.TextOverflow.clip,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+      pw.SizedBox(height: 8),
+      pw.Text(
+        '${photos.length} site photo(s) attached',
+        style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
+      ),
+    ],
   );
 }
