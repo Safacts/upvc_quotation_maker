@@ -668,6 +668,12 @@ describe("STATIC AUDIT — no tenant query may ship without a client_id filter",
       join("app", "api", "reviews", "route.ts"), // public review submission
       join("app", "api", "reviews", "[clientId]", "route.ts"), // public review feed
       join("app", "api", "quotation", "[id]", "route.ts"), // HMAC-gated share link
+      // Customer-facing PDF download for that same share link. Gated by the
+      // IDENTICAL HMAC (verified in constant time, BEFORE any query) and the
+      // row is fetched by primary key, so the token — which is bound to that
+      // one quotation id — is what scopes the read. A session is impossible
+      // here by design: the recipient of a WhatsApp link has no account.
+      join("app", "api", "quotation", "[id]", "pdf", "route.ts"),
       join("app", "api", "portal_auth", "route.ts"), // must run pre-session
       join("app", "api", "reset_client_password", "route.ts"), // OTP flow, pre-session
       join("app", "api", "save_client", "route.ts"), // body-hash auth (tracked ISO-06)

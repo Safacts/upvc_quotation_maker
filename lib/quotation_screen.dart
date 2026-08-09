@@ -22,6 +22,7 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
+import 'quote_share.dart';
 import 'umami_tracker.dart';
 import 'quotation_export.dart' deferred as exportLib;
 import 'package:permission_handler/permission_handler.dart';
@@ -594,13 +595,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
       await pdfGen.loadLibrary();
       final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: _photos);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
-      final reviewUrl = kIsWeb
-        ? '${Uri.base.origin}/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}'
-        : 'https://app.vitharn.com/${appState.clientConfig.clientId}/review?q=${Uri.encodeComponent(data.quotationNo)}';
-      final token = await _fetchQuoteToken(data.id!);
-      final quoteLink = kIsWeb
-        ? '${Uri.base.origin}/quote/${data.id}?token=$token'
-        : 'https://app.vitharn.com/quote/${data.id}?token=$token';
+      final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
+      final quoteLink = await _quoteLink(data);
+
+      // Only render the "Review & Confirm" CTA when we hold a working token.
+      // A tokenless /quote link 403s, so an always-on button was actively
+      // harmful — it taught customers the link was broken.
+      final reviewCta = quoteLink == null
+          ? ''
+          : '''
+        <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">Please review and confirm your quotation:</p>
+        <p style="margin: 6px 0 0 0;"><a href="$quoteLink" style="display: inline-block; background-color: #16a34a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Review &amp; Confirm Quotation</a></p>''';
 
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
@@ -615,8 +620,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
           <p style="margin: 5px 0; color: #1E3A5F;"><strong>Date:</strong> ${DateFormat('dd-MMM-yyyy').format(data.date)}</p>
           <p style="margin: 5px 0; color: #1E3A5F;"><strong>Total Amount:</strong> Rs. ${data.grandTotal.toStringAsFixed(2)}</p>
         </div>
-        <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">Please review and confirm your quotation:</p>
-        <p style="margin: 6px 0 0 0;"><a href="$quoteLink" style="display: inline-block; background-color: #16a34a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Review & Confirm Quotation</a></p>
+$reviewCta
         <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">We'd love your feedback! Please rate your experience with us here:</p>
         <p style="margin: 6px 0 0 0;"><a href="$reviewUrl" style="display: inline-block; background-color: #1E3A5F; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Rate Your Experience</a></p>
         <p style="color: #475569; font-size: 14px;">If you have any questions, please feel free to reach out.</p>
@@ -671,17 +675,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
     }
   }
 
-  Future<String> _fetchQuoteToken(String id) async {
-    try {
-      final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-      final res = await http.get(Uri.parse('$origin/api/quotation/$id/token'));
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
-        return json['token'] ?? '';
-      }
-    } catch (_) {}
-    return '';
-  }
+  /// Customer-facing quote link, or `null` when no valid token could be minted.
+  ///
+  /// This used to be a private `_fetchQuoteToken()` that returned `''` on
+  /// failure, which produced `/quote/<id>?token=` — a URL that always answers
+  /// 403 for the customer. The shared helper in `quote_share.dart` now returns
+  /// null instead, so the email can omit the button rather than embed a dead
+  /// one. See that file for the full root-cause write-up.
+  Future<String?> _quoteLink(QuotationData q) => QuoteShare.quoteLink(
+        q,
+        config: Provider.of<AppState>(context, listen: false).clientConfig,
+      );
 
   Future<void> _manualEmailPrompt() async {
     final emailController = TextEditingController(text: data.email);

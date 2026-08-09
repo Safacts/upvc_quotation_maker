@@ -1,16 +1,15 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart' deferred as printLib;
-import 'package:http/http.dart' as http;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
+import 'config/client_config.dart';
 import 'models.dart';
+import 'quote_share.dart';
 import 'supabase_config.dart';
 import 'file_helper.dart';
 
@@ -91,28 +90,46 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     }
   }
 
-  String _reviewUrl() {
-    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-    return '$origin/$clientId/review?q=${Uri.encodeComponent(widget.data.quotationNo)}';
+  ClientConfig get _config =>
+      Provider.of<AppState>(context, listen: false).clientConfig;
+
+  String _reviewUrl() =>
+      QuoteShare.reviewUrl(widget.data, config: _config);
+
+  /// The customer-facing quote link, or `null` when no valid token could be
+  /// minted. See `quote_share.dart` for why this is nullable — a tokenless
+  /// `/quote/<id>` URL renders "Access Denied" for the customer, so we would
+  /// rather send no link than a broken one.
+  Future<String?> _quoteLink() =>
+      QuoteShare.quoteLink(widget.data, config: _config);
+
+  /// Message body shared to WhatsApp / Telegram / the OS share sheet.
+  Future<String> _shareMessage() async {
+    final companyName =
+        Provider.of<AppState>(context, listen: false).companyName;
+    return QuoteShare.buildMessage(
+      data: widget.data,
+      companyName: companyName,
+      quoteLink: await _quoteLink(),
+      reviewUrl: _reviewUrl(),
+    );
   }
 
-  Future<String> _quoteLink() async {
-    final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-    final token = await _fetchQuoteToken(widget.data.id!);
-    return '$origin/quote/${widget.data.id}?token=$token';
+  /// Writes the PDF to a temp file so it can ride along on the share sheet.
+  /// Returns null on web (no temp dir) — callers fall back to in-memory bytes.
+  Future<String?> _writeTempPdf() async {
+    final helper = FileHelper();
+    final dir = await helper.getTempDir();
+    if (dir == null) return null;
+    final path = '$dir/Quotation_${widget.data.quotationNo}.pdf';
+    await helper.writeFile(path, widget.pdfBytes);
+    return path;
   }
 
-  Future<String> _fetchQuoteToken(String id) async {
-    try {
-      final origin = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
-      final res = await http.get(Uri.parse('$origin/api/quotation/$id/token'));
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
-        return json['token'] ?? '';
-      }
-    } catch (_) {}
-    return '';
+  void _toast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _markAsSent() async {
@@ -130,58 +147,79 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   }
 
   Future<void> _sharePdf() async {
-    final companyName = Provider.of<AppState>(context, listen: false).companyName;
-    final link = await _quoteLink();
-    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    
-    final helper = FileHelper();
-    final dir = await helper.getTempDir();
-    if (dir != null) {
-      final fileName = 'Quotation_${widget.data.quotationNo}.pdf';
-      await helper.writeFile('$dir/$fileName', widget.pdfBytes);
-      await Share.shareXFiles([XFile('$dir/$fileName')], text: text);
+    final text = await _shareMessage();
+    final path = await _writeTempPdf();
+    if (path != null) {
+      await Share.shareXFiles([XFile(path)], text: text);
+    } else if (kIsWeb) {
+      await Share.shareXFiles(
+        [
+          XFile.fromData(widget.pdfBytes,
+              name: 'Quotation_${widget.data.quotationNo}.pdf')
+        ],
+        text: text,
+      );
     } else {
       await Share.share(text);
     }
     await _markAsSent();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quotation shared successfully!')));
-    }
+    _toast('Quotation shared successfully!');
   }
 
+  /// Sends the quote to WhatsApp as a TEXT message containing the link.
+  ///
+  /// Previously this called `Share.shareXFiles(..., text: text)`. WhatsApp's
+  /// Android receiver takes the attached file and DISCARDS the caption, so the
+  /// customer received a bare PDF and never saw the review/approval link — the
+  /// exact behaviour this rewrite removes. A `whatsapp://send?text=` deep link
+  /// carries the text reliably, and the link in that text opens the public
+  /// quote page which offers the PDF download plus approve/reject.
   Future<void> _shareToWhatsApp() async {
-    final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final link = await _quoteLink();
-    final text = "Hello ${widget.data.customerName},\n\nPlease find attached the quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
+    if (link == null) {
+      // No valid token => the /quote page would 403. Say so instead of sending
+      // a dead link, and fall back to delivering the PDF itself.
+      _toast('Could not create a share link — sending the PDF instead.');
+      await _sharePdf();
+      return;
+    }
 
-    final helper = FileHelper();
-    final dir = await helper.getTempDir();
-    if (dir != null) {
-      final fileName = 'Quotation_${widget.data.quotationNo}.pdf';
-      await helper.writeFile('$dir/$fileName', widget.pdfBytes);
-      await Share.shareXFiles([XFile('$dir/$fileName')], text: text);
-    } else {
-      // Fallback for web or if temp dir unavailable
+    final companyName =
+        Provider.of<AppState>(context, listen: false).companyName;
+    final text = QuoteShare.buildMessage(
+      data: widget.data,
+      companyName: companyName,
+      quoteLink: link,
+      reviewUrl: _reviewUrl(),
+    );
+
+    final launched = await QuoteShare.openWhatsApp(
+      text: text,
+      phone: widget.data.contactNo,
+    );
+
+    if (!launched) {
+      // WhatsApp absent: keep the message recoverable, then offer the sheet.
       await Clipboard.setData(ClipboardData(text: text));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Message copied to clipboard! Paste it when sharing.')));
-      }
-      if (kIsWeb) {
-        await Share.shareXFiles([XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')], text: text);
-      }
+      _toast('WhatsApp not found — message copied, choose an app to share.');
+      await QuoteShare.shareViaSheet(text: text, filePath: await _writeTempPdf());
+      await _markAsSent();
+      return;
     }
+
     await _markAsSent();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quotation shared to WhatsApp!')));
-    }
+    _toast('Opening WhatsApp…');
   }
 
   Future<void> _shareToTelegram() async {
-    final companyName = Provider.of<AppState>(context, listen: false).companyName;
     final link = await _quoteLink();
-    final text = "Hello ${widget.data.customerName},\n\nHere is your quotation ${widget.data.quotationNo} from $companyName.\n\nReview & confirm online: $link\n\nWe value your feedback! Please rate your service here: ${_reviewUrl()}";
-    
-    final url = Uri.parse("https://t.me/share/url?url=${Uri.encodeComponent(link)}&text=${Uri.encodeComponent(text)}");
+    final text = await _shareMessage();
+
+    final url = Uri.parse(
+      link == null
+          ? 'https://t.me/share/url?url=${Uri.encodeComponent(_reviewUrl())}&text=${Uri.encodeComponent(text)}'
+          : 'https://t.me/share/url?url=${Uri.encodeComponent(link)}&text=${Uri.encodeComponent(text)}',
+    );
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
