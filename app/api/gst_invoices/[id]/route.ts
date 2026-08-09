@@ -8,6 +8,7 @@ import {
 } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { authorizeOwnedTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,31 @@ const CORS_HEADERS = {
 } as const;
 
 function json(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+  return NextResponse.json(data, { status });
+}
+
+/**
+ * TIER GATE — GST invoicing is included from Rs.25,000 `base` upward.
+ *
+ * Always call this AFTER `authorizeOwnedTenant()`, never before: reversing the
+ * order turns the route into an oracle, because a caller could tell "that
+ * invoice id exists but belongs to someone else" (403) apart from "your plan is
+ * too low" (402) and enumerate other tenants' invoice ids.
+ *
+ * Admins are exempt — an admin acting cross-tenant is us doing support, not a
+ * customer consuming a feature.
+ *
+ * Returns the denial response, or null when the caller may proceed. The 402
+ * body is re-wrapped through `json()` so it picks up this route's CORS headers;
+ * `requireTier`'s own response carries none, and the Flutter build calls these
+ * endpoints cross-origin, so a bare 402 would surface as a network error rather
+ * than an upgrade prompt.
+ */
+async function gateInvoicing(auth: { isAdmin?: boolean; clientId?: string }) {
+  if (auth.isAdmin) return null;
+  const paid = await requireTier(auth.clientId, "invoicing");
+  if (paid.ok) return null;
+  return json(await paid.error.json(), paid.error.status);
 }
 
 export async function GET(
@@ -46,6 +71,9 @@ export async function GET(
     // rejected here rather than falling through the old customer-only check.
     const auth = authorizeOwnedTenant(session, rows[0].client_id);
     if (!auth.ok) return json({ error: auth.error }, auth.status);
+
+    const denied = await gateInvoicing(auth);
+    if (denied) return denied;
 
     const items = await supaGet("gst_invoice_items", {
       invoice_id: "eq." + id,
@@ -80,6 +108,10 @@ export async function PUT(
     }
     const auth = authorizeOwnedTenant(session, existingRows[0].client_id);
     if (!auth.ok) return json({ error: auth.error }, auth.status);
+
+    const denied = await gateInvoicing(auth);
+    if (denied) return denied;
+
     // The verified owner of this invoice. Child rows are re-stamped with THIS,
     // never with anything the caller sent.
     const ownerClientId = auth.clientId;
@@ -154,6 +186,9 @@ export async function DELETE(
     }
     const auth = authorizeOwnedTenant(session, existingRows[0].client_id);
     if (!auth.ok) return json({ error: auth.error }, auth.status);
+
+    const denied = await gateInvoicing(auth);
+    if (denied) return denied;
 
     await supaDelete("gst_invoice_items", { invoice_id: "eq." + id });
     await supaDelete("gst_invoices", { id: "eq." + id });

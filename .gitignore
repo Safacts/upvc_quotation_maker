@@ -30,12 +30,20 @@ app.*.map.json
 android/app/upload-keystore.jks
 android/key.properties
 
-# --- DB migration scripts with hardcoded credentials (never commit) ---
-scripts/apply_migration_007_008.js
-scripts/verify_007_008.js
-scripts/apply_migration_009.js
-scripts/apply_migration_009_010.js
-scripts/apply_migration_011.js
+# --- DB/ops scripts that historically carry hardcoded credentials ---
+# PATTERN-BASED (09-08-2026): the old one-file-per-line list let 5 new
+# credential-bearing scripts slip into a commit. Never enumerate again.
+scripts/apply_migration*.js
+scripts/verify_*.js
+scripts/inspect_*.js
+scripts/check_clients.js
+scripts/check_hashes.js
+scripts/send_telegram.js
+scripts/_*.mjs
+
+# --- Build outputs / large binaries (never commit) ---
+*.apk
+*.aab
 # --- Scratch / junk files (never commit) ---
 scratch_patch.js
 business_documents.tar.gz
@@ -52,4 +60,11 @@ troubleshooting/
 *.pyc
 *.swp
 migrate_working_dir/
-send_tg.js  
+send_tg.js
+
+# --- Scratch / junk files added 09-08-2026 ---
+$null
+.next-verify/
+backups/
+android/.kotlin/
+public/logo_b64.txt

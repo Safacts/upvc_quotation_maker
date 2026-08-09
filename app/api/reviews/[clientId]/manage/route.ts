@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPatch, supaDelete } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
+import { requireTier } from "@/lib/tiers";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,19 @@ async function guard(clientId: string): Promise<NextResponse | null> {
   if (session.role !== "customer" && session.role !== "admin") {
     return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
   }
+
+  // TIER GATE — dynamic reviews are a Rs.35,000 `next` feature.
+  //
+  // Checked LAST, after both authentication and ownership, so a 402 can never
+  // be used to probe whether another tenant's slug exists.
+  //
+  // Admins are exempt: moderating a customer's testimonials on their behalf is
+  // support work, not feature consumption.
+  if (session.role === "customer") {
+    const paid = await requireTier(clientId, "reviews");
+    if (!paid.ok) return paid.error;
+  }
+
   return null;
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { resolveTenant } from "@/lib/tenant";
+import { requireTier } from "@/lib/tiers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +29,17 @@ export async function GET(request: NextRequest) {
     const t = resolveTenant(session, request.nextUrl.searchParams.get("client_id"));
     if (!t.ok) return json({ error: t.error }, t.status);
     const clientId = t.clientId;
+
+    // TIER GATE — GST invoicing is included from Rs.25,000 `base` upward.
+    //
+    // This route has a SIDE EFFECT: the RPC advances a persistent per-tenant
+    // counter. Gating it matters more than gating a read — an unpaid caller who
+    // reached it would burn invoice numbers and leave permanent audit gaps in a
+    // sequence that must stay gapless.
+    if (!t.isAdmin) {
+      const paid = await requireTier(clientId, "invoicing");
+      if (!paid.ok) return paid.error;
+    }
 
     const result = await supaPost("rpc/get_next_gst_invoice_number", {
       p_client_id: clientId,

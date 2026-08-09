@@ -48,6 +48,40 @@ export default async function ConsoleLayout({
   // correctly return that tenant's OWN data into a shell branded as someone
   // else's company, which is worse than either failure alone.
   const access = await requireConsoleAccess(client.id);
+
+  // A tenant who is logged in and owns this slug, but whose plan does not
+  // include the console, gets an upgrade prompt — NOT a redirect to /login.
+  // Bouncing an authenticated paying customer to a login screen tells them
+  // something is broken and generates a support call; this tells them the truth
+  // and how to fix it.
+  if (!access.ok && access.upgradeRequired) {
+    const cfg = parseClientConfig(client.config || {}, client.id);
+    // NOTE: plain CSS with the `vc-` prefix (see console.css). Tailwind is
+    // installed but NOT wired in this repo — utility classes compile to nothing
+    // and render as unstyled text. Do not "modernise" this to `className="flex"`.
+    return (
+      <div className="vc-upgrade-gate">
+        <div className="vc-upgrade-card">
+          {cfg.logoUrl ? <img src={cfg.logoUrl} alt="" className="vc-upgrade-logo" /> : null}
+          <h1 className="vc-upgrade-title">Ops Console</h1>
+          <p className="vc-upgrade-plan">Included with the Final plan — Rs. 55,000</p>
+          <p className="vc-upgrade-body">
+            The desktop Ops Console gives you keyboard-driven grids, reports,
+            payment tracking and Tally export on a full-size screen. Your
+            current plan does not include it yet.
+          </p>
+          <p className="vc-upgrade-body">
+            To enable it for <strong>{cfg.companyName || client.id}</strong>,
+            contact Vitharn ERP Services and we will activate it on your account.
+          </p>
+          <a className="vc-upgrade-back" href={`/${slug}/home`}>
+            Back to my dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (!access.ok) redirect(access.redirectTo || "/login");
 
   const config = parseClientConfig(client.config || {}, client.id);

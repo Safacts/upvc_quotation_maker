@@ -191,6 +191,15 @@ export async function POST(request: NextRequest) {
         const adminHash = Array.isArray(admins) && admins.length > 0 ? admins[0].password_hash : "";
         return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: adminHash }, 200);
       }
+      // CRITICAL FIX: Include password_hash for customer sessions too
+      if (session.role === "customer") {
+        const clientRows = await supaGet("clients", {
+          id: "eq." + session.client_id,
+          select: "password_hash",
+        });
+        const clientHash = Array.isArray(clientRows) && clientRows.length > 0 ? clientRows[0].password_hash : "";
+        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: clientHash }, 200);
+      }
       return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
     }
 
@@ -283,7 +292,7 @@ export async function POST(request: NextRequest) {
 
       await backfillPortalHash(client);
       await createSession({ role: "customer", email, client_id: client.id });
-      return json({ role: "customer", email, client_id: client.id }, 200);
+      return json({ role: "customer", email, client_id: client.id, password_hash: client.password_hash }, 200);
     }
 
     if (!admin && !client) {

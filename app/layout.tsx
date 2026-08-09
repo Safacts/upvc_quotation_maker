@@ -5,15 +5,15 @@ import UmamiTracker from "./UmamiTracker";
 import UmamiClickTracker from "./UmamiClickTracker";
 
 export const metadata: Metadata = {
-  title: "vitharn upvc — Quotation & Business Management Portal",
-  description: "vitharn upvc is a complete platform for UPVC window and door businesses to create, manage, and send professional quotations — on Android and the web.",
+  title: "Vitharn ERP Services — Industry Software Built for Speed",
+  description: "Vitharn builds vertical-specific ERP tools that transform small shops into modern, digital-first enterprises. Explore UPVC, Glass, Retail, and more.",
   icons: {
     icon: "/favicon.ico",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
-    title: "UPVC Quotation Maker",
+    title: "Vitharn ERP",
     statusBarStyle: "black-translucent",
   },
   other: {

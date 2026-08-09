@@ -316,7 +316,14 @@ export default function PlatformAdmin() {
         if (role === "customer") {
           if (cancelled) return;
           setCurrentUser(email);
-          setCurrentPasswordHash("");
+          // CRITICAL FIX: Fetch customer session to get password_hash for save_client auth
+          const custAuthRes = await fetch("/api/portal_auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "session", email }),
+          });
+          const custAuthData = await custAuthRes.json();
+          setCurrentPasswordHash(custAuthData.password_hash || "");
           setIsCustomer(true);
           setReady(true);
           loadClients();

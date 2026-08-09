@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { supaGet, supaPost } from "@/lib/supabase";
 import { getCachedClients } from "@/lib/slug";
 
+/**
+ * PUBLIC, ANONYMOUS, AND DELIBERATELY UNGATED — see `./[clientId]/route.ts`.
+ *
+ * POST here is a CUSTOMER leaving a testimonial from a quote link. They hold no
+ * session and no plan, so `requireTier()` would fail closed on every legitimate
+ * submission and silently kill the review funnel for paying tenants. The tenant
+ * pays for the MODERATION surface (`./[clientId]/manage`), which is gated on
+ * `reviews`; collection is free because the tenant is not the caller.
+ *
+ * The abuse control that belongs here is the existence check below (BUG-SEC-007),
+ * not a paywall.
+ */
 export async function GET() {
   return NextResponse.json({ reviews: [] });
 }

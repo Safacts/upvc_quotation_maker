@@ -7,6 +7,14 @@ import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 //   POST /api/invoice           -> create a draft, auto-numbered VIT/<FY>/NNNN
 //
 // Admin-only, same rationale as /api/invoice/[id].
+//
+// NO TIER GATE HERE, DELIBERATELY. `vitharn_invoices` is Vitharn billing its own
+// SaaS clients — it is not a product feature a tenant consumes, and no tenant
+// can reach it: `requireAdmin()` rejects every `customer` and `signup` session
+// outright. Adding `requireTier(..., "invoicing")` would only ever be evaluated
+// for platform admins, who bypass the paywall by design, so it would be dead
+// code that implies a boundary that is actually enforced one line above.
+// The tenant-facing GST module at /api/gst_invoices IS tier-gated.
 
 export const runtime = "nodejs";
 

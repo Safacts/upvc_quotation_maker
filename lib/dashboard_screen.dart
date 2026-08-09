@@ -20,6 +20,12 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
+import 'services/connectivity_service.dart';
+import 'services/offline_database.dart';
+import 'services/sync_engine.dart';
+import 'widgets/offline_indicator.dart';
+import 'widgets/sync_status_widget.dart';
+import 'widgets/update_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
@@ -36,10 +42,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _filterType = 'Newest';
   bool _hasHandledOpenQuote = false;
 
+  /// Number of locally-queued records awaiting push to the server.
+  int _pendingSyncCount = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchQuotations();
+    _refreshPendingSyncCount();
+  }
+
+  /// Read the offline write-queue depth so the banner shows a real number.
+  /// Never throws — OfflineDatabase is a no-op on Flutter Web.
+  Future<void> _refreshPendingSyncCount() async {
+    try {
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      if (clientId.isEmpty) return;
+      final count = await OfflineDatabase.instance.getPendingSyncCount(clientId);
+      if (!mounted || count == _pendingSyncCount) return;
+      setState(() => _pendingSyncCount = count);
+    } catch (_) {
+      // Pending count is cosmetic; never surface an error for it.
+    }
   }
 
   Future<void> _fetchQuotations() async {
@@ -270,6 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          const SyncStatusWidget(compact: true),
           IconButton(icon: const Icon(Icons.analytics_outlined), tooltip: 'Analytics', onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(quotations: _quotations)));
           }),
@@ -377,6 +403,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
+          // Offline indicator banner.
+          // connectivityStream emits isOnline (true == online), so it must be
+          // inverted here — the banner takes isOffline.
+          StreamBuilder<bool>(
+            stream: ConnectivityService.instance.connectivityStream
+                .map((online) => !online),
+            initialData: !ConnectivityService.instance.isOnline,
+            builder: (context, snapshot) {
+              final isOffline = snapshot.data ?? false;
+              return OfflineBanner(
+                isOffline: isOffline,
+                pendingSyncCount: _pendingSyncCount,
+                onTap: isOffline
+                    ? null
+                    : () => SyncEngine.instance
+                        .syncAll()
+                        .whenComplete(_refreshPendingSyncCount),
+              );
+            },
+          ),
+          // Content update banner (products / pricing / terms / bank / branding)
+          UpdateBanner(
+            clientId: context.read<AppState>().clientConfig.clientId,
+            onApplied: _fetchQuotations,
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Wrap(
