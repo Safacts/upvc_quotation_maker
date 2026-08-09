@@ -36,6 +36,9 @@ scripts/verify_007_008.js
 scripts/apply_migration_009.js
 scripts/apply_migration_009_010.js
 scripts/apply_migration_011.js
+scripts/apply_migration_015.js
+scripts/apply_migration_016.js
+scripts/send_telegram.js
 # --- Scratch / junk files (never commit) ---
 scratch_patch.js
 business_documents.tar.gz
@@ -52,4 +55,11 @@ troubleshooting/
 *.pyc
 *.swp
 migrate_working_dir/
-send_tg.js  
+send_tg.js
+
+# --- Scratch / junk files added 09-08-2026 ---
+$null
+.next-verify/
+backups/
+android/.kotlin/
+public/logo_b64.txt
