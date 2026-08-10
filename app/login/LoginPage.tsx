@@ -317,7 +317,7 @@ export default function LoginPage() {
         <input
           type="email"
           id="email"
-          placeholder="jvenkateshupvc@gmail.com"
+          placeholder="your@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

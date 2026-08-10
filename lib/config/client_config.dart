@@ -88,7 +88,7 @@ class ClientConfig {
     this.supabaseUrl = 'https://gumpmnbjdtzajhysnnaz.supabase.co',
     this.supabaseAnonKey =
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs',
-    this.adminEmails = const ['jvenkateshupvc@gmail.com'],
+    this.adminEmails = const ['vitarn.dev@gmail.com'],
     this.landingHeroTitle = '',
     this.landingHeroSubtitle = 'Quality UPVC solutions for your home',
     this.landingHeroImage = '',
@@ -195,7 +195,7 @@ class ClientConfig {
     isActive: json['isActive'] as bool? ?? true,
     supabaseUrl: json['supabaseUrl'] as String? ?? 'https://gumpmnbjdtzajhysnnaz.supabase.co',
     supabaseAnonKey: json['supabaseAnonKey'] as String? ?? '',
-    adminEmails: (json['adminEmails'] as List?)?.cast<String>() ?? ['jvenkateshupvc@gmail.com'],
+    adminEmails: (json['adminEmails'] as List?)?.cast<String>() ?? ['vitarn.dev@gmail.com'],
     landingHeroTitle: json['landingHeroTitle'] as String? ?? '',
     landingHeroSubtitle: json['landingHeroSubtitle'] as String? ?? 'Quality UPVC solutions for your home',
     landingHeroImage: json['landingHeroImage'] as String? ?? '',
