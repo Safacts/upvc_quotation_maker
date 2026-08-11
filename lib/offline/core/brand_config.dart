@@ -13,6 +13,7 @@
 library;
 
 import 'dart:convert';
+import 'package:path/path.dart' as p;
 
 /// The wizard is complete only when these are all satisfied. Company name is
 /// the single hard requirement — everything else can be filled in later from
@@ -98,6 +99,12 @@ class BrandConfig {
   ];
 
   bool get hasLogo => logoPath.trim().isNotEmpty;
+
+  /// Just the filename portion of [logoPath], e.g. `logo_1691234567890.png`.
+  /// Used by BrandService.resolveLogoPath() to re-join onto the current documents
+  /// directory when the stored absolute path is dead (iOS UUID change, etc.).
+  String get logoFileName =>
+      logoPath.trim().isEmpty ? '' : p.basename(logoPath);
 
   bool get hasBankDetails =>
       bankName.trim().isNotEmpty && bankAccountNo.trim().isNotEmpty;

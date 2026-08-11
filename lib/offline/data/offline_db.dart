@@ -90,6 +90,18 @@ class OfflineDb {
   static const String tableUnmeasuredItems = 'unmeasured_items';
   static const String tableCustomers = 'customers';
   static const String tableProducts = 'products';
+  static const String tablePayments = 'payments';
+
+  /// Sync status constants for the future sync engine.
+  /// A brand-new row that has never been near a server takes this default.
+  static const String defaultSyncStatus = 'pending_created';
+
+  /// SQL fragment used in rawUpdate: keeps a never-pushed row on
+  /// `pending_created` instead of demoting it to `pending_updated`, which would
+  /// make a future sync engine PATCH a row that does not exist server-side.
+  static const String syncStatusOnUpdateSql =
+      "sync_status = CASE WHEN sync_status = 'pending_created' "
+      "THEN 'pending_created' ELSE 'pending_updated' END";
 
   static const Uuid _uuid = Uuid();
 
@@ -179,7 +191,8 @@ class OfflineDb {
         notes TEXT NOT NULL DEFAULT '',
         grand_total REAL NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'pending_created'
       )
     ''');
 
@@ -225,7 +238,8 @@ class OfflineDb {
         gstin TEXT,
         notes TEXT,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'pending_created'
       )
     ''');
 
@@ -241,7 +255,22 @@ class OfflineDb {
         category TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'pending_created'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE payments (
+        id TEXT PRIMARY KEY,
+        quotation_id TEXT NOT NULL REFERENCES quotations(id) ON DELETE CASCADE,
+        amount REAL NOT NULL DEFAULT 0,
+        method TEXT NOT NULL DEFAULT 'cash',
+        reference TEXT NOT NULL DEFAULT '',
+        paid_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'pending_created'
       )
     ''');
 
