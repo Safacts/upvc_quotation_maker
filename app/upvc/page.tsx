@@ -3,17 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
-  Download,
   FileText,
   Globe,
   Smartphone,
   Users,
   CheckCircle,
+  Zap,
 } from "lucide-react";
 import "./upvc-web.css";
-
-const APK_URL =
-  "https://gumpmnbjdtzajhysnnaz.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
 
 export default function Home() {
   const [isCustomer, setIsCustomer] = useState(false);
@@ -36,15 +33,11 @@ export default function Home() {
     const session = localStorage.getItem("portal_session");
     const role = localStorage.getItem("portal_role");
 
-    if (session === "active") {
-      setLoggedIn(true);
-    }
+    if (session === "active") setLoggedIn(true);
 
     if (session === "active" && role === "customer") {
       const clientId = localStorage.getItem("portal_client_id");
-      if (!clientId) {
-        localStorage.clear();
-      }
+      if (!clientId) localStorage.clear();
     }
 
     const clientId = localStorage.getItem("portal_client_id");
@@ -52,9 +45,7 @@ export default function Home() {
     setIsCustomer(customer);
 
     if (customer) {
-      const target =
-        "/upvc/" +
-        clientId!.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const target = "/upvc/" + clientId!.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       setCustomerHref(target);
       setDashboardHref("/" + slugify(clientId!) + "/home");
     } else if (role === "admin") {
@@ -67,11 +58,8 @@ export default function Home() {
   useEffect(() => {
     const handleScroll = () => {
       if (headerRef.current) {
-        if (window.scrollY > 10) {
-          headerRef.current.classList.add("scrolled");
-        } else {
-          headerRef.current.classList.remove("scrolled");
-        }
+        if (window.scrollY > 10) headerRef.current.classList.add("scrolled");
+        else headerRef.current.classList.remove("scrolled");
       }
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -94,23 +82,22 @@ export default function Home() {
 
   return (
     <>
+      {/* ── HEADER ── */}
       <header ref={headerRef}>
-        <div className="logo-container">
+        <a href="/upvc" className="logo-container">
           <img
             src="/logo.png"
-            onError={(e) => {
-              e.currentTarget.src = "https://placehold.co/100";
-            }}
+            onError={(e) => { e.currentTarget.src = "https://placehold.co/100"; }}
             alt="Vitharn UPVC"
           />
-          <span className="logo-text">Vitharn UPVC</span>
-        </div>
+          <span className="logo-text">Vitharn <span>UPVC</span></span>
+        </a>
 
         {/* Desktop Nav */}
         <nav>
           <a href="#features">Features</a>
-          <a href="#app-purpose">Application Purpose</a>
           <a href="#how-it-works">How It Works</a>
+          <a href="/upvc/pricing">Pricing</a>
           {loggedIn && (
             <a href={dashboardHref} className="btn-nav-dashboard" id="navDashboardBtn">
               Dashboard
@@ -132,24 +119,17 @@ export default function Home() {
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
         >
-          <span />
-          <span />
-          <span />
+          <span /><span /><span />
         </button>
       </header>
 
       {/* Mobile Nav Drawer */}
       <div className={`mobile-nav${mobileMenuOpen ? " open" : ""}`}>
         <a href="#features" onClick={closeMobileMenu}>Features</a>
-        <a href="#app-purpose" onClick={closeMobileMenu}>Application Purpose</a>
         <a href="#how-it-works" onClick={closeMobileMenu}>How It Works</a>
+        <a href="/upvc/pricing" onClick={closeMobileMenu}>Pricing</a>
         {loggedIn && (
-          <a
-            href={dashboardHref}
-            className="btn-nav-dashboard"
-            id="mobileDashboardBtn"
-            onClick={closeMobileMenu}
-          >
+          <a href={dashboardHref} className="btn-nav-dashboard" id="mobileDashboardBtn" onClick={closeMobileMenu}>
             Dashboard
           </a>
         )}
@@ -163,35 +143,42 @@ export default function Home() {
         </a>
       </div>
 
-      {/* â”€â”€ HERO â”€â”€ */}
+      {/* ── HERO ── */}
       <section className="hero vitharn-grid">
         <div className="hero-content">
           <div className="hero-pills">
             <span className="pill">Quotations</span>
             <span className="pill">WhatsApp</span>
             <span className="pill">Invoicing</span>
-            <span className="pill">Website</span>
+            <span className="pill">Business Website</span>
           </div>
+
           <h1 className="hero-title">
-            Vitharn UPVC
+            Run your UPVC business.<br />
+            <em>Professionally.</em>
           </h1>
+
           <p className="hero-subtitle">
-            Create professional quotations in seconds, manage customers, and get your own business website. Built specifically for UPVC window and door shops. One-time payment. No monthly fees. Set up in 24 hours.
+            Create branded quotations in seconds, manage customers, and get your own business website.
+            Built specifically for UPVC window & door fabricators.{" "}
+            <strong>One-time payment. No monthly fees.</strong>
           </p>
+
           <p className="hero-note">
-            We use Google Sign-In purely for secure login. When you choose to sign in with Google, the only information we receive is your email address and name. We do not access your emails, Google Drive, YouTube, or any other Google service. We do not share your information with anyone.{" "}
-            <a href="/privacy" className="hero-note-link">
-              Read our Privacy Policy
-            </a>
+            We use Google Sign-In purely for secure login. We only receive your email and name —
+            nothing else. We do not access your Gmail, Drive, or any Google service.{" "}
+            <a href="/privacy" className="hero-note-link">Read our Privacy Policy</a>
           </p>
+
           <div className="btn-group">
             <a href="/login" className="btn-download" id="heroTrialBtn">
-              <ArrowRight size={20} /> Start Free Trial →
+              <ArrowRight size={18} /> Start Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp" id="heroPricingBtn">
               See Pricing
             </a>
           </div>
+
           <div className="stats-strip">
             <div className="stat-item">
               <div className="stat-num">₹0</div>
@@ -202,8 +189,8 @@ export default function Home() {
               <div className="stat-lbl">Day Free Trial</div>
             </div>
             <div className="stat-item">
-              <div className="stat-num">24</div>
-              <div className="stat-lbl">Hour Setup</div>
+              <div className="stat-num">24h</div>
+              <div className="stat-lbl">Setup Time</div>
             </div>
             <div className="stat-item">
               <div className="stat-num">100%</div>
@@ -213,66 +200,85 @@ export default function Home() {
         </div>
       </section>
 
-      {/* â”€â”€ APP PURPOSE & OAUTH DISCLOSURE â”€â”€ */}
-      <section className="features" id="app-purpose" style={{ paddingBottom: 0 }}>
-        <div style={{ background: "white", padding: 36, borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.04)", border: "1px solid #e2e8f0" }}>
-          <h2 className="section-title" style={{ textAlign: "left", fontSize: 24, marginBottom: 16, color: "#0f172a" }}>
-            What Vitharn UPVC does — and how we keep your account safe
-          </h2>
-          <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
-            Vitharn UPVC is a business management tool built specifically for UPVC window and door fabricators. It helps you generate accurate, branded quotations using your exact dimensions, calculate square footage and GST automatically, share quotes over WhatsApp, and manage your customer records — all from one place. Every business on Vitharn UPVC also gets its own branded marketing website and a customer portal where buyers can view quotes and request work.
+      {/* ── APP PURPOSE & OAUTH DISCLOSURE ── */}
+      <section className="app-purpose-section" id="app-purpose">
+        <div className="app-purpose-card">
+          <h2>What Vitharn UPVC does — and how we keep your account safe</h2>
+          <p>
+            Vitharn UPVC is a business management tool built specifically for UPVC window and door fabricators.
+            It helps you generate accurate, branded quotations using your exact dimensions, calculate square footage
+            and GST automatically, share quotes over WhatsApp, and manage your customer records — all from one place.
+            Every business on Vitharn UPVC also gets its own branded marketing website and a customer portal
+            where buyers can view quotes and request work.
           </p>
-          <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6 }}>
-            We use Google Sign-In purely for secure login. When you choose to sign in with Google, the only information we receive is your email address and name. We do not access your emails, Google Drive, YouTube, or any other Google service. We do not share your information with anyone. Your business data stays yours.
+          <p>
+            We use Google Sign-In purely for secure login. When you choose to sign in with Google, the only
+            information we receive is your email address and name. We do not access your emails, Google Drive,
+            YouTube, or any other Google service. We do not share your information with anyone. Your business data stays yours.
           </p>
         </div>
       </section>
 
-      {/* â”€â”€ FEATURES â”€â”€ */}
+      {/* ── FEATURES ── */}
       <section className="features" id="features">
         <h2 className="section-title">Everything your UPVC business needs</h2>
         <p className="section-subtitle">
-          One platform. One-time payment. Built for UPVC fabricators, not accountants.
+          One platform. One-time payment. Built for fabricators, not accountants.
         </p>
         <div className="features-grid features-grid--4">
           <div className="feature-card">
-            <FileText className="feature-icon-svg" />
+            <div className="feature-icon-box">
+              <FileText className="feature-icon-svg" />
+            </div>
+            <span className="feature-tag">Core</span>
             <h3 className="feature-title">Instant Branded Quotations</h3>
             <p>
-              Enter exact millimetre dimensions and Vitharn UPVC auto-calculates square footage, transport charges, and GST. Generate a clean, logo-branded PDF quotation in seconds â€” ready to print, email, or WhatsApp to your customer. No more handwritten quotes. No more calculator mistakes.
+              Enter millimetre dimensions and Vitharn UPVC auto-calculates square footage, transport charges,
+              and GST. Generate a logo-branded PDF in seconds — ready to print, email, or WhatsApp.
             </p>
           </div>
           <div className="feature-card">
-            <Globe className="feature-icon-svg" />
+            <div className="feature-icon-box">
+              <Globe className="feature-icon-svg" />
+            </div>
+            <span className="feature-tag">Web Presence</span>
             <h3 className="feature-title">Your Own Business Website</h3>
             <p>
-              Every business on Vitharn UPVC gets a dedicated, SEO-friendly marketing website showcasing your services, project gallery, and contact details. Look established online. Get found on Google.
+              Every business gets a dedicated SEO-friendly marketing website showcasing your services,
+              project gallery, and contact details. Look established online. Get found on Google.
             </p>
           </div>
           <div className="feature-card">
-            <Users className="feature-icon-svg" />
+            <div className="feature-icon-box">
+              <Users className="feature-icon-svg" />
+            </div>
+            <span className="feature-tag">Customers</span>
             <h3 className="feature-title">Dedicated Customer Portal</h3>
             <p>
-              Your customers get their own login to a branded portal where they can view quotations, check order status, and request new work. It builds trust and makes your shop look professional.
+              Your customers get their own login to a branded portal where they can view quotations,
+              check order status, and request new work. Builds trust and looks professional.
             </p>
           </div>
           <div className="feature-card">
-            <Smartphone className="feature-icon-svg" />
-            <h3 className="feature-title">Web &amp; Android, Anywhere</h3>
+            <div className="feature-icon-box">
+              <Smartphone className="feature-icon-svg" />
+            </div>
+            <span className="feature-tag">Cross-Platform</span>
+            <h3 className="feature-title">Web & Android, Anywhere</h3>
             <p>
-              Manage your business from your desk using the web dashboard, or from your phone with the Android app. Create quotes on-site, check customer records between jobs. Everything syncs to the cloud in real time.
+              Manage from your desk using the web dashboard, or from your phone with the Android app.
+              Create quotes on-site, check customer records between jobs. Real-time cloud sync.
             </p>
           </div>
         </div>
       </section>
 
-      {/* â”€â”€ HOW IT WORKS â”€â”€ */}
+      {/* ── HOW IT WORKS ── */}
       <section className="docs" id="how-it-works">
         <div className="docs-content">
           <h2 className="section-title">How It Works</h2>
           <p className="section-subtitle" style={{ textAlign: "center", marginBottom: 48 }}>
-            Getting your business on the platform is simple. We handle the
-            setup â€” you just start quoting.
+            Getting your business on the platform is simple. We handle the setup — you just start quoting.
           </p>
 
           <div className="doc-step">
@@ -280,7 +286,9 @@ export default function Home() {
             <div>
               <h3>We Configure Your Account</h3>
               <p>
-                Send us your company name, logo, brand colours, GST number, and pricing. We set up your entire account â€” fully branded to your business â€” within 24 hours. No technical skills needed. No software to install.
+                Send us your company name, logo, brand colours, GST number, and pricing. We set up your entire
+                account — fully branded to your business — within 24 hours. No technical skills needed.
+                No software to install.
               </p>
             </div>
           </div>
@@ -290,7 +298,8 @@ export default function Home() {
             <div>
               <h3>Your Platform Goes Live</h3>
               <p>
-                The moment your account is ready, your marketing website and customer portal go live on the internet. Share your link with customers immediately â€” on WhatsApp, business cards, or word of mouth.
+                The moment your account is ready, your marketing website and customer portal go live on the internet.
+                Share your link with customers immediately — on WhatsApp, business cards, or word of mouth.
               </p>
             </div>
           </div>
@@ -298,59 +307,59 @@ export default function Home() {
           <div className="doc-step">
             <div className="doc-step-number">03</div>
             <div>
-              <h3>Manage &amp; Quote Anywhere</h3>
+              <h3>Manage & Quote Anywhere</h3>
               <p>
-                Log in to the web dashboard or Android app using your Google account. Start creating professional quotations, managing customer records, and sending branded PDFs â€” all from one place.
+                Log in to the web dashboard or Android app using your Google account. Start creating professional
+                quotations, managing customer records, and sending branded PDFs — all from one place.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* â”€â”€ CTA BANNER â”€â”€ */}
+      {/* ── CTA BANNER ── */}
       <section className="cta-banner">
         <div className="cta-content">
-          <h2 className="cta-title">Ready to take your UPVC business online?</h2>
+          <div className="cta-badge">
+            <Zap size={11} /> Ready to get started
+          </div>
+          <h2 className="cta-title">
+            Take your UPVC business online.<br />
+            <span className="muted">Look professional. Quote faster.</span>
+          </h2>
           <p className="cta-sub">
-            Join fabricators across India using Vitharn UPVC to look professional, quote faster, and manage customers â€” all from one platform.
+            Join fabricators across India using Vitharn UPVC to look professional,
+            quote faster, and manage customers — all from one platform.
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
             <a href="/login" className="btn-download" id="ctaLoginBtn">
-              <ArrowRight size={20} /> Start Your Free Trial →
+              <ArrowRight size={18} /> Start Your Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">
               View Pricing
             </a>
           </div>
           <ul className="cta-checks">
-            <li><CheckCircle size={16} /> 7-day free trial</li>
-            <li><CheckCircle size={16} /> No credit card needed</li>
-            <li><CheckCircle size={16} /> One-time payment</li>
-            <li><CheckCircle size={16} /> No monthly fees</li>
-            <li><CheckCircle size={16} /> Setup in 24 hours</li>
-            <li><CheckCircle size={16} /> We do it for you</li>
+            <li><CheckCircle size={15} /> 7-day free trial</li>
+            <li><CheckCircle size={15} /> No credit card needed</li>
+            <li><CheckCircle size={15} /> One-time payment</li>
+            <li><CheckCircle size={15} /> No monthly fees</li>
+            <li><CheckCircle size={15} /> Setup in 24 hours</li>
+            <li><CheckCircle size={15} /> We do it for you</li>
           </ul>
         </div>
       </section>
 
       <footer>
-        <p>Â© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
+        <p>© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
-          <a href="/privacy" className="footer-link">
-            Privacy Policy
-          </a>{" "}
-          Â·{" "}
-          <a href="/terms" className="footer-link">
-            Terms of Service
-          </a>{" "}
-          Â·{" "}
-          <a href="/upvc/pricing" className="footer-link">
-            Pricing
-          </a>{" "}
-          Â·{" "}
-          <a href="mailto:vitarn.dev@gmail.com" className="footer-link">
-            Contact
-          </a>
+          <a href="/privacy" className="footer-link">Privacy Policy</a>{" "}
+          ·{" "}
+          <a href="/terms" className="footer-link">Terms of Service</a>{" "}
+          ·{" "}
+          <a href="/upvc/pricing" className="footer-link">Pricing</a>{" "}
+          ·{" "}
+          <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
         <p style={{ marginTop: 8, fontSize: 12, color: "#94a3b8" }}>
           Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
