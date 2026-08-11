@@ -273,7 +273,118 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
+      {/* ── WHY VITHARN UPVC — Comparison ── */}
+      <section className="comparison-section">
+        <h2 className="section-title">Why UPVC fabricators choose Vitharn</h2>
+        <p className="section-subtitle">
+          Tally is for accountants. Excel is for spreadsheets. Vitharn UPVC is built only for UPVC fabricators.
+        </p>
+        <div className="comparison-table-wrap">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th className="col-feature">Feature</th>
+                <th className="col-vitharn">Vitharn UPVC</th>
+                <th className="col-other">Tally</th>
+                <th className="col-other">Excel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>UPVC mm → sqft calculation</td>
+                <td className="cell-yes">✓ Auto</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">Manual formula</td>
+              </tr>
+              <tr>
+                <td>Branded PDF quotations</td>
+                <td className="cell-yes">✓ Instant</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-warn">Limited</td>
+              </tr>
+              <tr>
+                <td>WhatsApp quote sharing</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Customer portal with login</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Business website included</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Monthly fees</td>
+                <td className="cell-yes">₹0 / month</td>
+                <td className="cell-no">₹18,000+ / year</td>
+                <td className="cell-warn">Office licence</td>
+              </tr>
+              <tr>
+                <td>Setup time</td>
+                <td className="cell-yes">24 hours (we do it)</td>
+                <td className="cell-no">Days + accountant</td>
+                <td className="cell-warn">Self-setup</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── TRUST STRIP ── */}
+      <section className="trust-strip">
+        <div className="trust-item">
+          <div className="trust-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <div className="trust-label">Made in India</div>
+          <div className="trust-sub">Built in Hyderabad for Indian UPVC fabricators</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div className="trust-label">Secure by design</div>
+          <div className="trust-sub">HTTPS, hashed passwords, isolated per-business data</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0"/>
+            </svg>
+          </div>
+          <div className="trust-label">Personal support</div>
+          <div className="trust-sub">Direct WhatsApp support — not a ticket queue</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </div>
+          <div className="trust-label">Your data, always</div>
+          <div className="trust-sub">Export everything anytime. No lock-in.</div>
+        </div>
+      </section>
+
       <section className="docs" id="how-it-works">
         <div className="docs-content">
           <h2 className="section-title">How It Works</h2>
