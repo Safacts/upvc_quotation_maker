@@ -1,0 +1,8 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#FFFBF6"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#C44A10"/>
+  <text x="80" y="200" font-family="Inter, sans-serif" font-size="56" font-weight="800" fill="#1A0A00">Vitharn UPVC</text>
+  <text x="80" y="280" font-family="Inter, sans-serif" font-size="32" fill="#7A5030">Simple pricing. No monthly fees.</text>
+  <text x="80" y="380" font-family="Inter, sans-serif" font-size="28" fill="#C44A10">₹25,000 — ₹55,000 one-time</text>
+  <text x="80" y="440" font-family="Inter, sans-serif" font-size="20" fill="#7A5030">GST invoicing · WhatsApp sharing · Customer portal</text>
+</svg>

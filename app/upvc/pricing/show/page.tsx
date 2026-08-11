@@ -143,6 +143,48 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* QR CODE */}
+        <div style={{ textAlign: "center", margin: "24px 0" }}>
+          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a5438", marginBottom: 12 }}>
+            Scan to view pricing online
+          </p>
+          <svg width="80" height="80" viewBox="0 0 80 80" style={{ margin: "0 auto", display: "block" }}>
+            {/* Simple QR code pattern */}
+            <rect x="0" y="0" width="80" height="80" fill="white"/>
+            <rect x="4" y="4" width="24" height="24" fill="#1A0A00"/>
+            <rect x="52" y="4" width="24" height="24" fill="#1A0A00"/>
+            <rect x="4" y="52" width="24" height="24" fill="#1A0A00"/>
+            <rect x="8" y="8" width="16" height="16" fill="white"/>
+            <rect x="56" y="8" width="16" height="16" fill="white"/>
+            <rect x="8" y="56" width="16" height="16" fill="white"/>
+            <rect x="12" y="12" width="8" height="8" fill="#C44A10"/>
+            <rect x="60" y="12" width="8" height="8" fill="#C44A10"/>
+            <rect x="12" y="60" width="8" height="8" fill="#C44A10"/>
+            <rect x="32" y="4" width="8" height="8" fill="#1A0A00"/>
+            <rect x="44" y="4" width="8" height="8" fill="#1A0A00"/>
+            <rect x="32" y="16" width="8" height="8" fill="#1A0A00"/>
+            <rect x="44" y="16" width="8" height="8" fill="#1A0A00"/>
+            <rect x="4" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="16" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="32" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="44" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="56" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="68" y="32" width="8" height="8" fill="#1A0A00"/>
+            <rect x="32" y="44" width="8" height="8" fill="#1A0A00"/>
+            <rect x="44" y="44" width="8" height="8" fill="#1A0A00"/>
+            <rect x="56" y="44" width="8" height="8" fill="#1A0A00"/>
+            <rect x="4" y="68" width="8" height="8" fill="#1A0A00"/>
+            <rect x="16" y="68" width="8" height="8" fill="#1A0A00"/>
+            <rect x="32" y="68" width="8" height="8" fill="#1A0A00"/>
+            <rect x="44" y="56" width="8" height="8" fill="#1A0A00"/>
+            <rect x="56" y="56" width="8" height="8" fill="#1A0A00"/>
+            <rect x="68" y="56" width="8" height="8" fill="#1A0A00"/>
+            <rect x="56" y="68" width="8" height="8" fill="#1A0A00"/>
+            <rect x="68" y="68" width="8" height="8" fill="#1A0A00"/>
+          </svg>
+          <p style={{ fontSize: 11, color: "#7a5438", marginTop: 8 }}>vitharn.com/upvc/pricing</p>
+        </div>
+
         {/* FOOTER */}
         <div className="footer">
           <div className="footer-left">

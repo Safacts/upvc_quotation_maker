@@ -157,6 +157,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Customer & product database</li>
             <li><CheckCircle /> Daily cloud backup</li>
             <li><CheckCircle /> Business analytics</li>
+            <li><CheckCircle /> Email support</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="starterCtaBtn">
             Start Free Trial →
@@ -176,6 +177,8 @@ export default function WebPricingPage() {
             <li><CheckCircle /> SEO-optimized business webpage</li>
             <li><CheckCircle /> Customer star-rating system</li>
             <li><CheckCircle /> Auto review-request emails</li>
+            <li><CheckCircle /> UPI QR on invoices</li>
+            <li><CheckCircle /> Site photos (camera capture)</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="growthCtaBtn">
             Start Free Trial →
@@ -194,6 +197,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Direct WhatsApp sharing of quotes</li>
             <li><CheckCircle /> Review link sharing via WhatsApp</li>
             <li><CheckCircle /> Priority email support</li>
+            <li><CheckCircle /> Custom domain support</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="businessCtaBtn">
             Start Free Trial →
@@ -214,6 +218,8 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Payment tracking: who paid, who owes</li>
             <li><CheckCircle /> GST reports, sales register, customer ledger</li>
             <li><CheckCircle /> WhatsApp + email priority support</li>
+            <li><CheckCircle /> Multi-user access</li>
+            <li><CheckCircle /> Excel export</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="enterpriseCtaBtn">
             Start Free Trial →
@@ -249,6 +255,32 @@ export default function WebPricingPage() {
               <tr><td>Payment tracking & GST reports</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* ── COST COMPARISON ── */}
+      <section className="cost-comparison">
+        <h2 className="section-title">What you're paying now</h2>
+        <p className="section-subtitle">See how Vitharn compares to your current costs</p>
+        <div className="cost-rows">
+          <div className="cost-row">
+            <span className="cost-name">Tally Prime (1 year)</span>
+            <span className="cost-price">₹18,000</span>
+          </div>
+          <div className="cost-row">
+            <span className="cost-name">Accountant (monthly)</span>
+            <span className="cost-price">₹3,000–5,000/mo</span>
+          </div>
+          <div className="cost-row">
+            <span className="cost-name">Excel + your time</span>
+            <span className="cost-price">Errors + delays</span>
+          </div>
+        </div>
+        <div className="cost-vs">VS</div>
+        <div className="cost-vitharn">
+          <span className="cost-name">Vitharn Growth (one-time)</span>
+          <span className="cost-price cost-price--highlight">₹35,000</span>
+          <span className="cost-note">Pays for itself in under 3 months</span>
         </div>
       </section>
 
@@ -310,6 +342,9 @@ export default function WebPricingPage() {
           <div className="btn-group" style={{ justifyContent: "center" }}>
             <a href="mailto:vitarn.dev@gmail.com" className="btn-download" id="ctaContactBtn">
               <ArrowRight size={18} /> Contact Sales
+            </a>
+            <a href="tel:+916304562779" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
+              📞 Call Us
             </a>
             <a href="/upvc/login" className="btn-webapp btn-webapp--light" id="ctaTrialBtn">
               Start Free Trial

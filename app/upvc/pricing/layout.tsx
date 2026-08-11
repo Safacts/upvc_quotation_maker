@@ -9,9 +9,33 @@ export const metadata: Metadata = {
     url: "https://app.vitharn.com/upvc/pricing",
     siteName: "Vitharn UPVC",
     type: "website",
+    images: [{ url: "https://app.vitharn.com/og-pricing.svg", width: 1200, height: 630, alt: "Vitharn UPVC Pricing 2026" }],
   },
 };
 
 export default function PricingLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Vitharn UPVC",
+    "description": "Business management software for UPVC window and door fabricators",
+    "offers": {
+      "@type": "AggregateOffer",
+      "lowPrice": "25000",
+      "highPrice": "55000",
+      "priceCurrency": "INR",
+      "offerCount": "4"
+    }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        key="jsonld"
+      />
+      {children}
+    </>
+  );
 }
