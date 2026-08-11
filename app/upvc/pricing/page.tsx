@@ -166,7 +166,7 @@ export default function WebPricingPage() {
 
         {/* FEATURED: Growth */}
         <div className="pricing-card pricing-card--featured">
-          <div className="pricing-badge">Sweet Spot</div>
+          <div className="pricing-badge">Most Popular</div>
           <div className="pricing-label">Growth</div>
           <div className="pricing-price">₹35,000<sub>&nbsp;one-time</sub></div>
           <div className="pricing-desc">

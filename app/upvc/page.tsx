@@ -485,6 +485,9 @@ export default function Home() {
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">
               View Pricing
             </a>
+            <a href="tel:+916304562779" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
+              📞 Call Us
+            </a>
           </div>
           <ul className="cta-checks">
             <li><CheckCircle size={15} /> 7-day free trial</li>
