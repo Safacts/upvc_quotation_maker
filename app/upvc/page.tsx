@@ -273,7 +273,97 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
+      {/* ── WHY VITHARN UPVC — Comparison ── */}
+      <section className="comparison-section">
+        <h2 className="section-title">Why UPVC fabricators choose Vitharn</h2>
+        <p className="section-subtitle">
+          Tally is for accountants. Excel is for spreadsheets. Vitharn UPVC is built only for UPVC fabricators.
+        </p>
+        <div className="comparison-table-wrap">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th className="col-feature">Feature</th>
+                <th className="col-vitharn">Vitharn UPVC</th>
+                <th className="col-other">Tally</th>
+                <th className="col-other">Excel</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>UPVC mm → sqft calculation</td>
+                <td className="cell-yes">✓ Auto</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">Manual formula</td>
+              </tr>
+              <tr>
+                <td>Branded PDF quotations</td>
+                <td className="cell-yes">✓ Instant</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-warn">Limited</td>
+              </tr>
+              <tr>
+                <td>WhatsApp quote sharing</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Customer portal with login</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Business website included</td>
+                <td className="cell-yes">✓</td>
+                <td className="cell-no">✗</td>
+                <td className="cell-no">✗</td>
+              </tr>
+              <tr>
+                <td>Monthly fees</td>
+                <td className="cell-yes">₹0 / month</td>
+                <td className="cell-no">₹18,000+ / year</td>
+                <td className="cell-warn">Office licence</td>
+              </tr>
+              <tr>
+                <td>Setup time</td>
+                <td className="cell-yes">24 hours (we do it)</td>
+                <td className="cell-no">Days + accountant</td>
+                <td className="cell-warn">Self-setup</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── TRUST STRIP ── */}
+      <section className="trust-strip">
+        <div className="trust-item">
+          <div className="trust-icon">🇮🇳</div>
+          <div className="trust-label">Made in India</div>
+          <div className="trust-sub">Built in Hyderabad for Indian UPVC fabricators</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">🔒</div>
+          <div className="trust-label">Secure by design</div>
+          <div className="trust-sub">HTTPS, hashed passwords, isolated per-business data</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">📞</div>
+          <div className="trust-label">Personal support</div>
+          <div className="trust-sub">Direct WhatsApp support — not a ticket queue</div>
+        </div>
+        <div className="trust-divider" />
+        <div className="trust-item">
+          <div className="trust-icon">💾</div>
+          <div className="trust-label">Your data, always</div>
+          <div className="trust-sub">Export everything anytime. No lock-in.</div>
+        </div>
+      </section>
+
       <section className="docs" id="how-it-works">
         <div className="docs-content">
           <h2 className="section-title">How It Works</h2>
