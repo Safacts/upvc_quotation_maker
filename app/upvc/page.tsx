@@ -14,8 +14,8 @@ import "./upvc-web.css";
 
 export default function Home() {
   const [isCustomer, setIsCustomer] = useState(false);
-  const [customerHref, setCustomerHref] = useState("/login");
-  const [dashboardHref, setDashboardHref] = useState("/login");
+  const [customerHref, setCustomerHref] = useState("/upvc/login");
+  const [dashboardHref, setDashboardHref] = useState("/upvc/login");
   const [loggedIn, setLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -104,7 +104,7 @@ export default function Home() {
             </a>
           )}
           <a
-            href={loggedIn ? "/logout" : "/login"}
+            href={loggedIn ? "/logout" : "/upvc/login"}
             className="btn-nav-login"
             id="navPortalLogin"
           >
@@ -134,7 +134,7 @@ export default function Home() {
           </a>
         )}
         <a
-          href={loggedIn ? "/logout" : "/login"}
+          href={loggedIn ? "/logout" : "/upvc/login"}
           className="btn-nav-login"
           id="mobilePortalLogin"
           onClick={closeMobileMenu}
@@ -171,7 +171,7 @@ export default function Home() {
           </p>
 
           <div className="btn-group">
-            <a href="/login" className="btn-download" id="heroTrialBtn">
+            <a href="/upvc/login" className="btn-download" id="heroTrialBtn">
               <ArrowRight size={18} /> Start Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp" id="heroPricingBtn">
@@ -332,7 +332,7 @@ export default function Home() {
             quote faster, and manage customers — all from one platform.
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
-            <a href="/login" className="btn-download" id="ctaLoginBtn">
+            <a href="/upvc/login" className="btn-download" id="ctaLoginBtn">
               <ArrowRight size={18} /> Start Your Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">

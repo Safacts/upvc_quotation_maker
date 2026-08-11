@@ -6,7 +6,7 @@ import "../upvc-web.css";
 import "./pricing-web.css";
 
 export default function WebPricingPage() {
-  const [dashboardHref, setDashboardHref] = useState("/login");
+  const [dashboardHref, setDashboardHref] = useState("/upvc/login");
   const [loggedIn, setLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -80,7 +80,7 @@ export default function WebPricingPage() {
             </a>
           )}
           <a
-            href={loggedIn ? "/logout" : "/login"}
+            href={loggedIn ? "/logout" : "/upvc/login"}
             className="btn-nav-login"
             id="navPortalLogin"
           >
@@ -111,7 +111,7 @@ export default function WebPricingPage() {
           </a>
         )}
         <a
-          href={loggedIn ? "/logout" : "/login"}
+          href={loggedIn ? "/logout" : "/upvc/login"}
           className="btn-nav-login"
           id="mobilePortalLogin"
           onClick={closeMobileMenu}
@@ -277,7 +277,7 @@ export default function WebPricingPage() {
             <a href="mailto:vitarn.dev@gmail.com" className="btn-download" id="ctaContactBtn">
               <ArrowRight size={18} /> Contact Sales
             </a>
-            <a href="/login" className="btn-webapp btn-webapp--light" id="ctaTrialBtn">
+            <a href="/upvc/login" className="btn-webapp btn-webapp--light" id="ctaTrialBtn">
               Start Free Trial
             </a>
           </div>
