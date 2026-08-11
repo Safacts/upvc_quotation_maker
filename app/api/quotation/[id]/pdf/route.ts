@@ -139,6 +139,7 @@ export async function GET(
       measured,
       unmeasured,
       totals,
+      clientId: String(q.client_id || ""),
       companyName: String(config.companyName || config.appName || q.client_id),
       companyAddress: String(config.companyAddress || ""),
       companyProprietor: String(config.companyProprietor || ""),
@@ -151,7 +152,7 @@ export async function GET(
       termsAndConditions: Array.isArray(config.termsAndConditions)
         ? config.termsAndConditions.map(String)
         : [],
-      logoUrl: String(config.logoUrl || ""),
+      logoUrl: String(config.invoiceTopLogoUrl || config.logoUrl || ""),
       watermarkUrl: String(config.invoiceBackgroundLogoUrl || config.logoUrl || ""),
     };
 

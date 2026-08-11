@@ -65,6 +65,7 @@ export interface QuotationPdfData {
   measured: QuotationPdfMeasured[];
   unmeasured: QuotationPdfUnmeasured[];
   totals: QuotationTotals;
+  clientId?: string;
   // Branding.
   companyName: string;
   companyAddress: string;
@@ -368,7 +369,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   if (watermarkImg) {
     const iw = watermarkImg.width;
     const ih = watermarkImg.height;
-    const scale = Math.min(W / iw, H / ih);
+    const scale = Math.max(W / iw, H / ih);
     const dw = iw * scale;
     const dh = ih * scale;
     page.drawImage(watermarkImg, {
@@ -392,11 +393,11 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
 
   const bandH = 56;
   page.drawRectangle({ x: 0, y: y - bandH, width: W, height: bandH, color: C.headerBand });
-  text(data.companyName, W / 2, y - 16, { size: 14, font: bold, color: C.white, align: "center" });
-  text(data.companyAddress, W / 2, y - 28, { size: 8, color: C.white, align: "center" });
+  text(data.companyName, W / 2, y - 16, { size: 16, font: bold, color: C.white, align: "center" });
+  text(data.companyAddress, W / 2, y - 28, { size: 10, color: C.white, align: "center" });
   const propLine = `Prop: ${data.companyProprietor}   Contact: ${data.companyContact}`;
-  text(propLine, W / 2, y - 38, { size: 8, color: C.white, align: "center" });
-  text(`GST No: ${data.gstNumber}`, W / 2, y - 48, { size: 8, color: C.white, align: "center" });
+  text(propLine, W / 2, y - 38, { size: 10, color: C.white, align: "center" });
+  text(`GST No: ${data.gstNumber}`, W / 2, y - 48, { size: 10, color: C.white, align: "center" });
   y -= bandH + 10;
 
   // ---- Top bar: quotation no + date ----
@@ -408,7 +409,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   const sectionTitle = (label: string) => {
     if (y < 120) { page = doc.addPage(A4); y = H; }
     page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.headerBand });
-    text(label, M + 6, y - 12.5, { size: 10, font: bold, color: C.white });
+    text(label, M + 6, y - 12.5, { size: 11, font: bold, color: C.white });
     y -= 22;
   };
 
@@ -433,9 +434,13 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   // ---- Measured items ----
   sectionTitle("Quotation Details");
   if (data.measured.length) {
-    const headers = ["S.No", "Code", "Description", "W", "H", "Units", "Glass", "SFT", "T.SFT", "Rate", "Total"];
-    // Column weights matching Flutter's FlexColumnWidth ratios.
-    const weights = [1, 1.5, 6, 1.2, 1.2, 1.5, 2, 1.5, 1.5, 2, 2.5];
+    const kprSimplified = data.clientId === "kprupvc";
+    const headers = kprSimplified
+      ? ["S.No", "Description", "W", "H", "Units", "Glass", "SFT", "Rate", "Total"]
+      : ["S.No", "Code", "Description", "W", "H", "Units", "Glass", "SFT", "T.SFT", "Rate", "Total"];
+    const weights = kprSimplified
+      ? [1, 6, 1.2, 1.2, 1.5, 2, 1.5, 2, 2.5]
+      : [1, 1.5, 6, 1.2, 1.2, 1.5, 2, 1.5, 1.5, 2, 2.5];
     const totalW = weights.reduce((a, b) => a + b, 0);
     const colWidths = weights.map((w) => (w / totalW) * contentW);
     const drawRow = (cells: string[], yy: number, opts: { bold?: boolean; bg?: any; size?: number } = {}) => {
@@ -445,8 +450,9 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
         const cw = colWidths[i];
         const font = opts.bold ? bold : reg;
         const size = opts.size ?? 8;
-        // Right-align numeric columns (index >= 3).
-        if (i >= 3) {
+        // Right-align numeric columns (index >= 2 for KPR, >= 3 otherwise).
+        const numericFrom = kprSimplified ? 2 : 3;
+        if (i >= numericFrom) {
           page.drawText(safe(cells[i]), { x: x + cw - 4 - font.widthOfTextAtSize(safe(cells[i]), size), y: yy - 11, size, font });
         } else {
           page.drawText(safe(cells[i]), { x: x + 4, y: yy - 11, size, font });
@@ -474,21 +480,36 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
       const unitSqft = sqft(m.width, m.height);
       const totalSqft = measuredLineSqft({ width: m.width, height: m.height, units: m.units });
       const lineTotal = measuredLineTotal({ width: m.width, height: m.height, units: m.units, rate: m.rate });
-      const cells = [
-        String(idx + 1),
-        m.code,
-        m.description,
-        String(m.width),
-        String(m.height),
-        String(m.units),
-        m.glass,
-        unitSqft.toFixed(2),
-        totalSqft.toFixed(2),
-        inr(m.rate),
-        inr(lineTotal),
-      ];
+      let cells: string[];
+      if (kprSimplified) {
+        cells = [
+          String(idx + 1),
+          m.description,
+          String(Math.round(m.width)),
+          String(Math.round(m.height)),
+          String(m.units),
+          m.glass,
+          unitSqft.toFixed(2),
+          inr(m.rate),
+          inr(lineTotal),
+        ];
+      } else {
+        cells = [
+          String(idx + 1),
+          m.code,
+          m.description,
+          String(Math.round(m.width)),
+          String(Math.round(m.height)),
+          String(m.units),
+          m.glass,
+          unitSqft.toFixed(2),
+          totalSqft.toFixed(2),
+          inr(m.rate),
+          inr(lineTotal),
+        ];
+      }
       y = drawRow(cells, y);
-      page.drawRectangle({ x: M, y, width: contentW, height: 0.5, color: C.line });
+      page.drawRectangle({ x: M, y: y, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
     }
     y -= 6;
   }
@@ -528,34 +549,34 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     y -= 6;
   }
 
-  // ---- Totals table ----
+  // ---- Totals table (full-width, matches Flutter _buildTotalsTable) ----
   if (y < 140) { page = doc.addPage(A4); y = H; }
-  const totalsX = M + contentW / 2;
-  const totalsW = contentW / 2;
-  const drawTotalRow = (left: string, right: string, opts: { bold?: boolean; bg?: any } = {}) => {
-    if (opts.bg) page.drawRectangle({ x: totalsX, y: y - 18, width: totalsW, height: 18, color: opts.bg });
-    text(left, totalsX + 6, y - 12.5, { size: 9, font: opts.bold ? bold : reg });
-    rightText(right, M + contentW - 6, y - 12.5, { size: 9, font: opts.bold ? bold : reg });
-    page.drawRectangle({ x: totalsX, y: y - 18, width: totalsW, height: 18, borderColor: C.line, borderWidth: 0.5 });
-    y -= 18;
-  };
-  page.drawRectangle({ x: totalsX, y: y - 18 * 4, width: totalsW, height: 18 * 4, color: C.totalsBg });
-  drawTotalRow("Total SFT", data.totals.totalSqft.toFixed(2), { bold: true });
-  drawTotalRow("Subtotal", inr(data.totals.subtotal), { bold: true });
-  drawTotalRow("Transport", inr(data.totals.transport), { bold: true });
+  // Row 1: Total SFT + value | Subtotal + value
+  page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
+  text("Total SFT", M + 6, y - 12.5, { size: 10, font: bold });
+  text(data.totals.totalSqft.toFixed(2), M + contentW / 2 + 6, y - 12.5, { size: 10 });
+  rightText("Subtotal", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+  rightText(inr(data.totals.subtotal), M + contentW - 6, y - 12.5, { size: 10 });
+  y -= 18;
+  // Row 2: Transport + value | IGST + value (if applicable)
+  page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
+  text("Transport", M + 6, y - 12.5, { size: 10, font: bold });
+  text(inr(data.totals.transport), M + contentW / 2 + 6, y - 12.5, { size: 10 });
   if (data.totals.gstPercentage > 0) {
-    drawTotalRow(`IGST @ ${data.totals.gstPercentage}%`, inr(data.totals.gstAmount), { bold: true });
+    rightText(`IGST @ ${data.totals.gstPercentage}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+    rightText(inr(data.totals.gstAmount), M + contentW - 6, y - 12.5, { size: 10 });
   }
-  // Grand total row with accent border.
-  page.drawRectangle({ x: totalsX, y: y - 20, width: totalsW, height: 20, color: C.totalsBg });
-  page.drawLine({ start: { x: totalsX, y: y }, end: { x: M + contentW, y: y }, thickness: 2, color: C.headerBand });
-  text("Grand Total", totalsX + 6, y - 13.5, { size: 10, font: bold });
-  rightText(inr(data.totals.grandTotal), M + contentW - 6, y - 13.5, { size: 10, font: bold });
-  y -= 22;
-  // Amount in words.
-  page.drawRectangle({ x: totalsX, y: y - 22, width: totalsW, height: 22, color: C.totalsBg });
-  text("Amount in Words", totalsX + 6, y - 10, { size: 9, font: bold });
-  text(amountInWords(data.totals.grandTotal), totalsX + 6, y - 18, { size: 8 });
+  y -= 18;
+  // Row 3: empty | empty | Grand Total + value
+  page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
+  rightText("Grand Total", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+  rightText(inr(data.totals.grandTotal), M + contentW - 6, y - 12.5, { size: 10, font: bold });
+  y -= 18;
+  // Row 4: Amount in Words (with accent top border, full width)
+  page.drawRectangle({ x: M, y: y - 22, width: contentW, height: 22, color: C.totalsBg });
+  page.drawLine({ start: { x: M, y: y }, end: { x: M + contentW, y: y }, thickness: 2, color: C.headerBand });
+  text("Amount in Words", M + 6, y - 10, { size: 9, font: bold });
+  text(amountInWords(data.totals.grandTotal), M + 6, y - 18, { size: 8 });
   y -= 26;
 
   // ---- Bank Details + Terms ----

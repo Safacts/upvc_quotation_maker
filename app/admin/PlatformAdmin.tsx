@@ -718,7 +718,7 @@ export default function PlatformAdmin() {
       bankIfsc: form.ifsc.trim(),
       quotePrefix: form.prefix.trim(),
       defaultGstPercentage: 18.0,
-      termsAndConditions: ["Term 1", "Term 2", "Term 3"],
+      termsAndConditions: editingClient?.config?.termsAndConditions || [],
       primaryColor: parseInt("ff" + form.primaryColor.slice(1), 16),
       accentColor: parseInt("ff" + form.accentColor.slice(1), 16),
       adminEmails: [form.email.trim()],
@@ -765,6 +765,7 @@ export default function PlatformAdmin() {
         id,
         config,
         is_active: isActive,
+        merge: true,
       };
       if (trialExpiresAt) body.trial_expires_at = trialExpiresAt;
       if (portalPasswordHash) body.portal_password_hash = portalPasswordHash;
@@ -1164,7 +1165,12 @@ export default function PlatformAdmin() {
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>Or paste Invoice Top Logo URL</label>
-                        <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} />
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} style={{ flex: 1 }} />
+                          {form.invoiceTopLogoUrl && (
+                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                          )}
+                        </div>
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>Invoice Background Watermark Logo</label>
@@ -1186,7 +1192,12 @@ export default function PlatformAdmin() {
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>Or paste Invoice Background Logo URL</label>
-                        <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} />
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} style={{ flex: 1 }} />
+                          {form.invoiceBackgroundLogoUrl && (
+                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </>

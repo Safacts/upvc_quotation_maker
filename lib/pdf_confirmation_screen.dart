@@ -148,67 +148,56 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
 
   Future<void> _sharePdf() async {
     final text = await _shareMessage();
+    await Clipboard.setData(ClipboardData(text: text));
+    await Share.share(text);
+    await _markAsSent();
+    _toast('Message copied & shared!');
+  }
+
+  /// Opens WhatsApp with the PDF attached and copies the text to clipboard.
+  Future<void> _shareToWhatsApp() async {
+    final text = await _shareMessage();
+    await Clipboard.setData(ClipboardData(text: text));
+
+    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final contactNo = widget.data.contactNo;
+
+    // Venkateshwara: share PDF + auto-open WhatsApp with customer's number.
+    if (clientId == 'venkateshwara' && contactNo.isNotEmpty) {
+      final path = await _writeTempPdf();
+      if (path != null) {
+        await Share.shareXFiles([XFile(path)], text: text);
+      } else if (kIsWeb) {
+        await Share.shareXFiles(
+          [XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')],
+          text: text,
+        );
+      }
+      // Auto-open WhatsApp with customer's number.
+      await QuoteShare.openWhatsApp(text: text, phone: contactNo);
+      await _markAsSent();
+      _toast('PDF shared & WhatsApp opened!');
+      return;
+    }
+
+    // Default: share PDF via OS share sheet.
     final path = await _writeTempPdf();
     if (path != null) {
       await Share.shareXFiles([XFile(path)], text: text);
     } else if (kIsWeb) {
       await Share.shareXFiles(
-        [
-          XFile.fromData(widget.pdfBytes,
-              name: 'Quotation_${widget.data.quotationNo}.pdf')
-        ],
+        [XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')],
         text: text,
       );
     } else {
-      await Share.share(text);
-    }
-    await _markAsSent();
-    _toast('Quotation shared successfully!');
-  }
-
-  /// Sends the quote to WhatsApp as a TEXT message containing the link.
-  ///
-  /// Previously this called `Share.shareXFiles(..., text: text)`. WhatsApp's
-  /// Android receiver takes the attached file and DISCARDS the caption, so the
-  /// customer received a bare PDF and never saw the review/approval link — the
-  /// exact behaviour this rewrite removes. A `whatsapp://send?text=` deep link
-  /// carries the text reliably, and the link in that text opens the public
-  /// quote page which offers the PDF download plus approve/reject.
-  Future<void> _shareToWhatsApp() async {
-    final link = await _quoteLink();
-    if (link == null) {
-      // No valid token => the /quote page would 403. Say so instead of sending
-      // a dead link, and fall back to delivering the PDF itself.
-      _toast('Could not create a share link — sending the PDF instead.');
-      await _sharePdf();
-      return;
-    }
-
-    final companyName =
-        Provider.of<AppState>(context, listen: false).companyName;
-    final text = QuoteShare.buildMessage(
-      data: widget.data,
-      companyName: companyName,
-      quoteLink: link,
-      reviewUrl: _reviewUrl(),
-    );
-
-    final launched = await QuoteShare.openWhatsApp(
-      text: text,
-      phone: widget.data.contactNo,
-    );
-
-    if (!launched) {
-      // WhatsApp absent: keep the message recoverable, then offer the sheet.
-      await Clipboard.setData(ClipboardData(text: text));
-      _toast('WhatsApp not found — message copied, choose an app to share.');
-      await QuoteShare.shareViaSheet(text: text, filePath: await _writeTempPdf());
-      await _markAsSent();
-      return;
+      final launched = await QuoteShare.openWhatsApp(text: text, phone: contactNo);
+      if (!launched) {
+        await Share.share(text);
+      }
     }
 
     await _markAsSent();
-    _toast('Opening WhatsApp…');
+    _toast('PDF shared & message copied to clipboard!');
   }
 
   Future<void> _shareToTelegram() async {
@@ -309,8 +298,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
                 runSpacing: 16,
                 alignment: WrapAlignment.center,
                 children: [
-                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, _shareToWhatsApp, 300),
-                  _buildActionButton('Share', Icons.share, Colors.blue, _sharePdf, 400),
+                  _buildActionButton('WhatsApp', Icons.chat, Color(0xFF25D366), _shareToWhatsApp, 300),
+                  _buildActionButton('Share', Icons.chat, Colors.blue, _sharePdf, 400),
                   _buildActionButton('Save', Icons.download, Colors.indigo, _savePdfToDevice, 500),
                   _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 600),
                   _buildActionButton('Telegram', Icons.send, Colors.lightBlue, _shareToTelegram, 700),

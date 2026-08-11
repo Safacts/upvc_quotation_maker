@@ -423,11 +423,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             },
           ),
-          // Content update banner (products / pricing / terms / bank / branding)
-          UpdateBanner(
-            clientId: context.read<AppState>().clientConfig.clientId,
-            onApplied: _fetchQuotations,
-          ),
+          // Content update banner — Android only. On web the app is always
+          // fresh from Vercel deploy so content staleness never applies.
+          if (!kIsWeb)
+            UpdateBanner(
+              clientId: context.read<AppState>().clientConfig.clientId,
+              onApplied: _fetchQuotations,
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Wrap(

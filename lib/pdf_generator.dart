@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart' show BuildContext;
+import 'package:flutter/material.dart' show BuildContext, debugPrint;
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -95,10 +96,21 @@ Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context, App
 }
 
 Future<pw.ImageProvider> _loadLogoImage(String url, String fallbackUrl) async {
+  Future<pw.MemoryImage> fetch(String u) async {
+    final resp = await http.get(Uri.parse(u));
+    if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
+    return pw.MemoryImage(resp.bodyBytes);
+  }
   try {
-    return await networkImage(url);
-  } catch (_) {
-    return await networkImage(fallbackUrl);
+    return await fetch(url);
+  } catch (e) {
+    debugPrint('Logo load failed for $url: $e — trying fallback');
+    try {
+      return await fetch(fallbackUrl);
+    } catch (e2) {
+      debugPrint('Fallback logo also failed: $e2');
+      rethrow;
+    }
   }
 }
 
