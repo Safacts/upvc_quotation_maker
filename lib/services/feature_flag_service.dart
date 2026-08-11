@@ -152,7 +152,7 @@ const Map<String, String> _kFeatureMinTier = <String, String>{
   'site_photos': 'next',
   'upi_qr': 'next',
   'custom_domain': 'nextplus',
-  'analytics': 'nextplus',
+  'analytics': 'base',
   'desktop_console': 'final',
   'multi_user': 'final',
   'api_access': 'final',

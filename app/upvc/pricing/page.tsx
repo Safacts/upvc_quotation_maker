@@ -131,8 +131,8 @@ export default function WebPricingPage() {
             <em>No monthly fees.</em>
           </h1>
           <p className="hero-subtitle">
-            Built strictly for UPVC fabricators. Pay once, own it forever.
-            Upgrade anytime — only pay the difference.
+            Built strictly for UPVC fabricators. <strong>Pay once, no recurring fees</strong> for the first 25 clients.
+            After that, plans switch to monthly subscription. Upgrade anytime — only pay the difference.
           </p>
         </div>
       </section>
@@ -152,7 +152,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> GST-compliant invoicing</li>
             <li><CheckCircle /> Customer & product database</li>
             <li><CheckCircle /> Daily cloud backup</li>
-            <li><CheckCircle /> Basic analytics</li>
+            <li><CheckCircle /> Business analytics</li>
           </ul>
           <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="baseCtaBtn">
             Get Started →
@@ -171,7 +171,6 @@ export default function WebPricingPage() {
             <li><CheckCircle /> SEO-optimized business webpage</li>
             <li><CheckCircle /> Customer star-rating system</li>
             <li><CheckCircle /> Auto review-request emails</li>
-            <li><CheckCircle /> Advanced analytics & conversion rates</li>
           </ul>
           <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="nextCtaBtn">
             Get Started →
@@ -189,8 +188,6 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Everything in Next</li>
             <li><CheckCircle /> Direct WhatsApp sharing of quotes</li>
             <li><CheckCircle /> Review link sharing via WhatsApp</li>
-            <li><CheckCircle /> Product performance analytics</li>
-            <li><CheckCircle /> Customer retention metrics</li>
             <li><CheckCircle /> Priority email support</li>
           </ul>
           <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="nextPlusCtaBtn">
@@ -226,6 +223,7 @@ export default function WebPricingPage() {
           business grows — only the price difference is charged. Your data always transfers seamlessly.
         </p>
       </div>
+      <p style={{ textAlign: "center", marginTop: 12, fontSize: 13, color: "#7a5438" }}>Payment via UPI: 6304562779@nyes</p>
 
       {/* ── FAQ ── */}
       <section className="pricing-faq" id="faq">
@@ -233,28 +231,28 @@ export default function WebPricingPage() {
         <p className="section-subtitle">Got questions? We&apos;ve got answers.</p>
         <div className="faq-grid-modern">
           <div className="faq-item-modern">
-            <h4>Is this a subscription or one-time?</h4>
-            <p>Strictly one-time. No monthly fees, ever. Your software works as long as you need it.</p>
+            <h3>Is this a subscription or one-time?</h3>
+            <p>Strictly one-time for the first 25 clients. Pay once, no recurring fees. After the first 25 clients, plans switch to monthly subscription.</p>
           </div>
           <div className="faq-item-modern">
-            <h4>How is this better than Tally or Excel?</h4>
+            <h3>How is this better than Tally or Excel?</h3>
             <p>Tally is for accountants. Vitharn is built for UPVC fabricators — with WhatsApp sharing, a customer webpage, and review tools Tally doesn&apos;t have.</p>
           </div>
           <div className="faq-item-modern">
-            <h4>What about software updates?</h4>
+            <h3>What about software updates?</h3>
             <p>All updates are free for 1 year. After that, optional ₹5,000/year for continued updates.</p>
           </div>
           <div className="faq-item-modern">
-            <h4>Can I try before buying?</h4>
+            <h3>Can I try before buying?</h3>
             <p>Yes — 7-day free trial with full features. No card required. Setup takes under 24 hours.</p>
           </div>
           <div className="faq-item-modern">
-            <h4>Do you support GST invoicing?</h4>
-            <p>Fully. Vitharn handles GST invoicing on all plans. We currently don&apos;t charge GST on our software.</p>
+            <h3>Do you support GST invoicing?</h3>
+            <p>Fully. Vitharn handles GST invoicing on all plans. We are not registered for GST (annual turnover is below the ₹20 lakh threshold under Section 22 of the CGST Act). No GST is included in the price.</p>
           </div>
           <div className="faq-item-modern">
-            <h4>Do I need internet to use it?</h4>
-            <p>Yes. All plans require internet for cloud sync and dashboard access.</p>
+            <h3>Do I need internet?</h3>
+            <p>Most plans require internet for cloud sync. But our ₹10,000 offline plan works fully without internet — data syncs when you&apos;re back online.</p>
           </div>
         </div>
       </section>
@@ -285,7 +283,7 @@ export default function WebPricingPage() {
       </section>
 
       <footer>
-        <p>© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
+        <p>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad. Built by Aadi.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
           <a href="/privacy" className="footer-link">Privacy Policy</a>{" "}
           ·{" "}

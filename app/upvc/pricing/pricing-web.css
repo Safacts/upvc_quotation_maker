@@ -182,11 +182,10 @@
 
 .pricing-price sub {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   vertical-align: baseline;
   letter-spacing: 0;
-  font-weight: 500;
 }
 
 .pricing-desc {
