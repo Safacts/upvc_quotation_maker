@@ -164,9 +164,14 @@ export default function Home() {
       </div>
 
       {/* â”€â”€ HERO â”€â”€ */}
-      <section className="hero">
+      <section className="hero vitharn-grid">
         <div className="hero-content">
-          <div className="hero-badge">Built for UPVC Fabricators</div>
+          <div className="hero-pills">
+            <span className="pill">Quotations</span>
+            <span className="pill">WhatsApp</span>
+            <span className="pill">Invoicing</span>
+            <span className="pill">Website</span>
+          </div>
           <h1 className="hero-title">
             Vitharn UPVC
           </h1>
@@ -186,6 +191,24 @@ export default function Home() {
             <a href="/upvc/pricing" className="btn-webapp" id="heroPricingBtn">
               See Pricing
             </a>
+          </div>
+          <div className="stats-strip">
+            <div className="stat-item">
+              <div className="stat-num">₹0</div>
+              <div className="stat-lbl">Monthly Fees</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">7</div>
+              <div className="stat-lbl">Day Free Trial</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">24</div>
+              <div className="stat-lbl">Hour Setup</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">100%</div>
+              <div className="stat-lbl">Data Export</div>
+            </div>
           </div>
         </div>
       </section>
