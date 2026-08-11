@@ -10,7 +10,7 @@ import {
   Users,
   CheckCircle,
 } from "lucide-react";
-import "../landing.css";
+import "./upvc-web.css";
 
 const APK_URL =
   "https://gumpmnbjdtzajhysnnaz.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
@@ -101,9 +101,9 @@ export default function Home() {
             onError={(e) => {
               e.currentTarget.src = "https://placehold.co/100";
             }}
-            alt="vitharn upvc"
+            alt="Vitharn UPVC"
           />
-          <span className="logo-text">vitharn upvc</span>
+          <span className="logo-text">Vitharn UPVC</span>
         </div>
 
         {/* Desktop Nav */}
@@ -166,31 +166,25 @@ export default function Home() {
       {/* â”€â”€ HERO â”€â”€ */}
       <section className="hero">
         <div className="hero-content">
+          <div className="hero-badge">Built for UPVC Fabricators</div>
           <h1 className="hero-title">
-            vitharn upvc
+            Vitharn UPVC
           </h1>
           <p className="hero-subtitle">
-            <strong>vitharn upvc</strong> is an end-to-end quotation, catalog, and business management application designed for UPVC window and door manufacturers, dealers, and customers to generate accurate estimations, manage orders, and access personalized client portals.
+            Create professional quotations in seconds, manage customers, and get your own business website. Built specifically for UPVC window and door shops. One-time payment. No monthly fees. Set up in 24 hours.
           </p>
           <p className="hero-note">
-            Sign in with Google is used strictly to verify your identity and grant access to your account and saved quotations. We never access unneeded data, sell, or share your information.{" "}
-            <a href="/privacy" style={{ color: "#6366f1" }}>
+            We use Google Sign-In purely for secure login. When you choose to sign in with Google, the only information we receive is your email address and name. We do not access your emails, Google Drive, YouTube, or any other Google service. We do not share your information with anyone.{" "}
+            <a href="/privacy" className="hero-note-link">
               Read our Privacy Policy
             </a>
-            .
           </p>
           <div className="btn-group">
-            {isCustomer ? (
-              <a href={customerHref} className="btn-download" id="heroWebAppBtn">
-                <Globe size={20} /> Open Web App
-              </a>
-            ) : (
-              <a href="/login" className="btn-download" id="heroLoginBtn">
-                <ArrowRight size={20} /> Go to Portal
-              </a>
-            )}
-            <a href={loggedIn ? APK_URL : "/login"} className="btn-webapp" id="downloadBtn">
-              <Download size={20} /> Android App
+            <a href="/login" className="btn-download" id="heroTrialBtn">
+              <ArrowRight size={20} /> Start Free Trial →
+            </a>
+            <a href="/upvc/pricing" className="btn-webapp" id="heroPricingBtn">
+              See Pricing
             </a>
           </div>
         </div>
@@ -200,59 +194,50 @@ export default function Home() {
       <section className="features" id="app-purpose" style={{ paddingBottom: 0 }}>
         <div style={{ background: "white", padding: 36, borderRadius: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.04)", border: "1px solid #e2e8f0" }}>
           <h2 className="section-title" style={{ textAlign: "left", fontSize: 24, marginBottom: 16, color: "#0f172a" }}>
-            Application Purpose &amp; Google Sign-In Details
+            What Vitharn UPVC does — and how we keep your account safe
           </h2>
           <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6, marginBottom: 16 }}>
-            <strong>What vitharn upvc does:</strong> The <strong>vitharn upvc</strong> application provides UPVC window and door manufacturers and vendors with instant dimension-based quotation generators, automated SFT &amp; GST tax calculations, branded marketing websites, and secure web and mobile portals.
+            Vitharn UPVC is a business management tool built specifically for UPVC window and door fabricators. It helps you generate accurate, branded quotations using your exact dimensions, calculate square footage and GST automatically, share quotes over WhatsApp, and manage your customer records — all from one place. Every business on Vitharn UPVC also gets its own branded marketing website and a customer portal where buyers can view quotes and request work.
           </p>
           <p style={{ color: "#475569", fontSize: 16, lineHeight: 1.6 }}>
-            <strong>Why we use Google OAuth:</strong> <strong>vitharn upvc</strong> integrates Google Sign-In solely for secure account authentication. When users choose to log in with Google, we request basic profile information (email address and name) to authenticate their access to their registered business profile and saved quotations.
+            We use Google Sign-In purely for secure login. When you choose to sign in with Google, the only information we receive is your email address and name. We do not access your emails, Google Drive, YouTube, or any other Google service. We do not share your information with anyone. Your business data stays yours.
           </p>
         </div>
       </section>
 
       {/* â”€â”€ FEATURES â”€â”€ */}
       <section className="features" id="features">
-        <h2 className="section-title">Everything Your Business Needs</h2>
+        <h2 className="section-title">Everything your UPVC business needs</h2>
         <p className="section-subtitle">
-          One platform, built end-to-end for UPVC shop owners.
+          One platform. One-time payment. Built for UPVC fabricators, not accountants.
         </p>
         <div className="features-grid features-grid--4">
           <div className="feature-card">
             <FileText className="feature-icon-svg" />
             <h3 className="feature-title">Instant Branded Quotations</h3>
             <p>
-              Input exact mm dimensions to auto-calculate SFT, transport, and
-              18% IGST. Generate clean, logo-branded PDF quotes ready to print
-              or email â€” in seconds.
+              Enter exact millimetre dimensions and Vitharn UPVC auto-calculates square footage, transport charges, and GST. Generate a clean, logo-branded PDF quotation in seconds â€” ready to print, email, or WhatsApp to your customer. No more handwritten quotes. No more calculator mistakes.
             </p>
           </div>
           <div className="feature-card">
             <Globe className="feature-icon-svg" />
             <h3 className="feature-title">Your Own Business Website</h3>
             <p>
-              Every business on the platform gets a dedicated, SEO-friendly
-              marketing website showcasing their services, gallery, and contact
-              details â€” at a clean URL like{" "}
-              <span className="feature-inline-code">vitharn.com/akshaya</span>.
+              Every business on Vitharn UPVC gets a dedicated, SEO-friendly marketing website showcasing your services, project gallery, and contact details. Look established online. Get found on Google.
             </p>
           </div>
           <div className="feature-card">
             <Users className="feature-icon-svg" />
             <h3 className="feature-title">Dedicated Customer Portal</h3>
             <p>
-              Your buyers get their own login to a branded portal where they can
-              interact with your business, view their quotes, and request work
-              â€” giving them a professional, trust-building experience.
+              Your customers get their own login to a branded portal where they can view quotations, check order status, and request new work. It builds trust and makes your shop look professional.
             </p>
           </div>
           <div className="feature-card">
             <Smartphone className="feature-icon-svg" />
             <h3 className="feature-title">Web &amp; Android, Anywhere</h3>
             <p>
-              Manage your business from your desk on the web admin panel or on
-              the go with the Android app. Everything syncs to the cloud in
-              real time across all your devices.
+              Manage your business from your desk using the web dashboard, or from your phone with the Android app. Create quotes on-site, check customer records between jobs. Everything syncs to the cloud in real time.
             </p>
           </div>
         </div>
@@ -272,9 +257,7 @@ export default function Home() {
             <div>
               <h3>We Configure Your Account</h3>
               <p>
-                Our team sets up your business profile with your company name,
-                logo, brand colors, GST number, bank details, and admin email.
-                Your platform is fully branded to your business from day one.
+                Send us your company name, logo, brand colours, GST number, and pricing. We set up your entire account â€” fully branded to your business â€” within 24 hours. No technical skills needed. No software to install.
               </p>
             </div>
           </div>
@@ -284,10 +267,7 @@ export default function Home() {
             <div>
               <h3>Your Platform Goes Live</h3>
               <p>
-                The moment your account is ready, your branded marketing website
-                and customer portal are live on the internet. Share your link
-                with clients immediately â€” no waiting, no technical setup on
-                your end.
+                The moment your account is ready, your marketing website and customer portal go live on the internet. Share your link with customers immediately â€” on WhatsApp, business cards, or word of mouth.
               </p>
             </div>
           </div>
@@ -297,9 +277,7 @@ export default function Home() {
             <div>
               <h3>Manage &amp; Quote Anywhere</h3>
               <p>
-                Log in to the web admin or Android app using your registered
-                credentials. Start creating professional quotations, managing
-                client records, and sending branded PDFs â€” all from one place.
+                Log in to the web dashboard or Android app using your Google account. Start creating professional quotations, managing customer records, and sending branded PDFs â€” all from one place.
               </p>
             </div>
           </div>
@@ -311,36 +289,48 @@ export default function Home() {
         <div className="cta-content">
           <h2 className="cta-title">Ready to take your UPVC business online?</h2>
           <p className="cta-sub">
-            Get your own branded website, customer portal, and quoting system.
-            Reach out to get your business set up on the platform.
+            Join fabricators across India using Vitharn UPVC to look professional, quote faster, and manage customers â€” all from one platform.
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
             <a href="/login" className="btn-download" id="ctaLoginBtn">
-              <ArrowRight size={20} /> Go to Portal
+              <ArrowRight size={20} /> Start Your Free Trial →
             </a>
-            <a href={loggedIn ? APK_URL : "/login"} className="btn-webapp btn-webapp--light" id="ctaDownloadBtn">
-              <Download size={20} /> Android App
+            <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">
+              View Pricing
             </a>
           </div>
           <ul className="cta-checks">
-            <li><CheckCircle size={16} /> Fully branded to your business</li>
-            <li><CheckCircle size={16} /> Your own marketing website</li>
-            <li><CheckCircle size={16} /> Web &amp; Android access</li>
-            <li><CheckCircle size={16} /> Professional PDF quotations</li>
+            <li><CheckCircle size={16} /> 7-day free trial</li>
+            <li><CheckCircle size={16} /> No credit card needed</li>
+            <li><CheckCircle size={16} /> One-time payment</li>
+            <li><CheckCircle size={16} /> No monthly fees</li>
+            <li><CheckCircle size={16} /> Setup in 24 hours</li>
+            <li><CheckCircle size={16} /> We do it for you</li>
           </ul>
         </div>
       </section>
 
       <footer>
-        <p>Â© 2026 Vitharn UPVC Quotation Maker. Crafted by Aadi.</p>
+        <p>Â© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
-          <a href="/privacy" style={{ color: "#6366f1" }}>
+          <a href="/privacy" className="footer-link">
             Privacy Policy
           </a>{" "}
           Â·{" "}
-          <a href="/terms" style={{ color: "#6366f1" }}>
+          <a href="/terms" className="footer-link">
             Terms of Service
+          </a>{" "}
+          Â·{" "}
+          <a href="/upvc/pricing" className="footer-link">
+            Pricing
+          </a>{" "}
+          Â·{" "}
+          <a href="mailto:vitarn.dev@gmail.com" className="footer-link">
+            Contact
           </a>
+        </p>
+        <p style={{ marginTop: 8, fontSize: 12, color: "#94a3b8" }}>
+          Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
         </p>
       </footer>
     </>

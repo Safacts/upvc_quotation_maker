@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle, Download } from "lucide-react";
-import "../../landing.css";
+import "../upvc-web.css";
 import "./pricing-web.css";
 
 const APK_URL = "https://gumpmnbjdtzajhysnnaz.supabase.co/storage/v1/object/public/app-releases/KPR_Upvc.apk";
@@ -95,7 +95,7 @@ export default function WebPricingPage() {
             }}
             alt="vitharn upvc"
           />
-          <span className="logo-text">vitharn upvc</span>
+          <span className="logo-text">Vitharn UPVC</span>
         </div>
 
         {/* Desktop Nav */}
@@ -158,7 +158,7 @@ export default function WebPricingPage() {
       </div>
 
       <section className="pricing-hero">
-        <div className="hero-badge">Pricing Plan 2026</div>
+        <div className="hero-badge">Pricing Plans — 2026</div>
         <h1 className="hero-title">Simple pricing. <br/> No monthly fees.</h1>
         <p className="hero-subtitle" style={{ margin: "0 auto 20px" }}>
           Built strictly for UPVC fabricators. Pay once and own it forever.
@@ -255,20 +255,20 @@ export default function WebPricingPage() {
 
       <section className="cta-banner">
         <div className="cta-content">
-          <h2 className="cta-title">Upgrade anytime.</h2>
+          <h2 className="cta-title">Start with any plan. Upgrade anytime.</h2>
           <p className="cta-sub">
-            Start on Base and move to Final as your business grows — your data always transfers seamlessly. Only the price difference is charged.
+            Move from Base to Final as your business grows — only the price difference is charged. Your data always transfers seamlessly.
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
             <a href="mailto:vitarn.dev@gmail.com" className="btn-download" id="ctaContactBtn">
-              <ArrowRight size={20} /> Contact Sales
+              <ArrowRight size={20} /> Contact Sales →
             </a>
           </div>
         </div>
       </section>
 
       <footer>
-        <p>© 2026 Vitharn UPVC Quotation Maker. Crafted by Aadi.</p>
+        <p>© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
           <a href="/privacy" style={{ color: "#6366f1" }}>
             Privacy Policy
@@ -276,7 +276,14 @@ export default function WebPricingPage() {
           ·{" "}
           <a href="/terms" style={{ color: "#6366f1" }}>
             Terms of Service
+          </a>{" "}
+          ·{" "}
+          <a href="mailto:vitarn.dev@gmail.com" style={{ color: "#6366f1" }}>
+            Contact
           </a>
+        </p>
+        <p style={{ marginTop: 8, fontSize: 12, color: "#8a7a6a" }}>
+          Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
         </p>
       </footer>
     </>
