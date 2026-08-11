@@ -317,7 +317,7 @@ export default function LoginPage() {
         <input
           type="email"
           id="email"
-          placeholder="your@email.com"
+          placeholder="vitarn.dev@gmail.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -364,7 +364,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   id="otpEmail"
-                  placeholder="your@email.com"
+                  placeholder="vitarn.dev@gmail.com"
                   value={otpEmail}
                   onChange={(e) => setOtpEmail(e.target.value)}
                 />

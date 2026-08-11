@@ -341,7 +341,7 @@ export default function LoginPage() {
           <input
             type="email"
             id="email"
-            placeholder="your@email.com"
+            placeholder="vitarn.dev@gmail.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -367,7 +367,7 @@ export default function LoginPage() {
 
         <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
           {loginLoading && <span className="spinner" id="loginSpinner" />}
-          <span id="loginText">{loginLoading ? "Signing in…" : "Sign In"}</span>
+          <span id="loginText">{loginLoading ? "Signing in…" : "Login"}</span>
         </button>
         <button className="forgot-link" onClick={() => triggerForgotPassword()}>
           Forgot Password?
@@ -396,7 +396,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   id="otpEmail"
-                  placeholder="your@email.com"
+                  placeholder="vitarn.dev@gmail.com"
                   value={otpEmail}
                   onChange={(e) => setOtpEmail(e.target.value)}
                 />
