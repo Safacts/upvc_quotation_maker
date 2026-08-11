@@ -291,95 +291,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-wrap">
-      {/* ── LEFT: Brand panel ── */}
-      <div className="login-brand">
-        <div className="login-brand-inner">
-          <div className="login-brand-logo">
-            <img
-              src="/logo.png"
-              onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
-              alt="Vitharn UPVC"
-            />
-            <span>Vitharn <em>UPVC</em></span>
-          </div>
-          <h2>Built for UPVC<br /><span>fabricators.</span></h2>
-          <p>
-            Professional quotations, customer management, and your own business website —
-            all in one platform. One-time payment. No monthly fees.
-          </p>
-          <ul className="login-brand-features">
-            <li>Instant branded PDF quotations</li>
-            <li>Auto GST & square footage calculation</li>
-            <li>Your own business website</li>
-            <li>Customer portal with login</li>
-            <li>Android app + web dashboard</li>
-          </ul>
-        </div>
-      </div>
+    <div className="login-container">
+      <img
+        className="logo"
+        src="/logo.png"
+        onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
+        alt="Vitharn UPVC Quotation Maker"
+      />
+      <h2>Welcome Back</h2>
+      <p className="subtitle">Sign in to the Vitharn UPVC Quotation Maker Portal</p>
 
-      {/* ── RIGHT: Login form ── */}
-      <div className="login-container">
-        <div className="login-form-header">
-          <h2>Welcome back</h2>
-          <p>Sign in to the Vitharn UPVC Portal</p>
-        </div>
-
-        <div className="g-signin-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-          <div ref={googleDivRef} id="gSignInDiv" style={{ opacity: loginLoading ? 0.5 : 1, pointerEvents: loginLoading ? 'none' : 'auto' }} />
-          {loginLoading && (
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px', borderColor: 'var(--rust)', borderTopColor: 'transparent' }} />
-            </div>
-          )}
-        </div>
-
-        <div className="divider">or sign in with email</div>
-
-        <div className="input-group">
-          <label htmlFor="email">Email Address</label>
-          <input
-            type="email"
-            id="email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
-          />
-        </div>
-
-        {error && (
-          <div id="errorBox" className="error-msg" style={{ color: errorColor, display: "block" }}>
-            {error}
+      <div className="divider">Continue with</div>
+      <div className="g-signin-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+        <div ref={googleDivRef} id="gSignInDiv" style={{ opacity: loginLoading ? 0.5 : 1, pointerEvents: loginLoading ? 'none' : 'auto' }} />
+        {loginLoading && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px', borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
           </div>
         )}
-
-        <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
-          {loginLoading && <span className="spinner" id="loginSpinner" />}
-          <span id="loginText">{loginLoading ? "Signing in…" : "Sign In"}</span>
-        </button>
-        <button className="forgot-link" onClick={() => triggerForgotPassword()}>
-          Forgot Password?
-        </button>
-
-        <div className="login-privacy-note">
-          By signing in, you agree to our{" "}
-          <a href="/terms">Terms of Service</a> and{" "}
-          <a href="/privacy">Privacy Policy</a>.
-          We use Google Sign-In only for authentication — we never access your Google account data.
-        </div>
       </div>
+      <div className="divider">or</div>
+
+      <div className="input-group">
+        <label htmlFor="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          placeholder="vitarn.dev@gmail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+
+      <div className="input-group">
+        <label htmlFor="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
+        />
+      </div>
+
+      {error && (
+        <div id="errorBox" className="error-msg" style={{ color: errorColor, display: "block" }}>
+          {error}
+        </div>
+      )}
+
+      <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
+        {loginLoading && <span className="spinner" id="loginSpinner" />}
+        <span id="loginText">{loginLoading ? "Signing in…" : "Login"}</span>
+      </button>
+      <button className="forgot-link" onClick={() => triggerForgotPassword()}>
+        Forgot Password?
+      </button>
 
       {otpModalOpen && (
         <div className="modal" id="otpModal" style={{ display: "flex" }}>
@@ -396,7 +364,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   id="otpEmail"
-                  placeholder="your@email.com"
+                  placeholder="vitarn.dev@gmail.com"
                   value={otpEmail}
                   onChange={(e) => setOtpEmail(e.target.value)}
                 />
