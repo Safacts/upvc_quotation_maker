@@ -343,7 +343,7 @@ export default function WebPricingPage() {
             <a href="mailto:vitarn.dev@gmail.com" className="btn-download" id="ctaContactBtn">
               <ArrowRight size={18} /> Contact Us
             </a>
-            <a href="tel:+916304562779" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
+            <a href="tel:\+919705146471" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
               📞 Call Us
             </a>
             <a href="/upvc/login" className="btn-webapp btn-webapp--light" id="ctaTrialBtn">

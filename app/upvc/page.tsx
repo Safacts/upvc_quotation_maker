@@ -485,7 +485,7 @@ export default function Home() {
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">
               View Pricing
             </a>
-            <a href="tel:+916304562779" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
+            <a href="tel:+919705146471" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
               📞 Call Us
             </a>
           </div>
