@@ -5,28 +5,27 @@ import { ArrowRight, CheckCircle, Zap } from "lucide-react";
 import "../upvc-web.css";
 import "./pricing-web.css";
 
+function slugify(s: string) {
+  return (s || "")
+    .toString().trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 export default function WebPricingPage() {
   const [dashboardHref, setDashboardHref] = useState("/upvc/login");
   const [loggedIn, setLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
-  function slugify(s: string) {
-    return (s || "")
-      .toString().trim().toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  }
-
   useEffect(() => {
-    const session = localStorage.getItem("portal_session");
+    const active = localStorage.getItem("portal_session") === "active";
     const role = localStorage.getItem("portal_role");
-    if (session === "active") setLoggedIn(true);
-    if (session === "active" && role === "customer") {
-      const clientId = localStorage.getItem("portal_client_id");
+    const clientId = localStorage.getItem("portal_client_id");
+    if (active) setLoggedIn(true);
+    if (active && role === "customer") {
       if (!clientId) localStorage.clear();
     }
-    const clientId = localStorage.getItem("portal_client_id");
-    const customer = session === "active" && role === "customer" && !!clientId;
+    const customer = active && role === "customer" && !!clientId;
     if (customer) setDashboardHref("/" + slugify(clientId!) + "/home");
     else if (role === "admin") setDashboardHref("/admin");
     else if (role === "signup") setDashboardHref("/signup");
@@ -137,12 +136,17 @@ export default function WebPricingPage() {
         </div>
       </section>
 
+      <div className="urgency-banner">
+        <span className="urgency-dot" />
+        <strong>Limited offer:</strong> First 25 fabricators get lifetime pricing.
+        <span className="urgency-count"> 22 spots left.</span>
+      </div>
+
       {/* ── PRICING CARDS ── */}
       <section className="pricing-grid">
-        {/* FEATURED: Base */}
-        <div className="pricing-card pricing-card--featured">
-          <div className="pricing-badge">Sweet Spot</div>
-          <div className="pricing-label">Base</div>
+        {/* Starter */}
+        <div className="pricing-card">
+          <div className="pricing-label">Starter</div>
           <div className="pricing-price">₹25,000<sub>&nbsp;one-time</sub></div>
           <div className="pricing-desc">
             Small shops (1–5 people) who want digital quotations with cloud backup.
@@ -154,72 +158,104 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Daily cloud backup</li>
             <li><CheckCircle /> Business analytics</li>
           </ul>
-          <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="baseCtaBtn">
-            Get Started →
+          <a href="/upvc/login" className="pricing-cta" id="starterCtaBtn">
+            Start Free Trial →
           </a>
         </div>
 
-        {/* Next */}
-        <div className="pricing-card">
-          <div className="pricing-label">Next</div>
+        {/* FEATURED: Growth */}
+        <div className="pricing-card pricing-card--featured">
+          <div className="pricing-badge">Sweet Spot</div>
+          <div className="pricing-label">Growth</div>
           <div className="pricing-price">₹35,000<sub>&nbsp;one-time</sub></div>
           <div className="pricing-desc">
             Growing businesses wanting online visibility and customer reviews.
           </div>
           <ul className="pricing-features">
-            <li><CheckCircle /> Everything in Base</li>
+            <li><CheckCircle /> Everything in Starter</li>
             <li><CheckCircle /> SEO-optimized business webpage</li>
             <li><CheckCircle /> Customer star-rating system</li>
             <li><CheckCircle /> Auto review-request emails</li>
           </ul>
-          <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="nextCtaBtn">
-            Get Started →
+          <a href="/upvc/login" className="pricing-cta" id="growthCtaBtn">
+            Start Free Trial →
           </a>
         </div>
 
-        {/* Next+ */}
+        {/* Business */}
         <div className="pricing-card">
-          <div className="pricing-label">Next+</div>
+          <div className="pricing-label">Business</div>
           <div className="pricing-price">₹45,000<sub>&nbsp;one-time</sub></div>
           <div className="pricing-desc">
             Businesses wanting direct customer engagement via WhatsApp.
           </div>
           <ul className="pricing-features">
-            <li><CheckCircle /> Everything in Next</li>
+            <li><CheckCircle /> Everything in Growth</li>
             <li><CheckCircle /> Direct WhatsApp sharing of quotes</li>
             <li><CheckCircle /> Review link sharing via WhatsApp</li>
             <li><CheckCircle /> Priority email support</li>
           </ul>
-          <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="nextPlusCtaBtn">
-            Get Started →
+          <a href="/upvc/login" className="pricing-cta" id="businessCtaBtn">
+            Start Free Trial →
           </a>
         </div>
 
-        {/* Final */}
+        {/* Enterprise */}
         <div className="pricing-card">
-          <div className="pricing-label">Final</div>
+          <div className="pricing-label">Enterprise</div>
           <div className="pricing-price">₹55,000<sub>&nbsp;one-time</sub></div>
           <div className="pricing-desc">
             Full-service businesses who want complete automation and financial control.
           </div>
           <ul className="pricing-features">
-            <li><CheckCircle /> Everything in Next+</li>
+            <li><CheckCircle /> Everything in Business</li>
             <li><CheckCircle /> Desktop web console (split-view editor)</li>
             <li><CheckCircle /> Keyboard shortcuts — Tally-style speed</li>
             <li><CheckCircle /> Payment tracking: who paid, who owes</li>
             <li><CheckCircle /> GST reports, sales register, customer ledger</li>
             <li><CheckCircle /> WhatsApp + email priority support</li>
           </ul>
-          <a href="mailto:vitarn.dev@gmail.com" className="pricing-cta" id="finalCtaBtn">
-            Get Started →
+          <a href="/upvc/login" className="pricing-cta" id="enterpriseCtaBtn">
+            Start Free Trial →
           </a>
+        </div>
+      </section>
+
+      {/* ── FEATURE COMPARISON MATRIX ── */}
+      <section className="comparison-section">
+        <h2 className="section-title">Feature comparison</h2>
+        <p className="section-subtitle">See what's included in each plan</p>
+        <div className="comparison-table-wrap">
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Starter</th>
+                <th>Growth</th>
+                <th>Business</th>
+                <th>Enterprise</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Cloud sync & web dashboard</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>GST-compliant invoicing</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Customer & product database</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Business analytics</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>SEO-optimized webpage</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Customer reviews system</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>WhatsApp quote sharing</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Priority support</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Desktop web console</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+              <tr><td>Payment tracking & GST reports</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
       {/* Upgrade note */}
       <div className="pricing-note">
         <p>
-          <strong>Start with any plan. Upgrade anytime.</strong> Move from Base to Final as your
+          <strong>Start with any plan. Upgrade anytime.</strong> Move from Starter to Enterprise as your
           business grows — only the price difference is charged. Your data always transfers seamlessly.
         </p>
       </div>
@@ -268,7 +304,7 @@ export default function WebPricingPage() {
             <span className="muted">Upgrade as you grow.</span>
           </h2>
           <p className="cta-sub">
-            Move from Base to Final as your business grows — only the price difference is charged.
+            Move from Starter to Enterprise as your business grows — only the price difference is charged.
             Your data always transfers seamlessly.
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
@@ -291,8 +327,11 @@ export default function WebPricingPage() {
           ·{" "}
           <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
-        <p style={{ marginTop: 8, fontSize: 12, color: "#94a3b8" }}>
+        <p style={{ marginTop: 8, fontSize: 12, color: "#7a5438" }}>
           Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
+        </p>
+        <p style={{ marginTop: 8, fontSize: 12, color: "#7a5438" }}>
+          Payment via UPI: 6304562779@nyes
         </p>
       </footer>
     </>

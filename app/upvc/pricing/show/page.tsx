@@ -1,4 +1,3 @@
-import React from 'react';
 import './pricing.css';
 
 export default function PricingPage() {
@@ -155,6 +154,9 @@ export default function PricingPage() {
             SETUP IN 24 HOURS<br/>
             NO MONTHLY FEES
           </div>
+        </div>
+        <div style={{ marginTop: 16, fontSize: 10, color: "#7a5438", textAlign: "center" }}>
+          <a href="/privacy" style={{ color: "var(--rust)" }}>Privacy Policy</a> · <a href="/terms" style={{ color: "var(--rust)" }}>Terms</a> · <a href="mailto:vitarn.dev@gmail.com" style={{ color: "var(--rust)" }}>Contact</a>
         </div>
 
       </div>

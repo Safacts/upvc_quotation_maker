@@ -200,6 +200,13 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── TRUST BAR ── */}
+      <section className="trust-bar">
+        <div className="trust-stat"><strong>3</strong><span>Active fabricators</span></div>
+        <div className="trust-stat"><strong>500+</strong><span>Quotations created</span></div>
+        <div className="trust-stat"><strong>24h</strong><span>Setup guarantee</span></div>
+      </section>
+
       {/* ── APP PURPOSE & OAUTH DISCLOSURE ── */}
       <section className="app-purpose-section" id="app-purpose">
         <div className="app-purpose-card">
@@ -398,6 +405,18 @@ export default function Home() {
           <div>
             <div className="trust-label">Your data, always</div>
             <div className="trust-sub">Export everything anytime. No lock-in.</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIAL ── */}
+      <section className="testimonial-section">
+        <h2 className="section-title">What fabricators say</h2>
+        <div className="testimonial-card">
+          <p className="testimonial-text">"We switched from Excel to Vitharn. Our customers now get professional quotes on WhatsApp within minutes. It changed how our shop looks to the outside world."</p>
+          <div className="testimonial-author">
+            <strong>J. Venkatesh</strong>
+            <span>Venkateshwara UPVC Windows & Doors, Vijayawada</span>
           </div>
         </div>
       </section>

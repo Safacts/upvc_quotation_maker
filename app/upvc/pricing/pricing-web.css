@@ -256,6 +256,16 @@
   box-shadow: 0 10px 28px rgba(196, 74, 16, 0.50);
 }
 
+/* ── FEATURE COMPARISON MATRIX ── */
+.comparison-section { padding: 80px 24px; max-width: 900px; margin: 0 auto; }
+.comparison-table-wrap { overflow-x: auto; margin-top: 32px; }
+.comparison-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.comparison-table th, .comparison-table td { padding: 14px 16px; text-align: center; font-size: 13px; border-bottom: 1px solid var(--line); }
+.comparison-table th { background: var(--ink); color: white; font-weight: 700; }
+.comparison-table th:first-child, .comparison-table td:first-child { text-align: left; font-weight: 600; }
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table tr:hover { background: var(--paper-warm); }
+
 /* ── COMPARISON STRIP ── */
 .pricing-note {
   text-align: center;
@@ -315,6 +325,36 @@
   font-size: 14px;
   color: var(--text-muted);
   line-height: 1.65;
+}
+
+/* ── URGENCY BANNER ── */
+.urgency-banner {
+  text-align: center;
+  padding: 12px 20px;
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 0 auto 32px;
+  max-width: 600px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.urgency-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--rust);
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+.urgency-count {
+  font-weight: 700;
+  color: var(--rust);
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 /* ── MOBILE ── */
