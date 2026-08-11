@@ -57,8 +57,8 @@ void main() async {
     FaviconService.setFromUrl(initialConfig.logoUrl ?? '');
   }
 
-  // Initialize offline-first services
-  await _initializeOfflineServices(appState);
+  // Initialize offline-first services (non-blocking — must not delay first paint)
+  _initializeOfflineServices(appState).ignore();
 
   runApp(
     ChangeNotifierProvider.value(
