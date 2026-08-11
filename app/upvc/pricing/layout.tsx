@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     url: "https://app.vitharn.com/upvc/pricing",
     siteName: "Vitharn UPVC",
     type: "website",
-    images: [{ url: "https://app.vitharn.com/og-pricing.svg", width: 1200, height: 630, alt: "Vitharn UPVC Pricing 2026" }],
+    images: [{ url: "/og-pricing.svg", width: 1200, height: 630, alt: "Vitharn UPVC Pricing 2026" }],
   },
 };
 

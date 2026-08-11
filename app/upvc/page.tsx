@@ -160,8 +160,8 @@ export default function Home() {
 
           <p className="hero-subtitle">
             Create branded quotations in seconds, manage customers, and get your own business website.
-            Built specifically for UPVC window & door fabricators.{" "}
-            <strong>One-time payment. No monthly fees.</strong>
+             Built specifically for UPVC window & door fabricators.{" "}
+             <strong>One-time payment. No monthly fees for the first 25 clients.</strong>
           </p>
 
           <p className="hero-note">
@@ -329,7 +329,7 @@ export default function Home() {
               </tr>
               <tr>
                 <td>Monthly fees</td>
-                <td className="cell-yes">₹0 / month</td>
+                <td className="cell-yes">₹0 / month (first 25 clients)</td>
                 <td className="cell-no">₹18,000+ / year</td>
                 <td className="cell-warn">Office licence</td>
               </tr>

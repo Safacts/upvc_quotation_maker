@@ -10,7 +10,7 @@ export default function PricingPage() {
         {/* HEADER */}
         <div className="header">
           <div className="logo-wrap">
-            <img src="/pricing-logo.png" alt="Vitharn UPVC" loading="lazy" width={72} height={72} />
+            <img src="/pricing-logo.png" alt="Vitharn UPVC" loading="eager" width={72} height={72} />
           </div>
           <div className="header-text">
             <div className="header-meta">Pricing Plan — 2026 · Valid for first 25 clients</div>
@@ -26,12 +26,12 @@ export default function PricingPage() {
           <div className="intro-copy">
             <p className="intro-lead">Built for UPVC fabricators. Priced fairly.</p>
             <p>We build software specifically for UPVC window and door fabricators — to help you create professional quotations faster, look more professional to your customers, and get paid on time. Unlike Tally or Excel, Vitharn is built ground-up for your workflow.</p>
-            <p>Pay once and own it forever. No subscription traps. Free updates for the first year.</p>
+              <p>Pay once, no recurring fees for the first 25 clients. After that, plans switch to monthly. Free updates for the first year.</p>
           </div>
           <div className="stats">
             <div className="stat">
               <span className="num">₹0</span>
-              <span className="lbl"><strong>Monthly Fees</strong>One-time payment only. Yours forever.</span>
+              <span className="lbl"><strong>Monthly Fees</strong>One-time payment only. No monthly fees for the first 25 clients.</span>
             </div>
             <div className="stat">
               <span className="num">7</span>
@@ -50,7 +50,7 @@ export default function PricingPage() {
           <div className="tier-grid-top">
             <div className="tier-card featured">
               <div className="badge">Sweet Spot</div>
-              <div className="tier-label">Base</div>
+              <div className="tier-label">Starter</div>
               <div className="tier-price">₹25,000<sub>&nbsp;one-time</sub></div>
               <div className="tier-desc">Small shops (1–5 people) who want digital quotations with cloud backup.</div>
               <ul className="tier-features">
@@ -63,11 +63,11 @@ export default function PricingPage() {
             </div>
 
             <div className="tier-card">
-              <div className="tier-label">Next</div>
-              <div className="tier-price">₹35,000<sub>&nbsp;one-time</sub></div>
-              <div className="tier-desc">Growing businesses wanting online visibility and customer reviews.</div>
-              <ul className="tier-features">
-                <li>Everything in Base</li>
+                <div className="tier-label">Growth</div>
+                <div className="tier-price">₹35,000<sub>&nbsp;one-time</sub></div>
+                <div className="tier-desc">Growing businesses wanting online visibility and customer reviews.</div>
+                <ul className="tier-features">
+                  <li>Everything in Starter</li>
                 <li>SEO-optimized business webpage</li>
                 <li>Customer star-rating system</li>
                 <li>Auto review-request emails</li>
@@ -77,11 +77,11 @@ export default function PricingPage() {
           </div>
           <div className="tier-grid-bottom">
             <div className="tier-card">
-              <div className="tier-label">Next+</div>
+              <div className="tier-label">Business</div>
               <div className="tier-price">₹45,000<sub>&nbsp;one-time</sub></div>
               <div className="tier-desc">Businesses wanting direct customer engagement via WhatsApp.</div>
               <ul className="tier-features">
-                <li>Everything in Next</li>
+                <li>Everything in Growth</li>
                 <li>Direct WhatsApp sharing of quotes</li>
                 <li>Review link sharing via WhatsApp</li>
                 <li>Product performance analytics</li>
@@ -91,11 +91,11 @@ export default function PricingPage() {
             </div>
 
             <div className="tier-card">
-              <div className="tier-label">Final</div>
+              <div className="tier-label">Enterprise</div>
               <div className="tier-price">₹55,000<sub>&nbsp;one-time</sub></div>
               <div className="tier-desc">Full-service businesses who want complete automation and financial control.</div>
               <ul className="tier-features">
-                <li>Everything in Next+</li>
+                <li>Everything in Business</li>
                 <li>Desktop web console (split-view editor)</li>
                 <li>Keyboard shortcuts — Tally-style speed</li>
                 <li>Payment tracking: who paid, who owes</li>
@@ -108,7 +108,7 @@ export default function PricingPage() {
 
         {/* UPGRADE NOTE */}
         <div className="upgrade-note">
-          <p><strong>Upgrade anytime.</strong> Only the price difference is charged. Start on Base and move to Final as your business grows — your data always transfers seamlessly.</p>
+          <p><strong>Upgrade anytime.</strong> Only the price difference is charged. Start on Starter and move to Enterprise as your business grows — your data always transfers seamlessly.</p>
           <a href="mailto:vitarn.dev@gmail.com" className="note-cta">Contact us to upgrade →</a>
         </div>
 
@@ -118,7 +118,7 @@ export default function PricingPage() {
           <div className="faq-grid">
             <div className="faq-item">
               <h4>Is this a subscription or one-time?</h4>
-              <p>Strictly one-time. No monthly fees, ever. Your software works as long as you need it.</p>
+              <p>Strictly one-time for the first 25 clients. Pay once, no recurring fees. After that, plans switch to monthly subscription.</p>
             </div>
             <div className="faq-item">
               <h4>How is this better than Tally or Excel?</h4>
@@ -134,11 +134,11 @@ export default function PricingPage() {
             </div>
             <div className="faq-item">
               <h4>Do you support GST invoicing?</h4>
-              <p>Fully. Vitharn handles GST invoicing on all plans. We currently don&apos;t charge GST on our software.</p>
+              <p>Fully. Vitharn handles GST invoicing on all plans. We are not registered for GST (annual turnover is below the ₹20 lakh threshold under Section 22 of the CGST Act).</p>
             </div>
             <div className="faq-item">
               <h4>Do I need internet to use it?</h4>
-              <p>Yes. All plans require internet for cloud sync and dashboard access.</p>
+              <p>Most plans require internet for cloud sync. But our ₹10,000 offline plan works fully without internet — data syncs when you&apos;re back online.</p>
             </div>
           </div>
         </div>
@@ -148,48 +148,16 @@ export default function PricingPage() {
           <p style={{ fontFamily: "'Space Mono', monospace", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a5438", marginBottom: 12 }}>
             Scan to view pricing online
           </p>
-          <svg width="80" height="80" viewBox="0 0 80 80" style={{ margin: "0 auto", display: "block" }}>
-            {/* Simple QR code pattern */}
-            <rect x="0" y="0" width="80" height="80" fill="white"/>
-            <rect x="4" y="4" width="24" height="24" fill="#1A0A00"/>
-            <rect x="52" y="4" width="24" height="24" fill="#1A0A00"/>
-            <rect x="4" y="52" width="24" height="24" fill="#1A0A00"/>
-            <rect x="8" y="8" width="16" height="16" fill="white"/>
-            <rect x="56" y="8" width="16" height="16" fill="white"/>
-            <rect x="8" y="56" width="16" height="16" fill="white"/>
-            <rect x="12" y="12" width="8" height="8" fill="#C44A10"/>
-            <rect x="60" y="12" width="8" height="8" fill="#C44A10"/>
-            <rect x="12" y="60" width="8" height="8" fill="#C44A10"/>
-            <rect x="32" y="4" width="8" height="8" fill="#1A0A00"/>
-            <rect x="44" y="4" width="8" height="8" fill="#1A0A00"/>
-            <rect x="32" y="16" width="8" height="8" fill="#1A0A00"/>
-            <rect x="44" y="16" width="8" height="8" fill="#1A0A00"/>
-            <rect x="4" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="16" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="32" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="44" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="56" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="68" y="32" width="8" height="8" fill="#1A0A00"/>
-            <rect x="32" y="44" width="8" height="8" fill="#1A0A00"/>
-            <rect x="44" y="44" width="8" height="8" fill="#1A0A00"/>
-            <rect x="56" y="44" width="8" height="8" fill="#1A0A00"/>
-            <rect x="4" y="68" width="8" height="8" fill="#1A0A00"/>
-            <rect x="16" y="68" width="8" height="8" fill="#1A0A00"/>
-            <rect x="32" y="68" width="8" height="8" fill="#1A0A00"/>
-            <rect x="44" y="56" width="8" height="8" fill="#1A0A00"/>
-            <rect x="56" y="56" width="8" height="8" fill="#1A0A00"/>
-            <rect x="68" y="56" width="8" height="8" fill="#1A0A00"/>
-            <rect x="56" y="68" width="8" height="8" fill="#1A0A00"/>
-            <rect x="68" y="68" width="8" height="8" fill="#1A0A00"/>
-          </svg>
+          <div style={{ width: 80, height: 80, background: "#f5f5f5", border: "1px solid #ddd", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
+            <span style={{ fontSize: 10, color: "#999", textAlign: "center" }}>QR<br/>Code</span>
+          </div>
           <p style={{ fontSize: 11, color: "#7a5438", marginTop: 8 }}>vitharn.com/upvc/pricing</p>
         </div>
 
         {/* FOOTER */}
         <div className="footer">
           <div className="footer-left">
-            Ready to start? Email us at <a href="mailto:vitarn.dev@gmail.com" style={{ color: 'var(--rust)' }}>vitarn.dev@gmail.com</a><br/>
-            or visit <a href="https://app.vitharn.com" style={{ color: 'var(--rust)' }}>app.vitharn.com</a>
+            Ready to start? Email us at <a href="mailto:vitarn.dev@gmail.com" style={{ color: 'var(--rust)' }}>vitarn.dev@gmail.com</a> or visit <a href="https://app.vitharn.com" style={{ color: 'var(--rust)' }}>app.vitharn.com</a>. Vitharn ERP Services — Sole Proprietorship, Hyderabad.
           </div>
           <div className="footer-right">
             7-DAY FREE TRIAL AVAILABLE<br/>

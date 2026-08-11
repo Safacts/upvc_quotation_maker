@@ -6,13 +6,13 @@
   --rust:#C44A10;
   --orange:#E06A1E;
   --orange-mid:#F2924D;
-  --tint:#FBDCB8;
+  --tint:#FDDCB8;
   --paper:#FFFBF6;
   --paper-warm:#FFF3E6;
-  --line:rgba(42,19,5,0.12);
-  --line-strong:rgba(42,19,5,0.22);
-  --text-body:var(--text-body);
-  --text-muted:var(--text-muted);
+  --line:rgba(42,19,5,0.10);
+  --line-strong:rgba(42,19,5,0.20);
+  --text-body:#3D1F08;
+  --text-muted:#7A5030;
 }
 
 @media print {

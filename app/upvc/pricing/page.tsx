@@ -127,7 +127,7 @@ export default function WebPricingPage() {
           </div>
           <h1 className="hero-title">
             Simple pricing.<br />
-            <em>No monthly fees.</em>
+            <em>No monthly fees for first 25 clients.</em>
           </h1>
           <p className="hero-subtitle">
             Built strictly for UPVC fabricators. <strong>Pay once, no recurring fees</strong> for the first 25 clients.
@@ -138,8 +138,8 @@ export default function WebPricingPage() {
 
       <div className="urgency-banner">
         <span className="urgency-dot" />
-        <strong>Limited offer:</strong> First 25 fabricators get lifetime pricing.
-        <span className="urgency-count"> 22 spots left.</span>
+        <strong>Limited offer:</strong> First 25 fabricators get one-time lifetime pricing (no monthly fees for the first 25 clients).
+        <span className="urgency-count"> 23 spots left.</span>
       </div>
 
       {/* ── PRICING CARDS ── */}
@@ -160,7 +160,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Email support</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="starterCtaBtn">
-            Start Free Trial →
+            Start 7-Day Free Trial →
           </a>
         </div>
 
@@ -181,7 +181,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Site photos (camera capture)</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="growthCtaBtn">
-            Start Free Trial →
+            Start 7-Day Free Trial →
           </a>
         </div>
 
@@ -200,7 +200,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Custom domain support</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="businessCtaBtn">
-            Start Free Trial →
+            Start 7-Day Free Trial →
           </a>
         </div>
 
@@ -222,7 +222,7 @@ export default function WebPricingPage() {
             <li><CheckCircle /> Excel export</li>
           </ul>
           <a href="/upvc/login" className="pricing-cta" id="enterpriseCtaBtn">
-            Start Free Trial →
+            Start 7-Day Free Trial →
           </a>
         </div>
       </section>
@@ -280,7 +280,7 @@ export default function WebPricingPage() {
         <div className="cost-vitharn">
           <span className="cost-name">Vitharn Growth (one-time)</span>
           <span className="cost-price cost-price--highlight">₹35,000</span>
-          <span className="cost-note">Pays for itself in under 3 months</span>
+          <span className="cost-note">Pays for itself in under 3 months (if you currently pay ₹3,000+/mo for an accountant)</span>
         </div>
       </section>
 
@@ -291,7 +291,7 @@ export default function WebPricingPage() {
           business grows — only the price difference is charged. Your data always transfers seamlessly.
         </p>
       </div>
-      <p style={{ textAlign: "center", marginTop: 12, fontSize: 13, color: "#7a5438" }}>Payment via UPI: 6304562779@nyes</p>
+      <p className="upi-line">Payment via UPI: 6304562779@nyes</p>
 
       {/* ── FAQ ── */}
       <section className="pricing-faq" id="faq">
@@ -339,15 +339,15 @@ export default function WebPricingPage() {
             Move from Starter to Enterprise as your business grows — only the price difference is charged.
             Your data always transfers seamlessly.
           </p>
-          <div className="btn-group" style={{ justifyContent: "center" }}>
+          <div className="btn-group btn-group-center">
             <a href="mailto:vitarn.dev@gmail.com" className="btn-download" id="ctaContactBtn">
-              <ArrowRight size={18} /> Contact Sales
+              <ArrowRight size={18} /> Contact Us
             </a>
             <a href="tel:+916304562779" className="btn-webapp btn-webapp--light" id="ctaCallBtn">
               📞 Call Us
             </a>
             <a href="/upvc/login" className="btn-webapp btn-webapp--light" id="ctaTrialBtn">
-              Start Free Trial
+              Start 7-Day Free Trial
             </a>
           </div>
         </div>
@@ -355,17 +355,21 @@ export default function WebPricingPage() {
 
       <footer>
         <p>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad. Built by Aadi.</p>
-        <p style={{ marginTop: 8, fontSize: 13 }}>
+        <p className="footer-links">
           <a href="/privacy" className="footer-link">Privacy Policy</a>{" "}
           ·{" "}
           <a href="/terms" className="footer-link">Terms of Service</a>{" "}
           ·{" "}
+          <a href="/refund-policy" className="footer-link">Refund Policy</a>{" "}
+          ·{" "}
+          <a href="/sla" className="footer-link">SLA</a>{" "}
+          ·{" "}
           <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
-        <p style={{ marginTop: 8, fontSize: 12, color: "#7a5438" }}>
+        <p className="footer-fine-print">
           Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
         </p>
-        <p style={{ marginTop: 8, fontSize: 12, color: "#7a5438" }}>
+        <p className="footer-fine-print">
           Payment via UPI: 6304562779@nyes
         </p>
       </footer>
