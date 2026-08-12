@@ -172,7 +172,7 @@ export default function Home() {
 
           <div className="btn-group">
             <a href="/upvc/login" className="btn-download" id="heroTrialBtn">
-              <ArrowRight size={18} /> Start Free Trial
+              <ArrowRight size={18} /> Start 7-Day Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp" id="heroPricingBtn">
               See Pricing
@@ -480,7 +480,7 @@ export default function Home() {
           </p>
           <div className="btn-group" style={{ justifyContent: "center" }}>
             <a href="/upvc/login" className="btn-download" id="ctaLoginBtn">
-              <ArrowRight size={18} /> Start Your Free Trial
+              <ArrowRight size={18} /> Start 7-Day Free Trial
             </a>
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="ctaPricingBtn">
               View Pricing
@@ -501,7 +501,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <p>© 2026 Vitharn ERP Services. Built by Aadi in Hyderabad.</p>
+        <p>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.</p>
         <p style={{ marginTop: 8, fontSize: 13 }}>
           <a href="/privacy" className="footer-link">Privacy Policy</a>{" "}
           ·{" "}

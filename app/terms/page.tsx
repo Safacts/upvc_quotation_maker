@@ -105,7 +105,7 @@ export default function TermsPage() {
         </section>
 
         <footer style={styles.footer}>
-          <span>© 2026 Vitharn ERP Services. Built in Hyderabad.</span>
+          <span>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.</span>
           <span>
             <Link href="/privacy" style={styles.footerLink}>Privacy</Link>
             {" · "}

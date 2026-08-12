@@ -27,6 +27,9 @@ export default function RefundPolicyPage() {
           <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Contact</h2>
           <p>For refund requests: <a href="mailto:vitarn.dev@gmail.com" style={{ color: "#C44A10" }}>vitarn.dev@gmail.com</a></p>
         </section>
+        <footer style={{ padding: "18px 48px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: 13, color: "#7A5030" }}>
+          © 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.
+        </footer>
       </div>
     </main>
   );
