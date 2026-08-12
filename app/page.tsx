@@ -189,7 +189,7 @@ export default function ERPHome() {
 
       {/* ── FOOTER ── */}
       <footer className="v-footer">
-        <span>© 2026 Vitharn ERP Services. All rights reserved.</span>
+        <span>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.</span>
         <div className="v-footer-links">
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>

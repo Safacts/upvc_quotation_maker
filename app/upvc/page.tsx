@@ -204,7 +204,7 @@ export default function Home() {
       <section className="trust-bar">
         <div className="trust-stat"><strong>3</strong><span>Active fabricators</span></div>
         <div className="trust-stat"><strong>500+</strong><span>Quotations created</span></div>
-        <div className="trust-stat"><strong>24h</strong><span>Setup guarantee</span></div>
+        <div className="trust-stat"><strong>24h</strong><span>Setup promise</span></div>
       </section>
 
       {/* ── APP PURPOSE & OAUTH DISCLOSURE ── */}
