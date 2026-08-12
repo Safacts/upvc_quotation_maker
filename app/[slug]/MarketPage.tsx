@@ -381,7 +381,7 @@ function Footer({ business }: { business: Business }) {
   return (
     <footer>
       <div className="footer-main"><div><Brand business={business} /><p>Precisely measured uPVC windows and doors for homes, renovations and building projects across Hyderabad.</p></div><div><h4>Explore</h4>{nav.slice(1).map((item) => <a href={`#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>{item}</a>)}</div><div><h4>Contact</h4><span>{business.serviceArea}</span><span>{business.phone || "Phone to be confirmed"}</span><a href="#contact">Request a quote</a></div></div>
-      <div className="footer-bottom"><span>© {new Date().getFullYear()} {business.name}</span><span>Business details, claims and project images require final client confirmation.</span></div>
+      <div className="footer-bottom"><span>© {new Date().getFullYear()} {business.name}</span><span>Business details, claims and project images require final client confirmation.</span><span>Powered by Vitharn ERP Services — Sole Proprietorship, Hyderabad.</span></div>
     </footer>
   );
 }

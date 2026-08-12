@@ -139,7 +139,7 @@ export default function WebPricingPage() {
       <div className="urgency-banner">
         <span className="urgency-dot" />
         <strong>Limited offer:</strong> First 25 fabricators get one-time lifetime pricing (no monthly fees for the first 25 clients).
-        <span className="urgency-count"> 23 spots left.</span>
+        <span className="urgency-count"> 22 spots left.</span>
       </div>
 
       {/* ── PRICING CARDS ── */}
