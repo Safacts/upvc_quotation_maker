@@ -49,7 +49,7 @@ export default function PricingPage() {
         <div className="tier-section">
           <div className="tier-grid-top">
             <div className="tier-card featured">
-              <div className="badge">Sweet Spot</div>
+              <div className="badge">Most Popular</div>
               <div className="tier-label">Starter</div>
               <div className="tier-price">₹25,000<sub>&nbsp;one-time</sub></div>
               <div className="tier-desc">Small shops (1–5 people) who want digital quotations with cloud backup.</div>

@@ -27,13 +27,13 @@ export default function SlaPage() {
           <p>We perform daily automated backups of all customer data, including quotations, product catalogues, and account settings. Backups are retained for 30 days and stored in geographically redundant storage. In the event of data loss, we will restore from the most recent backup within 24 hours.</p>
           
           <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Downtime Credits</h2>
-          <p>If we fail to meet our 99.9% uptime commitment in any calendar month, affected customers may request a service credit as follows:</p>
+          <p>If we fail to meet our 99.9% uptime commitment in any calendar month, affected customers may request a service credit. For customers on monthly subscription, the credit is calculated against that month&apos;s subscription fee. For customers on the one-time payment plan (first 25 clients), the credit is provided as free months of extended service beyond the original license period:</p>
           <ul style={{ paddingLeft: 22, color: "#3D1F08" }}>
-            <li><strong>99.0% – 99.9% uptime:</strong> 5% credit on that month&apos;s subscription fee.</li>
-            <li><strong>95.0% – 98.9% uptime:</strong> 15% credit on that month&apos;s subscription fee.</li>
-            <li><strong>Below 95.0% uptime:</strong> 30% credit on that month&apos;s subscription fee.</li>
+            <li><strong>99.0% – 99.9% uptime:</strong> 5% credit (or 2 days extended service for one-time license holders).</li>
+            <li><strong>95.0% – 98.9% uptime:</strong> 15% credit (or 5 days extended service for one-time license holders).</li>
+            <li><strong>Below 95.0% uptime:</strong> 30% credit (or 10 days extended service for one-time license holders).</li>
           </ul>
-          <p>Credits must be requested within 15 days of the end of the affected month and will be applied to the next billing cycle.</p>
+          <p>Credits must be requested within 15 days of the end of the affected month. For one-time license holders, extended service days are added to the end of your license period.</p>
           
           <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Exclusions</h2>
           <p>Uptime credits do not apply to downtime caused by: (a) scheduled maintenance with prior notice; (b) force majeure events; (c) customer-side internet or hardware failures; or (d) customer misuse of the platform.</p>
@@ -41,6 +41,9 @@ export default function SlaPage() {
           <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Contact</h2>
           <p>For SLA claims or support requests: <a href="mailto:vitarn.dev@gmail.com" style={{ color: "#C44A10" }}>vitarn.dev@gmail.com</a></p>
         </section>
+        <footer style={{ padding: "18px 48px", borderTop: "1px solid #e2e8f0", textAlign: "center", fontSize: 13, color: "#7A5030" }}>
+          © 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.
+        </footer>
       </div>
     </main>
   );
