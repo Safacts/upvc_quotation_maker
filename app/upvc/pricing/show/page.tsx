@@ -14,7 +14,7 @@ export default function PricingPage() {
           </div>
           <div className="header-text">
             <div className="header-meta">Pricing Plan — 2026 · Valid for first 25 clients</div>
-            <h1 className="header-title">Simple pricing.<br/><em>No monthly fees.</em></h1>
+            <h1 className="header-title">Simple pricing.<br/><em>No monthly fees for first 25 clients.</em></h1>
             <div className="header-subtitle">
               Vitharn ERP Services &nbsp;·&nbsp; <a href="https://app.vitharn.com">app.vitharn.com</a> &nbsp;·&nbsp; vitarn.dev@gmail.com
             </div>

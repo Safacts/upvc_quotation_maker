@@ -61,6 +61,9 @@ export default function LogoutPage() {
           <li><CheckCircle size={15} /> Data secured</li>
           <li><CheckCircle size={15} /> Ready to go again</li>
         </ul>
+        <p style={{ marginTop: 32, fontSize: 12, color: "#7A5030", textAlign: "center" }}>
+          © 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.
+        </p>
       </div>
     </div>
   );
