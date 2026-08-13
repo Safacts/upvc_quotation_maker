@@ -79,6 +79,22 @@ export async function generateMetadata({
       title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
       description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
       icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
+      openGraph: {
+        title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName,
+        description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
+        url: `https://app.vitharn.com/${slug}`,
+        siteName: cfg.companyName || cfg.appName || "KPR UPVC",
+        type: "website",
+        locale: "en_IN",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName,
+        description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
+      },
+      alternates: {
+        canonical: `https://app.vitharn.com/${slug}`,
+      },
     };
   }
   const cfg = parseClientConfig(client.config || {}, client.id);
@@ -87,5 +103,22 @@ export async function generateMetadata({
     description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
     keywords: cfg.seoKeywords || "",
     icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
+    openGraph: {
+      title: cfg.seoTitle || cfg.companyName || cfg.appName,
+      description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
+      url: `https://app.vitharn.com/${slug}`,
+      siteName: cfg.companyName || cfg.appName,
+      type: "website",
+      locale: "en_IN",
+      images: cfg.logoUrl ? [{ url: cfg.logoUrl, width: 200, height: 200, alt: cfg.companyName || cfg.appName }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: cfg.seoTitle || cfg.companyName || cfg.appName,
+      description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
+    },
+    alternates: {
+      canonical: `https://app.vitharn.com/${slug}`,
+    },
   };
 }

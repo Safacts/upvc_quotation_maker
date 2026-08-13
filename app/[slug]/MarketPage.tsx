@@ -407,8 +407,39 @@ export default function MarketPage({ client, slug }: { client: any; slug: string
     workingHours: "",
   };
   const products = buildProducts(cfg.landingServices);
+
+  const localBusinessSchema = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": business.name,
+    "description": business.positioning,
+    "url": `https://app.vitharn.com/${slug}`,
+    "telephone": business.phone || "",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": cfg.companyAddress || "",
+      "addressLocality": "Hyderabad",
+      "addressRegion": "Telangana",
+      "addressCountry": "IN"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": 17.2444,
+      "longitude": 78.9164
+    },
+    "areaServed": business.serviceArea,
+    "serviceType": cfg.landingServices?.length > 0 ? cfg.landingServices : ["UPVC Windows", "UPVC Doors", "Structural Glazing", "Glass Facades"],
+    "priceRange": "$$",
+    "image": cfg.logoUrl || "",
+    "sameAs": []
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+      />
       <Header business={business} slug={slug} clientId={client.id} />
       <main>
         <Hero business={business} heroImage={cfg.landingHeroImage} />

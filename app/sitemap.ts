@@ -29,8 +29,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((client: any) => ({
         url: `${baseUrl}/${slugify(client.id)}`,
         lastModified: new Date().toISOString(),
-        changeFrequency: 'daily' as const,
-        priority: 0.6,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
       }));
   } catch (error) {
     console.error("Failed to generate sitemap for clients:", error);
