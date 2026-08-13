@@ -48,6 +48,20 @@ class ClientConfig {
   // Custom Download Links
   final String appDownloadUrl;
 
+  /// Latest APK version name published for this client (e.g. "1.0.1").
+  /// Written by the APK CI after a successful build; empty when no build yet.
+  final String appVersionName;
+
+  /// Latest APK version code (integer) published for this client.
+  /// Written by the APK CI after a successful build; 0 when no build yet.
+  final int appVersionCode;
+
+  /// Release notes for the latest APK (shown in the update dialog).
+  final String appReleaseNotes;
+
+  /// When true the update dialog is non-dismissable (mandatory update).
+  final bool forceUpdate;
+
   // Supplier company names (kprupvc only)
   final List<String> supplierCompanies;
 
@@ -106,6 +120,10 @@ class ClientConfig {
     this.measuredPresets = const [],
     this.unmeasuredPresets = const [],
     this.appDownloadUrl = '',
+    this.appVersionName = '',
+    this.appVersionCode = 0,
+    this.appReleaseNotes = '',
+    this.forceUpdate = false,
     this.supplierCompanies = const [],
     this.upiId = '',
     this.upiPayeeName = '',
@@ -164,6 +182,10 @@ class ClientConfig {
     'measuredPresets': measuredPresets,
     'unmeasuredPresets': unmeasuredPresets,
     'appDownloadUrl': appDownloadUrl,
+    'appVersionName': appVersionName,
+    'appVersionCode': appVersionCode,
+    'appReleaseNotes': appReleaseNotes,
+    'forceUpdate': forceUpdate,
     'supplierCompanies': supplierCompanies,
     'upiId': upiId,
     'upiPayeeName': upiPayeeName,
@@ -213,6 +235,12 @@ class ClientConfig {
     measuredPresets: (json['measuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
+    // Version fields for the in-app APK updater. Tolerate camelCase config
+    // writes and snake_case raw DB rows, like costMarginPercent above.
+    appVersionName: (json['appVersionName'] ?? json['app_version_name']) as String? ?? '',
+    appVersionCode: (json['appVersionCode'] as num?)?.toInt() ?? (json['app_version_code'] as num?)?.toInt() ?? 0,
+    appReleaseNotes: (json['appReleaseNotes'] ?? json['app_release_notes']) as String? ?? '',
+    forceUpdate: json['forceUpdate'] as bool? ?? json['force_update'] as bool? ?? false,
     supplierCompanies: (json['supplierCompanies'] as List?)?.cast<String>() ?? const [],
     // Accept both camelCase (app/console config) and snake_case (raw DB row),
     // matching the tolerance already applied to costMarginPercent above.

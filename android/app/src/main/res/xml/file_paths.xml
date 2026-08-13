@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider paths for the in-app APK updater.
+     The updater downloads to getExternalStorageDirectory() which resolves to
+     /sdcard/Android/data/<package>/files/ on modern Android, hence both the
+     external-files-path (app-private external) and a generic external-path
+     fallback for older devices / edge cases. -->
+<paths>
+    <external-files-path name="apk_files" path="." />
+    <external-path name="apks" path="." />
+</paths>

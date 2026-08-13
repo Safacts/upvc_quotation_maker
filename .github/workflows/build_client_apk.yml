@@ -11,6 +11,16 @@ on:
         description: 'Custom App Title (e.g. Venkateshwara UPVC Quote)'
         required: true
         type: string
+      version_name:
+        description: 'Version Name for this build (e.g. 1.0.1). Defaults to 1.0.0.'
+        required: false
+        default: '1.0.0'
+        type: string
+      version_code:
+        description: 'Version Code (integer) for this build. Defaults to 1.'
+        required: false
+        default: '1'
+        type: string
   repository_dispatch:
     types: [build-client-apk]
 
@@ -40,8 +50,12 @@ jobs:
         run: |
           CLIENT_ID="${{ github.event.inputs.client_id || github.event.client_payload.client_id }}"
           APP_NAME="${{ github.event.inputs.app_name || github.event.client_payload.app_name }}"
+          VERSION_NAME="${{ github.event.inputs.version_name || github.event.client_payload.version_name }}"
+          VERSION_CODE="${{ github.event.inputs.version_code || github.event.client_payload.version_code }}"
           echo "client_id=${CLIENT_ID}" >> $GITHUB_OUTPUT
           echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
+          echo "version_name=${VERSION_NAME:-1.0.0}" >> $GITHUB_OUTPUT
+          echo "version_code=${VERSION_CODE:-1}" >> $GITHUB_OUTPUT
 
       - name: Patch Android App Label
         run: |
@@ -77,7 +91,13 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Build Android Release APK
-        run: flutter build apk --release
+        # --target-platform android-arm64: build arm64-only APK.
+        # The full 3-ABI APK is ~91MB which exceeds Supabase's 50MB object limit
+        # (Free plan) and fails the storage upload with HTTP 413.
+        # --build-name/--build-number: bake the version supplied by the trigger
+        # (portal dispatches version_name/version_code; defaults 1.0.0/1) into
+        # the APK so the in-app updater can compare against the installed one.
+        run: flutter build apk --release --target-platform android-arm64 --build-name="${{ steps.vars.outputs.version_name }}" --build-number="${{ steps.vars.outputs.version_code }}"
 
       - name: Upload APK to Supabase Storage
         env:
@@ -90,11 +110,19 @@ jobs:
           fi
           SLUG=$(echo "${{ steps.vars.outputs.client_id }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
           echo "slug=${SLUG}" >> $GITHUB_ENV
-          curl -sS -X PUT \
+          HTTP_CODE=$(curl -sS -f -X PUT \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "x-upsert: true" \
             --data-binary "@build/app/outputs/flutter-apk/app-release.apk" \
-            "${SUPABASE_URL}/storage/v1/object/app-releases/${SLUG}/upvc-quote.apk"
+            -w "%{http_code}" -o /tmp/upload_response.txt \
+            "${SUPABASE_URL}/storage/v1/object/app-releases/${SLUG}/upvc-quote.apk")
+          echo "Upload HTTP status: ${HTTP_CODE}"
+          cat /tmp/upload_response.txt
+          echo
+          if [ "${HTTP_CODE}" -ne 200 ]; then
+            echo "::error::APK upload failed (HTTP ${HTTP_CODE}) — aborting."
+            exit 1
+          fi
           echo "Uploaded app-releases/${SLUG}/upvc-quote.apk"
 
       - name: Publish Download URL to Client Config
@@ -102,6 +130,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           CLIENT_ID: ${{ steps.vars.outputs.client_id }}
+          VERSION_NAME: ${{ steps.vars.outputs.version_name }}
+          VERSION_CODE: ${{ steps.vars.outputs.version_code }}
         run: |
           if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
             echo "Supabase secrets not configured — skipping config publish."
@@ -113,6 +143,8 @@ jobs:
             const url = process.env.SUPABASE_URL;
             const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
             const dl = `${url}/storage/v1/object/public/app-releases/${slug}/upvc-quote.apk`;
+            const versionName = process.env.VERSION_NAME || "1.0.0";
+            const versionCode = Number(process.env.VERSION_CODE) || 1;
             const headers = { apikey: key, Authorization: `Bearer ${key}` };
             (async () => {
               const r = await fetch(`${url}/rest/v1/clients?id=eq.${encodeURIComponent(cid)}&select=config`, { headers });
@@ -121,6 +153,10 @@ jobs:
               if (!rows || !rows.length) throw new Error("client not found: " + cid);
               const config = { ...(rows[0].config || {}) };
               config.appDownloadUrl = dl;
+              config.appVersionName = versionName;
+              config.appVersionCode = versionCode;
+              config.lastBuildVersionName = versionName;
+              config.lastBuildVersionCode = versionCode;
               config.lastBuildCompletedAt = new Date().toISOString();
               const p = await fetch(`${url}/rest/v1/clients?id=eq.${encodeURIComponent(cid)}`, {
                 method: "PATCH",
@@ -129,6 +165,7 @@ jobs:
               });
               if (!p.ok) throw new Error("PATCH clients failed: " + await p.text());
               console.log("Published appDownloadUrl = " + dl);
+              console.log("Published appVersionName = " + versionName + ", appVersionCode = " + versionCode);
             })().catch(e => { console.error(e); process.exit(1); });
           '
 

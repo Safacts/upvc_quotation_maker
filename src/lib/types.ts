@@ -30,6 +30,12 @@ export interface ClientConfig {
   trialExpiresAt?: string | null;
   lastBuildTriggeredAt?: string;
   lastBuildCompletedAt?: string;
+  appVersionName?: string;
+  appVersionCode?: number;
+  appReleaseNotes?: string;
+  forceUpdate?: boolean;
+  lastBuildVersionName?: string;
+  lastBuildVersionCode?: number;
   isActive: boolean;
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -101,6 +107,12 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     trialExpiresAt: cfg.trialExpiresAt ? String(cfg.trialExpiresAt) : null,
     lastBuildTriggeredAt: cfg.lastBuildTriggeredAt ? String(cfg.lastBuildTriggeredAt) : undefined,
     lastBuildCompletedAt: cfg.lastBuildCompletedAt ? String(cfg.lastBuildCompletedAt) : undefined,
+    appVersionName: cfg.appVersionName ? String(cfg.appVersionName) : undefined,
+    appVersionCode: typeof cfg.appVersionCode === "number" ? cfg.appVersionCode : (cfg.appVersionCode != null ? Number(cfg.appVersionCode) : undefined),
+    appReleaseNotes: cfg.appReleaseNotes ? String(cfg.appReleaseNotes) : undefined,
+    forceUpdate: cfg.forceUpdate === true,
+    lastBuildVersionName: cfg.lastBuildVersionName ? String(cfg.lastBuildVersionName) : undefined,
+    lastBuildVersionCode: typeof cfg.lastBuildVersionCode === "number" ? cfg.lastBuildVersionCode : (cfg.lastBuildVersionCode != null ? Number(cfg.lastBuildVersionCode) : undefined),
     isActive: cfg.isActive !== false,
     supabaseUrl: String(cfg.supabaseUrl || "https://gumpmnbjdtzajhysnnaz.supabase.co"),
     supabaseAnonKey: String(cfg.supabaseAnonKey || ""),

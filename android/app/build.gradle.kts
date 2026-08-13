@@ -68,4 +68,8 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // androidx.core.content.FileProvider (used by the in-app APK updater). The
+    // Flutter embedding usually brings androidx.core transitively, but declaring
+    // it explicitly guarantees FileProvider resolves on every toolchain.
+    implementation("androidx.core:core-ktx:1.13.1")
 }
