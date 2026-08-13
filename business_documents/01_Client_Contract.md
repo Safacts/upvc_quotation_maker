@@ -43,7 +43,7 @@ Vitharn ERP Services offers **five (5) distinct pricing tiers**. The Client's se
 | **Next+** | ₹45,000 | Businesses wanting customer engagement via WhatsApp |
 | **Final** | ₹55,000 | Full-service businesses wanting complete automation |
 
-**Detailed feature breakdown per tier is set out in §2.14 (Tier Service Matrix).**
+**Detailed feature breakdown per tier is set out in §2.15 (Tier Service Matrix).**
 
 - Invoices are due within **7 days** of the invoice date. Late payments will incur a **1.5%** monthly penalty fee.
 - **No GST Applicable:** Vitharn ERP Services is not GST-registered as turnover is below the statutory threshold (Section 22, CGST Act). No GST will be charged on invoices.
@@ -85,7 +85,21 @@ Vitharn ERP Services maintains regular backups of Client data. **However, the Cl
 ### 2.13 Dispute Resolution & Governing Law
 Any disputes arising under this agreement will be resolved through arbitration in **Hyderabad, Telangana**, before escalating to local courts. This Agreement is governed strictly by the laws of **Telangana, India**.
 
-### 2.14 Tier Service Matrix
+### 2.14 Data Portability and Ownership
+
+**2.14.1 Data Ownership.** All business data entered by Client into the Service shall remain the exclusive property of Client. Vitharn claims no ownership, lien, or security interest in Client's data.
+
+**2.14.2 Data Export.** Client may request a complete export of all data at any time during or after the Term. Vitharn shall provide the export within 24 hours in CSV, XLSX, PDF, and Tally XML formats at no additional charge.
+
+**2.14.3 Data Deletion.** Upon termination, Vitharn shall delete all Client data within 30 days, after providing Client a final complete export. Deletion is verified by written confirmation.
+
+**2.14.4 Backup Guarantee.** Vitharn maintains daily automated backups. Client may request a backup restore at any time. Backups are retained for 30 days minimum.
+
+**2.14.5 Source Code Escrow (Enterprise Only).** For clients on the Final tier (₹55,000), source code is deposited with a mutually agreed escrow agent. If Vitharn ceases operations for 90+ consecutive days, the escrow agent releases source code to Client.
+
+**2.14.6 No Lock-In.** Client may terminate this agreement at any time with 30 days notice. No termination fees. Full data export provided before deletion.
+
+### 2.15 Tier Service Matrix
 The following matrix defines the services included in each pricing tier. The Client's selected tier is recorded in the invoice. All tiers include the Client's company branding (logo, name, colours) on all deliverables.
 
 | Feature | Low | Base | Next | Next+ | Final |

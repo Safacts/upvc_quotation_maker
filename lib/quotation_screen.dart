@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -9,9 +8,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
@@ -25,8 +21,8 @@ import 'pdf_confirmation_screen.dart';
 import 'quote_share.dart';
 import 'umami_tracker.dart';
 import 'quotation_export.dart' deferred as exportLib;
-import 'package:permission_handler/permission_handler.dart';
 import 'services/catalog_service.dart';
+import 'widgets/site_photo_picker.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -57,9 +53,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
   List<Map<String, dynamic>> _customers = [];
   bool _isLoadingCustomers = false;
 
-  // Site Photos
+  // Site Photos (state kept for parent-level reference in PDF generation)
   List<QuotationPhoto> _photos = [];
-  bool _isUploading = false;
 
   final _nameFocus = FocusNode();
   final _referenceFocus = FocusNode();
@@ -113,9 +108,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
     if (widget.existingData != null) {
       data = widget.existingData!;
       _loadItems();
-      if (data.id != null) {
-        _loadPhotos();
-      }
     } else {
       data = QuotationData();
       _initQuoteNumber();
@@ -225,285 +217,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     }
   }
 
-  // ===== SITE PHOTOS =====
-
-  Future<void> _loadPhotos() async {
-    if (data.id == null) return;
-    try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      final response = await SupabaseConfig.client
-          .from('quotation_photos')
-          .select()
-          .eq('quotation_id', data.id!)
-          .eq('client_id', clientId)
-          .order('created_at', ascending: false);
-      
-      if (mounted) {
-        setState(() {
-          _photos = (response as List).map((e) => QuotationPhoto.fromMap(e)).toList();
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to load photos: $e');
-    }
-  }
-
-  Future<PermissionStatus> _requestPhotoPermission(ImageSource source) async {
-    if (source == ImageSource.camera) {
-      final status = await Permission.camera.request();
-      if (status.isGranted) return status;
-      if (status.isPermanentlyDenied) {
-        await openAppSettings();
-      }
-      return status;
-    } else {
-      if (Platform.isAndroid) {
-        // Android 13+ uses READ_MEDIA_IMAGES
-        final status = await Permission.photos.request();
-        if (status.isGranted) return status;
-        if (status.isPermanentlyDenied) {
-          await openAppSettings();
-        }
-        return status;
-      } else {
-        // iOS
-        final status = await Permission.photos.request();
-        if (status.isGranted) return status;
-        if (status.isPermanentlyDenied) {
-          await openAppSettings();
-        }
-        return status;
-      }
-    }
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    final permission = await _requestPhotoPermission(source);
-    if (!permission.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Permission denied for ${source == ImageSource.camera ? 'camera' : 'gallery'}')),
-        );
-      }
-      return;
-    }
-
-    final picker = ImagePicker();
-    final XFile? pickedFile = await picker.pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 75,
-      preferredCameraDevice: CameraDevice.rear,
-    );
-
-    if (pickedFile == null) return;
-
-    final bytes = await pickedFile.readAsBytes();
-    if (bytes.length > 200 * 1024) {
-      // If still too large, compress further
-      final compressedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 60,
-      );
-      if (compressedFile != null) {
-        final compressedBytes = await compressedFile.readAsBytes();
-        if (compressedBytes.length <= 200 * 1024) {
-          await _uploadPhoto(compressedBytes);
-        } else {
-          await _uploadPhoto(bytes); // Upload anyway, let server handle it
-        }
-      } else {
-        await _uploadPhoto(bytes);
-      }
-    } else {
-      await _uploadPhoto(bytes);
-    }
-  }
-
-  Future<void> _uploadPhoto(Uint8List imageBytes) async {
-    if (data.id == null) {
-      // Auto-save first to get an ID
-      await _autoSaveToDatabase();
-      if (data.id == null) return;
-    }
-
-    setState(() => _isUploading = true);
-
-    try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      final uuid = const Uuid().v4();
-      final storagePath = '$clientId/${data.id}/$uuid.jpg';
-      
-      // Upload to Supabase Storage
-      await SupabaseConfig.client.storage
-          .from('site-photos')
-          .uploadBinary(storagePath, imageBytes, fileOptions: const FileOptions(
-            contentType: 'image/jpeg',
-            upsert: false,
-          ));
-
-      // Get public URL
-      final publicUrl = SupabaseConfig.client.storage
-          .from('site-photos')
-          .getPublicUrl(storagePath);
-
-      // Get image dimensions
-      int? width;
-      int? height;
-      try {
-        final codec = await instantiateImageCodec(imageBytes);
-        final frame = await codec.getNextFrame();
-        width = frame.image.width;
-        height = frame.image.height;
-      } catch (_) {}
-
-      // Insert metadata row
-      final photo = QuotationPhoto(
-        quotationId: data.id!,
-        storagePath: storagePath,
-        publicUrl: publicUrl,
-        caption: '',
-        width: width,
-        height: height,
-        bytes: imageBytes.length,
-      );
-
-      await SupabaseConfig.client
-          .from('quotation_photos')
-          .insert(photo.toMap(clientId: clientId));
-
-      // Refresh photo list
-      await _loadPhotos();
-
-      if (mounted) {
-        toastification.show(
-          context: context,
-          title: const Text('Photo uploaded'),
-          type: ToastificationType.success,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 2),
-          alignment: Alignment.bottomCenter,
-        );
-      }
-    } catch (e) {
-      debugPrint('Photo upload error: $e');
-      if (mounted) {
-        toastification.show(
-          context: context,
-          title: const Text('Upload failed'),
-          description: Text(e.toString()),
-          type: ToastificationType.error,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 5),
-          alignment: Alignment.bottomCenter,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  Future<void> _deletePhoto(QuotationPhoto photo) async {
-    try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-
-      // Delete from storage
-      await SupabaseConfig.client.storage
-          .from('site-photos')
-          .remove([photo.storagePath]);
-
-      // Delete from database
-      await SupabaseConfig.client
-          .from('quotation_photos')
-          .delete()
-          .eq('id', photo.id!)
-          .eq('client_id', clientId);
-
-      // Refresh photo list
-      await _loadPhotos();
-
-      if (mounted) {
-        toastification.show(
-          context: context,
-          title: const Text('Photo deleted'),
-          type: ToastificationType.success,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 2),
-          alignment: Alignment.bottomCenter,
-        );
-      }
-    } catch (e) {
-      debugPrint('Photo delete error: $e');
-      if (mounted) {
-        toastification.show(
-          context: context,
-          title: const Text('Delete failed'),
-          description: Text(e.toString()),
-          type: ToastificationType.error,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 5),
-          alignment: Alignment.bottomCenter,
-        );
-      }
-    }
-  }
-
-  void _showPhotoSourceDialog() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Take Photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.gallery);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _confirmDeletePhoto(QuotationPhoto photo) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Photo'),
-        content: const Text('Are you sure you want to delete this photo? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deletePhoto(photo);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // ===== SITE PHOTOS (delegated to SitePhotoPicker widget) =====
 
   @override
   void dispose() {
@@ -1379,128 +1093,19 @@ if (_usePresets) ...[
               child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Unmeasured Item'), onPressed: () { setState(() => data.unmeasuredItems.add(UnmeasuredItem())); _onDataChanged(); }),
             ).animate().fade(delay: 600.ms),
 
-            // ===== SITE PHOTOS SECTION =====
+            // ===== SITE PHOTOS SECTION (delegated to SitePhotoPicker) =====
             _buildSectionTitle('Site Photos').animate().fade(delay: 650.ms),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_photos.isNotEmpty) ...[
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 1,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: _photos.length,
-                        itemBuilder: (context, index) {
-                          final photo = _photos[index];
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              AspectRatio(
-                                aspectRatio: photo.aspectRatio,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    photo.publicUrl,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Center(
-                                        child: CircularProgressIndicator(
-                                          value: loadingProgress.expectedTotalBytes != null
-                                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                              : null,
-                                          strokeWidth: 2,
-                                        ),
-                                      );
-                                    },
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.broken_image, color: Colors.grey),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              // Caption overlay
-                              if (photo.caption.isNotEmpty)
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      borderRadius: const BorderRadius.only(
-                                        bottomLeft: Radius.circular(8),
-                                        bottomRight: Radius.circular(8),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      photo.caption,
-                                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              // Delete button
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: GestureDetector(
-                                  onTap: () => _confirmDeletePhoto(photo),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(Icons.close, color: Colors.white, size: 16),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    // Add Photo Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: _isUploading
-                            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.add_a_photo),
-                        label: Text(_isUploading ? 'Uploading...' : 'Add Site Photo'),
-                        onPressed: _isUploading ? null : _showPhotoSourceDialog,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                        ),
-                      ),
-                    ),
-                    if (_photos.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_photos.length} photo(s) attached',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ).animate().fade(delay: 650.ms).slideX(begin: 0.1),
+            SitePhotoPicker(
+              quotationId: data.id,
+              initialPhotos: _photos,
+              onPhotosChanged: (photos) {
+                setState(() => _photos = photos);
+              },
+              onRequestSave: () async {
+                await _autoSaveToDatabase();
+                return data.id;
+              },
+            ),
 
             _buildSectionTitle('Final Computations').animate().fade(delay: 700.ms),
             Card(

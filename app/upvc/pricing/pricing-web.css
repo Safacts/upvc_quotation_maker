@@ -282,6 +282,63 @@
   .cost-row { flex-direction: column; gap: 4px; }
 }
 
+/* ── COST COMPARE TABLE (Why One-Time Beats Monthly) ── */
+.cost-compare-table th:last-child,
+.cost-compare-table td:last-child {
+  font-weight: 700;
+}
+
+.cost-compare-row--vitharn {
+  background: rgba(22, 163, 74, 0.04);
+}
+
+.cost-compare-row--vitharn td {
+  color: #16a34a;
+}
+
+.cost-compare-row--vitharn td:first-child {
+  color: var(--ink);
+}
+
+/* Callout box */
+.cost-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 28px;
+  padding: 20px 24px;
+  background: #FFF3E6;
+  border: 1px solid rgba(238, 88, 12, 0.18);
+  border-left: 4px solid var(--rust);
+  border-radius: 10px;
+  text-align: left;
+}
+
+.cost-callout-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cost-callout p {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.cost-callout strong {
+  color: var(--rust);
+}
+
+/* Disclaimer */
+.cost-compare-disclaimer {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* ── COMPARISON STRIP ── */
 .pricing-note {
   text-align: center;

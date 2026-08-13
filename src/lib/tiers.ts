@@ -60,7 +60,7 @@ export type Tier = (typeof TIERS)[number];
 
 /** Price in rupees, for the upgrade prompt the UI renders. */
 export const TIER_PRICING: Record<Tier, number> = {
-  low: 10000,
+  low: 15000,
   base: 25000,
   next: 35000,
   nextplus: 45000,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, CheckCircle, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle, Shield, Zap } from "lucide-react";
 import "../upvc-web.css";
 import "./pricing-web.css";
 
@@ -284,6 +284,209 @@ export default function WebPricingPage() {
         </div>
       </section>
 
+      {/* ── WHY ONE-TIME BEATS MONTHLY ── */}
+      <section className="comparison-section" style={{ maxWidth: 900 }}>
+        <h2 className="section-title">Why One-Time Beats Monthly</h2>
+        <p className="section-subtitle">
+          The real cost of subscription billing software over 3 years
+        </p>
+        <div className="comparison-table-wrap" style={{ marginTop: 32 }}>
+          <table className="comparison-table cost-compare-table">
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Year 1</th>
+                <th>Year 2</th>
+                <th>Year 3</th>
+                <th>3-Year Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Vyapar Silver</td>
+                <td>₹4,719</td>
+                <td>₹4,719</td>
+                <td>₹4,719</td>
+                <td>₹14,157</td>
+              </tr>
+              <tr>
+                <td>Vyapar Diamond</td>
+                <td>₹10,619</td>
+                <td>₹10,619</td>
+                <td>₹10,619</td>
+                <td>₹31,857</td>
+              </tr>
+              <tr>
+                <td>myBillBook Essential</td>
+                <td>₹3,490</td>
+                <td>₹3,490</td>
+                <td>₹3,490</td>
+                <td>₹10,470</td>
+              </tr>
+              <tr>
+                <td>myBillBook Enterprise</td>
+                <td>₹8,988</td>
+                <td>₹8,988</td>
+                <td>₹8,988</td>
+                <td>₹26,964</td>
+              </tr>
+              <tr className="cost-compare-row--vitharn">
+                <td><strong>Vitharn Base</strong></td>
+                <td><strong>₹25,000</strong></td>
+                <td>₹0</td>
+                <td>₹0</td>
+                <td><strong>₹25,000</strong></td>
+              </tr>
+              <tr className="cost-compare-row--vitharn">
+                <td><strong>Vitharn Final</strong></td>
+                <td><strong>₹55,000</strong></td>
+                <td>₹0</td>
+                <td>₹0</td>
+                <td><strong>₹55,000</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="cost-callout">
+          <span className="cost-callout-icon">💡</span>
+          <p>
+            <strong>₹25,000 one-time = ₹694/month over 3 years.</strong>{" "}
+            That&apos;s CHEAPER than Vyapar Silver + Tally combined.
+          </p>
+        </div>
+        <p className="cost-compare-disclaimer">
+          All prices include GST. Vyapar/myBillBook prices based on 2026 published rates.
+        </p>
+      </section>
+
+      {/* ── YOUR DATA IS SAFE ── */}
+      <section className="comparison-section" style={{ maxWidth: 720 }}>
+        <div style={{
+          background: "linear-gradient(160deg, #f0fdf4 0%, #fff 60%)",
+          border: "2px solid #16a34a",
+          borderRadius: 20,
+          padding: "48px 40px",
+          textAlign: "center",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          {/* Shield icon */}
+          <div style={{
+            width: 64,
+            height: 64,
+            background: "rgba(22, 163, 74, 0.1)",
+            borderRadius: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+          }}>
+            <Shield size={32} color="#16a34a" strokeWidth={2.2} />
+          </div>
+
+          <h2 style={{
+            fontSize: "clamp(1.6rem, 4vw, 2.2rem)",
+            fontWeight: 900,
+            color: "#1A0A00",
+            letterSpacing: "-0.03em",
+            marginBottom: 12,
+          }}>
+            Your Data, Your Ownership
+          </h2>
+          <p style={{
+            fontSize: 15,
+            color: "#7A5030",
+            maxWidth: 480,
+            margin: "0 auto 36px",
+            lineHeight: 1.65,
+          }}>
+            We built Vitharn on one belief: your business data belongs to you — not us, never us.
+          </p>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 24,
+            maxWidth: 600,
+            margin: "0 auto 36px",
+          }}>
+            {/* Point 1 */}
+            <div style={{
+              background: "white",
+              border: "1px solid rgba(22, 163, 74, 0.15)",
+              borderRadius: 14,
+              padding: "24px 20px",
+              textAlign: "left",
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 12 }}>📦</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1A0A00", marginBottom: 6 }}>
+                Export Everything
+              </div>
+              <div style={{ fontSize: 13, color: "#7A5030", lineHeight: 1.6 }}>
+                Export ALL your data anytime — CSV, Excel, PDF, Tally XML, ZIP. No restrictions.
+              </div>
+            </div>
+
+            {/* Point 2 */}
+            <div style={{
+              background: "white",
+              border: "1px solid rgba(22, 163, 74, 0.15)",
+              borderRadius: 14,
+              padding: "24px 20px",
+              textAlign: "left",
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 12 }}>🔓</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1A0A00", marginBottom: 6 }}>
+                Zero Lock-In
+              </div>
+              <div style={{ fontSize: 13, color: "#7A5030", lineHeight: 1.6 }}>
+                We never lock you in — cancel anytime, take everything. No exit fees, no delays.
+              </div>
+            </div>
+
+            {/* Point 3 */}
+            <div style={{
+              background: "white",
+              border: "1px solid rgba(22, 163, 74, 0.15)",
+              borderRadius: 14,
+              padding: "24px 20px",
+              textAlign: "left",
+            }}>
+              <div style={{ fontSize: 24, marginBottom: 12 }}>🛡️</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#1A0A00", marginBottom: 6 }}>
+                Source Code Escrow
+              </div>
+              <div style={{ fontSize: 13, color: "#7A5030", lineHeight: 1.6 }}>
+                Even if we shut down, you keep running. Enterprise clients get full source code escrow.
+              </div>
+            </div>
+          </div>
+
+          <a
+            href="/upvc/pricing/sample-export.csv"
+            download
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "14px 28px",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "white",
+              background: "#16a34a",
+              borderRadius: 50,
+              textDecoration: "none",
+              boxShadow: "0 6px 20px rgba(22, 163, 74, 0.35)",
+              transition: "background 0.2s, transform 0.2s",
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = "#15803d"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = "#16a34a"; e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            📥 Download Sample Export
+          </a>
+        </div>
+      </section>
+
             {/* ── HOW WE COMPARE ── */}
       <section className="comparison-section" style={{ maxWidth: 900 }}>
         <h2 className="section-title">How Vitharn Compares</h2>
@@ -410,6 +613,18 @@ export default function WebPricingPage() {
           <div className="faq-item-modern">
             <h3>Do I need internet?</h3>
             <p>Most plans require internet for cloud sync. But our ₹10,000 offline plan works fully without internet — data syncs when you&apos;re back online.</p>
+          </div>
+          <div className="faq-item-modern">
+            <h3>What if Vitharn shuts down?</h3>
+            <p>Your data is yours forever. Export everything anytime in standard formats (CSV, Excel, PDF, Tally XML). We also offer source code escrow for Enterprise clients — if we cease operations, you get the full source code.</p>
+          </div>
+          <div className="faq-item-modern">
+            <h3>Can I get a refund?</h3>
+            <p>Yes — 30-day money-back guarantee, no questions asked.</p>
+          </div>
+          <div className="faq-item-modern">
+            <h3>Do you own my data?</h3>
+            <p>No. You own 100% of your data. We never sell, share, or monetize it. This is legally guaranteed in our contract.</p>
           </div>
         </div>
       </section>
