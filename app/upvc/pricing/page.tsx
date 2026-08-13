@@ -671,7 +671,7 @@ export default function WebPricingPage() {
           <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
         <p className="footer-fine-print">
-          Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Google, or any other company mentioned.
+          Vitharn is an independent sole proprietorship. Not affiliated with Tally Solutions, Vyapar, myBillBook, Google, or any other company mentioned.
         </p>
         <p className="footer-fine-print">
           Payment via UPI: 6304562779@nyes
