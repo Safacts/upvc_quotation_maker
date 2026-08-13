@@ -24,6 +24,9 @@ class Product {
     this.description = '',
     this.price = 0,
     this.unit = 'SFT',
+    this.stockQuantity = 0,
+    this.lowStockThreshold = 10,
+    this.hsnCode = '3925',
   });
 
   final String? id;
@@ -40,9 +43,21 @@ class Product {
   /// offers the product to.
   final String unit;
 
+  /// Current stock level. Default 0 when column is missing from DB.
+  final int stockQuantity;
+
+  /// Stock level below which the product is flagged as low. Default 10.
+  final int lowStockThreshold;
+
+  /// HSN code for GST invoicing. Default '3925' (UPVC profiles).
+  final String hsnCode;
+
   /// Measured items are priced per square foot; everything else is a countable
   /// piece and belongs in the unmeasured list.
   bool get isMeasured => unit.trim().toUpperCase() == 'SFT';
+
+  /// Whether stock is at or below the low-stock threshold.
+  bool get isLowStock => stockQuantity <= lowStockThreshold;
 
   /// Label shown in the dropdown. Category is included because fabricators
   /// stock near-identical names across categories ("3 Track" window vs door).
@@ -52,6 +67,9 @@ class Product {
     return buffer.toString();
   }
 
+  /// Label with stock level for the inventory screen.
+  String get stockLabel => '$stockQuantity in stock';
+
   static Product fromMap(Map<String, dynamic> map) {
     return Product(
       id: map['id'] as String?,
@@ -60,6 +78,9 @@ class Product {
       description: (map['description'] ?? '') as String,
       price: (map['price'] as num?)?.toDouble() ?? 0,
       unit: ((map['unit'] ?? 'SFT') as String).isEmpty ? 'SFT' : map['unit'] as String,
+      stockQuantity: (map['stock_quantity'] as num?)?.toInt() ?? 0,
+      lowStockThreshold: (map['low_stock_threshold'] as num?)?.toInt() ?? 10,
+      hsnCode: (map['hsn_code'] ?? '3925') as String,
     );
   }
 
@@ -70,6 +91,103 @@ class Product {
         'description': description,
         'price': price,
         'unit': unit,
+        'stock_quantity': stockQuantity,
+        'low_stock_threshold': lowStockThreshold,
+        'hsn_code': hsnCode,
+        if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
+      };
+
+  /// Returns a map with only the original columns (pre-inventory) so inserts
+  /// work even when the inventory migration hasn't been applied yet.
+  Map<String, dynamic> toLegacyMap({String? clientId}) => {
+        if (id != null) 'id': id,
+        'name': name,
+        'category': category,
+        'description': description,
+        'price': price,
+        'unit': unit,
+        if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
+      };
+
+  Product copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? description,
+    double? price,
+    String? unit,
+    int? stockQuantity,
+    int? lowStockThreshold,
+    String? hsnCode,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      unit: unit ?? this.unit,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
+      lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
+      hsnCode: hsnCode ?? this.hsnCode,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// StockMovement — `stock_movements` (inventory tracking)
+// ---------------------------------------------------------------------------
+
+/// A single stock-in or stock-out event for a product.
+class StockMovement {
+  StockMovement({
+    this.id,
+    this.productId = '',
+    this.productName = '',
+    this.quantity = 0,
+    this.type = 'in',
+    this.reference = '',
+    this.note,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  final String? id;
+  final String productId;
+  final String productName;
+  final int quantity;
+
+  /// 'in' for stock received, 'out' for stock sold/used.
+  final String type;
+  final String reference;
+  final String? note;
+  final DateTime createdAt;
+
+  bool get isStockIn => type == 'in';
+  int get signedQuantity => isStockIn ? quantity : -quantity;
+
+  static StockMovement fromMap(Map<String, dynamic> map) {
+    return StockMovement(
+      id: map['id'] as String?,
+      productId: (map['product_id'] ?? '') as String,
+      productName: (map['product_name'] ?? '') as String,
+      quantity: (map['quantity'] as num?)?.toInt() ?? 0,
+      type: ((map['type'] ?? 'in') as String),
+      reference: (map['reference'] ?? '') as String,
+      note: map['note'] as String?,
+      createdAt: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'].toString())?.toLocal() ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap({String? clientId}) => {
+        if (id != null) 'id': id,
+        'product_id': productId,
+        'product_name': productName,
+        'quantity': quantity,
+        'type': type,
+        'reference': reference,
+        if (note != null) 'note': note,
         if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
       };
 }
@@ -119,7 +237,17 @@ class Payment {
     'other',
   ];
 
-  String get methodLabel => method.toUpperCase();
+  String get methodLabel {
+    switch (method) {
+      case 'upi': return 'UPI';
+      case 'cash': return 'Cash';
+      case 'cheque': return 'Cheque';
+      case 'neft': return 'NEFT';
+      case 'rtgs': return 'RTGS';
+      case 'card': return 'Card';
+      default: return method.toUpperCase();
+    }
+  }
 
   static Payment fromMap(Map<String, dynamic> map) {
     return Payment(

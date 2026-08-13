@@ -20,12 +20,14 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
+import 'inventory_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
 import 'services/auto_update_service.dart';
 import 'widgets/offline_indicator.dart';
 import 'widgets/sync_status_widget.dart';
+import 'widgets/sync_indicator.dart';
 import 'widgets/update_banner.dart';
 import 'widgets/update_prompt.dart';
 
@@ -310,6 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          const SyncIndicator(),
           const SyncStatusWidget(compact: true),
           IconButton(icon: const Icon(Icons.analytics_outlined), tooltip: 'Analytics', onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(quotations: _quotations)));
@@ -363,6 +366,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const GstInvoiceListScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined, color: Colors.brown),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
               },
             ),
             ListTile(
@@ -476,6 +487,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     delay: 200,
                     onTap: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => EmailPortalScreen()));
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: (MediaQuery.of(context).size.width / 2) - 22,
+                  child: _buildTopTile(
+                    title: 'Inventory',
+                    icon: Icons.inventory_2_outlined,
+                    gradient: const LinearGradient(colors: [Color(0xFFD97706), Color(0xFF92400E)]),
+                    delay: 300,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const InventoryScreen()));
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: (MediaQuery.of(context).size.width / 2) - 22,
+                  child: _buildTopTile(
+                    title: 'Analytics',
+                    icon: Icons.analytics_outlined,
+                    gradient: const LinearGradient(colors: [Color(0xFF059669), Color(0xFF065F46)]),
+                    delay: 400,
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => AnalyticsScreen(quotations: _quotations)));
                     },
                   ),
                 ),

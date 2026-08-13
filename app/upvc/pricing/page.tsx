@@ -284,7 +284,96 @@ export default function WebPricingPage() {
         </div>
       </section>
 
-      {/* Upgrade note */}
+            {/* ── HOW WE COMPARE ── */}
+      <section className="comparison-section" style={{ maxWidth: 900 }}>
+        <h2 className="section-title">How Vitharn Compares</h2>
+        <p className="section-subtitle">
+          See how we stack up against generic billing software
+        </p>
+        <div className="comparison-table-wrap" style={{ marginTop: 32 }}>
+          <table className="comparison-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th style={{ color: "#EA580C" }}>Vitharn UPVC</th>
+                <th>Vyapar</th>
+                <th>myBillBook</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>UPVC mm to sqft auto-calc</td><td style={{ color: "#16a34a", fontWeight: 700 }}>✓ Auto</td><td>✗</td><td>✗</td></tr>
+              <tr><td>Customer portal with login</td><td style={{ color: "#16a34a", fontWeight: 700 }}>✓</td><td>✗</td><td>✗</td></tr>
+              <tr><td>Business website included</td><td style={{ color: "#16a34a", fontWeight: 700 }}>✓</td><td>✗</td><td>✗</td></tr>
+              <tr><td>Monthly fees (first 25 clients)</td><td style={{ color: "#16a34a", fontWeight: 700 }}>₹0/month</td><td>₹200–500/mo</td><td>₹150–400/mo</td></tr>
+              <tr><td>3-Year total cost</td><td style={{ color: "#16a34a", fontWeight: 700 }}>₹35,000</td><td>₹72,000+</td><td>₹54,000+</td></tr>
+              <tr><td>Data export (Tally XML)</td><td style={{ color: "#16a34a", fontWeight: 700 }}>✓ Full</td><td>Partial</td><td>Partial</td></tr>
+              <tr><td>Setup</td><td style={{ color: "#16a34a", fontWeight: 700 }}>We do it (24h)</td><td>Self-setup</td><td>Self-setup</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 24 }}>
+          <a href="/upvc/compare" style={{ color: "#EA580C", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+            See full comparison with Vyapar and myBillBook →
+          </a>
+        </div>
+      </section>
+
+      {/* ── 3-YEAR SAVINGS CALCULATOR ── */}
+      <section style={{ padding: "60px 24px", maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+        <h2 className="section-title">Your 3-Year Savings</h2>
+        <p className="section-subtitle">What you pay now vs what you&apos;ll pay with Vitharn</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginTop: 32 }}>
+          <div style={{ background: "white", border: "1px solid rgba(42,19,5,0.10)", borderRadius: 12, padding: "24px 20px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#7A5030", marginBottom: 12 }}>If you pay ₹3,000/mo now</div>
+            <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#d97706", marginBottom: 4 }}>₹1,08,000</div>
+            <div style={{ fontSize: 13, color: "#7A5030" }}>3-year cost (current)</div>
+          </div>
+          <div style={{ background: "white", border: "2px solid #EA580C", borderRadius: 12, padding: "24px 20px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#EA580C", marginBottom: 12 }}>Vitharn Growth</div>
+            <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#16a34a", marginBottom: 4 }}>₹35,000</div>
+            <div style={{ fontSize: 13, color: "#7A5030" }}>one-time payment</div>
+          </div>
+          <div style={{ background: "#FFF3E6", border: "1px solid rgba(238,88,12,0.15)", borderRadius: 12, padding: "24px 20px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#EA580C", marginBottom: 12 }}>You Save</div>
+            <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#16a34a", marginBottom: 4 }}>₹73,000</div>
+            <div style={{ fontSize: 13, color: "#7A5030" }}>over 3 years</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST BADGES ── */}
+      <section style={{ padding: "0 24px 60px", maxWidth: 800, margin: "0 auto" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 16 }}>
+          {[
+            { icon: "✓", label: "Data Portability Guarantee", desc: "Export your data anytime in Tally XML or Excel" },
+            { icon: "✓", label: "Tally XML Export", desc: "Seamless migration from Tally" },
+            { icon: "✓", label: "24/7 WhatsApp Support", desc: "Direct help, not a ticket queue" },
+            { icon: "✓", label: "No Lock-in", desc: "Your data, always yours" },
+          ].map((badge, i) => (
+            <div key={i} style={{
+              background: "white",
+              border: "1px solid rgba(42,19,5,0.10)",
+              borderRadius: 12,
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              minWidth: 240,
+              flex: "1 1 240px",
+            }}>
+              <div style={{ width: 32, height: 32, background: "rgba(22, 163, 74, 0.1)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                {badge.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1A0A00" }}>{badge.label}</div>
+                <div style={{ fontSize: 12, color: "#7A5030" }}>{badge.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+{/* Upgrade note */}
       <div className="pricing-note">
         <p>
           <strong>Start with any plan. Upgrade anytime.</strong> Move from Starter to Enterprise as your

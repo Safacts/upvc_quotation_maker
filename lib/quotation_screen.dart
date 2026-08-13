@@ -53,6 +53,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
   List<Product> _unmeasuredProducts = [];
   bool _isLoadingCatalog = false;
 
+  // Customer Picker
+  List<Map<String, dynamic>> _customers = [];
+  bool _isLoadingCustomers = false;
+
   // Site Photos
   List<QuotationPhoto> _photos = [];
   bool _isUploading = false;
@@ -118,6 +122,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     }
     _fetchPastQuotations();
     _loadCatalog();
+    _loadCustomers();
     unawaited(_prefetchGenerationLibs());
   }
 
@@ -185,6 +190,38 @@ class _QuotationScreenState extends State<QuotationScreen> {
           alignment: Alignment.bottomCenter,
         );
       }
+    }
+  }
+
+  // ===== CUSTOMER PICKER =====
+
+  Future<void> _loadCustomers() async {
+    setState(() => _isLoadingCustomers = true);
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final response = await SupabaseConfig.client
+          .from('quotations')
+          .select('customer_name, contact_no, email, address')
+          .eq('client_id', clientId)
+          .order('created_at', ascending: false);
+
+      // Deduplicate by customer_name
+      final unique = <String, Map<String, dynamic>>{};
+      for (final row in (response as List)) {
+        final name = (row['customer_name'] ?? '') as String;
+        if (name.isNotEmpty && !unique.containsKey(name)) {
+          unique[name] = row as Map<String, dynamic>;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _customers = unique.values.toList();
+          _isLoadingCustomers = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load customers: $e');
+      if (mounted) setState(() => _isLoadingCustomers = false);
     }
   }
 
@@ -971,11 +1008,37 @@ $reviewCta
                             onFieldSubmitted();
                             _referenceFocus.requestFocus();
                           },
-                          decoration: const InputDecoration(labelText: 'Name'),
+                          decoration: InputDecoration(
+                            labelText: 'Name',
+                            suffixIcon: _isLoadingCustomers
+                                ? const SizedBox(width: 16, height: 16, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 1.5)))
+                                : null,
+                          ),
                           onChanged: (val) { data.customerName = val; _onDataChanged(); },
                         );
                       },
                     ),
+                    if (data.customerName.isNotEmpty && _customers.isNotEmpty)
+                      Builder(
+                        builder: (context) {
+                          final match = _customers.where((c) => c['customer_name'] == data.customerName).toList();
+                          if (match.isEmpty) return const SizedBox.shrink();
+                          final count = _pastQuotations.where((q) => q.customerName == data.customerName).length;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.history, size: 14, color: Colors.grey.shade500),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$count previous quotation${count == 1 ? '' : 's'}',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     const SizedBox(height: 12),
                     TextFormField(
                       focusNode: _referenceFocus,
@@ -1111,7 +1174,29 @@ if (_usePresets) ...[
                                   items: _measuredProducts.map((p) {
                                     return DropdownMenuItem<Product>(
                                       value: p,
-                                      child: Text(p.displayLabel),
+                                      child: Row(
+                                        children: [
+                                          Expanded(child: Text(p.displayLabel)),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: p.isLowStock
+                                                  ? Colors.red.withValues(alpha: 0.1)
+                                                  : Colors.green.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${p.stockQuantity}',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: p.isLowStock ? Colors.red : Colors.green,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: _isLoadingCatalog ? null : (Product? product) {
@@ -1224,7 +1309,29 @@ if (_usePresets) ...[
                                   items: _unmeasuredProducts.map((p) {
                                     return DropdownMenuItem<Product>(
                                       value: p,
-                                      child: Text(p.displayLabel),
+                                      child: Row(
+                                        children: [
+                                          Expanded(child: Text(p.displayLabel)),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: p.isLowStock
+                                                  ? Colors.red.withValues(alpha: 0.1)
+                                                  : Colors.green.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              '${p.stockQuantity}',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: p.isLowStock ? Colors.red : Colors.green,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     );
                                   }).toList(),
                                   onChanged: _isLoadingCatalog ? null : (Product? product) {
