@@ -45,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _searchQuery = '';
   String _filterType = 'Newest';
   bool _hasHandledOpenQuote = false;
+  bool _showQuickActions = false; // collapsed by default
 
   /// Number of locally-queued records awaiting push to the server.
   int _pendingSyncCount = 0;
@@ -797,11 +798,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          // Secondary/overflow actions — horizontally scrollable so adding new
-          // features never grows the layout vertically and never "destroys the look".
+          // Secondary/overflow actions — hidden by default behind a "More" button
+          // so the dashboard stays clean. Expand on tap.
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: _buildQuickActionsStrip(),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!_showQuickActions)
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _showQuickActions = true),
+                      icon: const Icon(Icons.expand_more, size: 20),
+                      label: const Text('More tools'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 16,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      _buildQuickActionsStrip(),
+                      const SizedBox(height: 4),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed:
+                              () => setState(() => _showQuickActions = false),
+                          icon: const Icon(Icons.expand_less, size: 20),
+                          label: const Text('Show less'),
+                          style: TextButton.styleFrom(
+                            foregroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
 
           Padding(
