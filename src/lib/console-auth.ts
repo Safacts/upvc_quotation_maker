@@ -67,6 +67,11 @@ export function consoleJson(data: unknown, status = 200): NextResponse {
   return NextResponse.json(data, { status, headers: CONSOLE_HEADERS });
 }
 
+/** Convenience wrapper: `{ error: message }` at the given status (default 500). */
+export function consoleError(message: string, status = 500): NextResponse {
+  return consoleJson({ error: message }, status);
+}
+
 /**
  * NOTE ON SHAPE: flat optional fields, NOT a discriminated union — identical
  * reasoning to `TenantResolution` in tenant.ts. `tsconfig.json` sets
