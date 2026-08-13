@@ -1,126 +1,141 @@
 ((a,b)=>{a[b]=a[b]||{}})(self,"$__dart_deferred_initializers__")
-$__dart_deferred_initializers__.current=function(a,b,c,$){var D,C,A,B,G,F={
-amH(d,e){var x=0,w=D.w(y.o),v,u,t,s,r,q,p,o,n,m
-var $async$amH=D.r(function(f,g){if(f===1)return D.t(g,w)
-for(;;)switch(x){case 0:u=A.boS()
-t=D.FE(null,"en_IN","Rs. ")
-r=A
-q=!1
-p=E.a75
-o=G.pm
-n=A
-x=3
-return D.k(B.Qm.pM(),$async$amH)
-case 3:m=g
-x=4
-return D.k(B.Ql.pM(),$async$amH)
-case 4:s=r.brf(null,q,p,null,o,null,n.bjL(m,g))
-d.Wu()
-u.adj(A.bqW(new F.bfG(e,d,t),new F.bfH(),s))
-v=u.k_(0)
-x=1
+$__dart_deferred_initializers__.current=function(a,b,c,$){var D,B,A,C,G,F={
+amH(d,e){var w=0,v=D.w(x.o),u,t,s,r,q,p,o,n,m,l
+var $async$amH=D.r(function(f,g){if(f===1)return D.t(g,v)
+for(;;)switch(w){case 0:t=A.bp7()
+s=D.FG(null,"en_IN","Rs. ")
+q=A
+p=!1
+o=E.a78
+n=G.pm
+m=A
+w=3
+return D.k(C.Qs.pN(),$async$amH)
+case 3:l=g
+w=4
+return D.k(C.Qr.pN(),$async$amH)
+case 4:r=q.brv(null,p,o,null,n,null,m.bk0(l,g))
+d.Wt()
+t.adk(A.brb(new F.bfU(e,d,s),new F.bfV(),r))
+u=t.k_(0)
+w=1
 break
-case 1:return D.u(v,w)}})
-return D.v($async$amH,w)},
-bOV(d,e){var x=null,w=A.bb(x,x,x,x,x,x,x,x,x,B.a2,x,x,9,x,B.aB,x,!0,x,x,x,x),v=A.o7(x,x,A.m9("#dce6f1")),u=A.bb(x,x,x,x,x,x,x,x,x,B.a2,x,x,9,x,x,x,!0,x,x,x,x)
-return A.aPh(A.H0(B.iZ),B.eu,u,D.a2([0,E.ac4,1,E.ac3,2,E.ac2,3,E.mT,4,E.mT,5,E.BF,6,E.BF],y.e,y.a),D.q2(d.ok.length,new F.bds(d,e),!0,y.B),v,w,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
-bfH:function bfH(){},
-bfG:function bfG(d,e,f){this.a=d
+case 1:return D.u(u,v)}})
+return D.v($async$amH,v)},
+bPc(d,e){var w=null,v=A.b4(w,w,w,w,w,w,w,w,w,C.a2,w,w,9,w,C.aA,w,!0,w,w,w,w),u=A.o7(w,w,A.m8("#dce6f1")),t=A.b4(w,w,w,w,w,w,w,w,w,C.a2,w,w,9,w,w,w,!0,w,w,w,w)
+return A.aPk(A.H3(C.j0),C.ev,t,D.a2([0,E.ac7,1,E.ac6,2,E.ac5,3,E.mS,4,E.mS,5,E.BH,6,E.BH],x.e,x.a),D.q2(d.k4.length,new F.bdG(d,e),!0,x.B),u,v,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
+bPb(d){var w,v,u,t,s,r=null,q="UPVC Quotation Maker",p="default",o="Quality UPVC solutions for your home",n=y.a,m="https://gumpmnbjdtzajhysnnaz.supabase.co",l=d.r
+if(!(l.length!==0)){w=d.a
+l=(w==null?D.aH(B.S,B.V,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",o,"","",B.U,B.T,"",B.z,"",B.R,"",n,m,B.r,B.r,r,B.z,"",""):w).x}v=d.w
+if(!(v.length!==0)){w=d.a
+v=(w==null?D.aH(B.S,B.V,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",o,"","",B.U,B.T,"",B.z,"",B.R,"",n,m,B.r,B.r,r,B.z,"",""):w).y}u=d.x
+if(!(u.length!==0)){w=d.a
+u=(w==null?D.aH(B.S,B.V,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",o,"","",B.U,B.T,"",B.z,"",B.R,"",n,m,B.r,B.r,r,B.z,"",""):w).z}t=d.y
+if(!(t.length!==0)){w=d.a
+t=(w==null?D.aH(B.S,B.V,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",o,"","",B.U,B.T,"",B.z,"",B.R,"",n,m,B.r,B.r,r,B.z,"",""):w).Q}if(l.length===0&&v.length===0&&u.length===0&&t.length===0)return new A.dc(0,0,r)
+w=A.bi("Bank Details",r,r,A.b4(r,r,r,r,r,r,r,r,r,C.a2,r,r,10,r,C.aA,r,!0,r,r,r,r),r,r)
+s=d.c
+if(!(s.length!==0)){s=d.a
+s=(s==null?D.aH(B.S,B.V,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",o,"","",B.U,B.T,"",B.z,"",B.R,"",n,m,B.r,B.r,r,B.z,"",""):s).c}return A.k5(D.b([w,new A.dc(r,4,r),A.bi("Company Name : "+s,r,r,A.b4(r,r,r,r,r,r,r,r,r,C.a2,r,r,9,r,r,r,!0,r,r,r,r),r,r),A.bi("Bank Name & Branch : "+l+" - "+v,r,r,A.b4(r,r,r,r,r,r,r,r,r,C.a2,r,r,9,r,r,r,!0,r,r,r,r),r,r),A.bi("Account No : "+u,r,r,A.b4(r,r,r,r,r,r,r,r,r,C.a2,r,r,9,r,r,r,!0,r,r,r,r),r,r),A.bi("IFSC : "+t,r,r,A.b4(r,r,r,r,r,r,r,r,r,C.a2,r,r,9,r,r,r,!0,r,r,r,r),r,r)],x.u),C.eD,C.cF)},
+bfV:function bfV(){},
+bfU:function bfU(d,e,f){this.a=d
 this.b=e
 this.c=f},
-bds:function bds(d,e){this.a=d
+bdG:function bdG(d,e){this.a=d
 this.b=e}},E
 D=c[0]
-C=c[2]
+B=c[2]
 A=c[7]
-B=c[10]
+C=c[10]
 G=c[12]
 F=a.updateHolder(c[3],F)
 E=c[11]
 var z=a.updateTypes(["o8(jf)","C<dK>(jf)"])
-F.bfH.prototype={
-$1(d){var x,w=null,v=d.d.d
-v===$&&D.a()
-x=d.a
-x.toString
-return A.k5(B.eu,A.br("This is a computer-generated GST invoice | Page "+(C.m.cv(v.cx.cx,x)+1)+" of "+v.cx.cx.length,w,w,A.bb(w,B.ld,w,w,w,w,w,w,w,B.a2,w,w,8,w,w,w,!0,w,w,w,w),w,w),w,w,E.ZR,w,E.a6K,E.a6Q,w)},
+F.bfV.prototype={
+$1(d){var w,v=null,u=d.d.d
+u===$&&D.a()
+w=d.a
+w.toString
+return A.k6(C.ev,A.bi("This is a computer-generated GST invoice | Page "+(B.m.cv(u.cx.cx,w)+1)+" of "+u.cx.cx.length,v,v,A.b4(v,C.lf,v,v,v,v,v,v,v,C.a2,v,v,8,v,v,v,!0,v,v,v,v),v,v),v,v,E.ZY,v,E.a6N,E.a6T,v)},
 $S:z+0}
-F.bfG.prototype={
-$1(d){var x,w,v,u,t,s,r,q,p,o=null,n="#1e3a5f",m="UPVC Quotation Maker",l="default",k="Quality UPVC solutions for your home",j="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs",i="https://gumpmnbjdtzajhysnnaz.supabase.co",h=this.a,g=A.bhV(A.br("TAX INVOICE",o,o,A.bb(o,A.m9(n),o,o,o,o,o,o,o,B.a2,o,o,20,o,B.aB,o,!0,o,o,o,o),o,o)),f=A.m9(n),e=h.c
-if(!(e.length!==0)){e=h.a
-e=(e==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):e).c}e=A.br(e,o,o,A.bb(o,B.en,o,o,o,o,o,o,o,B.a2,o,o,16,o,B.aB,o,!0,o,o,o,o),o,o)
-x=h.d
-if(!(x.length!==0)){x=h.a
-x=(x==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):x).d}x=A.br(x,o,o,A.bb(o,B.en,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o)
-w=h.as
-if(!(w.length!==0)){w=h.a
-w=(w==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):w).r}v=h.e
-if(!(v.length!==0)){v=h.a
-v=(v==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):v).e}v=A.br("Prop: "+w+"   Contact: "+v,o,o,A.bb(o,B.en,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o)
-w=h.at
-if(!(w.length!==0)){w=h.a
-w=(w==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):w).w}u=y.u
-f=A.kR(D.b([g,new A.dt(o,10,o),A.k5(o,A.kR(D.b([e,x,v,A.br("GST No: "+w,o,o,A.bb(o,B.en,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.dr,B.cL),f,o,o,o,o,B.mI,1/0)],u),B.dr,B.cL)
-w=this.b
-v=A.Gp(D.b([A.br("Invoice No: "+w.b,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o),A.br("Date: "+D.iP("dd-MMM-yyyy").cu(w.c),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o),A.br("Place of Supply: "+w.at,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o)],u),B.dr,B.oR)
-x=D.a2([0,E.mT,1,E.mT],y.e,y.a)
-e=A.br("Supplier Details",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o)
-g=h.c
-if(!(g.length!==0)){g=h.a
-g=(g==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):g).c}g=A.br(g,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,B.aB,o,!0,o,o,o,o),o,o)
-t=h.d
-if(!(t.length!==0)){t=h.a
-t=(t==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):t).d}t=A.br(t,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o)
-s=h.at
-if(!(s.length!==0)){s=h.a
-s=(s==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):s).w}r=y.m
-x=A.a8t(o,D.b([new A.ht(D.b([A.k5(o,A.kR(D.b([e,new A.dt(o,4,o),g,t,A.br("GSTIN: "+s,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o)],u),B.eU,B.cL),o,o,E.zb,o,o,E.d9,o),A.k5(o,A.kR(D.b([A.br("Bill To (Buyer Details)",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o),new A.dt(o,4,o),A.br(w.x,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,B.aB,o,!0,o,o,o,o),o,o),A.br(w.y,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o),A.br("GSTIN: "+w.z,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o),A.br("State: "+w.Q+" ("+w.as+")",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o)],u),B.eU,B.cL),o,o,E.zb,o,o,E.d9,o)],u),!1,o)],r),x,B.jM,B.q3,B.jj)
-s=A.m9(n)
-s=A.k5(o,A.br("Invoice Items",o,o,A.bb(o,B.en,o,o,o,o,o,o,o,B.a2,o,o,11,o,B.aB,o,!0,o,o,o,o),o,o),s,o,o,o,E.a6L,E.a7a,1/0)
-t=this.c
-g=F.bOV(w,t)
-e=A.m9("#f1f5fa")
-q=A.H0(new A.ag(0,0,0,0))
-p=D.b([new A.ht(D.b([new A.dm(E.d9,A.br("Subtotal",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.cy),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o),new A.ht(D.b([new A.dm(E.d9,A.br("Transport",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.cx),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o),new A.ht(D.b([new A.dm(E.d9,A.br("Taxable Value",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.db),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o)],r)
-if(w.ay)C.m.K(p,D.b([new A.ht(D.b([new A.dm(E.d9,A.br("IGST @ "+D.h(w.fr)+"%",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.go),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o)],r))
-else C.m.K(p,D.b([new A.ht(D.b([new A.dm(E.d9,A.br("CGST @ "+D.h(w.dx)+"%",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.fx),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o),new A.ht(D.b([new A.dm(E.d9,A.br("SGST @ "+D.h(w.dy)+"%",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(E.d9,A.br(t.cu(w.fy),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o))],u),!1,o)],r))
-r=A.o7(new A.ps(new A.mO(A.m9(n),2,B.fg),B.dO,B.dO,B.dO),o,o)
-p.push(new A.ht(D.b([new A.dm(B.mI,A.br("Grand Total",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,12,o,B.aB,o,!0,o,o,o,o),B.dy,o)),new A.dm(B.mI,A.br(t.cu(w.id),o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,12,o,B.aB,o,!0,o,o,o,o),o,o))],u),!1,r))
-e=A.k5(o,A.a8t(q,p,o,B.jM,B.q3,B.jj),e,o,o,o,o,o,o)
-p=A.o7(A.bnU(B.iZ),o,o)
-p=A.k5(o,A.Gp(D.b([A.br("Amount in Words: ",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o),new A.of(1,B.tW,A.br(w.k1,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,9,o,o,o,!0,o,o,o,o),o,o))],u),B.dr,B.cL),o,o,p,o,o,E.d9,1/0)
-q=A.br("Terms & Conditions",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o)
-t=h.z
-if(!(t.length!==0)){t=h.a
-t=(t==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):t).gOP()}t=A.kR(D.b([q,new A.dt(o,4,o),A.br(t,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,8,o,o,o,!0,o,o,o,o),o,o)],u),B.eU,B.cL)
-q=A.br("Reverse Charge: ",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o)
-w=w.ch?"Yes":"No"
-w=A.Gp(D.b([q,A.br(w,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.dr,B.cL)
-r=h.c
-if(r.length!==0)h=r
-else{h=h.a
-h=(h==null?D.aL(C.U,C.X,"",m,"",0,"","","","","",l,"","","","","",65,18,!1,!1,"","","",!0,"","","",C.r,"",C.r,"",k,"","",C.W,C.V,"",C.z,"",C.T,"",j,i,C.r,C.r,o,C.z,"",""):h).c}return D.b([f,new A.dt(o,12,o),v,new A.dt(o,10,o),x,new A.dt(o,10,o),s,g,new A.dt(o,10,o),e,new A.dt(o,10,o),p,new A.dt(o,10,o),t,new A.dt(o,8,o),w,new A.dt(o,30,o),A.Gp(D.b([new A.dt(o,o,o),A.kR(D.b([A.br("For "+h,o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,B.aB,o,!0,o,o,o,o),o,o),new A.dt(o,20,o),A.br("Authorized Signature",o,o,A.bb(o,o,o,o,o,o,o,o,o,B.a2,o,o,10,o,o,o,!0,o,o,o,o),o,o)],u),B.dr,B.cL)],u),B.dr,B.oR)],u)},
+F.bfU.prototype={
+$1(a0){var w,v,u,t,s,r,q,p,o,n=null,m="#1e3a5f",l="UPVC Quotation Maker",k="default",j="Quality UPVC solutions for your home",i=y.a,h="https://gumpmnbjdtzajhysnnaz.supabase.co",g=this.a,f=A.bi8(A.bi("TAX INVOICE",n,n,A.b4(n,A.m8(m),n,n,n,n,n,n,n,C.a2,n,n,20,n,C.aA,n,!0,n,n,n,n),n,n)),e=A.m8(m),d=g.c
+if(!(d.length!==0)){d=g.a
+d=(d==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):d).c}d=A.bi(d,n,n,A.b4(n,C.en,n,n,n,n,n,n,n,C.a2,n,n,16,n,C.aA,n,!0,n,n,n,n),n,n)
+w=g.d
+if(!(w.length!==0)){w=g.a
+w=(w==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):w).d}w=A.bi(w,n,n,A.b4(n,C.en,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n)
+v=g.as
+if(!(v.length!==0)){v=g.a
+v=(v==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):v).r}u=g.e
+if(!(u.length!==0)){u=g.a
+u=(u==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):u).e}u=A.bi("Prop: "+v+"   Contact: "+u,n,n,A.b4(n,C.en,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n)
+v=g.at
+if(!(v.length!==0)){v=g.a
+v=(v==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):v).w}t=x.u
+e=A.k5(D.b([f,new A.dc(n,10,n),A.k6(n,A.k5(D.b([d,w,u,A.bi("GST No: "+v,n,n,A.b4(n,C.en,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n)],t),C.dr,C.cF),e,n,n,n,n,C.mH,1/0)],t),C.dr,C.cF)
+v=this.b
+u=A.Gr(D.b([A.bi("Invoice No: "+v.b,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n),A.bi("Date: "+D.iQ("dd-MMM-yyyy").cu(v.c),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n),A.bi("Place of Supply: "+v.at,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n)],t),C.dr,C.oR)
+w=D.a2([0,E.mS,1,E.mS],x.e,x.a)
+d=A.bi("Supplier Details",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n)
+f=g.c
+if(!(f.length!==0)){f=g.a
+f=(f==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):f).c}f=A.bi(f,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,C.aA,n,!0,n,n,n,n),n,n)
+s=g.d
+if(!(s.length!==0)){s=g.a
+s=(s==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):s).d}s=A.bi(s,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n)
+r=g.at
+if(!(r.length!==0)){r=g.a
+r=(r==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):r).w}q=x.m
+w=A.a8u(n,D.b([new A.hu(D.b([A.k6(n,A.k5(D.b([d,new A.dc(n,4,n),f,s,A.bi("GSTIN: "+r,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n)],t),C.eD,C.cF),n,n,E.ze,n,n,E.da,n),A.k6(n,A.k5(D.b([A.bi("Bill To (Buyer Details)",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n),new A.dc(n,4,n),A.bi(v.x,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,C.aA,n,!0,n,n,n,n),n,n),A.bi(v.y,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n),A.bi("GSTIN: "+v.z,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n),A.bi("State: "+v.Q+" ("+v.as+")",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n)],t),C.eD,C.cF),n,n,E.ze,n,n,E.da,n)],t),!1,n)],q),w,C.jP,C.q3,C.jn)
+r=A.m8(m)
+r=A.k6(n,A.bi("Invoice Items",n,n,A.b4(n,C.en,n,n,n,n,n,n,n,C.a2,n,n,11,n,C.aA,n,!0,n,n,n,n),n,n),r,n,n,n,E.a6O,E.a7d,1/0)
+s=this.c
+f=F.bPc(v,s)
+d=A.m8("#f1f5fa")
+p=A.H3(new A.ag(0,0,0,0))
+o=D.b([new A.hu(D.b([new A.dn(E.da,A.bi("Subtotal",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.cy),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n),new A.hu(D.b([new A.dn(E.da,A.bi("Transport",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.cx),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n),new A.hu(D.b([new A.dn(E.da,A.bi("Taxable Value",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.db),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n)],q)
+if(v.ay)B.m.K(o,D.b([new A.hu(D.b([new A.dn(E.da,A.bi("IGST @ "+D.h(v.fr)+"%",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.go),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n)],q))
+else B.m.K(o,D.b([new A.hu(D.b([new A.dn(E.da,A.bi("CGST @ "+D.h(v.dx)+"%",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.fx),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n),new A.hu(D.b([new A.dn(E.da,A.bi("SGST @ "+D.h(v.dy)+"%",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(E.da,A.bi(s.cu(v.fy),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n))],t),!1,n)],q))
+q=A.o7(new A.pt(new A.mN(A.m8(m),2,C.fg),C.dN,C.dN,C.dN),n,n)
+o.push(new A.hu(D.b([new A.dn(C.mH,A.bi("Grand Total",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,12,n,C.aA,n,!0,n,n,n,n),C.dz,n)),new A.dn(C.mH,A.bi(s.cu(v.id),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,12,n,C.aA,n,!0,n,n,n,n),n,n))],t),!1,q))
+d=A.k6(n,A.a8u(p,o,n,C.jP,C.q3,C.jn),d,n,n,n,n,n,n)
+o=A.o7(A.bo9(C.j0),n,n)
+o=A.k6(n,A.Gr(D.b([A.bi("Amount in Words: ",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n),new A.of(1,C.tZ,A.bi(D.biL(v.id),n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,9,n,n,n,!0,n,n,n,n),n,n))],t),C.dr,C.cF),n,n,o,n,n,E.da,1/0)
+p=A.bi("Terms & Conditions",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n)
+s=g.z
+if(!(s.length!==0)){s=g.a
+s=(s==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):s).gOO()}s=A.k5(D.b([p,new A.dc(n,4,n),A.bi(s,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,8,n,n,n,!0,n,n,n,n),n,n)],t),C.eD,C.cF)
+p=F.bPb(g)
+q=A.bi("Reverse Charge: ",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n)
+v=v.ch?"Yes":"No"
+v=A.Gr(D.b([q,A.bi(v,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n)],t),C.dr,C.cF)
+q=g.c
+if(q.length!==0)g=q
+else{g=g.a
+g=(g==null?D.aH(B.S,B.V,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,"","","",!0,"","","",B.r,"",B.r,"",j,"","",B.U,B.T,"",B.z,"",B.R,"",i,h,B.r,B.r,n,B.z,"",""):g).c}return D.b([e,new A.dc(n,12,n),u,new A.dc(n,10,n),w,new A.dc(n,10,n),r,f,new A.dc(n,10,n),d,new A.dc(n,10,n),o,new A.dc(n,10,n),s,new A.dc(n,8,n),p,new A.dc(n,10,n),v,new A.dc(n,30,n),A.Gr(D.b([new A.dc(n,n,n),A.k5(D.b([A.bi("For "+g,n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,C.aA,n,!0,n,n,n,n),n,n),new A.dc(n,20,n),A.bi("Authorized Signature",n,n,A.b4(n,n,n,n,n,n,n,n,n,C.a2,n,n,10,n,n,n,!0,n,n,n,n),n,n)],t),C.dr,C.cF)],t),C.dr,C.oR)],t)},
 $S:z+1}
-F.bds.prototype={
-$1(d){var x=this.a.ok[d],w=this.b
-return D.b([""+(d+1),x.c,x.d,C.n.ad(x.e,0),x.f,w.cu(x.r),w.cu(x.e*x.r)],y.x)},
-$S:113};(function inheritance(){var x=a.inheritMany
-x(D.lM,[F.bfH,F.bfG,F.bds])})()
-var y={x:D.a4("B<e>"),m:D.a4("B<ht>"),u:D.a4("B<dK>"),B:D.a4("C<e>"),a:D.a4("Bq"),o:D.a4("du"),e:D.a4("m")};(function constants(){E.Zl=new A.mO(B.wq,1,B.fg)
-E.ZA=new A.ps(E.Zl,B.dO,B.dO,B.dO)
-E.ZR=new A.Kz(null,E.ZA,null)
-E.m0=new A.mO(B.iZ,1,B.fg)
-E.Zz=new A.ps(E.m0,E.m0,E.m0,E.m0)
-E.zb=new A.Kz(null,E.Zz,null)
-E.a6K=new A.dh(0,10,0,0)
-E.a6L=new A.dh(0,10,0,4)
-E.a6Q=new A.dh(0,5,0,0)
-E.a75=new A.dh(30,30,30,30)
-E.a7a=new A.dh(4,4,4,4)
-E.d9=new A.dh(6,6,6,6)
-E.mT=new A.dT(1)
-E.BF=new A.dT(2)
-E.ac2=new A.dT(4)
-E.ac3=new A.dT(1.2)
-E.ac4=new A.dT(0.8)})()};
-(a=>{a["+ljp/ExiuB0HuoTwRMvj3qaRy5g="]=a.current})($__dart_deferred_initializers__);
+F.bdG.prototype={
+$1(d){var w=this.a.k4[d],v=this.b
+return D.b([""+(d+1),w.c,w.d,B.n.ad(w.e,0),w.f,v.cu(w.r),v.cu(w.e*w.r)],x.x)},
+$S:116};(function inheritance(){var w=a.inheritMany
+w(D.lM,[F.bfV,F.bfU,F.bdG])})()
+var y={a:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs"}
+var x={x:D.a4("B<e>"),m:D.a4("B<hu>"),u:D.a4("B<dK>"),B:D.a4("C<e>"),a:D.a4("Bq"),o:D.a4("du"),e:D.a4("m")};(function constants(){E.Zs=new A.mN(C.wt,1,C.fg)
+E.ZH=new A.pt(E.Zs,C.dN,C.dN,C.dN)
+E.ZY=new A.KD(null,E.ZH,null)
+E.m_=new A.mN(C.j0,1,C.fg)
+E.ZG=new A.pt(E.m_,E.m_,E.m_,E.m_)
+E.ze=new A.KD(null,E.ZG,null)
+E.a6N=new A.di(0,10,0,0)
+E.a6O=new A.di(0,10,0,4)
+E.a6T=new A.di(0,5,0,0)
+E.a78=new A.di(30,30,30,30)
+E.a7d=new A.di(4,4,4,4)
+E.da=new A.di(6,6,6,6)
+E.mS=new A.dT(1)
+E.BH=new A.dT(2)
+E.ac5=new A.dT(4)
+E.ac6=new A.dT(1.2)
+E.ac7=new A.dT(0.8)})()};
+(a=>{a["RdHwPiX7hg7ro/bz7yJSRQPxwfo="]=a.current})($__dart_deferred_initializers__);

@@ -404,6 +404,8 @@ export default function ComparePage() {
           ·{" "}
           <a href="/upvc/pricing" className="footer-link">Pricing</a>{" "}
           ·{" "}
+          <a href="/upvc/changelog" className="footer-link">What&apos;s New</a>{" "}
+          ·{" "}
           <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
         <p className="footer-fine-print">

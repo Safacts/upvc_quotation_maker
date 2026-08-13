@@ -193,9 +193,9 @@ class _DesignConfiguratorState extends State<DesignConfigurator> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       items: profiles.map((p) {
-                        return DropdownMenuItem(
-                          value: p['value'],
-                          child: Text(p['label']),
+                        return DropdownMenuItem<String>(
+                          value: p['value'] as String?,
+                          child: Text(p['label'] as String? ?? ''),
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => profileType = v!),

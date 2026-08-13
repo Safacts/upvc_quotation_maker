@@ -21,7 +21,7 @@ class _DesignDetail3DScreenState extends State<DesignDetail3DScreen> {
   final List<Map<String, dynamic>> viewModes = [
     {'value': 'solid', 'label': 'Solid', 'icon': Icons.view_in_ar},
     {'value': 'wireframe', 'label': 'Wireframe', 'icon': Icons.view_week},
-    {'value': 'shaded', 'label': 'Shaded', 'icon': Icons.shading},
+    {'value': 'shaded', 'label': 'Shaded', 'icon': Icons.blur_on},
   ];
 
   @override
@@ -70,8 +70,8 @@ class _DesignDetail3DScreenState extends State<DesignDetail3DScreen> {
             DropdownButton<String>(
               value: viewMode,
               items: viewModes.map((vm) {
-                return DropdownMenuItem(
-                  value: vm['value'],
+                return DropdownMenuItem<String>(
+                  value: vm['value'] as String?,
                   child: Row(
                     children: [
                       Icon(vm['icon'], size: 18),
