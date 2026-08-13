@@ -20,7 +20,7 @@ function sha256(str: string) {
   return crypto.createHash("sha256").update(str).digest("hex");
 }
 
-const PROTECTED_CLIENTS = ["venkateshwara", "akshaya upvc", "kprupvc"];
+const PROTECTED_CLIENTS = ["venkateshwara", "kprupvc"];
 
 // Tools definition for Groq
 const tools = [
@@ -98,6 +98,21 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "update_client",
+      description: "Updates an existing client's configuration (e.g., enabling features like Ops Console).",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "string", description: "The client ID to update." },
+          updates: { type: "object", description: "The specific configuration fields to update or merge into the client's config." }
+        },
+        required: ["clientId", "updates"],
+      },
+    },
+  },
 ];
 
 export async function POST(request: NextRequest) {
@@ -127,7 +142,7 @@ Your job is to help the admin automatically create client accounts, read existin
 CRITICAL INSTRUCTIONS:
 1. NEVER INVENT DUMMY DATA: If the user says "create a client" but doesn't provide all the necessary details (company name, app name, email, password, etc.), DO NOT call the create_client tool with made-up information. Instead, ask the user follow-up questions to gather the missing details. Only execute the tool when you have all the facts.
 2. BE SMART & AGENTIC: Use get_client and list_clients to look up previous clients. If the user asks for a setup "like Akshaya" or "standard setup", fetch that client's config first and use it as a template, merging the new details over it. 
-3. SECURITY: When deleting a client, you MUST respect the "aiCanDelete" flag. If it is false, you cannot delete them. Never try to modify or delete protected clients: venkateshwara, akshaya upvc, kprupvc. You are permitted to use get_client to read them to use as templates.`,
+3. SECURITY: When deleting or updating a client, you MUST respect the "aiCanDelete" flag for deletions. Never try to modify or delete protected clients: venkateshwara, kprupvc. You are permitted to use get_client to read them to use as templates.`,
       },
       ...history,
       { role: "user", content: prompt },
@@ -249,6 +264,27 @@ CRITICAL INSTRUCTIONS:
             actionLogs.push(`Sent email to: ${args.to}`);
           } catch (e: any) {
             result = "Mail Error: " + String(e.message);
+          }
+        } else if (functionName === "update_client") {
+          const { clientId, updates } = args;
+          if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
+            result = "Error: Cannot modify protected client.";
+            actionLogs.push(`Error: Blocked modification of protected client ${clientId}`);
+          } else {
+            const existing = await supaGet("clients", { id: "eq." + clientId });
+            if (!existing || existing.length === 0) {
+              result = "Error: Client not found.";
+            } else {
+              const currentConfig = existing[0].config || {};
+              const newConfig = { ...currentConfig, ...updates };
+              try {
+                await supaPatch("clients", { config: newConfig }, { id: "eq." + clientId });
+                result = `Success: Updated client ${clientId}.`;
+                actionLogs.push(`Updated config for client: ${clientId}`);
+              } catch (e: any) {
+                result = "DB Error: " + String(e.message);
+              }
+            }
           }
         }
 
