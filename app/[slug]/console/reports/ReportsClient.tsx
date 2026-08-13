@@ -97,7 +97,7 @@ export default function ReportsClient() {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams({ report });
+      const params = new URLSearchParams({ type: report });
       if (from) params.set("from", from);
       if (to) params.set("to", to);
       if (status) params.set("status", status);
