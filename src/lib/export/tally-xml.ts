@@ -269,7 +269,7 @@ function emitVoucher(q: TallyQuotation, cfg: TallyExportConfig): string | null {
         `      <ALLLEDGERENTRIES.LIST>\n` +
         `        <LEDGERNAME>${escapeXml(l.ledgerName)}</LEDGERNAME>\n` +
         `        <ISDEEMEDPOSITIVE>${tag === "Dr" ? "Yes" : "No"}</ISDEEMEDPOSITIVE>\n` +
-        `        <AMOUNT>${(-l.amount).toFixed(2)}</AMOUNT>\n` +
+        `        <AMOUNT>${l.isDebit ? "-" : ""}${l.amount.toFixed(2)}</AMOUNT>\n` +
         `      </ALLLEDGERENTRIES.LIST>`
       );
     })

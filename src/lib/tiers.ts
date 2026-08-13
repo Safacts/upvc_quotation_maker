@@ -169,7 +169,7 @@ export const FEATURE_TIERS = {
   /** Payment ledger + automatic paid/partial/unpaid status. */
   payment_tracking: "final",
   /** Tally XML / spreadsheet export. */
-  data_export: "final",
+  data_export: "nextplus",
 } as const satisfies Record<string, Tier>;
 
 export type Feature = keyof typeof FEATURE_TIERS;

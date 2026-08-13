@@ -268,9 +268,7 @@ export default function OverviewClient() {
         <button
           type="button"
           className="vc-btn"
-          onClick={() => {
-            toast("Reports arrive in Phase 2", "info");
-          }}
+          onClick={() => router.push(`/${slug}/console/reports`)}
         >
           Reports
         </button>
