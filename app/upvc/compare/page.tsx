@@ -13,7 +13,7 @@ function slugify(s: string) {
 
 const features = [
   { label: "Industry focus", vitharn: "Built exclusively for UPVC fabricators", vyapar: "Generic billing for all businesses", mybillbook: "Generic billing for all businesses" },
-  { label: "UPVC mm \u2192 sqft auto-calc", vitharn: true, vyapar: false, mybillbook: false },
+  { label: "UPVC mm → sqft auto-calc", vitharn: true, vyapar: false, mybillbook: false },
   { label: "Branded PDF quotations", vitharn: "Instant, logo-branded", vyapar: "Basic templates", mybillbook: "Basic templates" },
   { label: "WhatsApp quote sharing", vitharn: true, vyapar: "Paid add-on", mybillbook: "Paid add-on" },
   { label: "Customer portal with login", vitharn: true, vyapar: false, mybillbook: false },
@@ -23,10 +23,10 @@ const features = [
   { label: "GST-compliant invoicing", vitharn: true, vyapar: true, mybillbook: true },
   { label: "Mobile app (Android)", vitharn: true, vyapar: true, mybillbook: true },
   { label: "Data export (Tally XML / Excel)", vitharn: true, vyapar: "Partial", mybillbook: "Partial" },
-  { label: "Monthly fees (first 25 clients)", vitharn: "\u20B90 / month", vyapar: "\u20B9200\u2013500 / month", mybillbook: "\u20B9291\u2013570 / month" },
+  { label: "Monthly fees (first 25 clients)", vitharn: "₹0 / month", vyapar: "₹200–500 / month", mybillbook: "₹291–570 / month" },
   { label: "Setup time", vitharn: "24 hours (we do it for you)", vyapar: "Self-setup (days)", mybillbook: "Self-setup (days)" },
-  { label: "Support", vitharn: "Direct WhatsApp \u2014 personal", vyapar: "Ticket queue", mybillbook: "Ticket queue" },
-  { label: "3-Year TCO (estimated)", vitharn: "\u20B925,000 one-time", vyapar: "\u20B972,000\u20131,80,000", mybillbook: "\u20B91,05,000\u20132,05,000" },
+  { label: "Support", vitharn: "Direct WhatsApp — personal", vyapar: "Ticket queue", mybillbook: "Ticket queue" },
+  { label: "3-Year TCO (estimated)", vitharn: "₹25,000 one-time", vyapar: "₹72,000–1,80,000", mybillbook: "₹1,05,000–2,05,000" },
 ];
 
 function CellValue({ value }: { value: string | boolean }) {
@@ -129,14 +129,14 @@ export default function ComparePage() {
       <section className="pricing-hero pricing-hero-grid">
         <div className="pricing-hero-inner">
           <div className="hero-badge">
-            <Zap size={11} /> Competitor Comparison \u2014 2026
+            <Zap size={11} /> Competitor Comparison — 2026
           </div>
           <h1 className="hero-title">
             Why UPVC Fabricators Choose Vitharn<br />
             <em>Over Generic Billing Software</em>
           </h1>
           <p className="hero-subtitle">
-            Vyapar and myBillBook serve 2.5 Cr businesses combined \u2014 but none of them are UPVC fabricators.
+            Vyapar and myBillBook serve 2.5 Cr businesses combined — but none of them are UPVC fabricators.
             Vitharn is built <strong>only for your business</strong>. Here&apos;s the difference.
           </p>
         </div>
@@ -146,14 +146,14 @@ export default function ComparePage() {
       <section style={{ padding: "80px 24px", maxWidth: 900, margin: "0 auto" }}>
         <h2 className="section-title">Built for YOUR business, not every business</h2>
         <p className="section-subtitle">
-          Generic billing apps try to serve everyone. We serve one industry \u2014 and do it better.
+          Generic billing apps try to serve everyone. We serve one industry — and do it better.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16, marginTop: 48 }}>
           {[
-            { title: "UPVC Dimensions", desc: "Enter millimetre dimensions. We auto-calculate square footage, transport charges, and GST \u2014 no spreadsheets, no errors." },
+            { title: "UPVC Dimensions", desc: "Enter millimetre dimensions. We auto-calculate square footage, transport charges, and GST — no spreadsheets, no errors." },
             { title: "Industry Templates", desc: "Quotation templates designed for UPVC windows and doors. Not generic invoicing layouts forced to fit your workflow." },
             { title: "Customer Portal", desc: "Your customers log in to a branded portal to view quotes and request work. Vyapar and myBillBook have nothing like this." },
-            { title: "Business Website", desc: "Get a professional, SEO-optimized website at no extra cost. Generic apps charge \u20B95,000\u201315,000/year for basic web pages." },
+            { title: "Business Website", desc: "Get a professional, SEO-optimized website at no extra cost. Generic apps charge ₹5,000–15,000/year for basic web pages." },
           ].map((item, i) => (
             <div key={i} style={{
               background: "white",
@@ -220,7 +220,7 @@ export default function ComparePage() {
             boxShadow: "0 8px 40px rgba(238, 88, 12, 0.12)",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#EA580C", marginBottom: 16 }}>Vitharn UPVC</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#16a34a", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B925,000</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#16a34a", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>₹25,000</div>
             <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>one-time</div>
             <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>Pay once, own forever</div>
           </div>
@@ -234,9 +234,9 @@ export default function ComparePage() {
             textAlign: "center",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#7A5030", marginBottom: 16 }}>Vyapar</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B972,000+</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>₹72,000+</div>
             <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>over 3 years</div>
-            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>\u20B92,000/month forever</div>
+            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>₹2,000/month forever</div>
           </div>
 
           {/* myBillBook */}
@@ -248,15 +248,15 @@ export default function ComparePage() {
             textAlign: "center",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#7A5030", marginBottom: 16 }}>myBillBook</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B91,05,000+</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>₹1,05,000+</div>
             <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>over 3 years</div>
-            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>\u20B92,900/month forever</div>
+            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>₹2,900/month forever</div>
           </div>
         </div>
 
         <div style={{ marginTop: 32, padding: "20px 24px", background: "#FFF3E6", borderRadius: 12, border: "1px solid rgba(238,88,12,0.15)" }}>
           <p style={{ fontSize: 14, color: "#7A5030", lineHeight: 1.65, textAlign: "center", margin: 0 }}>
-            <strong style={{ color: "#EA580C" }}>You save \u20B947,000\u2013\u20B91,80,000</strong> over 3 years. Plus features they don&apos;t have \u2014 customer portal, website, UPVC auto-calc.
+            <strong style={{ color: "#EA580C" }}>You save ₹47,000–₹1,80,000</strong> over 3 years. Plus features they don&apos;t have — customer portal, website, UPVC auto-calc.
           </p>
         </div>
       </section>
@@ -344,7 +344,7 @@ export default function ComparePage() {
           </div>
           <div>
             <div className="trust-label">24/7 WhatsApp support</div>
-            <div className="trust-sub">Direct help \u2014 not a ticket queue</div>
+            <div className="trust-sub">Direct help — not a ticket queue</div>
           </div>
         </div>
       </section>
@@ -394,16 +394,16 @@ export default function ComparePage() {
       </section>
 
       <footer>
-        <p>\u00A9 2026 Vitharn ERP Services \u2014 Sole Proprietorship, Hyderabad.</p>
+        <p>© 2026 Vitharn ERP Services — Sole Proprietorship, Hyderabad.</p>
         <p className="footer-links">
           <a href="/privacy" className="footer-link">Privacy Policy</a>{" "}
-          \u00B7{" "}
+          ·{" "}
           <a href="/terms" className="footer-link">Terms of Service</a>{" "}
-          \u00B7{" "}
+          ·{" "}
           <a href="/refund-policy" className="footer-link">Refund Policy</a>{" "}
-          \u00B7{" "}
+          ·{" "}
           <a href="/upvc/pricing" className="footer-link">Pricing</a>{" "}
-          \u00B7{" "}
+          ·{" "}
           <a href="mailto:vitarn.dev@gmail.com" className="footer-link">Contact</a>
         </p>
         <p className="footer-fine-print">
