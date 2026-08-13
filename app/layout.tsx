@@ -5,8 +5,9 @@ import UmamiTracker from "./UmamiTracker";
 import UmamiClickTracker from "./UmamiClickTracker";
 
 export const metadata: Metadata = {
-  title: "Vitharn ERP Services — Industry Software Built for Speed",
-  description: "Vitharn builds vertical-specific ERP tools that transform small shops into modern, digital-first enterprises. Explore UPVC, Glass, Retail, and more.",
+  title: "Vitharn ERP Services — Business Software for Indian Fabricators",
+  description:
+    "Vitharn builds industry-specific software for UPVC, glass, and fabrication businesses. Branded quotations, customer portals, and business websites. Made in Hyderabad, India.",
   icons: {
     icon: "/favicon.ico",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
@@ -18,6 +19,14 @@ export const metadata: Metadata = {
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 };
 

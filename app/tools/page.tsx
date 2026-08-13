@@ -61,12 +61,14 @@ export default function ToolsHub() {
       </div>
 
       <section className="tools-hero">
-        <div className="container">
-          <h1>Free Tools for Indian Businesses</h1>
-          <p>
-            Instant calculators for UPVC fabricators, glass dealers, and every
-            Indian business. No signup, no ads, no limits — just results.
-          </p>
+        <div className="tools-hero-inner">
+          <div className="container">
+            <h1>Free Tools for Indian Businesses</h1>
+            <p>
+              Instant calculators for UPVC fabricators, glass dealers, and every
+              Indian business. No signup, no ads, no limits — just results.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -167,7 +169,7 @@ export default function ToolsHub() {
           <a href="/#pricing" className="btn-white">
             <IndianRupee size={18} /> View Pricing Plans
           </a>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 14 }}>
+          <p className="price-note">
             Starting at ₹10,000 one-time · No monthly fees
           </p>
         </div>
