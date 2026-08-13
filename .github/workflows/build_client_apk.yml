@@ -77,7 +77,10 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Build Android Release APK
-        run: flutter build apk --release
+        # --target-platform android-arm64: build arm64-only APK.
+        # The full 3-ABI APK is ~91MB which exceeds Supabase's 50MB object limit
+        # (Free plan) and fails the storage upload with HTTP 413.
+        run: flutter build apk --release --target-platform android-arm64
 
       - name: Upload APK to Supabase Storage
         env:
@@ -90,11 +93,19 @@ jobs:
           fi
           SLUG=$(echo "${{ steps.vars.outputs.client_id }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
           echo "slug=${SLUG}" >> $GITHUB_ENV
-          curl -sS -X PUT \
+          HTTP_CODE=$(curl -sS -f -X PUT \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "x-upsert: true" \
             --data-binary "@build/app/outputs/flutter-apk/app-release.apk" \
-            "${SUPABASE_URL}/storage/v1/object/app-releases/${SLUG}/upvc-quote.apk"
+            -w "%{http_code}" -o /tmp/upload_response.txt \
+            "${SUPABASE_URL}/storage/v1/object/app-releases/${SLUG}/upvc-quote.apk")
+          echo "Upload HTTP status: ${HTTP_CODE}"
+          cat /tmp/upload_response.txt
+          echo
+          if [ "${HTTP_CODE}" -ne 200 ]; then
+            echo "::error::APK upload failed (HTTP ${HTTP_CODE}) — aborting."
+            exit 1
+          fi
           echo "Uploaded app-releases/${SLUG}/upvc-quote.apk"
 
       - name: Publish Download URL to Client Config
