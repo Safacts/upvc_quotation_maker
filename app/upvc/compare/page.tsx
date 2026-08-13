@@ -372,11 +372,11 @@ export default function ComparePage() {
             <span className="muted">Own your platform. Pay once.</span>
           </h2>
           <p className="cta-sub">
-            Start your 7-day free trial. No credit card needed. We&apos;ll set up your account in 24 hours \u2014 fully branded to your business.
+            One-time payment. No monthly fees. Fully branded to your business.
           </p>
           <div className="btn-group btn-group-center">
             <a href="/upvc/login" className="btn-download" id="compareTrialBtn">
-              <ArrowRight size={18} /> Start 7-Day Free Trial
+              <ArrowRight size={18} /> Get Started
             </a>
             <a href="/upvc/pricing" className="btn-webapp btn-webapp--light" id="comparePricingBtn">
               View Pricing
