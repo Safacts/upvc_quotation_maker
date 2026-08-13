@@ -129,7 +129,7 @@ export function computeGstTotals(input: GstInvoiceTotalsInput): GstInvoiceTotals
   }
 
   const transport = num(input.transportCost);
-  const taxableValue = subtotal + transport;
+  const taxableValue = round2(subtotal + transport);
 
   // Resolve the configured rates once.
   const configuredCgst = num(input.cgstRate, 9);

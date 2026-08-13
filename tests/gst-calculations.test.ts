@@ -180,9 +180,11 @@ describe("computeGstTotals() — paisa-level rounding (GAP 1)", () => {
   });
 
   it("produces exact paisa-aligned totals (no float drift)", () => {
-    // taxableValue = 100.05, cgst 9% = 9.0045 → rounds to 9.00
-    // taxableValue = 100.05, sgst 9% = 9.0045 → rounds to 9.00
-    // grandTotal = 100.05 + 9.00 + 9.00 = 118.05
+    // taxableValue = 100.05
+    // IGST-equivalent = round2(100.05 * 18/100) = round2(18.009) = 18.01
+    // CGST = floor(18.01 * 100 / 2) / 100 = floor(900.5) / 100 = 9.00
+    // SGST = 18.01 - 9.00 = 9.01  (remainder — CGST+SGST = IGST exactly)
+    // grandTotal = 100.05 + 9.00 + 9.01 = 118.06
     const t = computeGstTotals({
       items: [{ quantity: 100.05, rate: 1 }],
       transportCost: 0,
@@ -191,8 +193,8 @@ describe("computeGstTotals() — paisa-level rounding (GAP 1)", () => {
       isInterstate: false,
     });
     expect(t.cgstAmount).toBe(9.0);
-    expect(t.sgstAmount).toBe(9.0);
-    expect(t.grandTotal).toBe(118.05);
+    expect(t.sgstAmount).toBe(9.01);
+    expect(t.grandTotal).toBe(118.06);
   });
 });
 
