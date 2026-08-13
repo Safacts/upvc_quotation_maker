@@ -2,27 +2,31 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { sha256 } from "@/lib/auth";
 
-// Mock dependencies
+// Mock dependencies — define spies BEFORE vi.mock so they're accessible without require()
+const supaGet = vi.fn();
+const supaPatch = vi.fn();
+const supaPost = vi.fn();
+const createSession = vi.fn().mockResolvedValue(undefined);
+const deleteSession = vi.fn().mockResolvedValue(undefined);
+const getSession = vi.fn().mockResolvedValue(null);
+
 vi.mock("@/lib/supabase", () => ({
-  supaGet: vi.fn(),
-  supaPatch: vi.fn(),
-  supaPost: vi.fn(),
+  supaGet,
+  supaPatch,
+  supaPost,
   isServiceKeyConfigured: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("@/lib/session", () => ({
-  createSession: vi.fn().mockResolvedValue(undefined),
-  deleteSession: vi.fn().mockResolvedValue(undefined),
-  getSession: vi.fn().mockResolvedValue(null),
+  createSession,
+  deleteSession,
+  getSession,
 }));
 
 vi.mock("@/lib/mail", () => ({
   sendSignupNotification: vi.fn().mockResolvedValue(undefined),
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
-
-const { supaGet, supaPost, supaPatch } = require("@/lib/supabase");
-const { createSession, getSession } = require("@/lib/session");
 
 describe("Auth Flows", () => {
   beforeEach(() => {

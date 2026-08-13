@@ -1,25 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock Supabase
+// Mock Supabase — define spies BEFORE vi.mock so they're accessible without require()
+const supaGet = vi.fn();
+const supaPatch = vi.fn();
+const supaPost = vi.fn();
+const supaGetAllPaged = vi.fn();
+const supabaseRpc = vi.fn();
+const supabaseAdmin = {
+  from: vi.fn(() => ({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+  })),
+};
+
 vi.mock("@/lib/supabase", () => ({
-  supaGet: vi.fn(),
-  supaPatch: vi.fn(),
-  supaPost: vi.fn(),
-  supaGetAllPaged: vi.fn(),
-  supabaseRpc: vi.fn(),
+  supaGet,
+  supaPatch,
+  supaPost,
+  supaGetAllPaged,
+  supabaseRpc,
   isServiceKeyConfigured: vi.fn().mockReturnValue(true),
-  supabaseAdmin: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      delete: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-    })),
-  },
+  supabaseAdmin,
 }));
 
 vi.mock("@/lib/console-auth", () => ({
@@ -42,8 +49,6 @@ vi.mock("@/lib/pricing", () => ({
   measuredLineTotal: vi.fn().mockReturnValue(5000),
   unmeasuredLineTotal: vi.fn().mockReturnValue(3000),
 }));
-
-const { supaGet, supaPost, supaPatch, supaGetAllPaged, supabaseAdmin } = require("@/lib/supabase");
 
 describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
   beforeEach(() => {

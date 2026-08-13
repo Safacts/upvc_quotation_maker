@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock dependencies
+// Mock dependencies — define spies BEFORE vi.mock so they're accessible without require()
+const requireConsoleSession = vi.fn().mockResolvedValue({ ok: true, clientId: "testclient" });
+const supaGetAllPaged = vi.fn();
+const supabaseRpc = vi.fn();
+const quotationTotals = vi.fn().mockReturnValue({ netTotal: 1000, gstAmount: 180, grandTotal: 1180, totalSqft: 50 });
+const measuredLineSqft = vi.fn().mockReturnValue(25);
+const measuredLineTotal = vi.fn().mockReturnValue(5000);
+const unmeasuredLineTotal = vi.fn().mockReturnValue(3000);
+
 vi.mock("@/lib/console-auth", () => ({
-  requireConsoleSession: vi.fn().mockResolvedValue({ ok: true, clientId: "testclient" }),
+  requireConsoleSession,
   consoleJson: (data: any, status = 200) => new Response(JSON.stringify(data), { status }),
 }));
 
@@ -11,25 +19,22 @@ vi.mock("@/lib/supabase", () => ({
   supaGet: vi.fn(),
   supaPatch: vi.fn(),
   supaPost: vi.fn(),
-  supaGetAllPaged: vi.fn(),
-  supabaseRpc: vi.fn(),
+  supaGetAllPaged,
+  supabaseRpc,
   isServiceKeyConfigured: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("@/lib/pricing", () => ({
-  quotationTotals: vi.fn().mockReturnValue({ netTotal: 1000, gstAmount: 180, grandTotal: 1180, totalSqft: 50 }),
-  measuredLineSqft: vi.fn().mockReturnValue(25),
-  measuredLineTotal: vi.fn().mockReturnValue(5000),
-  unmeasuredLineTotal: vi.fn().mockReturnValue(3000),
+  quotationTotals,
+  measuredLineSqft,
+  measuredLineTotal,
+  unmeasuredLineTotal,
 }));
 
 vi.mock("@/lib/export/spreadsheet", () => ({
   exportCsv: vi.fn().mockReturnValue("csv"),
   exportXlsx: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
 }));
-
-const { supaGetAllPaged, supabaseRpc } = require("@/lib/supabase");
-const { quotationTotals, measuredLineSqft, measuredLineTotal, unmeasuredLineTotal } = require("@/lib/pricing");
 
 describe("Reports API - All 5 Reports Drill-down", () => {
   beforeEach(() => {
@@ -500,7 +505,6 @@ describe("Reports API - All 5 Reports Drill-down", () => {
 
     it("TC-RPT-029: Returns 401 for missing session", async () => {
       // Mock requireConsoleSession to return error
-      const { requireConsoleSession } = require("@/lib/console-auth");
       requireConsoleSession.mockResolvedValueOnce({ 
         ok: false, 
         error: new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }) 

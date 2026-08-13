@@ -1,29 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Mock dependencies
+// Mock dependencies — define spies BEFORE vi.mock so they're accessible without require()
+const supaGet = vi.fn();
+const supaPatch = vi.fn();
+const supaPost = vi.fn();
+const getSession = vi.fn();
+const sendMail = vi.fn().mockResolvedValue(undefined);
+const sendOtpEmail = vi.fn().mockResolvedValue(undefined);
+const sendSignupNotification = vi.fn().mockResolvedValue(undefined);
+const sendWelcomeEmail = vi.fn().mockResolvedValue(undefined);
+const sendTrialExpiryEmail = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@/lib/supabase", () => ({
-  supaGet: vi.fn(),
-  supaPatch: vi.fn(),
-  supaPost: vi.fn(),
+  supaGet,
+  supaPatch,
+  supaPost,
   isServiceKeyConfigured: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock("@/lib/session", () => ({
-  getSession: vi.fn(),
+  getSession,
 }));
 
 vi.mock("@/lib/mail", () => ({
-  sendMail: vi.fn().mockResolvedValue(undefined),
-  sendOtpEmail: vi.fn().mockResolvedValue(undefined),
-  sendSignupNotification: vi.fn().mockResolvedValue(undefined),
-  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
-  sendTrialExpiryEmail: vi.fn().mockResolvedValue(undefined),
+  sendMail,
+  sendOtpEmail,
+  sendSignupNotification,
+  sendWelcomeEmail,
+  sendTrialExpiryEmail,
 }));
-
-const { supaGet, supaPost, supaPatch } = require("@/lib/supabase");
-const { getSession } = require("@/lib/session");
-const { sendMail, sendOtpEmail, sendSignupNotification, sendWelcomeEmail, sendTrialExpiryEmail } = require("@/lib/mail");
 
 describe("Email Flows", () => {
   beforeEach(() => {
@@ -373,7 +379,6 @@ describe("Email Flows", () => {
   group("Welcome Email Flow", () => {
     it("TC-EML-013: Sends welcome email on client approval", async () => {
       // This would be triggered from admin panel
-      const { sendWelcomeEmail } = require("@/lib/mail");
       sendWelcomeEmail.mockResolvedValue(undefined);
       
       await sendWelcomeEmail("client-1", "newclient@test.com");
@@ -389,7 +394,6 @@ describe("Email Flows", () => {
 
   group("Trial Expiry Email Flow", () => {
     it("TC-EML-015: Sends trial expiry warning email", async () => {
-      const { sendTrialExpiryEmail } = require("@/lib/mail");
       sendTrialExpiryEmail.mockResolvedValue(undefined);
       
       await sendTrialExpiryEmail("client-1", 2); // 2 days left
@@ -398,7 +402,6 @@ describe("Email Flows", () => {
     });
 
     it("TC-EML-016: Sends trial expired email", async () => {
-      const { sendTrialExpiryEmail } = require("@/lib/mail");
       sendTrialExpiryEmail.mockResolvedValue(undefined);
       
       await sendTrialExpiryEmail("client-1", 0); // Expired

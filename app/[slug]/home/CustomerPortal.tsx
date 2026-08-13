@@ -478,8 +478,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }
 
             return (
-              <>
-                <a 
+              <a 
                 href={isBuilding ? "#" : (config.appDownloadUrl || "#")} 
                 target={config.appDownloadUrl && !isBuilding ? "_blank" : "_self"}
                 rel="noopener noreferrer" 
@@ -565,7 +564,6 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 }}>
                   {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'Install APK' : 'Request Build'}
                 </span>
-              </a>
               {config.appDownloadUrl && config.lastBuildCompletedAt && (
                 <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', paddingLeft: '2px' }}>
                   {(() => {
@@ -576,7 +574,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   })()}
                 </div>
               )}
-              </>
+              </a>
             );
           })()}
           <button className="btn-logout" onClick={handleLogout}>
