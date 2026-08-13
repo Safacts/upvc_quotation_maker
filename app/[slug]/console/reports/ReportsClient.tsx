@@ -8,7 +8,6 @@ import {
   Users,
   Package,
   Trophy,
-  TrendingUp,
   Download,
   RefreshCw,
   Calendar,
@@ -350,7 +349,7 @@ export default function ReportsClient() {
         <DataGrid
           data={data?.rows || []}
           columns={columns}
-          getRowId={(row: any) => row.id ?? row.customer_name ?? row.status ?? row.invoice_number ?? Math.random().toString()}
+          getRowId={(row: any) => row.id ?? row.customer_name ?? row.status ?? row.invoice_number ?? `row-${JSON.stringify(row).slice(0, 64)}`}
           onRowActivate={onRowActivate}
           loading={loading}
           emptyTitle="No data for this range"

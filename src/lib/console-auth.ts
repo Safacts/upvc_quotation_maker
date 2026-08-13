@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession, type SessionPayload } from "@/lib/session";
 import { resolveTenant, type TenantResolution } from "@/lib/tenant";
 import { isServiceKeyConfigured } from "@/lib/supabase";
+import { requireTier } from "@/lib/tiers";
 
 /**
  * console-auth.ts — THE ENTRY GATE FOR EVERY `/api/console/*` ROUTE.
@@ -124,6 +125,19 @@ export async function requireConsoleSession(
       ok: false,
       error: consoleJson({ error: tenant.error || "Forbidden" }, tenant.status || 403),
     };
+  }
+
+  // ── Tier gating (only for non-admin sessions) ──────────────────────────
+  // Admins bypass the paywall — an admin acting cross-tenant is US doing
+  // support, not a customer consuming a feature. Console routes gate inside
+  // requireConsoleSession(), so callers must NOT double-gate.
+  if (!tenant.isAdmin) {
+    const tierCheck = await requireTier(tenant.clientId!, "desktop_console");
+    if (!tierCheck.ok) {
+      // Re-wrap with console headers (no CORS on console routes, but
+      // consistency with the CONSOLE_HEADERS shape).
+      return { ok: false, error: tierCheck.error };
+    }
   }
 
   return {
