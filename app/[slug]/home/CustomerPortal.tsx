@@ -478,7 +478,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }
 
             return (
-              <a 
+              <>
+                <a 
                 href={isBuilding ? "#" : (config.appDownloadUrl || "#")} 
                 target={config.appDownloadUrl && !isBuilding ? "_blank" : "_self"}
                 rel="noopener noreferrer" 
@@ -575,6 +576,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   })()}
                 </div>
               )}
+              </>
             );
           })()}
           <button className="btn-logout" onClick={handleLogout}>
