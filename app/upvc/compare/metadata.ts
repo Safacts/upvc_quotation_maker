@@ -20,11 +20,11 @@ export const metadata = {
     title: "Vitharn vs Vyapar vs myBillBook - Which is Best for UPVC Fabricators?",
     description:
       "See why UPVC fabricators choose Vitharn over generic billing software. 15-dimension comparison, 3-year cost analysis, and industry-specific features.",
-    url: "https://vitharn.com/upvc/compare",
+    url: "https://app.vitharn.com/upvc/compare",
     siteName: "Vitharn UPVC",
     type: "website",
   },
   alternates: {
-    canonical: "https://vitharn.com/upvc/compare",
+    canonical: "https://app.vitharn.com/upvc/compare",
   },
 };
