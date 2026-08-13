@@ -90,6 +90,21 @@ jobs:
           echo "Icon source: $SRC -> assets/icon_source.png"
           dart run flutter_launcher_icons
 
+      - name: Configure permanent release signing
+        # Rehydrate the shared keystore (single permanent key, same signature on
+        # every build) from GH secrets. Without this, gradle falls back to the
+        # runner's ephemeral DEBUG keystore -> every build has a DIFFERENT
+        # signature -> Android refuses install-over-existing ("package conflict").
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/vitharn-release.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=vitharn-release.jks\n' "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/key.properties
+          echo "Permanent signing configured (keystore + key.properties written)."
+
       - name: Build Android Release APK
         # --target-platform android-arm64: build arm64-only APK.
         # The full 3-ABI APK is ~91MB which exceeds Supabase's 50MB object limit
