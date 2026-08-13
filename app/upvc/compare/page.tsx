@@ -207,7 +207,7 @@ export default function ComparePage() {
       {/* 3-YEAR TCO */}
       <section className="cost-comparison" style={{ maxWidth: 800 }}>
         <h2 className="section-title">3-Year Total Cost of Ownership</h2>
-        <p className="section-subtitle">Add up what you&apos;ll actually pay over 3 years \u2014 not just Year 1</p>
+        <p className="section-subtitle">Pay once. Own it forever.</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20, marginTop: 40 }}>
           {/* Vitharn */}
@@ -220,27 +220,9 @@ export default function ComparePage() {
             boxShadow: "0 8px 40px rgba(238, 88, 12, 0.12)",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#EA580C", marginBottom: 16 }}>Vitharn UPVC</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#1A0A00", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B925,000</div>
-            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 20 }}>one-time payment</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 1</span>
-                <span style={{ fontWeight: 700, color: "#16a34a" }}>\u20B925,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 2</span>
-                <span style={{ fontWeight: 700, color: "#16a34a" }}>\u20B90</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 3</span>
-                <span style={{ fontWeight: 700, color: "#16a34a" }}>\u20B90</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px", fontSize: 14, fontWeight: 800 }}>
-                <span style={{ color: "#1A0A00" }}>3-Year Total</span>
-                <span style={{ color: "#16a34a" }}>\u20B925,000</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 16, fontSize: 12, color: "#7A5030" }}>Free updates included</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#16a34a", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B925,000</div>
+            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>one-time</div>
+            <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>Pay once, own forever</div>
           </div>
 
           {/* Vyapar */}
@@ -252,27 +234,9 @@ export default function ComparePage() {
             textAlign: "center",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#7A5030", marginBottom: 16 }}>Vyapar</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#1A0A00", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B972,000+</div>
-            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 20 }}>over 3 years (subscription)</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 1</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B924,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 2</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B924,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 3</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B924,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px", fontSize: 14, fontWeight: 800 }}>
-                <span style={{ color: "#1A0A00" }}>3-Year Total</span>
-                <span style={{ color: "#d97706" }}>\u20B972,000+</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 16, fontSize: 12, color: "#d97706" }}>Prices may increase on renewal</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B972,000+</div>
+            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>over 3 years</div>
+            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>\u20B92,000/month forever</div>
           </div>
 
           {/* myBillBook */}
@@ -284,34 +248,15 @@ export default function ComparePage() {
             textAlign: "center",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#7A5030", marginBottom: 16 }}>myBillBook</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#1A0A00", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B954,000+</div>
-            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 20 }}>over 3 years (subscription)</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 1</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B918,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 2</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B918,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
-                <span style={{ color: "#7A5030" }}>Year 3</span>
-                <span style={{ fontWeight: 700, color: "#d97706" }}>\u20B918,000</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px", fontSize: 14, fontWeight: 800 }}>
-                <span style={{ color: "#1A0A00" }}>3-Year Total</span>
-                <span style={{ color: "#d97706" }}>\u20B954,000+</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 16, fontSize: 12, color: "#d97706" }}>Prices may increase on renewal</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#d97706", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B91,05,000+</div>
+            <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 8 }}>over 3 years</div>
+            <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>\u20B92,900/month forever</div>
           </div>
         </div>
 
         <div style={{ marginTop: 32, padding: "20px 24px", background: "#FFF3E6", borderRadius: 12, border: "1px solid rgba(238,88,12,0.15)" }}>
           <p style={{ fontSize: 14, color: "#7A5030", lineHeight: 1.65, textAlign: "center", margin: 0 }}>
-            <strong style={{ color: "#EA580C" }}>You save \u20B947,000\u2013\u20B91,80,000</strong> over 3 years with Vitharn compared to generic billing software.
-            And you get features they don&apos;t have \u2014 customer portal, business website, UPVC auto-calc.
+            <strong style={{ color: "#EA580C" }}>You save \u20B947,000\u2013\u20B91,80,000</strong> over 3 years. Plus features they don&apos;t have \u2014 customer portal, website, UPVC auto-calc.
           </p>
         </div>
       </section>
@@ -330,7 +275,6 @@ export default function ComparePage() {
                 <li style={{ color: "rgba(255,251,246,0.85)", fontSize: 14, lineHeight: 1.6 }}>✓ Pay once, own it forever</li>
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✓ No surprise price hikes</li>
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✓ No per-user or per-invoice fees</li>
-                <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✓ Free updates for 1 year</li>
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✓ Export data anytime (no lock-in)</li>
               </ul>
             </div>
