@@ -21,6 +21,13 @@ export const MAIL_REPLY_TO = (process.env.SMTP_REPLY_TO || MAIL_FROM_EMAIL).trim
 
 export const ADMIN_EMAILS = ["kongaaadisheshu@gmail.com", "vitarn.dev@gmail.com", "pusalalaxmi41@gmail.com"];
 
+// Singleton pooled transport. Creating a new nodemailer transport per send was
+// the biggest source of email latency: every send re-did DNS + TCP + STARTTLS
+// + SMTP handshake (~2-3s). With a module-level cached transport we reuse the
+// same connection across sends within a serverless invocation, and `pool: true`
+// keeps it warm for subsequent invocations on the same warm lambda.
+let cachedTransporter: any = null;
+
 function transporter() {
   // Live Brevo relay config (07-08-2026):
   //   SMTP_HOST = smtp-relay.brevo.com
@@ -57,11 +64,18 @@ function transporter() {
     auth: { user, pass },
     timeout: 30000,
     connectionTimeout: 30000,
+    // Reuse pooled SMTP connections instead of opening one per email.
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
   };
   if (ip) {
     opts.tls = { servername: host, rejectUnauthorized: true };
   }
-  return nodemailer.createTransport(opts);
+  if (!cachedTransporter) {
+    cachedTransporter = nodemailer.createTransport(opts);
+  }
+  return cachedTransporter;
 }
 
 export function slugify(s: string): string {
@@ -227,9 +241,7 @@ export async function sendSignupNotification(
     </div>
   `;
 
-  for (const admin of ADMIN_EMAILS) {
-    await sendMail({ to: admin, subject, html });
-  }
+  await Promise.all(ADMIN_EMAILS.map((admin) => sendMail({ to: admin, subject, html })));
 }
 
 export function escapeHtml(s: string): string {
