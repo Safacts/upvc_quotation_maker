@@ -99,11 +99,50 @@ class GstInvoiceData {
   double sgstAmount;
   double igstAmount;
   double grandTotal;
-  String amountInWords;
   String notes;
   GstInvoiceStatus status;
   DateTime createdAt;
   List<GstInvoiceItem> items;
+
+  /// Round to 2 decimal places (paisa-level), matching JS
+  /// `Math.round(x * 100) / 100` and TS `round2()`.
+  static double _round2(double x) {
+    return (x * 100).roundToDouble() / 100;
+  }
+
+  /// Convert a number to Indian Rupees-in-words (uppercase, hyphenated tens).
+  /// Matches the TS `amountInWords` in `src/lib/gst-invoice-pdf.ts`.
+  static String numberToWords(double n) {
+    const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+      "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+    String convertChunk(int x) {
+      if (x < 20) return ones[x];
+      if (x < 100) return tens[x ~/ 10] + (x % 10 != 0 ? "-${ones[x % 10]}" : "");
+      if (x < 1000) return "${ones[x ~/ 100]} Hundred${x % 100 != 0 ? " ${convertChunk(x % 100)}" : ""}";
+      return "";
+    }
+
+    int rupees = n.floor();
+    int paise = ((n - rupees) * 100).round();
+    if (rupees == 0 && paise == 0) return "RUPEES ZERO ONLY";
+
+    String words = "";
+    if (rupees >= 10000000) { words += "${convertChunk(rupees ~/ 10000000)} Crore "; rupees %= 10000000; }
+    if (rupees >= 100000) { words += "${convertChunk(rupees ~/ 100000)} Lakh "; rupees %= 100000; }
+    if (rupees >= 1000) { words += "${convertChunk(rupees ~/ 1000)} Thousand "; rupees %= 1000; }
+    if (rupees > 0) words += "${convertChunk(rupees)} ";
+    words += "Rupees";
+    if (paise > 0) words += " and ${convertChunk(paise)} Paise";
+    return "${words}Only".toUpperCase();
+  }
+
+  /// GAP 2: amountInWords is now a computed getter derived from [grandTotal],
+  /// not a stored field. Uses the existing [numberToWords] function so every
+  /// invoice — even ones loaded without a persisted amount_in_words column —
+  /// produces the correct words.
+  String get amountInWords => numberToWords(grandTotal);
 
   GstInvoiceData({
     this.id,
@@ -134,7 +173,6 @@ class GstInvoiceData {
     this.sgstAmount = 0,
     this.igstAmount = 0,
     this.grandTotal = 0,
-    this.amountInWords = '',
     this.notes = '',
     this.status = GstInvoiceStatus.draft,
     DateTime? createdAt,
@@ -152,16 +190,22 @@ class GstInvoiceData {
       igstRate = cgstRate + sgstRate;
       cgstRate = 0;
       sgstRate = 0;
-      igstAmount = taxableValue * igstRate / 100;
+      igstAmount = _round2(taxableValue * igstRate / 100);
       cgstAmount = 0;
       sgstAmount = 0;
     } else {
-      igstRate = 0;
+      // Intra-state: CGST + SGST — split IGST-equivalent so CGST+SGST=IGST exactly.
+      igstAmount = _round2(taxableValue * (cgstRate + sgstRate) / 100);
+      final igistPaisa = (igstAmount * 100).round();
+      cgstAmount = _round2((igistPaisa ~/ 2) / 100);
+      sgstAmount = _round2(igistEquiv - cgstAmount);
       igstAmount = 0;
-      cgstAmount = taxableValue * cgstRate / 100;
-      sgstAmount = taxableValue * sgstRate / 100;
     }
-    grandTotal = taxableValue + cgstAmount + sgstAmount + igstAmount;
+    grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igstAmount);
+  }
+    grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igistAmount);
+  }
+    grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igstAmount);
   }
 
   static Future<String> generateNextNumber(String clientId) async {
@@ -251,7 +295,6 @@ class GstInvoiceData {
     d.sgstAmount = (map['sgst_amount'] ?? 0).toDouble();
     d.igstAmount = (map['igst_amount'] ?? 0).toDouble();
     d.grandTotal = (map['grand_total'] ?? 0).toDouble();
-    d.amountInWords = map['amount_in_words'] ?? '';
     d.notes = map['notes'] ?? '';
     d.status = GstInvoiceStatusX.fromString(map['status']);
     d.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();

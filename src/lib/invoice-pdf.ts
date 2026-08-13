@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
 import { BRAND, ORANGE, GST_NOTE, hexToRgb } from "./brand";
+import * as QRCode from "qrcode";
 
 // Server-side Vitharn INVOICE PDF (orange monochrome).
 //
@@ -422,6 +423,26 @@ export async function buildInvoicePdf(data: InvoiceData): Promise<Uint8Array> {
     py,
     { size: 7.6, font: oblique, color: C.muted },
   );
+
+  if (upiId) {
+    try {
+      let upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(upiName)}&tr=${encodeURIComponent(data.invoiceNumber)}&cu=INR`;
+      if (subtotal > 0) {
+        upiUri += `&am=${subtotal.toFixed(2)}`;
+      }
+      const qrBuffer = await QRCode.toBuffer(upiUri, { errorCorrectionLevel: "M", margin: 0 });
+      const qrImg = await doc.embedPng(qrBuffer);
+      page.drawImage(qrImg, {
+        x: M + contentW - 74,
+        y: y - payH + 12,
+        width: 60,
+        height: 60,
+      });
+      text("SCAN TO PAY", M + contentW - 68, y - payH + 5, { size: 6.5, font: bold, color: C.main });
+    } catch (e) {
+      console.error("[invoice-pdf] Failed to generate UPI QR:", e);
+    }
+  }
 
   y -= payH + 14;
 

@@ -105,8 +105,8 @@ function inr(n: number): string {
   return `Rs. ${out}.${frac}`;
 }
 
-/** Rupees in words — matches lib/models.dart:77-99 (hyphenated tens, UPPERCASE). */
-function amountInWords(n: number): string {
+/** Rupees in words — matches Dart `GstInvoiceData.numberToWords`. Uppercased. */
+export function amountInWords(n: number): string {
   const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
     "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
   const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];

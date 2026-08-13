@@ -3,6 +3,8 @@ import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { getSession } from "@/lib/session";
 import { resolveTenant } from "@/lib/tenant";
 import { requireTier } from "@/lib/tiers";
+import { computeGstTotals, gstItemTaxableValue } from "@/lib/gst-calculations";
+import { amountInWords } from "@/lib/gst-invoice-pdf";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -71,6 +73,18 @@ export async function POST(request: NextRequest) {
 
     const items: any[] = Array.isArray(p.items) ? p.items : [];
 
+    // GAP 4: Server-side recompute — never trust client-supplied tax amounts.
+    // Recompute all tax figures from items + transport + rates + states.
+    const computed = computeGstTotals({
+      items,
+      transportCost: p.transport_cost,
+      cgstRate: p.cgst_rate,
+      sgstRate: p.sgst_rate,
+      isInterstate: p.is_interstate,
+      supplierState: p.supplier_state,
+      buyerState: p.buyer_state,
+    });
+
     const invoiceBody: Record<string, any> = {
       client_id: clientId,
       invoice_number: p.invoice_number || null,
@@ -87,20 +101,21 @@ export async function POST(request: NextRequest) {
       buyer_state_code: p.buyer_state_code || null,
       place_of_supply: p.place_of_supply || null,
       place_of_supply_code: p.place_of_supply_code || null,
-      is_interstate: p.is_interstate ?? false,
+      is_interstate: computed.isInterstate,
       is_reverse_charge: p.is_reverse_charge ?? false,
       source_quotation_id: p.source_quotation_id || null,
-      transport_cost: p.transport_cost ?? 0,
-      subtotal: p.subtotal ?? 0,
-      taxable_value: p.taxable_value ?? 0,
-      cgst_rate: p.cgst_rate ?? 0,
-      sgst_rate: p.sgst_rate ?? 0,
-      igst_rate: p.igst_rate ?? 0,
-      cgst_amount: p.cgst_amount ?? 0,
-      sgst_amount: p.sgst_amount ?? 0,
-      igst_amount: p.igst_amount ?? 0,
-      grand_total: p.grand_total ?? 0,
-      amount_in_words: p.amount_in_words || null,
+      transport_cost: computed.transportCost,
+      // --- Server-computed values (overwrite client-supplied) ---
+      subtotal: computed.subtotal,
+      taxable_value: computed.taxableValue,
+      cgst_rate: computed.cgstRate,
+      sgst_rate: computed.sgstRate,
+      igst_rate: computed.igstRate,
+      cgst_amount: computed.cgstAmount,
+      sgst_amount: computed.sgstAmount,
+      igst_amount: computed.igstAmount,
+      grand_total: computed.grandTotal,
+      amount_in_words: amountInWords(computed.grandTotal),
       notes: p.notes || null,
       status: p.status || "draft",
     };
@@ -116,10 +131,10 @@ export async function POST(request: NextRequest) {
         sno: item.sno ?? idx + 1,
         hsn_code: item.hsn_code || null,
         description: item.description || null,
-        quantity: item.quantity ?? 0,
-        unit: item.unit || null,
-        rate: item.rate ?? 0,
-        taxable_value: item.taxable_value ?? 0,
+          quantity: item.quantity ?? 0,
+          unit: item.unit || null,
+          rate: item.rate ?? 0,
+          taxable_value: gstItemTaxableValue(item),
       }));
       await supaPost("gst_invoice_items", itemRows);
     }

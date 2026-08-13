@@ -9,6 +9,8 @@ import {
 import { getSession } from "@/lib/session";
 import { authorizeOwnedTenant } from "@/lib/tenant";
 import { requireTier } from "@/lib/tiers";
+import { computeGstTotals, gstItemTaxableValue } from "@/lib/gst-calculations";
+import { amountInWords } from "@/lib/gst-invoice-pdf";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -101,12 +103,19 @@ export async function PUT(
 
     const { id } = await params;
     const p = await request.json();
-    
-    const existingRows = await supaGet("gst_invoices", { id: "eq." + id, select: "client_id" });
+
+    // Fetch the FULL existing row (not just client_id) so we can recompute
+    // tax amounts server-side from the persisted state when the client
+    // does not resend every field.
+    const existingRows = await supaGet("gst_invoices", { id: "eq." + id, select: "*" });
     if (!Array.isArray(existingRows) || existingRows.length === 0) {
       return json({ error: "not found" }, 404);
     }
-    const auth = authorizeOwnedTenant(session, existingRows[0].client_id);
+    const existing = existingRows[0];
+
+    // Ownership, not just comparison: a `signup` role holds no tenant and is
+    // rejected here rather than falling through the old customer-only check.
+    const auth = authorizeOwnedTenant(session, existing.client_id);
     if (!auth.ok) return json({ error: auth.error }, auth.status);
 
     const denied = await gateInvoicing(auth);
@@ -116,22 +125,66 @@ export async function PUT(
     // never with anything the caller sent.
     const ownerClientId = auth.clientId;
 
+    // Merge: client input takes precedence for recompute-relevant fields,
+    // existing persisted values serve as fallback.
+    const mergedSupplierState = p.supplier_state || existing.supplier_state;
+    const mergedBuyerState = p.buyer_state || existing.buyer_state;
+    const mergedTransport = p.transport_cost !== undefined ? p.transport_cost : existing.transport_cost;
+    const mergedCgstRate = p.cgst_rate !== undefined ? p.cgst_rate : existing.cgst_rate;
+    const mergedSgstRate = p.sgst_rate !== undefined ? p.sgst_rate : existing.sgst_rate;
+
+    // Items for recompute: client-supplied if present, otherwise fetch the
+    // existing line items from the database so totals stay correct even when
+    // the caller only patches header fields.
+    let recomputeItems: any[] = Array.isArray(p.items) ? p.items : [];
+    if (!Array.isArray(p.items)) {
+      const existingItems = await supaGet("gst_invoice_items", {
+        invoice_id: "eq." + id,
+        client_id: "eq." + ownerClientId,
+        select: "*",
+        order: "sno.asc",
+      });
+      recomputeItems = Array.isArray(existingItems) ? existingItems : [];
+    }
+
+    // GAP 4: Server-side recompute — never trust client-supplied tax amounts.
+    const computed = computeGstTotals({
+      items: recomputeItems,
+      transportCost: mergedTransport,
+      cgstRate: mergedCgstRate,
+      sgstRate: mergedSgstRate,
+      isInterstate: p.is_interstate,
+      supplierState: mergedSupplierState,
+      buyerState: mergedBuyerState,
+    });
+
     const updateBody: Record<string, any> = {};
     const fields = [
       "invoice_number", "invoice_date", "supplier_company_name",
       "supplier_address", "supplier_gstin", "supplier_state",
       "supplier_state_code", "buyer_name", "buyer_address",
       "buyer_gstin", "buyer_state", "buyer_state_code",
-      "place_of_supply", "place_of_supply_code", "is_interstate",
-      "is_reverse_charge", "source_quotation_id", "transport_cost",
-      "subtotal", "taxable_value", "cgst_rate", "sgst_rate", "igst_rate",
-      "cgst_amount", "sgst_amount", "igst_amount", "grand_total",
-      "amount_in_words", "notes", "status",
+      "place_of_supply", "place_of_supply_code", "is_reverse_charge",
+      "source_quotation_id", "notes", "status",
     ];
 
     for (const f of fields) {
       if (p[f] !== undefined) updateBody[f] = p[f];
     }
+
+    // --- Server-computed values (overwrite client-supplied) ---
+    updateBody.transport_cost = computed.transportCost;
+    updateBody.subtotal = computed.subtotal;
+    updateBody.taxable_value = computed.taxableValue;
+    updateBody.cgst_rate = computed.cgstRate;
+    updateBody.sgst_rate = computed.sgstRate;
+    updateBody.igst_rate = computed.igstRate;
+    updateBody.cgst_amount = computed.cgstAmount;
+    updateBody.sgst_amount = computed.sgstAmount;
+    updateBody.igst_amount = computed.igstAmount;
+    updateBody.grand_total = computed.grandTotal;
+    updateBody.is_interstate = computed.isInterstate;
+    updateBody.amount_in_words = amountInWords(computed.grandTotal);
 
     if (Object.keys(updateBody).length > 0) {
       await supaPatch("gst_invoices", { id: "eq." + id }, updateBody);
@@ -154,7 +207,7 @@ export async function PUT(
           quantity: item.quantity ?? 0,
           unit: item.unit || null,
           rate: item.rate ?? 0,
-          taxable_value: item.taxable_value ?? 0,
+          taxable_value: gstItemTaxableValue(item),
         }));
         await supaPost("gst_invoice_items", itemRows);
       }

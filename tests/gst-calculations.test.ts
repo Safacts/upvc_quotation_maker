@@ -147,3 +147,116 @@ describe("computeGstTotals() — edge cases", () => {
     expect(t.cgstAmount).toBe(900);
   });
 });
+
+describe("computeGstTotals() — paisa-level rounding (GAP 1)", () => {
+  it("rounds fractional tax amounts to the nearest paisa", () => {
+    // taxableValue = 111.11, cgst 9% = 9.9999 → rounds to 10.00
+    // taxableValue = 111.11, sgst 9% = 9.9999 → rounds to 10.00
+    // grandTotal = 111.11 + 10.00 + 10.00 = 131.11
+    const t = computeGstTotals({
+      items: [{ quantity: 111.11, rate: 1 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      isInterstate: false,
+    });
+    expect(t.cgstAmount).toBe(10); // 111.11 * 9/100 = 9.9999 → 10.00
+    expect(t.sgstAmount).toBe(10);
+    expect(t.grandTotal).toBe(131.11);
+  });
+
+  it("rounds IGST amounts to the nearest paisa", () => {
+    // taxableValue = 111.11, igst 18% = 19.9998 → rounds to 20.00
+    // grandTotal = 111.11 + 20.00 = 131.11
+    const t = computeGstTotals({
+      items: [{ quantity: 111.11, rate: 1 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      isInterstate: true,
+    });
+    expect(t.igstAmount).toBe(20); // 111.11 * 18/100 = 19.9998 → 20.00
+    expect(t.grandTotal).toBe(131.11);
+  });
+
+  it("produces exact paisa-aligned totals (no float drift)", () => {
+    // taxableValue = 100.05, cgst 9% = 9.0045 → rounds to 9.00
+    // taxableValue = 100.05, sgst 9% = 9.0045 → rounds to 9.00
+    // grandTotal = 100.05 + 9.00 + 9.00 = 118.05
+    const t = computeGstTotals({
+      items: [{ quantity: 100.05, rate: 1 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      isInterstate: false,
+    });
+    expect(t.cgstAmount).toBe(9.0);
+    expect(t.sgstAmount).toBe(9.0);
+    expect(t.grandTotal).toBe(118.05);
+  });
+});
+
+describe("computeGstTotals() — auto inter-state detection (GAP 3)", () => {
+  it("detects IGST when supplier and buyer are in different states", () => {
+    const t = computeGstTotals({
+      items: [{ quantity: 10, rate: 1000 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      supplierState: "Telangana",
+      buyerState: "Maharashtra",
+    });
+    expect(t.isInterstate).toBe(true);
+    expect(t.igstRate).toBe(18);
+    expect(t.cgstRate).toBe(0);
+    expect(t.sgstRate).toBe(0);
+    expect(t.cgstAmount).toBe(0);
+    expect(t.sgstAmount).toBe(0);
+    expect(t.igstAmount).toBe(1800);
+    expect(t.grandTotal).toBe(11800);
+  });
+
+  it("detects CGST+SGST when supplier and buyer are in the same state", () => {
+    const t = computeGstTotals({
+      items: [{ quantity: 10, rate: 1000 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      supplierState: "Telangana",
+      buyerState: "Telangana",
+    });
+    expect(t.isInterstate).toBe(false);
+    expect(t.cgstRate).toBe(9);
+    expect(t.sgstRate).toBe(9);
+    expect(t.igstRate).toBe(0);
+    expect(t.cgstAmount).toBe(900);
+    expect(t.sgstAmount).toBe(900);
+    expect(t.igstAmount).toBe(0);
+    expect(t.grandTotal).toBe(11800);
+  });
+
+  it("case-insensitive state comparison", () => {
+    const t = computeGstTotals({
+      items: [{ quantity: 10, rate: 1000 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      supplierState: "telangana",
+      buyerState: "TELANGANA",
+    });
+    expect(t.isInterstate).toBe(false);
+    expect(t.cgstAmount).toBe(900);
+  });
+
+  it("falls back to client-supplied isInterstate when states are not provided", () => {
+    const t = computeGstTotals({
+      items: [{ quantity: 10, rate: 1000 }],
+      transportCost: 0,
+      cgstRate: 9,
+      sgstRate: 9,
+      isInterstate: true,
+    });
+    expect(t.isInterstate).toBe(true);
+    expect(t.igstAmount).toBe(1800);
+  });
+});
