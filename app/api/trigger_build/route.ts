@@ -10,9 +10,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { client_id, app_name } = await request.json();
+    const { client_id, app_name, version_name, version_code } = await request.json();
     if (!client_id) {
       return NextResponse.json({ error: "Missing client_id" }, { status: 400 });
+    }
+
+    // Version-aware build dispatch.
+    // The portal sends the version the client CURRENTLY has (version_name / version_code).
+    // We bump it for the NEW build: versionCode is simply +1 (or 1 if absent/invalid),
+    // and versionName gets its PATCH segment incremented (e.g. "1.0.0" -> "1.0.1").
+    // The CI workflow writes appVersionName / appVersionCode / lastBuildVersionCode back
+    // into the client config only after the build succeeds — we never write them here.
+    const rawCode = Number(version_code);
+    const newCode =
+      version_code != null && Number.isFinite(rawCode) && rawCode >= 0 ? rawCode + 1 : 1;
+
+    let newName: string | undefined;
+    if (version_name != null && String(version_name).trim() !== "") {
+      const parts = String(version_name).trim().split(".");
+      const lastSegment = Number(parts[parts.length - 1]);
+      if (Number.isFinite(lastSegment)) {
+        parts[parts.length - 1] = String(lastSegment + 1);
+        newName = parts.join(".");
+      } else {
+        // No numeric last segment — leave the version name unchanged.
+        newName = String(version_name);
+      }
     }
 
     // Allow admins to build for anyone, but customers can only build for themselves.
@@ -52,6 +75,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Dispatch GitHub Action build event
+    const clientPayload: Record<string, unknown> = {
+      client_id,
+      app_name: app_name || `${client_id} UPVC Quote`,
+      version_code: newCode,
+    };
+    if (newName !== undefined) {
+      clientPayload.version_name = newName;
+    }
+
     const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/dispatches`, {
       method: "POST",
       headers: {
@@ -61,10 +93,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         event_type: "build-client-apk",
-        client_payload: {
-          client_id,
-          app_name: app_name || `${client_id} UPVC Quote`
-        }
+        client_payload: clientPayload
       })
     });
 

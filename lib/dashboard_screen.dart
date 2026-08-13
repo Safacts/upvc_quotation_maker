@@ -23,9 +23,11 @@ import 'gst_invoice_list_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
+import 'services/auto_update_service.dart';
 import 'widgets/offline_indicator.dart';
 import 'widgets/sync_status_widget.dart';
 import 'widgets/update_banner.dart';
+import 'widgets/update_prompt.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
@@ -50,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _fetchQuotations();
     _refreshPendingSyncCount();
+    _initAutoUpdate();
   }
 
   /// Read the offline write-queue depth so the banner shows a real number.
@@ -64,6 +67,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() => _pendingSyncCount = count);
     } catch (_) {
       // Pending count is cosmetic; never surface an error for it.
+    }
+  }
+
+  /// First in-app update check after login. Runs with the logged-in client's
+  /// config so the updater compares against the right tenant's published APK.
+  void _initAutoUpdate() {
+    try {
+      final cfg = Provider.of<AppState>(context, listen: false).clientConfig;
+      AutoUpdateService.instance.setConfig(cfg);
+      AutoUpdateService.instance.checkNow();
+    } catch (e) {
+      debugPrint('AutoUpdate init error: $e');
     }
   }
 
@@ -430,6 +445,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               clientId: context.read<AppState>().clientConfig.clientId,
               onApplied: _fetchQuotations,
             ),
+          // Listens for in-app APK updates; renders nothing itself.
+          const UpdatePrompt(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Wrap(

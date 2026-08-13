@@ -500,7 +500,11 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           client_id: client.id,
-                          app_name: config.appName
+                          app_name: config.appName,
+                          // Pass the CURRENT published version so the API bumps it
+                          // for the new build (versionCode +1, patch +1).
+                          version_name: config.appVersionName || undefined,
+                          version_code: config.appVersionCode ?? undefined,
                         })
                       });
                       if (res.ok) {
@@ -558,9 +562,19 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   padding: '2px 6px', 
                   borderRadius: '10px' 
                 }}>
-                  {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'APK Ready' : 'Request Build'}
+                  {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'Install APK' : 'Request Build'}
                 </span>
               </a>
+              {config.appDownloadUrl && config.lastBuildCompletedAt && (
+                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', paddingLeft: '2px' }}>
+                  {(() => {
+                    const d = new Date(config.lastBuildCompletedAt);
+                    if (isNaN(d.getTime())) return null;
+                    const pad = (n: number) => String(n).padStart(2, '0');
+                    return `Last updated: ${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+                  })()}
+                </div>
+              )}
             );
           })()}
           <button className="btn-logout" onClick={handleLogout}>

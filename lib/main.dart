@@ -10,6 +10,7 @@ import 'theme.dart';
 import 'app_state.dart';
 import 'notification_service.dart';
 import 'services/notification_center_service.dart';
+import 'services/auto_update_service.dart';
 import 'config/client_loader.dart';
 import 'favicon_service.dart';
 import 'services/offline_database.dart';
@@ -59,6 +60,14 @@ void main() async {
 
   // Initialize offline-first services (non-blocking — must not delay first paint)
   _initializeOfflineServices(appState).ignore();
+
+  // In-app APK updater (Android only — no-op on web). The config provider is
+  // a closure over AppState so it always sees the LOGGED-IN client's config,
+  // even after a login switches clients. The first check is deferred to the
+  // dashboard initState so it runs after login with the right tenant.
+  AutoUpdateService.instance.initialize(
+    configProvider: () => appState.clientConfig,
+  );
 
   runApp(
     ChangeNotifierProvider.value(
