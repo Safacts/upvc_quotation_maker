@@ -48,6 +48,11 @@ export interface GstInvoicePdfData {
   companyName: string;
   companyAddress: string;
   gstNumber: string;
+  // Bank details.
+  bankName: string;
+  bankBranch: string;
+  bankAccountNo: string;
+  bankIfsc: string;
   // Buyer.
   buyerName: string;
   buyerAddress: string;
@@ -313,6 +318,21 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   const wordsStr = data.amountInWords || amountInWords(data.grandTotal);
   text(wordsStr, M + 90, y - 10, { size: 8 });
   y -= 26;
+
+  // ---- Bank Details ----
+  sectionTitle("Bank Details");
+  const bankLines = [
+    `Company Name : ${data.companyName}`,
+    `Bank Name & Branch : ${data.bankName} - ${data.bankBranch}`,
+    `Account No : ${data.bankAccountNo}`,
+    `IFSC : ${data.bankIfsc}`,
+  ];
+  for (const ln of bankLines) {
+    if (y < 120) { page = doc.addPage(A4); y = H; }
+    text(ln, M, y - 9, { size: 8 });
+    y -= 10;
+  }
+  y -= 6;
 
   // ---- Terms & Conditions ----
   sectionTitle("Terms & Conditions");

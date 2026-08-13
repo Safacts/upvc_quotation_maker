@@ -53,6 +53,8 @@ Future<Uint8List> generateGstPdfBytes(GstInvoiceData data, AppState appState) as
           pw.SizedBox(height: 10),
           _buildTermsAndConditions(appState),
           pw.SizedBox(height: 8),
+          _buildBankDetails(appState),
+          pw.SizedBox(height: 10),
           _buildReverseCharge(data),
           pw.SizedBox(height: 30),
           _buildSignature(appState),
@@ -253,6 +255,27 @@ pw.Widget _buildTermsAndConditions(AppState appState) {
       pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
       pw.SizedBox(height: 4),
       pw.Text(appState.termsAndConditions, style: pw.TextStyle(fontSize: 8)),
+    ],
+  );
+}
+
+pw.Widget _buildBankDetails(AppState appState) {
+  final bankName = appState.bankName;
+  final bankBranch = appState.bankBranch;
+  final bankAccountNo = appState.bankAccountNo;
+  final bankIfsc = appState.bankIfsc;
+  if (bankName.isEmpty && bankBranch.isEmpty && bankAccountNo.isEmpty && bankIfsc.isEmpty) {
+    return pw.SizedBox.shrink();
+  }
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text('Bank Details', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+      pw.SizedBox(height: 4),
+      pw.Text('Company Name : ${appState.companyName}', style: pw.TextStyle(fontSize: 9)),
+      pw.Text('Bank Name & Branch : $bankName - $bankBranch', style: pw.TextStyle(fontSize: 9)),
+      pw.Text('Account No : $bankAccountNo', style: pw.TextStyle(fontSize: 9)),
+      pw.Text('IFSC : $bankIfsc', style: pw.TextStyle(fontSize: 9)),
     ],
   );
 }
