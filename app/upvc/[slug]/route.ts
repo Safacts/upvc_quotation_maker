@@ -57,7 +57,7 @@ export async function GET(
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="${esc(splashName)}">
   <meta name="theme-color" content="${themeColor}">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="${esc(splashIcon)}">
   <link rel="icon" type="image/png" href="favicon.png"/>
   <title>${esc(splashName)}</title>
   <link rel="manifest" href="/api/pwa/${esc(appSlug)}">
