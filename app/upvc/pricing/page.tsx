@@ -620,7 +620,7 @@ export default function WebPricingPage() {
           </div>
           <div className="faq-item-modern">
             <h3>Can I get a refund?</h3>
-            <p>Yes — 30-day money-back guarantee, no questions asked.</p>
+            <p>Yes — 7-day money-back guarantee, no questions asked.</p>
           </div>
           <div className="faq-item-modern">
             <h3>Do you own my data?</h3>

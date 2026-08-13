@@ -35,6 +35,9 @@ export default function SlaPage() {
           </ul>
           <p>Credits must be requested within 15 days of the end of the affected month. For one-time license holders, extended service days are added to the end of your license period.</p>
           
+          <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Liability Cap</h2>
+          <p>In no event shall our total aggregate liability for all claims arising out of or related to service downtime, data loss, or breach of this SLA exceed the total amount paid by you to Vitharn ERP Services during the twelve (12) months immediately preceding the event giving rise to the liability.</p>
+
           <h2 style={{ color: "#1A0A00", fontSize: 19 }}>Exclusions</h2>
           <p>Uptime credits do not apply to downtime caused by: (a) scheduled maintenance with prior notice; (b) force majeure events; (c) customer-side internet or hardware failures; or (d) customer misuse of the platform.</p>
           

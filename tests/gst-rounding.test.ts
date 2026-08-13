@@ -333,20 +333,25 @@ describe("GST rounding — zero GST rate", () => {
 // ---------------------------------------------------------------------------
 describe("GST rounding — 3-decimal input precision", () => {
   it("₹100.105 rate is rounded consistently (TS and Dart parity)", () => {
-    // 100.105 in IEEE-754 double is 100.1049999… so roundMoney → 100.10
+    // The double for 100.105 is 100.10500000000000398 (slightly ABOVE the
+    // half-paisa boundary), so 100.105*100 = 10010.5 EXACTLY in Node (V8) →
+    // round2 → 100.11. The IEEE-754 result is deterministic: every correct
+    // rounding (Math.round, toFixed, Dart roundToDouble) yields 100.11.
     const t = computeGstTotals({
       items: [{ quantity: 1, rate: 100.105 }],
       cgstRate: 9,
       sgstRate: 9,
       isInterstate: false,
     });
-    // taxableValue = roundMoney(100.105) = 100.10
-    expect(t.taxableValue).toBe(100.1);
-    // CGST = round(100.10 * 9/100) = round(9.009) = 9.01
+    // taxableValue = round2(100.105) = 100.11
+    expect(t.taxableValue).toBe(100.11);
+    // IGST-equivalent = round2(100.11 * 18/100) = round2(18.0198) = 18.02
+    // CGST = floor(18.02 * 100 / 2) / 100 = floor(901) / 100 = 9.01
+    // SGST = 18.02 - 9.01 = 9.01
     expect(t.cgstAmount).toBe(9.01);
     expect(t.sgstAmount).toBe(9.01);
-    // grandTotal = 100.10 + 9.01 + 9.01 = 118.12
-    expect(t.grandTotal).toBe(118.12);
+    // grandTotal = 100.11 + 9.01 + 9.01 = 118.13
+    expect(t.grandTotal).toBe(118.13);
     expectGrandTotalClean(t);
   });
 
@@ -371,19 +376,20 @@ describe("GST rounding — 3-decimal input precision", () => {
     expectCgstSgstEqualsIgst(intra, inter);
   });
 
-  it("rounds half-away-from-zero on 0.5 paisa boundary", () => {
+  it("floors CGST at the .5-paisa split boundary so CGST+SGST = IGST exactly", () => {
     // taxableValue = 101, rate = 5% (cgst 2.5, sgst 2.5)
-    // CGST = round(101 * 2.5/100) = round(2.525) = 2.53
-    // SGST = round(2.525) = 2.53
+    // IGST-equivalent = round2(101 * 5/100) = round2(5.05) = 5.05
+    // CGST = floor(5.05 * 100 / 2) / 100 = floor(252.5) / 100 = 2.52
+    // SGST = 5.05 - 2.52 = 2.53  (remainder — CGST+SGST = IGST to the paisa)
     const t = computeGstTotals({
       items: [{ quantity: 1, rate: 101 }],
       cgstRate: 2.5,
       sgstRate: 2.5,
       isInterstate: false,
     });
-    expect(t.cgstAmount).toBe(2.53);
+    expect(t.cgstAmount).toBe(2.52);
     expect(t.sgstAmount).toBe(2.53);
-    expect(t.grandTotal).toBe(101 + 2.53 + 2.53);
+    expect(t.grandTotal).toBe(101 + 2.52 + 2.53);
   });
 
   it("rounds half-away-from-zero DOWN at .5 boundary for CGST 9%", () => {

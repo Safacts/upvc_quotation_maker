@@ -194,17 +194,14 @@ class GstInvoiceData {
       cgstAmount = 0;
       sgstAmount = 0;
     } else {
-      // Intra-state: CGST + SGST — split IGST-equivalent so CGST+SGST=IGST exactly.
-      igstAmount = _round2(taxableValue * (cgstRate + sgstRate) / 100);
-      final igistPaisa = (igstAmount * 100).round();
-      cgstAmount = _round2((igistPaisa ~/ 2) / 100);
-      sgstAmount = _round2(igistEquiv - cgstAmount);
-      igstAmount = 0;
+      // Intra-state: CGST + SGST — split IGST-equivalent so CGST+SGST = IGST exactly.
+      final combined = _round2(taxableValue * (cgstRate + sgstRate) / 100);
+      final paisa = (combined * 100).round();
+      cgstAmount = _round2((paisa ~/ 2) / 100); // floor half
+      sgstAmount = _round2(combined - cgstAmount); // remainder
+      igstRate = 0; // display
+      igstAmount = 0; // display
     }
-    grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igstAmount);
-  }
-    grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igistAmount);
-  }
     grandTotal = _round2(taxableValue + cgstAmount + sgstAmount + igstAmount);
   }
 

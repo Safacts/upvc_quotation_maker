@@ -91,13 +91,18 @@ export default function TermsPage() {
             are posted constitutes acceptance of the updated Terms.
           </p>
 
-          <h2 style={styles.h2}>10. Governing Law</h2>
+          <h2 style={styles.h2}>10. No Payment Processing or Financial Liability</h2>
+          <p>
+            Vitharn ERP Services purely provides software tools (including quotation generation and UPI QR code display). We are not a payment processor, payment gateway, or financial intermediary. We do not handle, collect, or process any funds on behalf of businesses or their customers. Any financial transactions occur directly between the business and their end customer. We accept no liability for payment disputes, failure of delivery, fraud, or tax compliance arising from transactions facilitated by quotations generated on our platform.
+          </p>
+
+          <h2 style={styles.h2}>11. Governing Law</h2>
           <p>
             These Terms are governed by the laws of India. Any disputes shall be subject to the
             exclusive jurisdiction of the courts of Hyderabad, Telangana.
           </p>
 
-          <h2 style={styles.h2}>11. Contact Us</h2>
+          <h2 style={styles.h2}>12. Contact Us</h2>
           <p>
             Questions about these Terms may be sent to{" "}
             <a href="mailto:vitarn.dev@gmail.com" style={styles.link}>vitarn.dev@gmail.com</a>.
