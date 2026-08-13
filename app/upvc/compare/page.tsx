@@ -23,10 +23,10 @@ const features = [
   { label: "GST-compliant invoicing", vitharn: true, vyapar: true, mybillbook: true },
   { label: "Mobile app (Android)", vitharn: true, vyapar: true, mybillbook: true },
   { label: "Data export (Tally XML / Excel)", vitharn: true, vyapar: "Partial", mybillbook: "Partial" },
-  { label: "Monthly fees (first 25 clients)", vitharn: "\u20B90 / month", vyapar: "\u20B9200\u2013500 / month", mybillbook: "\u20B9150\u2013400 / month" },
+  { label: "Monthly fees (first 25 clients)", vitharn: "\u20B90 / month", vyapar: "\u20B9200\u2013500 / month", mybillbook: "\u20B9291\u2013570 / month" },
   { label: "Setup time", vitharn: "24 hours (we do it for you)", vyapar: "Self-setup (days)", mybillbook: "Self-setup (days)" },
   { label: "Support", vitharn: "Direct WhatsApp \u2014 personal", vyapar: "Ticket queue", mybillbook: "Ticket queue" },
-  { label: "3-Year TCO (estimated)", vitharn: "\u20B935,000 one-time", vyapar: "\u20B972,000\u20131,80,000", mybillbook: "\u20B954,000\u20131,44,000" },
+  { label: "3-Year TCO (estimated)", vitharn: "\u20B925,000 one-time", vyapar: "\u20B972,000\u20131,80,000", mybillbook: "\u20B91,05,000\u20132,05,000" },
 ];
 
 function CellValue({ value }: { value: string | boolean }) {
@@ -220,12 +220,12 @@ export default function ComparePage() {
             boxShadow: "0 8px 40px rgba(238, 88, 12, 0.12)",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "#EA580C", marginBottom: 16 }}>Vitharn UPVC</div>
-            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#1A0A00", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B935,000</div>
+            <div style={{ fontSize: "2.8rem", fontWeight: 900, color: "#1A0A00", letterSpacing: "-0.04em", lineHeight: 1, marginBottom: 4 }}>\u20B925,000</div>
             <div style={{ fontSize: 13, color: "#7A5030", marginBottom: 20 }}>one-time payment</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
                 <span style={{ color: "#7A5030" }}>Year 1</span>
-                <span style={{ fontWeight: 700, color: "#16a34a" }}>\u20B935,000</span>
+                <span style={{ fontWeight: 700, color: "#16a34a" }}>\u20B925,000</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(42,19,5,0.08)", fontSize: 13 }}>
                 <span style={{ color: "#7A5030" }}>Year 2</span>
@@ -237,10 +237,10 @@ export default function ComparePage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 4px", fontSize: 14, fontWeight: 800 }}>
                 <span style={{ color: "#1A0A00" }}>3-Year Total</span>
-                <span style={{ color: "#16a34a" }}>\u20B935,000</span>
+                <span style={{ color: "#16a34a" }}>\u20B925,000</span>
               </div>
             </div>
-            <div style={{ marginTop: 16, fontSize: 12, color: "#7A5030" }}>Free updates for 1 year</div>
+            <div style={{ marginTop: 16, fontSize: 12, color: "#7A5030" }}>Free updates included</div>
           </div>
 
           {/* Vyapar */}
@@ -310,7 +310,7 @@ export default function ComparePage() {
 
         <div style={{ marginTop: 32, padding: "20px 24px", background: "#FFF3E6", borderRadius: 12, border: "1px solid rgba(238,88,12,0.15)" }}>
           <p style={{ fontSize: 14, color: "#7A5030", lineHeight: 1.65, textAlign: "center", margin: 0 }}>
-            <strong style={{ color: "#EA580C" }}>You save \u20B919,000\u2013\u20B91,45,000</strong> over 3 years with Vitharn compared to generic billing software.
+            <strong style={{ color: "#EA580C" }}>You save \u20B947,000\u2013\u20B91,80,000</strong> over 3 years with Vitharn compared to generic billing software.
             And you get features they don&apos;t have \u2014 customer portal, business website, UPVC auto-calc.
           </p>
         </div>
@@ -342,6 +342,7 @@ export default function ComparePage() {
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✗ Features locked behind higher tiers</li>
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✗ Stop paying = lose access</li>
                 <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✗ Limited export options</li>
+                <li style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, lineHeight: 1.6 }}>✗ No UPVC-specific features</li>
               </ul>
             </div>
           </div>
@@ -404,17 +405,17 @@ export default function ComparePage() {
         </div>
       </section>
 
-      {/* TESTIMONIAL */}
-      <section className="testimonial-section">
+      {/* TESTIMONIAL — PLACEHOLDER: Replace with real client testimonial after first 5 clients */}
+      {/* <section className="testimonial-section">
         <h2 className="section-title">What fabricators say</h2>
         <div className="testimonial-card">
-          <p className="testimonial-text">&quot;We tried Vyapar first. It works for billing, but it doesn&apos;t understand UPVC. Vitharn calculates our dimensions in seconds and our customers love the portal. It&apos;s like having a website and an accountant in one tool.&quot;</p>
+          <p className="testimonial-text">"..."</p>
           <div className="testimonial-author">
-            <strong>R. Suresh</strong>
-            <span>Sri Lakshmi UPVC Windows, Visakhapatnam</span>
+            <strong>Client Name</strong>
+            <span>Company, City</span>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA */}
       <section className="cta-banner">
@@ -441,11 +442,9 @@ export default function ComparePage() {
             </a>
           </div>
           <ul className="cta-checks">
-            <li><CheckCircle size={15} /> 7-day free trial</li>
-            <li><CheckCircle size={15} /> No credit card needed</li>
             <li><CheckCircle size={15} /> One-time payment</li>
-            <li><CheckCircle size={15} /> Setup in 24 hours</li>
-            <li><CheckCircle size={15} /> We do it for you</li>
+            <li><CheckCircle size={15} /> No monthly fees</li>
+            <li><CheckCircle size={15} /> Personal support</li>
           </ul>
         </div>
       </section>
