@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; _errorMessage = ''; });
     try {
       final res = await http.post(
-        Uri.parse('/api/portal_auth'),
+        Uri.parse(_portalAuthUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'mode': 'google', 'email': email, 'credential': credential ?? ''}),
       );
@@ -156,24 +156,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Stores the password hash received from login/session API for use in
-  /// save_client authentication (proves the caller knows the password).
-  Future<void> _writeSessionPasswordHash(String? hash) async {
-    if (hash == null || hash.isEmpty) return;
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session_password_hash', hash);
-      return;
-    }
-    try {
-      const storage = FlutterSecureStorage();
-      await storage.write(key: 'session_password_hash', value: hash);
-    } catch (_) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session_password_hash', hash);
-    }
-  }
-
   Future<void> _checkExistingSession() async {
     String? openQuote;
     if (kIsWeb) {
@@ -191,8 +173,6 @@ class _LoginScreenState extends State<LoginScreen> {
             final data = _decodeJson(res);
             if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
               await _writeSession('true');
-              // CRITICAL FIX: Store password_hash for save_client authentication
-              await _writeSessionPasswordHash(data['password_hash'] as String?);
               if (!mounted) return;
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
               return;
@@ -208,6 +188,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
     }
   }
+
+  String get _portalAuthUrl =>
+      kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
 
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
@@ -234,25 +217,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    if (!kIsWeb) {
-      final appState = Provider.of<AppState>(context, listen: false);
-      if (appState.clientConfig.adminEmails.contains(email)) {
-        if (appState.clientConfig.portalPasswordHash == _hashPassword(password)) {
-          umamiTrack('login_success');
-          await _writeSession('true');
-          if (!mounted) return;
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-          return;
-        }
-      }
-      umamiTrack('login_failed');
-      setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
-      return;
-    }
-
     try {
       final res = await http.post(
-        Uri.parse('/api/portal_auth'),
+        Uri.parse(_portalAuthUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'mode': 'login', 'email': email, 'password': password}),
       );
@@ -264,8 +231,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
-        // CRITICAL FIX: Store password_hash for save_client authentication
-        await _writeSessionPasswordHash(data['password_hash'] as String?);
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
           await _applyTenant(clientId);
