@@ -28,6 +28,10 @@ import {
   SlidersHorizontal,
   UserPlus,
   PackagePlus,
+  Factory,
+  Scissors,
+  FolderKanban,
+  Box,
 } from "lucide-react";
 import {
   useHotkeys,
@@ -185,7 +189,11 @@ const NAV = [
   { key: "quotations", label: "Quotations", icon: FileText, hint: "2" },
   { key: "customers", label: "Customers", icon: Users, hint: "3" },
   { key: "products", label: "Products", icon: Package, hint: "4" },
-  { key: "reports", label: "Reports", icon: BarChart3, hint: "5" },
+  { key: "production", label: "Production", icon: Factory, hint: "5" },
+  { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
+  { key: "leads", label: "Leads", icon: UserPlus, hint: "7" },
+  { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
+  { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
 ] as const;
 
 /** Minimum width for the console. Below this, the mobile portal is the right surface. */
@@ -718,6 +726,16 @@ export default function ConsoleShell({
               <PanelLeft size={15} strokeWidth={2} />
               <span className="vc-nav-label">Lite Portal</span>
             </button>
+            <a
+              className="vc-nav-item"
+              href="/upvc/3d-viewer"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="3D window preview"
+            >
+              <Box size={15} strokeWidth={2} />
+              <span className="vc-nav-label">3D Viewer</span>
+            </a>
           </nav>
 
           <div className="vc-sidebar-foot">
