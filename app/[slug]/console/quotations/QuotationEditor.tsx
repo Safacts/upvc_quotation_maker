@@ -526,7 +526,7 @@ export default function QuotationEditor({
       { keys: "Ctrl+S", label: "Save" },
       { keys: "Alt+I", label: "Add row" },
       { keys: "Alt+X", label: "Delete row" },
-      { keys: "Alt+C", label: "New master" },
+      { keys: "Alt+C", label: "Add customer/product" },
       { keys: "Ctrl+/", label: "Calculator" },
       ...(nav.index >= 0
         ? [{ keys: "PgUp/PgDn", label: "Prev/next quote" }]
@@ -656,8 +656,14 @@ export default function QuotationEditor({
             <button
               type="button"
               className="vc-btn vc-btn-sm"
-              onClick={() => window.print()}
-              title="Print preview"
+              onClick={() => {
+                if (!savedId) {
+                  toast("Save the quotation first to print", "info");
+                  return;
+                }
+                window.open(`/api/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
+              }}
+              title="Open PDF for printing"
             >
               <Printer size={12} /> <span className="vc-kbd">Ctrl P</span>
             </button>
@@ -688,19 +694,19 @@ export default function QuotationEditor({
             </button>
           </div>
 
-          {/* Header: 3 columns, everything visible. No wizard, no accordion. */}
+          {/* Header: 4-column grid — Row 1: who, Row 2: contact, Row 3: job context.
+               Separator divs create a visual break between groups without headings. */}
           <div className="vc-hdr-grid">
+
+            {/* ── Row 1: Core identity ── */}
             <div className="vc-field vc-span-2">
               <label className="vc-label">
                 Customer <span className="vc-req">*</span>
-                {/* Alt+C is the whole point of this affordance: the user is
-                    already typing a name that is not on file, and this saves
-                    them abandoning the quotation to go and create it. */}
                 <button
                   type="button"
                   className="vc-inline-add"
                   onClick={quickCreateFromContext}
-                  title="Add this customer to the master (Alt+C)"
+                  title="Add this customer to masters (Alt+C)"
                 >
                   <UserPlus size={11} /> Add <span className="vc-kbd">Alt C</span>
                 </button>
@@ -710,7 +716,6 @@ export default function QuotationEditor({
                 value={header.customer_name}
                 onChange={(e) => setHeaderField("customer_name", e.target.value)}
                 placeholder="Customer name"
-                // Not arithmetic — keep Ctrl+/ out of a name field.
                 data-calc="off"
                 autoFocus
               />
@@ -725,27 +730,7 @@ export default function QuotationEditor({
                 className="vc-input"
                 value={header.quote_no}
                 onChange={(e) => setHeaderField("quote_no", e.target.value)}
-                placeholder="Auto / manual"
-              />
-            </div>
-
-            <div className="vc-field">
-              <label className="vc-label">Phone</label>
-              <input
-                className="vc-input"
-                value={header.contact_no}
-                onChange={(e) => setHeaderField("contact_no", e.target.value)}
-                inputMode="tel"
-              />
-            </div>
-
-            <div className="vc-field">
-              <label className="vc-label">Email</label>
-              <input
-                className="vc-input"
-                value={header.email}
-                onChange={(e) => setHeaderField("email", e.target.value)}
-                inputMode="email"
+                placeholder="Auto"
               />
             </div>
 
@@ -759,36 +744,53 @@ export default function QuotationEditor({
               />
             </div>
 
-            <div className="vc-field vc-span-2">
-              <label className="vc-label">Address</label>
+            {/* ── Separator ── */}
+            <div className="vc-hdr-sep" />
+
+            {/* ── Row 2: Contact details ── */}
+            <div className="vc-field">
+              <label className="vc-label">Phone</label>
               <input
                 className="vc-input"
-                value={header.address}
-                onChange={(e) => setHeaderField("address", e.target.value)}
+                value={header.contact_no}
+                onChange={(e) => setHeaderField("contact_no", e.target.value)}
+                inputMode="tel"
+                placeholder="Mobile number"
               />
             </div>
 
             <div className="vc-field">
-              <label className="vc-label">Status</label>
-              <select
-                className="vc-select"
-                value={header.status}
-                onChange={(e) => setHeaderField("status", e.target.value)}
-              >
-                {QUOTATION_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </select>
+              <label className="vc-label">Email</label>
+              <input
+                className="vc-input"
+                value={header.email}
+                onChange={(e) => setHeaderField("email", e.target.value)}
+                inputMode="email"
+                placeholder="customer@email.com"
+              />
             </div>
 
+            <div className="vc-field vc-span-2">
+              <label className="vc-label">Address / Site</label>
+              <input
+                className="vc-input"
+                value={header.address}
+                onChange={(e) => setHeaderField("address", e.target.value)}
+                placeholder="Delivery or site address"
+              />
+            </div>
+
+            {/* ── Separator ── */}
+            <div className="vc-hdr-sep" />
+
+            {/* ── Row 3: Job context (optional) ── */}
             <div className="vc-field">
               <label className="vc-label">Reference</label>
               <input
                 className="vc-input"
                 value={header.reference}
                 onChange={(e) => setHeaderField("reference", e.target.value)}
+                placeholder="Site name / PO no."
               />
             </div>
 
@@ -798,21 +800,28 @@ export default function QuotationEditor({
                 className="vc-input"
                 value={header.supplier_company}
                 onChange={(e) => setHeaderField("supplier_company", e.target.value)}
+                placeholder="APARNA, FENESTA…"
               />
             </div>
 
-            <div className="vc-field">
-              <label className="vc-label">Transport (Rs.)</label>
-              <input
-                className="vc-input vc-num"
-                value={header.transport_cost}
-                onChange={(e) => setHeaderField("transport_cost", e.target.value)}
-                inputMode="decimal"
-                // Names the field in the calculator's header so the popover
-                // says what it will write into.
-                data-calc-label="Transport"
-              />
-            </div>
+            {/* Status only on saved quotations */}
+            {savedId ? (
+              <div className="vc-field vc-span-2">
+                <label className="vc-label">Status</label>
+                <select
+                  className="vc-select"
+                  value={header.status}
+                  onChange={(e) => setHeaderField("status", e.target.value)}
+                >
+                  {QUOTATION_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
           </div>
         </div>
 
@@ -830,8 +839,7 @@ export default function QuotationEditor({
               <thead>
                 <tr>
                   <th className="vc-row-num">#</th>
-                  <th style={{ width: 70 }}>Code</th>
-                  <th style={{ minWidth: 130 }}>Description</th>
+                  <th style={{ minWidth: 160 }}>Description</th>
                   <th style={{ width: 76 }}>W (mm)</th>
                   <th style={{ width: 76 }}>H (mm)</th>
                   <th style={{ width: 52 }}>Qty</th>
@@ -862,16 +870,6 @@ export default function QuotationEditor({
                       className={i === focusedMeasured ? "vc-row-focus" : ""}
                     >
                       <td className="vc-row-num">{i + 1}</td>
-                      <td>
-                        <input
-                          className="vc-cell-input"
-                          data-c="code"
-                          value={row.code}
-                          onFocus={() => setFocusedMeasured(i)}
-                          onChange={(e) => updateMeasured(i, "code", e.target.value)}
-                          onKeyDown={(e) => onGridKeyDown(e, i, "code")}
-                        />
-                      </td>
                       <td>
                         <textarea
                           className="vc-cell-input"
@@ -950,10 +948,10 @@ export default function QuotationEditor({
           </div>
         </div>
 
-        {/* ---- Unmeasured items ---- */}
+        {/* ---- Unmeasured items (hardware, labour, fitting charges, etc.) ---- */}
         <div className="vc-card">
           <div className="vc-card-head">
-            <span className="vc-card-title">Other Items (per unit)</span>
+            <span className="vc-card-title">Additional Charges</span>
             <div style={{ flex: 1 }} />
             <button type="button" className="vc-btn vc-btn-sm" onClick={addUnmeasured}>
               <Plus size={12} /> Add
@@ -1020,15 +1018,27 @@ export default function QuotationEditor({
             </table>
           )}
 
-          {/* Running totals — always visible, never "at the end". */}
+          {/* Running totals — always visible, never "at the end".
+               Transport is inline-editable here so the user can adjust the
+               delivery cost without hunting for a header field. */}
           <div className="vc-totals">
             <div className="vc-total-item">
               <span className="vc-total-label">Subtotal</span>
               <span className="vc-total-value">{formatAmount(totals.subtotal)}</span>
             </div>
             <div className="vc-total-item">
-              <span className="vc-total-label">Transport</span>
-              <span className="vc-total-value">{formatAmount(totals.transport)}</span>
+              <label className="vc-total-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                Transport (Rs.)
+              </label>
+              <input
+                className="vc-input vc-num"
+                style={{ width: 90, height: 22, fontSize: 12, textAlign: "right" }}
+                value={header.transport_cost}
+                onChange={(e) => setHeaderField("transport_cost", e.target.value)}
+                inputMode="decimal"
+                placeholder="0"
+                data-calc-label="Transport"
+              />
             </div>
             <div className="vc-total-item">
               <span className="vc-total-label">

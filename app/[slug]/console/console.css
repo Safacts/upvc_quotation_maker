@@ -230,12 +230,11 @@
 }
 
 .vc-nav-section {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: #5d6877;
-  padding: 12px 10px 4px;
+  padding: 10px 10px 4px;
 }
 
 .vc-sidebar-foot {
@@ -444,8 +443,9 @@
 
 .vc-input,
 .vc-select {
-  height: 28px;
-  padding: 0 8px;
+  /* 26px: 2px tighter than before — gains visible rows at the same scroll depth. */
+  height: 26px;
+  padding: 0 7px;
   border: 1px solid var(--vc-border);
   border-radius: var(--vc-radius);
   background: var(--vc-surface);
@@ -454,6 +454,7 @@
   font-family: inherit;
   width: 100%;
   min-width: 0;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
 
 .vc-input:focus,
@@ -470,7 +471,7 @@
 
 textarea.vc-input {
   height: auto;
-  padding: 6px 8px;
+  padding: 5px 7px;
   resize: vertical;
   line-height: 1.5;
 }
@@ -478,20 +479,22 @@ textarea.vc-input {
 .vc-field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .vc-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--vc-text-faint);
+  /* Mixed case instead of ALL-CAPS: easier to scan quickly, especially for
+     non-native English readers. Weight + colour still provide clear hierarchy. */
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--vc-text-dim);
 }
 
 .vc-label .vc-req {
   color: var(--vc-red);
+  margin-left: 2px;
 }
 
 .vc-err {
@@ -514,16 +517,17 @@ textarea.vc-input {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 11px;
+  /* 6px instead of 8px — saves 4px of vertical height per card (4 cards = 16px back). */
+  padding: 6px 11px;
   border-bottom: 1px solid var(--vc-border);
   background: var(--vc-surface-2);
 }
 
 .vc-card-title {
-  font-size: 11px;
+  /* Mixed case for card titles too — matches the label change. */
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--vc-text-dim);
 }
 
@@ -703,13 +707,14 @@ textarea.vc-input {
   top: 0;
 }
 
-/* Header fields: 3 columns, everything visible at once. No accordion, no
-   wizard, no "next step" — the single-column mobile form is the problem. */
+/* Header fields: 4 columns — gives each field more room than 3 columns,
+   removes the cramped appearance, and fits the customer + phone + email + date
+   in a single natural row without span hacks. */
 .vc-hdr-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px 10px;
-  padding: 11px;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 6px 8px;
+  padding: 9px 11px;
 }
 
 .vc-span-2 {
@@ -717,6 +722,19 @@ textarea.vc-input {
 }
 .vc-span-3 {
   grid-column: span 3;
+}
+.vc-span-4 {
+  grid-column: span 4;
+}
+
+/* Visual section separator inside the header grid — draws a faint line
+   between the customer-identity fields (row 1) and the job-context fields
+   (row 2+) without adding extra markup. */
+.vc-hdr-sep {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--vc-border);
+  margin: 2px 0;
 }
 
 /* Editable item grid */
@@ -731,10 +749,9 @@ textarea.vc-input {
   background: var(--vc-surface-2);
   border-bottom: 1px solid var(--vc-border);
   padding: 5px 6px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--vc-text-dim);
   text-align: left;
   white-space: nowrap;
@@ -841,12 +858,14 @@ textarea.vc-cell-input {
   color: var(--vc-red);
 }
 
-/* Totals strip — always visible, never revealed "at the end". */
+/* Totals strip — always visible, never revealed "at the end".
+   Items are horizontal pairs (label : value) rather than stacked columns —
+   this lets the Transport input sit inline without disrupting the flow. */
 .vc-totals {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 9px 11px;
+  gap: 16px;
+  padding: 7px 11px;
   background: var(--vc-surface-2);
   border-top: 1px solid var(--vc-border);
   flex-wrap: wrap;
@@ -854,27 +873,38 @@ textarea.vc-cell-input {
 
 .vc-total-item {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  align-items: center;
+  gap: 6px;
 }
 
 .vc-total-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--vc-text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vc-text-dim);
+  white-space: nowrap;
 }
 
 .vc-total-value {
   font-family: var(--vc-mono);
   font-variant-numeric: tabular-nums;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.vc-total-grand {
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--vc-border);
+}
+
+.vc-total-grand .vc-total-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vc-text);
 }
 
 .vc-total-grand .vc-total-value {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--vc-accent);
 }
