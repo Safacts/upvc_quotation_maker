@@ -4,6 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { Suspense, useRef, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 function WindowFrame({ width, height, depth }) {
   const group = useRef(null);
@@ -69,7 +70,15 @@ function LoadingFallback() {
   );
 }
 
-export default function Page({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+export default function Page() {
+  return (
+    <Suspense fallback={<div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading 3D design...</div>}>
+      <Viewer />
+    </Suspense>
+  );
+}
+
+function Viewer() {
   const [design, setDesign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,10 +87,9 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
   // The API GET returns { design, order, renders } — never a flat design object.
   // `?designId=X` loads a saved design; `?fromQuotation=Y` derives one from the
   // quotation's first measured opening via the configurator.
-  const sp = searchParams ?? {};
-  const designId = typeof sp.designId === "string" ? sp.designId.trim() : "";
-  const fromQuotationId =
-    typeof sp.fromQuotation === "string" ? sp.fromQuotation.trim() : "";
+  const searchParams = useSearchParams();
+  const designId = (searchParams.get("designId") ?? "").trim();
+  const fromQuotationId = (searchParams.get("fromQuotation") ?? "").trim();
 
   useEffect(() => {
     let cancelled = false;
