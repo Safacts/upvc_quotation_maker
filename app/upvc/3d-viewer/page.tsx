@@ -69,26 +69,84 @@ function LoadingFallback() {
   );
 }
 
-export default function Page({ searchParams }) {
-  const [design, setDesign] = useState(null);
+export default function Page({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  const [design, setDesign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef(null);
 
+  // The API GET returns { design, order, renders } — never a flat design object.
+  // `?designId=X` loads a saved design; `?fromQuotation=Y` derives one from the
+  // quotation's first measured opening via the configurator.
+  const sp = searchParams ?? {};
+  const designId = typeof sp.designId === "string" ? sp.designId.trim() : "";
+  const fromQuotationId =
+    typeof sp.fromQuotation === "string" ? sp.fromQuotation.trim() : "";
+
   useEffect(() => {
-    const id = searchParams && searchParams.designId;
-    if (!id) {
-      setLoading(false);
-      return;
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (designId) {
+          const res = await fetch(`/api/console/3d/designs/${encodeURIComponent(designId)}`, {
+            credentials: "include",
+          });
+          if (!res.ok) return; // leave design null -> "No design found"
+          const data = await res.json();
+          setDesign(data && data.design ? data.design : null);
+          return;
+        }
+
+        if (fromQuotationId) {
+          const qRes = await fetch(
+            `/api/console/quotations/${encodeURIComponent(fromQuotationId)}`,
+            { credentials: "include" },
+          );
+          if (!qRes.ok) return; // leave design null -> "No design found"
+          const qData = await qRes.json();
+          const measured = Array.isArray(qData.measured_items)
+            ? qData.measured_items
+            : [];
+          const opening = measured.find(
+            (m: any) => Number(m.width) > 0 && Number(m.height) > 0,
+          );
+          if (!opening) {
+            setError("No measurable opening found on this quotation");
+            return;
+          }
+          const cfgRes = await fetch("/api/console/3d/configurator", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              width_mm: Math.round(Number(opening.width)),
+              height_mm: Math.round(Number(opening.height)),
+              type: "fixed",
+              profile_type: "uPVC",
+              name: `From quotation ${fromQuotationId}`,
+            }),
+          });
+          if (!cfgRes.ok) return; // leave design null -> "No design found"
+          const cfgData = await cfgRes.json();
+          setDesign(cfgData && cfgData.design ? cfgData.design : null);
+          return;
+        }
+      } catch {
+        // network error -> "No design found"
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
-    fetch(`/api/console/3d/designs/${id}`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        setDesign(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [searchParams && searchParams.designId]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [designId, fromQuotationId]);
 
   if (loading) {
     return (
@@ -98,10 +156,18 @@ export default function Page({ searchParams }) {
     );
   }
 
+  if (error) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#EA580C' }}>{error}</div>
+      </div>
+    );
+  }
+
   if (!design) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>No design found. Pass ?designId=XXX to view.</div>
+        <div>No design found. Pass ?designId=XXX or ?fromQuotation=XXX to view.</div>
       </div>
     );
   }

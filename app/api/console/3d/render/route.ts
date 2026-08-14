@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireConsoleSession, consoleJson, consoleError } from "@/lib/console-auth";
 import { supaGet, supaPost, supaPatch } from "@/lib/supabase";
 import { formatZodError } from "@/lib/console-schemas";
+import { placeholderPng } from "@/lib/render-placeholder";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -35,10 +36,15 @@ function generateRenderUrl(clientId: string, designId: string, renderType: strin
   return `${baseUrl}/render/${clientId}/${designId}/${renderType}.png`;
 }
 
-async function renderDesign(design: any, renderType: string, width: number, height: number) {
+/**
+ * Synchronous in-process render. Generates the placeholder image NOW (real
+ * work, real measured time) instead of sleeping 10ms; the recorded URL is
+ * served by the matching GET route so it never 404s.
+ */
+function renderDesign(design: any, renderType: string, width: number, height: number) {
   const start = Date.now();
 
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  placeholderPng(width, height, `${design.client_id}/${design.id}/${renderType}`);
 
   const elapsed = Date.now() - start;
   return {

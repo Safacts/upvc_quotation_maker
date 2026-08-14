@@ -36,8 +36,28 @@ const designUpdateSchema = z.object({
   profile_type: z.enum(PROFILE_TYPES).optional(),
   dimensions: z
     .object({
-      width_mm: z.any(),
-      height_mm: z.any(),
+      width_mm: z
+        .union([z.number(), z.string(), z.null(), z.undefined()])
+        .transform((v): number | null => {
+          if (v === null || v === undefined || (typeof v === "string" && v.trim() === ""))
+            return null;
+          const n = typeof v === "number" ? v : Number(v);
+          return Number.isFinite(n) ? n : null;
+        })
+        .refine((n): n is number => n !== null && n > 0, {
+          message: "width_mm must be a positive number",
+        }),
+      height_mm: z
+        .union([z.number(), z.string(), z.null(), z.undefined()])
+        .transform((v): number | null => {
+          if (v === null || v === undefined || (typeof v === "string" && v.trim() === ""))
+            return null;
+          const n = typeof v === "number" ? v : Number(v);
+          return Number.isFinite(n) ? n : null;
+        })
+        .refine((n): n is number => n !== null && n > 0, {
+          message: "height_mm must be a positive number",
+        }),
       configuration: z.enum(["sliding", "casement", "tilt_turn", "fixed"]).optional(),
     })
     .strict()
