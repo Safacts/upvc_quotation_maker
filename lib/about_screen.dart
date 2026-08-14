@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +15,24 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> {
+  String _installedVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInstalledVersion();
+  }
+
+  Future<void> _loadInstalledVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _installedVersion = info.version);
+    } catch (_) {
+      // Version display is cosmetic; never surface an error for it.
+    }
+  }
+
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
     if (!await launchUrl(url)) {
@@ -59,6 +78,25 @@ class _AboutScreenState extends State<AboutScreen> {
                 style: TextStyle(color: Colors.grey.shade500),
               ).animate().fade(delay: 400.ms),
               
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _installedVersion.isEmpty
+                      ? 'Version'
+                      : 'Version $_installedVersion',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ).animate().fade(delay: 450.ms),
+
               const SizedBox(height: 40),
               const Divider(),
               const SizedBox(height: 20),
