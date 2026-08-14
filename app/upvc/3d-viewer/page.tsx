@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Suspense, useRef, useState, useEffect, Component, type ReactNode } from 'react';
+import { Suspense, useRef, useState, useEffect, Component, type ReactNode, type FC } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 class ViewerErrorBoundary extends Component<
@@ -38,60 +38,203 @@ class ViewerErrorBoundary extends Component<
   }
 }
 
-const FRAME_COLOR = "#F2EFE9";
-const GLASS_COLOR = "#9FD3E8";
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-function Bar({ w, h, d, x = 0, y = 0 }) {
+const FRAME_COLOR = "#E8E4DC";
+const FRAME_COLOR_DARK = "#C8C4BC";
+const GLASS_COLOR = "#B8D8E8";
+const GLASS_OPACITY = 0.38;
+const WALL_COLOR = "#F5F3EF";
+const FLOOR_COLOR = "#E0DDD8";
+const HANDLE_COLOR = "#8A8A8A";
+const SASH_COLOR = "#DEDAD2";
+
+// ─── Profile thickness ────────────────────────────────────────────────────────
+// All mm values divided by 100 to get scene units. 1 unit ≈ 100mm.
+
+function profileT(W: number, H: number): number {
+  return Math.max(1.2, Math.min(2.2, Math.min(W, H) * 0.06));
+}
+
+// ─── Box helper ───────────────────────────────────────────────────────────────
+
+function Box({
+  w, h, d, x = 0, y = 0, z = 0, color, opacity = 1, transparent = false,
+}: {
+  w: number; h: number; d: number;
+  x?: number; y?: number; z?: number;
+  color: string; opacity?: number; transparent?: boolean;
+}) {
   return (
-    <mesh position={[x, y, 0]}>
+    <mesh position={[x, y, z]}>
       <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={FRAME_COLOR} />
+      <meshStandardMaterial
+        color={color}
+        opacity={opacity}
+        transparent={transparent}
+        roughness={0.35}
+        metalness={0.05}
+      />
     </mesh>
   );
 }
 
-function Window3D({ design }) {
+// ─── Outer frame ──────────────────────────────────────────────────────────────
+// Each rail = face box + inner lip box. This simulates an extruded U-profile.
+
+function Frame({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const lip = t * 0.3;
+  const lipD = fd * 0.4;
+  const lipOffset = (fd - lipD) / 2;
+
+  return (
+    <>
+      {/* Top rail */}
+      <Box w={W} h={t} d={fd} y={H / 2 - t / 2} color={FRAME_COLOR} />
+      <Box w={W - t * 2} h={lip} d={lipD} y={H / 2 - t + lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
+      {/* Bottom rail */}
+      <Box w={W} h={t} d={fd} y={-H / 2 + t / 2} color={FRAME_COLOR} />
+      <Box w={W - t * 2} h={lip} d={lipD} y={-H / 2 + t - lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
+      {/* Left stile */}
+      <Box w={t} h={H - 2 * t} d={fd} x={-W / 2 + t / 2} color={FRAME_COLOR} />
+      <Box w={lip} h={H - 2 * t - lip * 2} d={lipD} x={-W / 2 + t - lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
+      {/* Right stile */}
+      <Box w={t} h={H - 2 * t} d={fd} x={W / 2 - t / 2} color={FRAME_COLOR} />
+      <Box w={lip} h={H - 2 * t - lip * 2} d={lipD} x={W / 2 - t + lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
+    </>
+  );
+}
+
+// ─── Glass pane ───────────────────────────────────────────────────────────────
+
+function Glass({ w, h, z = 0 }: { w: number; h: number; z?: number }) {
+  return (
+    <Box w={w} h={h} d={0.3} z={z} color={GLASS_COLOR} opacity={GLASS_OPACITY} transparent />
+  );
+}
+
+// ─── Handle ───────────────────────────────────────────────────────────────────
+
+function Handle({ x, y }: { x: number; y: number }) {
+  return (
+    <>
+      <Box w={0.3} h={1.2} d={0.4} x={x} y={y} z={3.5} color={HANDLE_COLOR} />
+      <Box w={0.25} h={0.25} d={1.2} x={x} y={y + 0.3} z={4.1} color={HANDLE_COLOR} />
+    </>
+  );
+}
+
+// ─── Fixed window ─────────────────────────────────────────────────────────────
+
+function FixedWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const iW = W - 2 * t;
+  const iH = H - 2 * t;
+  return (
+    <>
+      <Frame W={W} H={H} t={t} fd={fd} />
+      <Glass w={iW} h={iH} />
+    </>
+  );
+}
+
+// ─── Sliding window ───────────────────────────────────────────────────────────
+
+function SlidingWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const iW = W - 2 * t;
+  const iH = H - 2 * t;
+  const sW = iW / 2 + t * 0.6;
+  const sH = iH;
+  const mt = t * 0.7;
+
+  return (
+    <>
+      <Frame W={W} H={H} t={t} fd={fd} />
+
+      {/* Left sash (back) */}
+      <Box w={sW} h={mt} d={fd * 0.55} x={-iW / 2 + sW / 2 - t * 0.3} y={iH / 2 - mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
+      <Box w={sW} h={mt} d={fd * 0.55} x={-iW / 2 + sW / 2 - t * 0.3} y={-iH / 2 + mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
+      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={-iW / 2 + mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
+      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={-iW / 2 + sW - mt / 2 - t * 0.3} z={-fd * 0.2} color={SASH_COLOR} />
+      <Glass w={sW - mt * 2} h={sH - mt * 2} z={-fd * 0.2} />
+
+      {/* Right sash (front) */}
+      <Box w={sW} h={mt} d={fd * 0.55} x={iW / 2 - sW / 2 + t * 0.3} y={iH / 2 - mt / 2} z={fd * 0.2} color={SASH_COLOR} />
+      <Box w={sW} h={mt} d={fd * 0.55} x={iW / 2 - sW / 2 + t * 0.3} y={-iH / 2 + mt / 2} z={fd * 0.2} color={SASH_COLOR} />
+      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={iW / 2 - mt / 2} z={fd * 0.2} color={SASH_COLOR} />
+      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={iW / 2 - sW + mt / 2 + t * 0.3} z={fd * 0.2} color={SASH_COLOR} />
+      <Glass w={sW - mt * 2} h={sH - mt * 2} z={fd * 0.2} />
+
+      <Handle x={iW / 2 - sW + mt + 0.4} y={0} />
+    </>
+  );
+}
+
+// ─── Casement / Tilt-Turn ─────────────────────────────────────────────────────
+
+function CasementWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const iW = W - 2 * t;
+  const iH = H - 2 * t;
+  const mt = t * 0.75;
+
+  return (
+    <>
+      <Frame W={W} H={H} t={t} fd={fd} />
+      <Box w={iW} h={mt} d={fd * 0.6} y={iH / 2 - mt / 2} z={fd * 0.15} color={SASH_COLOR} />
+      <Box w={iW} h={mt} d={fd * 0.6} y={-iH / 2 + mt / 2} z={fd * 0.15} color={SASH_COLOR} />
+      <Box w={mt} h={iH - mt * 2} d={fd * 0.6} x={-iW / 2 + mt / 2} z={fd * 0.15} color={SASH_COLOR} />
+      <Box w={mt} h={iH - mt * 2} d={fd * 0.6} x={iW / 2 - mt / 2} z={fd * 0.15} color={SASH_COLOR} />
+      <Glass w={iW - mt * 2} h={iH - mt * 2} z={fd * 0.15} />
+      {/* Hinges */}
+      <Box w={0.2} h={0.5} d={fd * 0.7} x={-iW / 2 + mt * 0.5} y={iH * 0.3} z={fd * 0.2} color="#999" />
+      <Box w={0.2} h={0.5} d={fd * 0.7} x={-iW / 2 + mt * 0.5} y={-iH * 0.3} z={fd * 0.2} color="#999" />
+      <Handle x={iW / 2 - mt - 0.5} y={0} />
+    </>
+  );
+}
+
+// ─── Wall + Floor context ─────────────────────────────────────────────────────
+
+function Scene({ W, H }: { W: number; H: number }) {
+  return (
+    <>
+      <mesh position={[0, 0, -12]}>
+        <planeGeometry args={[W * 2.6, H * 2.2]} />
+        <meshStandardMaterial color={WALL_COLOR} roughness={0.9} />
+      </mesh>
+      <mesh position={[0, -H / 2, -12 + (H * 1.8) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[W * 2.6, H * 1.8]} />
+        <meshStandardMaterial color={FLOOR_COLOR} roughness={0.85} />
+      </mesh>
+    </>
+  );
+}
+
+// ─── Window3D — top-level dispatcher ─────────────────────────────────────────
+
+function Window3D({ design }: { design: any }) {
   const dimensions = design.dimensions;
   const W = dimensions.width_mm / 100;
   const H = dimensions.height_mm / 100;
   const fd = 6;
-  const t = Math.max(1.5, Math.min(W, H) * 0.05);
+  const t = profileT(W, H);
+  const type: string = (dimensions.configuration ?? "fixed").toLowerCase();
 
-  const panels =
-    design.design && Array.isArray(design.design.panels) ? design.design.panels : [];
-  const innerW = W - 2 * t;
-  const innerH = H - 2 * t;
-
-  const panelWidths = panels.map((p) => Number(p.width) || 0);
-  const totalPW = panelWidths.reduce((a, b) => a + b, 0) || innerW;
-  const mullionXs: number[] = [];
-  let acc = 0;
-  for (let i = 0; i < panelWidths.length - 1; i++) {
-    acc += panelWidths[i];
-    mullionXs.push(-innerW / 2 + (acc / totalPW) * innerW);
+  let Opening: FC<{ W: number; H: number; t: number; fd: number }>;
+  if (type === "sliding") {
+    Opening = SlidingWindow;
+  } else if (type === "casement" || type === "tilt_turn" || type === "tilt-turn") {
+    Opening = CasementWindow;
+  } else {
+    Opening = FixedWindow;
   }
-
-  const showTransom = dimensions.configuration === "fixed" && H > W * 1.25;
 
   return (
     <>
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[10, 10, 5]} intensity={0.8} />
-      {/* frame borders */}
-      <Bar w={W} h={t} d={fd} y={H / 2 - t / 2} />
-      <Bar w={W} h={t} d={fd} y={-H / 2 + t / 2} />
-      <Bar w={t} h={H - 2 * t} d={fd} x={-W / 2 + t / 2} />
-      <Bar w={t} h={H - 2 * t} d={fd} x={W / 2 - t / 2} />
-      {/* glass */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[innerW, innerH, 0.4]} />
-        <meshStandardMaterial color={GLASS_COLOR} transparent opacity={0.45} />
-      </mesh>
-      {/* mullions */}
-      {mullionXs.map((mx, i) => (
-        <Bar key={i} w={t} h={innerH} d={fd} x={mx} />
-      ))}
-      {showTransom && <Bar w={innerW} h={t} d={fd} y={0} />}
+      <ambientLight intensity={0.65} />
+      <directionalLight position={[8, 12, 10]} intensity={0.9} castShadow />
+      <directionalLight position={[-6, -4, 6]} intensity={0.2} />
+      <Scene W={W} H={H} />
+      <Opening W={W} H={H} t={t} fd={fd} />
     </>
   );
 }
@@ -353,14 +496,18 @@ function Viewer() {
     );
   }
 
-  const cameraZ = Math.max(design.dimensions.width_mm, design.dimensions.height_mm) / 30 + 100;
+  const W3d = design.dimensions.width_mm / 100;
+  const H3d = design.dimensions.height_mm / 100;
+  const cameraZ = Math.max(W3d, H3d) * 1.8 + 18;
 
   return (
     <ViewerErrorBoundary>
+      <div style={{ position: 'relative', width: '100vw', height: '100vh', background: 'linear-gradient(160deg, #EEF2F7 0%, #E2E8F2 100%)' }}>
       <Canvas
         ref={canvasRef}
-        camera={{ position: [0, 0, cameraZ] }}
-        style={{ height: '100vh', width: '100vw', background: '#f8f4f0' }}
+        camera={{ position: [0, 0, cameraZ], fov: 45 }}
+        style={{ height: '100vh', width: '100vw', background: 'transparent' }}
+        shadows
       >
         <Suspense fallback={<LoadingFallback />}>
           <Window3D design={design} />
@@ -370,18 +517,27 @@ function Viewer() {
       <div
         style={{
           position: 'absolute',
-          bottom: 16,
-          left: 16,
-          background: 'rgba(255,255,255,0.92)',
-          padding: '8px 16px',
-          borderRadius: 8,
+          bottom: 20,
+          left: 20,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(8px)',
+          padding: '10px 18px',
+          borderRadius: 12,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.12)',
           pointerEvents: 'none',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 'bold' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
           {design.dimensions.width_mm} × {design.dimensions.height_mm} mm
         </div>
-        <div style={{ fontSize: 12, color: '#666' }}>{design.dimensions.configuration}</div>
+        <div style={{ fontSize: 12, color: '#666', marginTop: 2, textTransform: 'capitalize' }}>
+          {(design.dimensions.configuration ?? 'fixed').replace(/_/g, ' ')} window
+        </div>
+        <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+          Drag to rotate · Scroll to zoom
+        </div>
+      </div>
       </div>
     </ViewerErrorBoundary>
   );
