@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { Suspense, useRef, useState, useEffect, Component, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -83,24 +83,12 @@ function Window3D({ design }) {
       <directionalLight position={[10, 10, 5]} intensity={0.8} />
       <WindowFrame width={w} height={h} depth={fd} />
       <GlassPanel width={w - fd * 2} height={h - fd * 2 - 2} />
-      <Html position={[0, -5, 0]}>
-        <div style={{ background: 'rgba(255,255,255,0.9)', padding: '8px 16px', borderRadius: '8px' }}>
-          <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
-            {dimensions.width_mm} × {dimensions.height_mm} mm
-          </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{dimensions.configuration}</div>
-        </div>
-      </Html>
     </>
   );
 }
 
 function LoadingFallback() {
-  return (
-    <Html>
-      <div style={{ color: '#EA580C', fontSize: '16px' }}>Loading 3D model...</div>
-    </Html>
-  );
+  return null;
 }
 
 export default function Page() {
@@ -370,6 +358,22 @@ function Viewer() {
           <OrbitControls enablePan enableZoom enableRotate maxDistance={500} minDistance={50} />
         </Suspense>
       </Canvas>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          left: 16,
+          background: 'rgba(255,255,255,0.92)',
+          padding: '8px 16px',
+          borderRadius: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ fontSize: 14, fontWeight: 'bold' }}>
+          {design.dimensions.width_mm} × {design.dimensions.height_mm} mm
+        </div>
+        <div style={{ fontSize: 12, color: '#666' }}>{design.dimensions.configuration}</div>
+      </div>
     </ViewerErrorBoundary>
   );
 }
