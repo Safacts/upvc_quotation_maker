@@ -86,6 +86,17 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
   useEffect(() => {
     let cancelled = false;
 
+    async function readError(res: Response): Promise<string> {
+      let msg = `Request failed (${res.status})`;
+      try {
+        const body = await res.json();
+        if (body?.error) msg = String(body.error);
+      } catch {
+        // non-JSON body — keep the status-based message
+      }
+      return msg;
+    }
+
     async function load() {
       setLoading(true);
       setError(null);
@@ -95,7 +106,10 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
           const res = await fetch(`/api/console/3d/designs/${encodeURIComponent(designId)}`, {
             credentials: "include",
           });
-          if (!res.ok) return; // leave design null -> "No design found"
+          if (!res.ok) {
+            setError(await readError(res));
+            return;
+          }
           const data = await res.json();
           setDesign(data && data.design ? data.design : null);
           return;
@@ -106,7 +120,10 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
             `/api/console/quotations/${encodeURIComponent(fromQuotationId)}`,
             { credentials: "include" },
           );
-          if (!qRes.ok) return; // leave design null -> "No design found"
+          if (!qRes.ok) {
+            setError(await readError(qRes));
+            return;
+          }
           const qData = await qRes.json();
           const measured = Array.isArray(qData.measured_items)
             ? qData.measured_items
@@ -130,13 +147,16 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
               name: `From quotation ${fromQuotationId}`,
             }),
           });
-          if (!cfgRes.ok) return; // leave design null -> "No design found"
+          if (!cfgRes.ok) {
+            setError(await readError(cfgRes));
+            return;
+          }
           const cfgData = await cfgRes.json();
           setDesign(cfgData && cfgData.design ? cfgData.design : null);
           return;
         }
-      } catch {
-        // network error -> "No design found"
+      } catch (e: any) {
+        setError(e?.message ? String(e.message) : "Network error while loading");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -157,9 +177,32 @@ export default function Page({ searchParams }: { searchParams?: Record<string, s
   }
 
   if (error) {
+    const isAuth = /unauthorized|forbidden|login|session/i.test(error);
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#EA580C' }}>{error}</div>
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f4f0' }}>
+        <div style={{ textAlign: 'center', maxWidth: 420, padding: '0 24px' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#7C2D12', marginBottom: 8 }}>
+            {isAuth ? 'Please log in to view this design' : 'Could not load this design'}
+          </div>
+          <div style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
+            {error}
+          </div>
+          <a
+            href="/kprupvc/console"
+            style={{
+              display: 'inline-block',
+              background: '#EA580C',
+              color: '#fff',
+              padding: '10px 24px',
+              borderRadius: 8,
+              textDecoration: 'none',
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            Log in to Ops Console
+          </a>
+        </div>
       </div>
     );
   }
