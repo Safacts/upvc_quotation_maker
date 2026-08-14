@@ -70,14 +70,14 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = quotationQuerySchema.safeParse({
-      q: url.searchParams.get("q"),
-      status: url.searchParams.get("status"),
-      from: url.searchParams.get("from"),
-      to: url.searchParams.get("to"),
-      sort: url.searchParams.get("sort"),
-      dir: url.searchParams.get("dir"),
-      page: url.searchParams.get("page"),
-      page_size: url.searchParams.get("page_size"),
+      q: url.searchParams.get("q") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      from: url.searchParams.get("from") ?? undefined,
+      to: url.searchParams.get("to") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      dir: url.searchParams.get("dir") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      page_size: url.searchParams.get("page_size") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query", fields: formatZodError(parsed.error) }, 400);

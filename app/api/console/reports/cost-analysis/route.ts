@@ -85,9 +85,9 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = querySchema.safeParse({
-      from: url.searchParams.get("from"),
-      to: url.searchParams.get("to"),
-      status: url.searchParams.get("status"),
+      from: url.searchParams.get("from") ?? undefined,
+      to: url.searchParams.get("to") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query" }, 400);

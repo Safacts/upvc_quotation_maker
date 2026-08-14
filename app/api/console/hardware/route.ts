@@ -69,13 +69,13 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = querySchema.safeParse({
-      type: url.searchParams.get("type"),
-      low_stock: url.searchParams.get("low_stock"),
-      q: url.searchParams.get("q"),
-      page: url.searchParams.get("page"),
-      page_size: url.searchParams.get("page_size"),
-      sort: url.searchParams.get("sort"),
-      dir: url.searchParams.get("dir"),
+      type: url.searchParams.get("type") ?? undefined,
+      low_stock: url.searchParams.get("low_stock") ?? undefined,
+      q: url.searchParams.get("q") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      page_size: url.searchParams.get("page_size") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      dir: url.searchParams.get("dir") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query" }, 400);

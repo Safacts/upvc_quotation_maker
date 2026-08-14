@@ -798,11 +798,11 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = reportQuerySchema.safeParse({
-      type: url.searchParams.get("type"),
-      from: url.searchParams.get("from"),
-      to: url.searchParams.get("to"),
-      status: url.searchParams.get("status"),
-      customer_id: url.searchParams.get("customer_id"),
+      type: url.searchParams.get("type") ?? undefined,
+      from: url.searchParams.get("from") ?? undefined,
+      to: url.searchParams.get("to") ?? undefined,
+      status: url.searchParams.get("status") ?? undefined,
+      customer_id: url.searchParams.get("customer_id") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query", fields: formatZodError(parsed.error) }, 400);

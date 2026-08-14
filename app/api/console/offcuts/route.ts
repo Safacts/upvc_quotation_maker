@@ -52,14 +52,14 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = querySchema.safeParse({
-      status: url.searchParams.get("status"),
-      profile_type: url.searchParams.get("profile_type"),
-      cutting_list_id: url.searchParams.get("cutting_list_id"),
-      min_length: url.searchParams.get("min_length"),
-      page: url.searchParams.get("page"),
-      page_size: url.searchParams.get("page_size"),
-      sort: url.searchParams.get("sort"),
-      dir: url.searchParams.get("dir"),
+      status: url.searchParams.get("status") ?? undefined,
+      profile_type: url.searchParams.get("profile_type") ?? undefined,
+      cutting_list_id: url.searchParams.get("cutting_list_id") ?? undefined,
+      min_length: url.searchParams.get("min_length") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      page_size: url.searchParams.get("page_size") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      dir: url.searchParams.get("dir") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query" }, 400);

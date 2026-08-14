@@ -56,12 +56,12 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = orderQuerySchema.safeParse({
-      status: url.searchParams.get("status"),
-      q: url.searchParams.get("q"),
-      page: url.searchParams.get("page"),
-      page_size: url.searchParams.get("page_size"),
-      sort: url.searchParams.get("sort"),
-      dir: url.searchParams.get("dir"),
+      status: url.searchParams.get("status") ?? undefined,
+      q: url.searchParams.get("q") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      page_size: url.searchParams.get("page_size") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      dir: url.searchParams.get("dir") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query" }, 400);

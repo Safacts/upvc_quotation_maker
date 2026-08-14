@@ -136,13 +136,13 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const parsed = querySchema.safeParse({
-      status: url.searchParams.get("status"),
-      order_id: url.searchParams.get("order_id"),
-      profile_type: url.searchParams.get("profile_type"),
-      page: url.searchParams.get("page"),
-      page_size: url.searchParams.get("page_size"),
-      sort: url.searchParams.get("sort"),
-      dir: url.searchParams.get("dir"),
+      status: url.searchParams.get("status") ?? undefined,
+      order_id: url.searchParams.get("order_id") ?? undefined,
+      profile_type: url.searchParams.get("profile_type") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      page_size: url.searchParams.get("page_size") ?? undefined,
+      sort: url.searchParams.get("sort") ?? undefined,
+      dir: url.searchParams.get("dir") ?? undefined,
     });
     if (!parsed.success) {
       return consoleJson({ error: "Invalid query" }, 400);
