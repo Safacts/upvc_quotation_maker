@@ -3,8 +3,41 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { Suspense, useRef, useState, useEffect } from 'react';
+import { Suspense, useRef, useState, useEffect, Component, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
+
+class ViewerErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f4f0' }}>
+          <div style={{ textAlign: 'center', maxWidth: 480, padding: '0 24px' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#7C2D12', marginBottom: 8 }}>
+              3D preview error
+            </div>
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 12, wordBreak: 'break-word' }}>
+              {String(this.state.error.message || this.state.error)}
+            </div>
+            <button
+              onClick={() => this.setState({ error: null })}
+              style={{ background: '#EA580C', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Reload preview
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function WindowFrame({ width, height, depth }) {
   const group = useRef(null);
@@ -310,18 +343,33 @@ function Viewer() {
     );
   }
 
+  if (!design.dimensions || typeof design.dimensions.width_mm !== 'number') {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: 480 }}>
+          <div style={{ fontWeight: 700, color: '#7C2D12' }}>Invalid design data</div>
+          <div style={{ fontSize: 13, color: '#666', marginTop: 8 }}>
+            The generated design is missing dimension information. Try again or contact support.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const cameraZ = Math.max(design.dimensions.width_mm, design.dimensions.height_mm) / 30 + 100;
 
   return (
-    <Canvas
-      ref={canvasRef}
-      camera={{ position: [0, 0, cameraZ] }}
-      style={{ height: '100vh', width: '100vw', background: '#f8f4f0' }}
-    >
-      <Suspense fallback={<LoadingFallback />}>
-        <Window3D design={design} />
-        <OrbitControls enablePan enableZoom enableRotate maxDistance={500} minDistance={50} />
-      </Suspense>
-    </Canvas>
+    <ViewerErrorBoundary>
+      <Canvas
+        ref={canvasRef}
+        camera={{ position: [0, 0, cameraZ] }}
+        style={{ height: '100vh', width: '100vw', background: '#f8f4f0' }}
+      >
+        <Suspense fallback={<LoadingFallback />}>
+          <Window3D design={design} />
+          <OrbitControls enablePan enableZoom enableRotate maxDistance={500} minDistance={50} />
+        </Suspense>
+      </Canvas>
+    </ViewerErrorBoundary>
   );
 }
