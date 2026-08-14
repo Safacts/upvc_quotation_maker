@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, Lightformer } from '@react-three/drei';
+import { OrbitControls, ContactShadows } from '@react-three/drei';
 import { Suspense, useRef, useState, useEffect, Component, type ReactNode, type FC, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import * as THREE from 'three';
@@ -295,13 +295,11 @@ function CasementWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: 
 function Scene({ W, H }: { W: number; H: number }) {
   return (
     <>
-      <Environment resolution={256}>
-        <Lightformer intensity={0.6} position={[0, 5, -9]} scale={[14, 7, 1]} color="#ffffff" />
-        <Lightformer intensity={0.4} position={[-9, 2, 4]} scale={[7, 9, 1]} color="#fff4e6" />
-        <Lightformer intensity={0.4} position={[9, 2, 4]} scale={[7, 9, 1]} color="#e6f0ff" />
-        <Lightformer intensity={0.3} position={[0, -6, 6]} scale={[12, 5, 1]} color="#dfe7ef" />
-      </Environment>
-      
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[8, 12, 8]} intensity={1.1} castShadow />
+      <directionalLight position={[-10, 6, 4]} intensity={0.5} color="#fff4e6" />
+      <pointLight position={[0, -6, 10]} intensity={0.4} color="#e6f0ff" />
+
       {/* Wall */}
       <mesh position={[0, 0, -12]} receiveShadow>
         <planeGeometry args={[W * 3, H * 2.5]} />
