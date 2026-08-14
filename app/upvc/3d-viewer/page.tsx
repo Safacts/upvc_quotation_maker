@@ -1,8 +1,7 @@
 "use client";
 
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import * as THREE from 'three';
 import { Suspense, useRef, useState, useEffect, Component, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -39,50 +38,60 @@ class ViewerErrorBoundary extends Component<
   }
 }
 
-function WindowFrame({ width, height, depth }) {
-  const group = useRef(null);
+const FRAME_COLOR = "#F2EFE9";
+const GLASS_COLOR = "#9FD3E8";
 
-  useFrame(() => {
-    if (group.current) {
-      group.current.rotation.y += 0.001;
-    }
-  });
-
+function Bar({ w, h, d, x = 0, y = 0 }) {
   return (
-    <group ref={group}>
-      <mesh position={[0, height / 2, 0]}>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial color="#CD4A12" />
-      </mesh>
-      <mesh position={[0, height / 2, depth / 2 - 2]}>
-        <boxGeometry args={[width, height, 4]} />
-        <meshStandardMaterial color="#EA580C" />
-      </mesh>
-    </group>
-  );
-}
-
-function GlassPanel({ width, height }) {
-  return (
-    <mesh position={[0, height / 2, 0.5]}>
-      <planeGeometry args={[width, height]} />
-      <meshStandardMaterial color="#87CEEB" transparent opacity={0.4} side={THREE.DoubleSide} />
+    <mesh position={[x, y, 0]}>
+      <boxGeometry args={[w, h, d]} />
+      <meshStandardMaterial color={FRAME_COLOR} />
     </mesh>
   );
 }
 
 function Window3D({ design }) {
   const dimensions = design.dimensions;
-  const w = dimensions.width_mm / 100;
-  const h = dimensions.height_mm / 100;
+  const W = dimensions.width_mm / 100;
+  const H = dimensions.height_mm / 100;
   const fd = 6;
+  const t = Math.max(1.5, Math.min(W, H) * 0.05);
+
+  const panels =
+    design.design && Array.isArray(design.design.panels) ? design.design.panels : [];
+  const innerW = W - 2 * t;
+  const innerH = H - 2 * t;
+
+  const panelWidths = panels.map((p) => Number(p.width) || 0);
+  const totalPW = panelWidths.reduce((a, b) => a + b, 0) || innerW;
+  const mullionXs: number[] = [];
+  let acc = 0;
+  for (let i = 0; i < panelWidths.length - 1; i++) {
+    acc += panelWidths[i];
+    mullionXs.push(-innerW / 2 + (acc / totalPW) * innerW);
+  }
+
+  const showTransom = dimensions.configuration === "fixed" && H > W * 1.25;
 
   return (
     <>
       <ambientLight intensity={0.8} />
       <directionalLight position={[10, 10, 5]} intensity={0.8} />
-      <WindowFrame width={w} height={h} depth={fd} />
-      <GlassPanel width={w - fd * 2} height={h - fd * 2 - 2} />
+      {/* frame borders */}
+      <Bar w={W} h={t} d={fd} y={H / 2 - t / 2} />
+      <Bar w={W} h={t} d={fd} y={-H / 2 + t / 2} />
+      <Bar w={t} h={H - 2 * t} d={fd} x={-W / 2 + t / 2} />
+      <Bar w={t} h={H - 2 * t} d={fd} x={W / 2 - t / 2} />
+      {/* glass */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[innerW, innerH, 0.4]} />
+        <meshStandardMaterial color={GLASS_COLOR} transparent opacity={0.45} />
+      </mesh>
+      {/* mullions */}
+      {mullionXs.map((mx, i) => (
+        <Bar key={i} w={t} h={innerH} d={fd} x={mx} />
+      ))}
+      {showTransom && <Bar w={innerW} h={t} d={fd} y={0} />}
     </>
   );
 }
