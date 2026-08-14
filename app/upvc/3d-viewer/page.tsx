@@ -82,7 +82,52 @@ function Viewer() {
   const [design, setDesign] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needManual, setNeedManual] = useState(false);
+  const [manualW, setManualW] = useState(1200);
+  const [manualH, setManualH] = useState(1200);
+  const [manualType, setManualType] = useState("fixed");
   const canvasRef = useRef(null);
+
+  async function readError(res: Response): Promise<string> {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.error) msg = String(body.error);
+    } catch {
+      // non-JSON body — keep the status-based message
+    }
+    return msg;
+  }
+
+  async function generateManual() {
+    setLoading(true);
+    setError(null);
+    setNeedManual(false);
+    try {
+      const cfgRes = await fetch("/api/console/3d/configurator", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          width_mm: Math.round(Number(manualW)),
+          height_mm: Math.round(Number(manualH)),
+          type: manualType,
+          profile_type: "uPVC",
+          name: fromQuotationId ? `From quotation ${fromQuotationId}` : "Manual window",
+        }),
+      });
+      if (!cfgRes.ok) {
+        setError(await readError(cfgRes));
+        return;
+      }
+      const cfgData = await cfgRes.json();
+      setDesign(cfgData && cfgData.design ? cfgData.design : null);
+    } catch (e: any) {
+      setError(e?.message ? String(e.message) : "Network error while loading");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // The API GET returns { design, order, renders } — never a flat design object.
   // `?designId=X` loads a saved design; `?fromQuotation=Y` derives one from the
@@ -93,17 +138,6 @@ function Viewer() {
 
   useEffect(() => {
     let cancelled = false;
-
-    async function readError(res: Response): Promise<string> {
-      let msg = `Request failed (${res.status})`;
-      try {
-        const body = await res.json();
-        if (body?.error) msg = String(body.error);
-      } catch {
-        // non-JSON body — keep the status-based message
-      }
-      return msg;
-    }
 
     async function load() {
       setLoading(true);
@@ -140,7 +174,14 @@ function Viewer() {
             (m: any) => Number(m.width) > 0 && Number(m.height) > 0,
           );
           if (!opening) {
-            setError("No measurable opening found on this quotation");
+            // No measurable opening — let the user enter dimensions manually
+            // instead of dead-ending. Pre-fill with the quotation's first item
+            // if it carries any width/height hint.
+            const hint = measured[0];
+            if (hint && Number(hint.width) > 0) setManualW(Math.round(Number(hint.width)));
+            if (hint && Number(hint.height) > 0) setManualH(Math.round(Number(hint.height)));
+            setNeedManual(true);
+            setLoading(false);
             return;
           }
           const cfgRes = await fetch("/api/console/3d/configurator", {
@@ -210,6 +251,52 @@ function Viewer() {
           >
             Log in to Ops Console
           </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (needManual) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8f4f0' }}>
+        <div style={{ background: '#fff', padding: 28, borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', maxWidth: 360, width: '90%' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#7C2D12', marginBottom: 4 }}>
+            Enter window dimensions
+          </div>
+          <div style={{ fontSize: 13, color: '#666', marginBottom: 18 }}>
+            This quotation has no measured opening yet. Enter dimensions to generate a 3D preview.
+          </div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Width (mm)</label>
+          <input
+            type="number"
+            value={manualW}
+            onChange={(e) => setManualW(Number(e.target.value) || 0)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', marginBottom: 14, fontSize: 14 }}
+          />
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Height (mm)</label>
+          <input
+            type="number"
+            value={manualH}
+            onChange={(e) => setManualH(Number(e.target.value) || 0)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ddd', marginBottom: 14, fontSize: 14 }}
+          />
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Type</label>
+          <select
+            value={manualType}
+            onChange={(e) => setManualType(e.target.value)}
+            style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #ddd', marginBottom: 18, fontSize: 14 }}
+          >
+            <option value="fixed">Fixed</option>
+            <option value="casement">Casement</option>
+            <option value="sliding">Sliding</option>
+            <option value="tilt_turn">Tilt &amp; Turn</option>
+          </select>
+          <button
+            onClick={generateManual}
+            style={{ width: '100%', background: '#EA580C', color: '#fff', border: 'none', padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Generate 3D
+          </button>
         </div>
       </div>
     );
