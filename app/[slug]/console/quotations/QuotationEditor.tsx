@@ -16,7 +16,7 @@ import {
 } from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight, ChevronDown, Copy,
+  ChevronLeft, ChevronRight, ChevronDown, Copy, Box,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
@@ -828,6 +828,18 @@ export default function QuotationEditor({
                 title="Duplicate as new draft (Alt+D)"
               >
                 <FileText size={12} /> Duplicate <span className="vc-kbd">Alt D</span>
+              </button>
+            )}
+            {savedId && (
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() =>
+                  window.open(`/upvc/3d-viewer?fromQuotation=${savedId}`, "_blank", "noopener,noreferrer")
+                }
+                title="Open this quotation in the 3D window viewer"
+              >
+                <Box size={12} /> View in 3D
               </button>
             )}
             <button
