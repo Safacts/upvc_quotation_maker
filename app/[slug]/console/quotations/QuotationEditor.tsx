@@ -2,6 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+// Pure, serializable editor types + helpers live in a plain (non-"use client")
+// module so the server component `new/page.tsx` can call `blankHeader` without
+// tripping Next.js's "Cannot call a Client Function from a Server Component".
+import {
+  blankHeader,
+  emptyMeasured,
+  emptyUnmeasured,
+  type MeasuredRow,
+  type UnmeasuredRow,
+  type QuotationHeader,
+  type EditorInitial,
+} from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
   ChevronLeft, ChevronRight,
@@ -59,86 +71,14 @@ import { LivePreview } from "../_components/LivePreview";
  * client-supplied amount is a client-supplied price.
  */
 
-export interface MeasuredRow {
-  key: string;
-  code: string;
-  description: string;
-  glass: string;
-  width: string;
-  height: string;
-  units: string;
-  rate: string;
-}
-
-export interface UnmeasuredRow {
-  key: string;
-  description: string;
-  units: string;
-  rate: string;
-}
-
-export interface QuotationHeader {
-  quote_no: string;
-  date: string;
-  customer_name: string;
-  contact_no: string;
-  email: string;
-  address: string;
-  reference: string;
-  supplier_company: string;
-  status: string;
-  transport_cost: string;
-  include_gst: boolean;
-  gst_percentage: string;
-  customer_id: string | null;
-}
-
-export interface EditorInitial {
-  header: QuotationHeader;
-  measured: MeasuredRow[];
-  unmeasured: UnmeasuredRow[];
-}
-
-/**
- * Row keys are generated CLIENT-SIDE and are not database ids.
- *
- * React needs a stable key across inserts, deletes and reorders within one
- * editing session. Using the array index instead makes React reuse the wrong DOM
- * node when a row is deleted from the middle — the user watches the value they
- * just typed jump to a different line. A counter is used rather than
- * `crypto.randomUUID()` so that server and client render identically and
- * hydration does not mismatch.
- */
-let keySeq = 0;
-function nextKey(): string {
-  keySeq += 1;
-  return "r" + keySeq;
-}
-
-export function emptyMeasured(): MeasuredRow {
-  return { key: nextKey(), code: "", description: "", glass: "", width: "", height: "", units: "1", rate: "" };
-}
-export function emptyUnmeasured(): UnmeasuredRow {
-  return { key: nextKey(), description: "", units: "1", rate: "" };
-}
-
-export function blankHeader(gstPercentage = 18): QuotationHeader {
-  return {
-    quote_no: "",
-    date: new Date().toISOString().slice(0, 10),
-    customer_name: "",
-    contact_no: "",
-    email: "",
-    address: "",
-    reference: "",
-    supplier_company: "",
-    status: "draft",
-    transport_cost: "0",
-    include_gst: false,
-    gst_percentage: String(gstPercentage),
-    customer_id: null,
-  };
-}
+// Re-export the editor types so existing importers (e.g. EditQuotationClient.tsx,
+// which does `import type { ... } from "../QuotationEditor"`) keep working.
+export type {
+  MeasuredRow,
+  UnmeasuredRow,
+  QuotationHeader,
+  EditorInitial,
+};
 
 export default function QuotationEditor({
   quotationId,

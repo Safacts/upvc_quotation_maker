@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
-import QuotationEditor, { blankHeader } from "../QuotationEditor";
+// `blankHeader` must come from the plain (non-"use client") module: calling a
+// function exported by a "use client" module from this Server Component throws
+// "Cannot call a Client Function from a Server Component" at render time.
+import { blankHeader } from "@/lib/quotation-editor";
+import QuotationEditor from "../QuotationEditor";
 
 /**
  * `/<slug>/console/quotations/new` — the split-view editor with an empty document.
