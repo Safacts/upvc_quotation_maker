@@ -112,7 +112,10 @@ jobs:
         # --build-name/--build-number: bake the version supplied by the trigger
         # (portal dispatches version_name/version_code; defaults 1.0.0/1) into
         # the APK so the in-app updater can compare against the installed one.
-        run: flutter build apk --release --target-platform android-arm64 --build-name="${{ steps.vars.outputs.version_name }}" --build-number="${{ steps.vars.outputs.version_code }}"
+        # --dart-define=CLIENT_ID: WITHOUT this every APK falls back to
+        # 'venkateshwara' (ClientLoader.getClientId) -> wrong logo/branding/
+        # tenant in-app for every other client. Bakes the client identity in.
+        run: flutter build apk --release --target-platform android-arm64 --dart-define=CLIENT_ID="${{ steps.vars.outputs.client_id }}" --build-name="${{ steps.vars.outputs.version_name }}" --build-number="${{ steps.vars.outputs.version_code }}"
 
       - name: Upload APK to Supabase Storage
         env:
