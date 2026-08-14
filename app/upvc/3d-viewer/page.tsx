@@ -1,9 +1,10 @@
 "use client";
 
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { Suspense, useRef, useState, useEffect, Component, type ReactNode, type FC } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
+import { Suspense, useRef, useState, useEffect, Component, type ReactNode, type FC, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import * as THREE from 'three';
 
 class ViewerErrorBoundary extends Component<
   { children: ReactNode },
@@ -40,87 +41,138 @@ class ViewerErrorBoundary extends Component<
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const FRAME_COLOR = "#E8E4DC";
-const FRAME_COLOR_DARK = "#C8C4BC";
-const GLASS_COLOR = "#B8D8E8";
-const GLASS_OPACITY = 0.38;
+const FRAME_COLOR = "#F4F3F0"; // Slightly warmer, more realistic UPVC
+const GLASS_COLOR = "#E8F4F8";
 const WALL_COLOR = "#F5F3EF";
-const FLOOR_COLOR = "#E0DDD8";
-const HANDLE_COLOR = "#8A8A8A";
-const SASH_COLOR = "#DEDAD2";
-
-// ─── Profile thickness ────────────────────────────────────────────────────────
-// All mm values divided by 100 to get scene units. 1 unit ≈ 100mm.
+const FLOOR_COLOR = "#DEDAD5";
+const HANDLE_COLOR = "#D1D1D1";
+const SASH_COLOR = "#EAE8E4";
+const GASKET_COLOR = "#222222";
 
 function profileT(W: number, H: number): number {
   return Math.max(1.2, Math.min(2.2, Math.min(W, H) * 0.06));
 }
 
-// ─── Box helper ───────────────────────────────────────────────────────────────
+// ─── Realistic Extruded Profile ──────────────────────────────────────────────
 
-function Box({
-  w, h, d, x = 0, y = 0, z = 0, color, opacity = 1, transparent = false,
-}: {
-  w: number; h: number; d: number;
-  x?: number; y?: number; z?: number;
-  color: string; opacity?: number; transparent?: boolean;
-}) {
+function ProfileExtrusion({ W, H, t, fd, color }: { W: number; H: number; t: number; fd: number; color: string }) {
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-W / 2, -H / 2);
+    s.lineTo(W / 2, -H / 2);
+    s.lineTo(W / 2, H / 2);
+    s.lineTo(-W / 2, H / 2);
+    s.lineTo(-W / 2, -H / 2);
+
+    const hole = new THREE.Path();
+    const iW = W - 2 * t;
+    const iH = H - 2 * t;
+    hole.moveTo(-iW / 2, -iH / 2);
+    hole.lineTo(iW / 2, -iH / 2);
+    hole.lineTo(iW / 2, iH / 2);
+    hole.lineTo(-iW / 2, iH / 2);
+    hole.lineTo(-iW / 2, -iH / 2);
+    s.holes.push(hole);
+    return s;
+  }, [W, H, t]);
+
+  const extrudeSettings = {
+    depth: fd,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    steps: 1,
+    bevelSize: 0.1,
+    bevelThickness: 0.1,
+  };
+
   return (
-    <mesh position={[x, y, z]}>
-      <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial
-        color={color}
-        opacity={opacity}
-        transparent={transparent}
-        roughness={0.35}
+    <mesh position={[0, 0, -fd / 2]} castShadow receiveShadow>
+      <extrudeGeometry args={[shape, extrudeSettings]} />
+      <meshStandardMaterial color={color} roughness={0.35} metalness={0.05} />
+    </mesh>
+  );
+}
+
+// ─── Gasket ───────────────────────────────────────────────────────────────────
+
+function Gasket({ w, h, z }: { w: number; h: number; z: number }) {
+  const t = 0.08;
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    s.moveTo(-w / 2, -h / 2);
+    s.lineTo(w / 2, -h / 2);
+    s.lineTo(w / 2, h / 2);
+    s.lineTo(-w / 2, h / 2);
+    s.lineTo(-w / 2, -h / 2);
+
+    const hole = new THREE.Path();
+    hole.moveTo(-w / 2 + t, -h / 2 + t);
+    hole.lineTo(w / 2 - t, -h / 2 + t);
+    hole.lineTo(w / 2 - t, h / 2 - t);
+    hole.lineTo(-w / 2 + t, h / 2 - t);
+    hole.lineTo(-w / 2 + t, -h / 2 + t);
+    s.holes.push(hole);
+    return s;
+  }, [w, h]);
+
+  return (
+    <mesh position={[0, 0, z]}>
+      <extrudeGeometry args={[shape, { depth: 0.4, bevelEnabled: false }]} />
+      <meshStandardMaterial color={GASKET_COLOR} roughness={0.8} />
+    </mesh>
+  );
+}
+
+// ─── Glass pane (Physical Material) ──────────────────────────────────────────
+
+function Glass({ w, h, z = 0 }: { w: number; h: number; z?: number }) {
+  return (
+    <mesh position={[0, 0, z]}>
+      <boxGeometry args={[w, h, 0.3]} />
+      <meshPhysicalMaterial
+        color={GLASS_COLOR}
+        transmission={0.96}
+        opacity={1}
         metalness={0.05}
+        roughness={0.05}
+        ior={1.5}
+        thickness={0.5}
+        transparent
       />
     </mesh>
   );
 }
 
-// ─── Outer frame ──────────────────────────────────────────────────────────────
-// Each rail = face box + inner lip box. This simulates an extruded U-profile.
+// ─── Architectural Handle ─────────────────────────────────────────────────────
 
-function Frame({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
-  const lip = t * 0.3;
-  const lipD = fd * 0.4;
-  const lipOffset = (fd - lipD) / 2;
-
+function Handle({ x, y, z }: { x: number; y: number; z: number }) {
   return (
-    <>
-      {/* Top rail */}
-      <Box w={W} h={t} d={fd} y={H / 2 - t / 2} color={FRAME_COLOR} />
-      <Box w={W - t * 2} h={lip} d={lipD} y={H / 2 - t + lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
-      {/* Bottom rail */}
-      <Box w={W} h={t} d={fd} y={-H / 2 + t / 2} color={FRAME_COLOR} />
-      <Box w={W - t * 2} h={lip} d={lipD} y={-H / 2 + t - lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
-      {/* Left stile */}
-      <Box w={t} h={H - 2 * t} d={fd} x={-W / 2 + t / 2} color={FRAME_COLOR} />
-      <Box w={lip} h={H - 2 * t - lip * 2} d={lipD} x={-W / 2 + t - lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
-      {/* Right stile */}
-      <Box w={t} h={H - 2 * t} d={fd} x={W / 2 - t / 2} color={FRAME_COLOR} />
-      <Box w={lip} h={H - 2 * t - lip * 2} d={lipD} x={W / 2 - t + lip / 2} z={-lipOffset} color={FRAME_COLOR_DARK} />
-    </>
-  );
-}
-
-// ─── Glass pane ───────────────────────────────────────────────────────────────
-
-function Glass({ w, h, z = 0 }: { w: number; h: number; z?: number }) {
-  return (
-    <Box w={w} h={h} d={0.3} z={z} color={GLASS_COLOR} opacity={GLASS_OPACITY} transparent />
-  );
-}
-
-// ─── Handle ───────────────────────────────────────────────────────────────────
-
-function Handle({ x, y }: { x: number; y: number }) {
-  return (
-    <>
-      <Box w={0.3} h={1.2} d={0.4} x={x} y={y} z={3.5} color={HANDLE_COLOR} />
-      <Box w={0.25} h={0.25} d={1.2} x={x} y={y + 0.3} z={4.1} color={HANDLE_COLOR} />
-    </>
+    <group position={[x, y, z]}>
+      {/* Base rosette */}
+      <mesh position={[0, 0, 0.15]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.2, 0.8, 16]} />
+        <meshStandardMaterial color={HANDLE_COLOR} roughness={0.3} metalness={0.6} />
+      </mesh>
+      {/* Lever spindle */}
+      <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.12, 0.12, 0.4, 16]} />
+        <meshStandardMaterial color={HANDLE_COLOR} roughness={0.3} metalness={0.6} />
+      </mesh>
+      {/* Lever handle */}
+      <mesh position={[0, -0.6, 0.7]} rotation={[0, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.12, 0.12, 1.3, 16]} />
+        <meshStandardMaterial color={HANDLE_COLOR} roughness={0.3} metalness={0.6} />
+      </mesh>
+      {/* Lever curve */}
+      <mesh position={[0, 0.05, 0.7]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial color={HANDLE_COLOR} roughness={0.3} metalness={0.6} />
+      </mesh>
+      <mesh position={[0, -1.25, 0.7]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial color={HANDLE_COLOR} roughness={0.3} metalness={0.6} />
+      </mesh>
+    </group>
   );
 }
 
@@ -131,78 +183,129 @@ function FixedWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: num
   const iH = H - 2 * t;
   return (
     <>
-      <Frame W={W} H={H} t={t} fd={fd} />
+      <ProfileExtrusion W={W} H={H} t={t} fd={fd} color={FRAME_COLOR} />
+      <Gasket w={iW} h={iH} z={-0.2} />
       <Glass w={iW} h={iH} />
     </>
   );
 }
 
-// ─── Sliding window ───────────────────────────────────────────────────────────
+// ─── Sliding window (Interactive) ─────────────────────────────────────────────
 
 function SlidingWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const leftSashRef = useRef<THREE.Group>(null);
+  
   const iW = W - 2 * t;
   const iH = H - 2 * t;
-  const sW = iW / 2 + t * 0.6;
+  const sW = iW / 2 + t * 0.4;
   const sH = iH;
   const mt = t * 0.7;
 
+  useFrame((state, delta) => {
+    if (leftSashRef.current) {
+      const targetX = isOpen ? iW * 0.45 : 0;
+      leftSashRef.current.position.x = THREE.MathUtils.damp(leftSashRef.current.position.x, targetX, 4, delta);
+    }
+  });
+
   return (
     <>
-      <Frame W={W} H={H} t={t} fd={fd} />
+      <ProfileExtrusion W={W} H={H} t={t} fd={fd} color={FRAME_COLOR} />
 
-      {/* Left sash (back) */}
-      <Box w={sW} h={mt} d={fd * 0.55} x={-iW / 2 + sW / 2 - t * 0.3} y={iH / 2 - mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
-      <Box w={sW} h={mt} d={fd * 0.55} x={-iW / 2 + sW / 2 - t * 0.3} y={-iH / 2 + mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
-      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={-iW / 2 + mt / 2} z={-fd * 0.2} color={SASH_COLOR} />
-      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={-iW / 2 + sW - mt / 2 - t * 0.3} z={-fd * 0.2} color={SASH_COLOR} />
-      <Glass w={sW - mt * 2} h={sH - mt * 2} z={-fd * 0.2} />
+      {/* Right sash (back, fixed for simplicity) */}
+      <group position={[iW / 2 - sW / 2 + t * 0.2, 0, -fd * 0.2]}>
+        <ProfileExtrusion W={sW} H={sH} t={mt} fd={fd * 0.55} color={SASH_COLOR} />
+        <Gasket w={sW - 2 * mt} h={sH - 2 * mt} z={-0.2} />
+        <Glass w={sW - 2 * mt} h={sH - 2 * mt} />
+      </group>
 
-      {/* Right sash (front) */}
-      <Box w={sW} h={mt} d={fd * 0.55} x={iW / 2 - sW / 2 + t * 0.3} y={iH / 2 - mt / 2} z={fd * 0.2} color={SASH_COLOR} />
-      <Box w={sW} h={mt} d={fd * 0.55} x={iW / 2 - sW / 2 + t * 0.3} y={-iH / 2 + mt / 2} z={fd * 0.2} color={SASH_COLOR} />
-      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={iW / 2 - mt / 2} z={fd * 0.2} color={SASH_COLOR} />
-      <Box w={mt} h={sH - mt * 2} d={fd * 0.55} x={iW / 2 - sW + mt / 2 + t * 0.3} z={fd * 0.2} color={SASH_COLOR} />
-      <Glass w={sW - mt * 2} h={sH - mt * 2} z={fd * 0.2} />
-
-      <Handle x={iW / 2 - sW + mt + 0.4} y={0} />
+      {/* Left sash (front, sliding) */}
+      <group 
+        ref={leftSashRef}
+        position={[-iW / 2 + sW / 2 - t * 0.2, 0, fd * 0.2]}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        onPointerOver={() => document.body.style.cursor = 'pointer'}
+        onPointerOut={() => document.body.style.cursor = 'auto'}
+      >
+        <ProfileExtrusion W={sW} H={sH} t={mt} fd={fd * 0.55} color={SASH_COLOR} />
+        <Gasket w={sW - 2 * mt} h={sH - 2 * mt} z={-0.2} />
+        <Glass w={sW - 2 * mt} h={sH - 2 * mt} />
+        <Handle x={sW / 2 - mt * 1.5} y={0} z={fd * 0.25} />
+      </group>
     </>
   );
 }
 
-// ─── Casement / Tilt-Turn ─────────────────────────────────────────────────────
+// ─── Casement / Tilt-Turn (Interactive) ───────────────────────────────────────
 
 function CasementWindow({ W, H, t, fd }: { W: number; H: number; t: number; fd: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const sashRef = useRef<THREE.Group>(null);
+  
   const iW = W - 2 * t;
   const iH = H - 2 * t;
   const mt = t * 0.75;
+  const pivotX = -iW / 2; // Hinge left
+
+  useFrame((state, delta) => {
+    if (sashRef.current) {
+      const targetRot = isOpen ? -Math.PI / 3 : 0; // Open outward 60 degrees
+      sashRef.current.rotation.y = THREE.MathUtils.damp(sashRef.current.rotation.y, targetRot, 4, delta);
+    }
+  });
 
   return (
     <>
-      <Frame W={W} H={H} t={t} fd={fd} />
-      <Box w={iW} h={mt} d={fd * 0.6} y={iH / 2 - mt / 2} z={fd * 0.15} color={SASH_COLOR} />
-      <Box w={iW} h={mt} d={fd * 0.6} y={-iH / 2 + mt / 2} z={fd * 0.15} color={SASH_COLOR} />
-      <Box w={mt} h={iH - mt * 2} d={fd * 0.6} x={-iW / 2 + mt / 2} z={fd * 0.15} color={SASH_COLOR} />
-      <Box w={mt} h={iH - mt * 2} d={fd * 0.6} x={iW / 2 - mt / 2} z={fd * 0.15} color={SASH_COLOR} />
-      <Glass w={iW - mt * 2} h={iH - mt * 2} z={fd * 0.15} />
-      {/* Hinges */}
-      <Box w={0.2} h={0.5} d={fd * 0.7} x={-iW / 2 + mt * 0.5} y={iH * 0.3} z={fd * 0.2} color="#999" />
-      <Box w={0.2} h={0.5} d={fd * 0.7} x={-iW / 2 + mt * 0.5} y={-iH * 0.3} z={fd * 0.2} color="#999" />
-      <Handle x={iW / 2 - mt - 0.5} y={0} />
+      <ProfileExtrusion W={W} H={H} t={t} fd={fd} color={FRAME_COLOR} />
+      
+      {/* Sash hinged on the left */}
+      <group position={[pivotX, 0, fd * 0.1]}>
+        <group 
+          ref={sashRef}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          onPointerOver={() => document.body.style.cursor = 'pointer'}
+          onPointerOut={() => document.body.style.cursor = 'auto'}
+        >
+          {/* Shift geometry back by pivotX to center it locally */}
+          <group position={[iW / 2, 0, 0]}>
+            <ProfileExtrusion W={iW} H={iH} t={mt} fd={fd * 0.6} color={SASH_COLOR} />
+            <Gasket w={iW - 2 * mt} h={iH - 2 * mt} z={-0.2} />
+            <Glass w={iW - 2 * mt} h={iH - 2 * mt} />
+            <Handle x={iW / 2 - mt - 0.2} y={0} z={fd * 0.3} />
+          </group>
+        </group>
+      </group>
+      
+      {/* Visual hinges */}
+      <mesh position={[-iW / 2 + 0.1, iH * 0.3, fd * 0.2]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.6, 16]} />
+        <meshStandardMaterial color="#999" />
+      </mesh>
+      <mesh position={[-iW / 2 + 0.1, -iH * 0.3, fd * 0.2]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.6, 16]} />
+        <meshStandardMaterial color="#999" />
+      </mesh>
     </>
   );
 }
 
-// ─── Wall + Floor context ─────────────────────────────────────────────────────
+// ─── Wall + Floor context (HDRI) ──────────────────────────────────────────────
 
 function Scene({ W, H }: { W: number; H: number }) {
   return (
     <>
-      <mesh position={[0, 0, -12]}>
-        <planeGeometry args={[W * 2.6, H * 2.2]} />
+      <Environment preset="apartment" background />
+      
+      {/* Wall */}
+      <mesh position={[0, 0, -12]} receiveShadow>
+        <planeGeometry args={[W * 3, H * 2.5]} />
         <meshStandardMaterial color={WALL_COLOR} roughness={0.9} />
       </mesh>
-      <mesh position={[0, -H / 2, -12 + (H * 1.8) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[W * 2.6, H * 1.8]} />
+      
+      {/* Floor */}
+      <mesh position={[0, -H / 2 - 1.5, -12 + (H * 1.8) / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[W * 3, H * 2]} />
         <meshStandardMaterial color={FLOOR_COLOR} roughness={0.85} />
       </mesh>
     </>
@@ -230,9 +333,9 @@ function Window3D({ design }: { design: any }) {
 
   return (
     <>
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[8, 12, 10]} intensity={0.9} castShadow />
-      <directionalLight position={[-6, -4, 6]} intensity={0.2} />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[8, 12, 10]} intensity={1.2} castShadow />
+      <directionalLight position={[-6, -4, 6]} intensity={0.4} />
       <Scene W={W} H={H} />
       <Opening W={W} H={H} t={t} fd={fd} />
     </>

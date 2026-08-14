@@ -16,7 +16,7 @@ import {
 } from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, ChevronDown, Copy,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
@@ -109,6 +109,25 @@ export default function QuotationEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
   const [savedId, setSavedId] = useState<string | null>(quotationId);
+
+  // ---- Customer picker (Feature A: autofill from masters) -----------------
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<
+    { id: string; name: string; phone?: string; company?: string }[]
+  >([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const customerBoxRef = useRef<HTMLDivElement>(null);
+
+  // ---- Item templates + measured quick actions (Feature B) ----------------
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([]);
+  const templateBoxRef = useRef<HTMLDivElement>(null);
+  const [applyW, setApplyW] = useState("");
+  const [applyH, setApplyH] = useState("");
+  const [applyRate, setApplyRate] = useState("");
+  const [applyGlass, setApplyGlass] = useState("");
+  const [applyWithRate, setApplyWithRate] = useState(false);
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
 
@@ -234,6 +253,164 @@ export default function QuotationEditor({
     },
     [markDirty],
   );
+
+  // ---- Feature A: customer picker ----------------------------------------
+  const fetchCustomers = useCallback(async (q: string) => {
+    setCustomerLoading(true);
+    try {
+      const res = await fetch(
+        `/api/console/customers?q=${encodeURIComponent(q)}&page_size=20`,
+        { credentials: "same-origin" },
+      );
+      if (!res.ok) {
+        setCustomerResults([]);
+        return;
+      }
+      const data = await res.json();
+      setCustomerResults(Array.isArray(data.rows) ? data.rows : []);
+    } catch {
+      setCustomerResults([]);
+    } finally {
+      setCustomerLoading(false);
+    }
+  }, []);
+
+  const selectCustomer = useCallback(
+    async (cid: string) => {
+      try {
+        const res = await fetch(`/api/console/customers/${cid}`, { credentials: "same-origin" });
+        if (!res.ok) return;
+        const data = await res.json();
+        // Autofill header. Blank fields only — never overwrite what the user
+        // already typed. `gstin` maps onto `reference` (the header has no gstin
+        // column); the FK `customer_id` links the master for later lookups.
+        setHeader((h) => ({
+          ...h,
+          customer_name: data.name || h.customer_name,
+          contact_no: data.contact_no || h.contact_no,
+          email: data.email || h.email,
+          address: data.address || h.address,
+          reference: h.reference || data.gstin || h.reference,
+          customer_id: data.id || h.customer_id,
+        }));
+        // Bonus: seed a default glass on rows that have none yet.
+        if (data.preferred_glass) {
+          setMeasured((rows) =>
+            rows.map((r) => (r.glass ? r : { ...r, glass: data.preferred_glass })),
+          );
+        }
+        markDirty();
+        setCustomerOpen(false);
+      } catch {
+        // Non-fatal: the user can still type manually.
+      }
+    },
+    [markDirty],
+  );
+
+  useEffect(() => {
+    if (customerOpen) void fetchCustomers(customerQuery);
+  }, [customerOpen, customerQuery, fetchCustomers]);
+  useEffect(() => {
+    if (!customerOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (customerBoxRef.current && !customerBoxRef.current.contains(e.target as Node)) {
+        setCustomerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [customerOpen]);
+
+  // ---- Feature B: item templates + measured quick actions -----------------
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/console/item-templates", { credentials: "same-origin" });
+      if (!res.ok) {
+        setTemplates([]);
+        return;
+      }
+      const data = await res.json();
+      setTemplates(Array.isArray(data.templates) ? data.templates : []);
+    } catch {
+      setTemplates([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (templatesOpen) void loadTemplates();
+  }, [templatesOpen, loadTemplates]);
+  useEffect(() => {
+    if (!templatesOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (templateBoxRef.current && !templateBoxRef.current.contains(e.target as Node)) {
+        setTemplatesOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [templatesOpen]);
+
+  const insertTemplate = useCallback(
+    (t: any) => {
+      // name -> description, window_type -> code, width_mm/height_mm -> width/height,
+      // quantity -> units, rate/glass straight through. Inserts a NEW measured row.
+      const row: MeasuredRow = {
+        ...emptyMeasured(),
+        description: t.name || t.description || "",
+        code: t.window_type || "",
+        width: t.width_mm != null && t.width_mm !== "" ? String(t.width_mm) : "",
+        height: t.height_mm != null && t.height_mm !== "" ? String(t.height_mm) : "",
+        units: t.quantity != null && t.quantity !== "" ? String(t.quantity) : "1",
+        rate: t.rate != null && t.rate !== "" ? String(t.rate) : "",
+        glass: t.glass || "",
+      };
+      setMeasured((rows) => [...rows, row]);
+      setTemplatesOpen(false);
+      markDirty();
+    },
+    [markDirty],
+  );
+
+  const duplicateMeasured = useCallback(
+    (index: number) => {
+      setMeasured((rows) => {
+        const src = rows[index];
+        if (!src) return rows;
+        // Copy description/glass/rate; W/H carried over so the user can tweak.
+        const copy: MeasuredRow = {
+          ...emptyMeasured(),
+          description: src.description,
+          glass: src.glass,
+          width: src.width,
+          height: src.height,
+          units: src.units,
+          rate: src.rate,
+        };
+        const next = [...rows];
+        next.splice(index + 1, 0, copy);
+        return next;
+      });
+      markDirty();
+    },
+    [markDirty],
+  );
+
+  const applyToAllRows = useCallback(() => {
+    if (!applyW.trim() && !applyH.trim()) {
+      toast("Enter at least a width or height to apply", "info");
+      return;
+    }
+    setMeasured((rows) =>
+      rows.map((r) => ({
+        ...r,
+        width: applyW.trim() ? applyW.trim() : r.width,
+        height: applyH.trim() ? applyH.trim() : r.height,
+        ...(applyWithRate ? { rate: applyRate.trim(), glass: applyGlass.trim() } : {}),
+      })),
+    );
+    markDirty();
+  }, [applyW, applyH, applyRate, applyGlass, applyWithRate, markDirty, toast]);
 
   // ---- Save ---------------------------------------------------------------
   const save = useCallback(async () => {
@@ -711,14 +888,89 @@ export default function QuotationEditor({
                   <UserPlus size={11} /> Add <span className="vc-kbd">Alt C</span>
                 </button>
               </label>
-              <input
-                className={"vc-input" + (fieldErrors.customer_name ? " vc-invalid" : "")}
-                value={header.customer_name}
-                onChange={(e) => setHeaderField("customer_name", e.target.value)}
-                placeholder="Customer name"
-                data-calc="off"
-                autoFocus
-              />
+              {/* Customer picker (Feature A): combobox over existing masters that
+                  autofills the header on select. The free-text input + Alt+C
+                  quick-create below stay fully functional. */}
+              <div style={{ position: "relative" }} ref={customerBoxRef}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    className={"vc-input" + (fieldErrors.customer_name ? " vc-invalid" : "")}
+                    style={{ flex: 1 }}
+                    value={header.customer_name}
+                    onChange={(e) => setHeaderField("customer_name", e.target.value)}
+                    placeholder="Customer name"
+                    data-calc="off"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="vc-btn vc-btn-sm"
+                    onClick={() => setCustomerOpen((o) => !o)}
+                    title="Pick an existing customer to autofill details"
+                  >
+                    Pick <ChevronDown size={12} />
+                  </button>
+                </div>
+                {customerOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 50,
+                      marginTop: 4,
+                      background: "#fff",
+                      border: "1px solid #FFEDD5",
+                      borderRadius: 8,
+                      boxShadow: "0 8px 24px rgba(124,45,18,0.15)",
+                      maxHeight: 280,
+                      overflowY: "auto",
+                      fontSize: 12,
+                    }}
+                  >
+                    <div style={{ padding: 8, borderBottom: "1px solid #FFEDD5" }}>
+                      <input
+                        className="vc-input"
+                        style={{ width: "100%" }}
+                        autoFocus
+                        placeholder="Search customers…"
+                        value={customerQuery}
+                        onChange={(e) => setCustomerQuery(e.target.value)}
+                      />
+                    </div>
+                    {customerLoading ? (
+                      <div style={{ padding: 10, color: "#7C2D12" }}>Loading…</div>
+                    ) : customerResults.length === 0 ? (
+                      <div style={{ padding: 10, color: "#8a94a1" }}>No customers found</div>
+                    ) : (
+                      customerResults.map((c) => (
+                        <div
+                          key={c.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            void selectCustomer(c.id);
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "#FFEDD5")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                          style={{
+                            padding: "8px 10px",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #FFF7ED",
+                          }}
+                        >
+                          <div style={{ color: "#7C2D12", fontWeight: 600 }}>{c.name}</div>
+                          {c.phone || c.company ? (
+                            <div style={{ color: "#8a94a1", fontSize: 11 }}>
+                              {[c.phone, c.company].filter(Boolean).join(" · ")}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               {fieldErrors.customer_name && (
                 <span className="vc-err">{fieldErrors.customer_name}</span>
               )}
@@ -830,10 +1082,141 @@ export default function QuotationEditor({
           <div className="vc-card-head">
             <span className="vc-card-title">Measured Items</span>
             <div style={{ flex: 1 }} />
+
+            {/* Item templates (Feature B): insert a prefilled row. */}
+            <div ref={templateBoxRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => setTemplatesOpen((o) => !o)}
+                title="Insert a saved item template"
+              >
+                Templates <ChevronDown size={12} />
+              </button>
+              {templatesOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    zIndex: 50,
+                    marginTop: 4,
+                    background: "#fff",
+                    border: "1px solid #FFEDD5",
+                    borderRadius: 8,
+                    boxShadow: "0 8px 24px rgba(124,45,18,0.15)",
+                    maxHeight: 260,
+                    overflowY: "auto",
+                    fontSize: 12,
+                    minWidth: 200,
+                  }}
+                >
+                  {templates.length === 0 ? (
+                    <div style={{ padding: 10, color: "#8a94a1" }}>No templates yet</div>
+                  ) : (
+                    templates.map((t) => (
+                      <div
+                        key={t.id}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          insertTemplate(t);
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#FFEDD5")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        style={{
+                          padding: "8px 10px",
+                          cursor: "pointer",
+                          borderBottom: "1px solid #FFF7ED",
+                        }}
+                      >
+                        <div style={{ color: "#7C2D12", fontWeight: 600 }}>{t.name}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             <button type="button" className="vc-btn vc-btn-sm" onClick={addMeasured}>
               <Plus size={12} /> Add row <span className="vc-kbd">Alt I</span>
             </button>
           </div>
+
+          {/* Apply-to-all toolbar (Feature B): push one W/H (+ optional rate/glass)
+              across every measured row — common when a frame repeats. */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              padding: "8px 12px",
+              background: "#FFEDD5",
+              borderBottom: "1px solid #FED7AA",
+              fontSize: 12,
+              color: "#7C2D12",
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>Apply to all rows:</span>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              W
+              <input
+                className="vc-input vc-num"
+                style={{ width: 70, height: 22 }}
+                inputMode="decimal"
+                value={applyW}
+                onChange={(e) => setApplyW(e.target.value)}
+                placeholder="mm"
+              />
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              H
+              <input
+                className="vc-input vc-num"
+                style={{ width: 70, height: 22 }}
+                inputMode="decimal"
+                value={applyH}
+                onChange={(e) => setApplyH(e.target.value)}
+                placeholder="mm"
+              />
+            </label>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={applyWithRate}
+                onChange={(e) => setApplyWithRate(e.target.checked)}
+              />
+              + rate/glass
+            </label>
+            {applyWithRate && (
+              <>
+                <input
+                  className="vc-input vc-num"
+                  style={{ width: 80, height: 22 }}
+                  inputMode="decimal"
+                  value={applyRate}
+                  onChange={(e) => setApplyRate(e.target.value)}
+                  placeholder="rate"
+                />
+                <input
+                  className="vc-input"
+                  style={{ width: 120, height: 22 }}
+                  value={applyGlass}
+                  onChange={(e) => setApplyGlass(e.target.value)}
+                  placeholder="glass"
+                />
+              </>
+            )}
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm vc-btn-primary"
+              onClick={applyToAllRows}
+              style={{ background: "#EA580C", borderColor: "#EA580C", color: "#fff" }}
+            >
+              Apply
+            </button>
+          </div>
+
           <div style={{ overflowX: "auto" }}>
             <table className="vc-item-grid">
               <thead>
@@ -930,16 +1313,24 @@ export default function QuotationEditor({
                         />
                       </td>
                       <td className="vc-cell-calc vc-amt">{formatAmount(lineTotal)}</td>
-                      <td className="vc-row-del">
-                        <button
-                          type="button"
-                          className="vc-icon-btn"
-                          onClick={() => removeMeasured(i)}
-                          title="Delete row (Alt+X)"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </td>
+                       <td className="vc-row-del">
+                         <button
+                           type="button"
+                           className="vc-icon-btn"
+                           onClick={() => duplicateMeasured(i)}
+                           title="Duplicate this row"
+                         >
+                           <Copy size={12} />
+                         </button>
+                         <button
+                           type="button"
+                           className="vc-icon-btn"
+                           onClick={() => removeMeasured(i)}
+                           title="Delete row (Alt+X)"
+                         >
+                           <Trash2 size={12} />
+                         </button>
+                       </td>
                     </tr>
                   );
                 })}
