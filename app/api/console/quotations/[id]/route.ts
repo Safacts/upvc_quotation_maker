@@ -46,7 +46,7 @@ const DETAIL_SELECT =
   "id,quote_no,date,customer_name,contact_no,email,address,reference," +
   "supplier_company,status,transport_cost,include_gst,gst_percentage," +
   "created_at,client_id,customer_id," +
-  "measured_items(id,code,description,glass,width,height,units,rate,created_at)," +
+  "measured_items(id,code,description,glass,width,height,units,rate,bom_config,created_at)," +
   "unmeasured_items(id,description,units,rate,created_at)";
 
 export async function GET(
@@ -209,6 +209,7 @@ export async function PATCH(
           height: m.height,
           units: m.units,
           rate: m.rate,
+          bom_config: m.bom,
         })) as any,
       );
     }

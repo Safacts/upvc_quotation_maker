@@ -6,6 +6,7 @@ import QuotationEditor, {
   type EditorInitial,
   type MeasuredRow,
   type UnmeasuredRow,
+  emptyBom,
 } from "../QuotationEditor";
 import { useConsole } from "../../ConsoleShell";
 import { toDateInputValue } from "@/lib/console-format";
@@ -85,6 +86,7 @@ export default function EditQuotationClient({
           height: toStr(m.height),
           units: toStr(m.units, "1"),
           rate: toStr(m.rate),
+          bom: m.bom_config && typeof m.bom_config === "object" ? m.bom_config : emptyBom(),
         }));
         const unmeasured: UnmeasuredRow[] = (data.unmeasured_items || []).map((u: any) => ({
           key: rowKey(),

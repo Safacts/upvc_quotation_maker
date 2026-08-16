@@ -111,6 +111,11 @@ export const measuredItemSchema = z.object({
   height: numberish(0).refine((n) => n >= 0, { message: "Height cannot be negative" }),
   units: numberish(1).refine((n) => n >= 0, { message: "Units cannot be negative" }),
   rate: numberish(0).refine((n) => n >= 0, { message: "Rate cannot be negative" }),
+  bom: z.object({
+    profile: z.object({ system: text(100), color: text(50) }),
+    glass: z.object({ type: text(100), thickness: text(20) }),
+    hardware: z.array(z.object({ name: text(200), quantity: numberish(1).refine((n) => n >= 0) })).max(50),
+  }).default({ profile: { system: "", color: "white" }, glass: { type: "", thickness: "" }, hardware: [] }),
 });
 export type MeasuredItemInput = z.input<typeof measuredItemSchema>;
 export type MeasuredItemParsed = z.output<typeof measuredItemSchema>;

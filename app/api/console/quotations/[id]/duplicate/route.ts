@@ -40,7 +40,7 @@ export async function POST(
       select:
         "client_id,quote_no,date,customer_name,contact_no,email,address," +
         "reference,supplier_company,transport_cost,include_gst,gst_percentage," +
-        "measured_items(code,description,glass,width,height,units,rate)," +
+        "measured_items(code,description,glass,width,height,units,rate,bom_config)," +
         "unmeasured_items(description,units,rate)",
       limit: 1,
     });
@@ -80,6 +80,7 @@ export async function POST(
           height: num(m.height),
           units: num(m.units, 1),
           rate: num(m.rate),
+          bom_config: m.bom_config || {},
         })) as any,
       );
     }
