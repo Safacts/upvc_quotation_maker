@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
 import { getSession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-client";
 import { requireTier } from "@/lib/tiers";
+import {
+  createQuotationToken,
+  hashQuotationToken,
+  quotationTokenExpiry,
+} from "@/lib/quotation-token";
 
 // MUST stay byte-identical to the derivation in `../route.ts`, and MUST NOT
 // fall back to a literal. The old `|| "dev-secret"` meant that if the env var
@@ -10,8 +15,6 @@ import { requireTier } from "@/lib/tiers";
 // hard-coded string — forgeable by anyone reading the repo — while the
 // verifying route (which has no such literal) fails closed and rejects them.
 // Fail closed here too: no secret, no token.
-const TOKEN_SECRET = process.env.QUOTE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://app.vitharn.com",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
@@ -24,10 +27,6 @@ function json(data: unknown, status = 200) {
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
-}
-
-function mintToken(quotationId: string): string {
-  return createHmac("sha256", TOKEN_SECRET).update(quotationId).digest("hex").slice(0, 16);
 }
 
 /**
@@ -108,10 +107,6 @@ async function resolveCaller(
  * from the request.
  */
 async function issue(id: string, body: Record<string, any> | null) {
-  if (!TOKEN_SECRET) {
-    return json({ error: "Share links are not configured" }, 503);
-  }
-
   const caller = await resolveCaller(body);
   if (!caller) {
     return json({ error: "Unauthorized" }, 401);
@@ -140,7 +135,23 @@ async function issue(id: string, body: Record<string, any> | null) {
   const paid = await requireTier(caller.clientId, "whatsapp_share");
   if (!paid.ok) return paid.error;
 
-  return json({ token: mintToken(id) }, 200);
+  const token = createQuotationToken();
+  const { data: stored, error: storeError } = await supabaseAdmin
+    .from("quotation_share_tokens")
+    .insert({
+      quotation_id: id,
+      client_id: caller.clientId,
+      token_hash: hashQuotationToken(token),
+      expires_at: quotationTokenExpiry(),
+    })
+    .select("expires_at")
+    .single();
+
+  if (storeError || !stored) {
+    return json({ error: "Failed to create share link" }, 500);
+  }
+
+  return json({ token, expires_at: stored.expires_at }, 200);
 }
 
 /** Web portal path — authenticated by the HttpOnly session cookie. */

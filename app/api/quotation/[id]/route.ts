@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase-client";
+import { hashQuotationToken } from "@/lib/quotation-token";
 
-const TOKEN_SECRET = process.env.QUOTE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 /**
  * The ONLY `clients.config` keys this PUBLIC, UNAUTHENTICATED route may emit.
@@ -39,16 +38,6 @@ function publicClientConfig(config: unknown): Record<string, unknown> {
   return out;
 }
 
-function generateToken(quotationId: string): string {
-  return createHmac("sha256", TOKEN_SECRET).update(quotationId).digest("hex").slice(0, 16);
-}
-
-function verifyToken(quotationId: string, token: string): boolean {
-  if (!TOKEN_SECRET) return false;
-  const expected = generateToken(quotationId);
-  return expected === token;
-}
-
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -57,8 +46,21 @@ export async function GET(
   const url = new URL(req.url);
   const token = url.searchParams.get("token");
 
-  if (!token || !verifyToken(id, token)) {
+  if (!token) {
     return NextResponse.json({ error: "Invalid or missing token" }, { status: 403 });
+  }
+
+  const { data: tokenRow } = await supabaseAdmin
+    .from("quotation_share_tokens")
+    .select("quotation_id")
+    .eq("quotation_id", id)
+    .eq("token_hash", hashQuotationToken(token))
+    .gt("expires_at", new Date().toISOString())
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (!tokenRow) {
+    return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
   }
 
   const { data: quotation, error } = await supabaseAdmin
@@ -111,8 +113,21 @@ export async function POST(
   }
 
   const token = body.token;
-  if (!token || !verifyToken(id, token)) {
+  if (!token) {
     return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+  }
+
+  const { data: tokenRow } = await supabaseAdmin
+    .from("quotation_share_tokens")
+    .select("quotation_id")
+    .eq("quotation_id", id)
+    .eq("token_hash", hashQuotationToken(token))
+    .gt("expires_at", new Date().toISOString())
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (!tokenRow) {
+    return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
   }
 
   const action = body.action;

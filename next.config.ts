@@ -10,6 +10,19 @@ const nextConfig: NextConfig = {
   // dev server:  set NEXT_DIST_DIR=.next-verify&& npm run build
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
+  async headers() {
+    return [{
+      source: "/(.*)",
+      headers: [
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data:; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },
+        { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        { key: "X-Frame-Options", value: "DENY" },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+      ],
+    }];
+  },
   async rewrites() {
     if (isDev) {
       const flutter = "http://127.0.0.1:8080";

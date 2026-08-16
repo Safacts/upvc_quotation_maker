@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase-client";
+import { hashQuotationToken } from "@/lib/quotation-token";
 import { quotationTotals } from "@/lib/pricing";
 import { buildQuotationPdf, type QuotationPdfData } from "@/lib/quotation-pdf";
 
@@ -8,7 +8,6 @@ import { buildQuotationPdf, type QuotationPdfData } from "@/lib/quotation-pdf";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TOKEN_SECRET = process.env.QUOTE_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 /**
  * GET /api/quotation/[id]/pdf?token=<hmac> — PUBLIC quotation PDF download.
@@ -25,20 +24,11 @@ const TOKEN_SECRET = process.env.QUOTE_TOKEN_SECRET || process.env.SUPABASE_SERV
  * mangled screenshot of the DOM to nothing happening at all. The customer could
  * never actually obtain the quotation document.
  *
- * AUTH: the same 16-hex truncated HMAC that gates the JSON route. No session —
+ * AUTH: the same opaque stored bearer token that gates the JSON route. No session —
  * by design, the recipient of a WhatsApp link has no account. The token is
  * verified in CONSTANT TIME and BEFORE any database read, so an invalid token
  * cannot be used to probe which quotation ids exist.
  */
-
-function verifyToken(quotationId: string, token: string | null): boolean {
-  if (!TOKEN_SECRET || !token) return false;
-  const expected = createHmac("sha256", TOKEN_SECRET).update(quotationId).digest("hex").slice(0, 16);
-  const a = Buffer.from(expected, "utf8");
-  const b = Buffer.from(token, "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
 
 function num(v: unknown, fallback = 0): number {
   if (v === null || v === undefined || v === "") return fallback;
@@ -60,9 +50,22 @@ export async function GET(
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
 
-    // Fail closed BEFORE touching the database.
-    if (!verifyToken(id, token)) {
+    // Verify the opaque token before loading quotation data.
+    if (!token) {
       return NextResponse.json({ error: "Invalid or missing token" }, { status: 403 });
+    }
+
+    const { data: tokenRow } = await supabaseAdmin
+      .from("quotation_share_tokens")
+      .select("quotation_id")
+      .eq("quotation_id", id)
+      .eq("token_hash", hashQuotationToken(token))
+      .gt("expires_at", new Date().toISOString())
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    if (!tokenRow) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
     }
 
     const { data: qRow, error } = await supabaseAdmin

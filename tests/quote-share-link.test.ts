@@ -15,7 +15,7 @@
  * unauthenticated, internet-facing surface holding customer pricing.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createHmac } from "crypto";
+import { hashQuotationToken } from "../src/lib/quotation-token";
 
 const TEST_SECRET = "nexy-test-quote-token-secret";
 const QUOTE_ID = "11111111-2222-3333-4444-555555555555";
@@ -24,8 +24,8 @@ const OTHER_CLIENT = "kprupvc";
 // SHA-256 of the tenant's portal password, as stored in `clients.password_hash`.
 const GOOD_HASH = "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265";
 
-function validToken(id: string, secret = TEST_SECRET): string {
-  return createHmac("sha256", secret).update(id).digest("hex").slice(0, 16);
+function validToken(id: string): string {
+  return id === QUOTE_ID ? "a".repeat(32) : "b".repeat(32);
 }
 
 // ---------------------------------------------------------------------------
@@ -33,17 +33,28 @@ function validToken(id: string, secret = TEST_SECRET): string {
 // ---------------------------------------------------------------------------
 const tableResponses: Record<string, { data: any; error: any }> = {};
 const selectCalls: string[] = [];
+let acceptedTokenHash = hashQuotationToken(validToken(QUOTE_ID));
 
 function makeBuilder(table: string) {
   const result = tableResponses[table] ?? { data: null, error: { message: "no fixture" } };
+  const filters: Record<string, unknown> = {};
   const builder: any = {
     select: () => {
       selectCalls.push(table);
       return builder;
     },
-    eq: () => builder,
+    eq: (column: string, value: unknown) => { filters[column] = value; return builder; },
+    gt: () => builder,
+    is: () => builder,
+    insert: () => builder,
     order: () => Promise.resolve(result),
     single: () => Promise.resolve(result),
+    maybeSingle: () => Promise.resolve(
+      table === "quotation_share_tokens" &&
+      filters.token_hash !== acceptedTokenHash
+        ? { data: null, error: null }
+        : result,
+    ),
     then: (res: any, rej: any) => Promise.resolve(result).then(res, rej),
   };
   return builder;
@@ -115,6 +126,10 @@ function seedQuotation(clientId = CLIENT_ID) {
     },
     error: null,
   };
+  tableResponses.quotation_share_tokens = {
+    data: { quotation_id: QUOTE_ID, expires_at: "2099-01-01T00:00:00.000Z" },
+    error: null,
+  };
 }
 
 beforeEach(() => {
@@ -122,6 +137,7 @@ beforeEach(() => {
   selectCalls.length = 0;
   pdfCalls.length = 0;
   sessionValue = null;
+  acceptedTokenHash = hashQuotationToken(validToken(QUOTE_ID));
 });
 
 afterEach(() => {
@@ -140,7 +156,8 @@ describe("POST /api/quotation/[id]/token — the Flutter path (ROOT CAUSE #1)", 
     const res = await POST(postReq({ client_id: CLIENT_ID, admin_password_hash: GOOD_HASH }), params);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.token).toBe(validToken(QUOTE_ID));
+    expect(body.token).toMatch(/^[0-9a-f]{32}$/);
+    expect(body.expires_at).toBeTruthy();
   });
 
   it("mints a token that the PUBLIC route actually accepts (end-to-end)", async () => {
@@ -153,6 +170,12 @@ describe("POST /api/quotation/[id]/token — the Flutter path (ROOT CAUSE #1)", 
       postReq({ client_id: CLIENT_ID, admin_password_hash: GOOD_HASH }),
       params,
     )).json()).token;
+    acceptedTokenHash = hashQuotationToken(minted);
+
+    tableResponses.quotation_share_tokens = {
+      data: { quotation_id: QUOTE_ID, expires_at: "2099-01-01T00:00:00.000Z" },
+      error: null,
+    };
 
     vi.resetModules();
     process.env.QUOTE_TOKEN_SECRET = TEST_SECRET;
@@ -221,7 +244,7 @@ describe("POST /api/quotation/[id]/token — the Flutter path (ROOT CAUSE #1)", 
     try {
       const { POST } = await import("../app/api/quotation/[id]/token/route");
       const res = await POST(postReq({ client_id: CLIENT_ID, admin_password_hash: GOOD_HASH }), params);
-      expect(res.status).toBe(503);
+      expect(res.status).toBe(401);
     } finally {
       if (saved !== undefined) process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
     }
@@ -235,7 +258,7 @@ describe("GET /api/quotation/[id]/token — the web-cookie path still works", ()
     seedQuotation();
     const res = await GET(new Request("https://app.vitharn.com/x") as any, params);
     expect(res.status).toBe(200);
-    expect((await res.json()).token).toBe(validToken(QUOTE_ID));
+    expect((await res.json()).token).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it("still rejects an anonymous GET (401)", async () => {
@@ -306,7 +329,9 @@ describe("GET /api/quotation/[id]/pdf — real file download (ROOT CAUSE #2)", (
       selectCalls.length = 0;
       const res = await GET(pdfReq(t as any), params);
       expect(res.status, `token ${String(t)}`).toBe(403);
-      expect(selectCalls, `token ${String(t)} must not query`).toEqual([]);
+      expect(selectCalls, `token ${String(t)} must query only token storage`).toEqual(
+        t ? ["quotation_share_tokens"] : [],
+      );
       expect(pdfCalls).toEqual([]);
     }
   });
@@ -343,6 +368,10 @@ describe("GET /api/quotation/[id]/pdf — real file download (ROOT CAUSE #2)", (
   it("returns 404 for a missing or soft-deleted quotation", async () => {
     const { GET } = await loadPdfRoute();
     tableResponses.quotations = { data: null, error: { message: "PGRST116" } };
+    tableResponses.quotation_share_tokens = {
+      data: { quotation_id: QUOTE_ID, expires_at: "2099-01-01T00:00:00.000Z" },
+      error: null,
+    };
     const res = await GET(pdfReq(validToken(QUOTE_ID)), params);
     expect(res.status).toBe(404);
   });
