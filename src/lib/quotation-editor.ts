@@ -22,6 +22,21 @@ export interface MeasuredRow {
   height: string;
   units: string;
   rate: string;
+  bom: WindowBom;
+}
+
+export interface WindowBom {
+  profile: { system: string; color: string };
+  glass: { type: string; thickness: string };
+  hardware: { name: string; quantity: string }[];
+}
+
+export function emptyBom(): WindowBom {
+  return {
+    profile: { system: "", color: "white" },
+    glass: { type: "", thickness: "" },
+    hardware: [],
+  };
 }
 
 export interface UnmeasuredRow {
@@ -70,7 +85,7 @@ function nextKey(): string {
 }
 
 export function emptyMeasured(): MeasuredRow {
-  return { key: nextKey(), code: "", description: "", glass: "", width: "", height: "", units: "1", rate: "" };
+  return { key: nextKey(), code: "", description: "", glass: "", width: "", height: "", units: "1", rate: "", bom: emptyBom() };
 }
 export function emptyUnmeasured(): UnmeasuredRow {
   return { key: nextKey(), description: "", units: "1", rate: "" };

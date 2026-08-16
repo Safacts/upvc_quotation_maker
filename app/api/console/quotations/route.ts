@@ -335,6 +335,7 @@ export async function POST(request: NextRequest) {
           height: m.height,
           units: m.units,
           rate: m.rate,
+          bom_config: m.bom,
         })) as any,
       );
     }

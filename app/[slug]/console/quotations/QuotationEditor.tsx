@@ -13,7 +13,9 @@ import {
   type UnmeasuredRow,
   type QuotationHeader,
   type EditorInitial,
+  type WindowBom,
 } from "@/lib/quotation-editor";
+export { emptyBom } from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
   ChevronLeft, ChevronRight, ChevronDown, Copy, Box,
@@ -35,6 +37,7 @@ import {
 } from "@/lib/console-format";
 import { QUOTATION_STATUSES } from "@/lib/console-schemas";
 import { LivePreview } from "../_components/LivePreview";
+import PhotoAttachments from "./PhotoAttachments";
 
 /**
  * QuotationEditor — THE SPLIT-VIEW. This screen is the product.
@@ -108,6 +111,7 @@ export default function QuotationEditor({
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
+  const [bomOpen, setBomOpen] = useState<Record<string, boolean>>({});
   const [savedId, setSavedId] = useState<string | null>(quotationId);
 
   // ---- Customer picker (Feature A: autofill from masters) -----------------
@@ -231,6 +235,29 @@ export default function QuotationEditor({
       markDirty();
     },
     [markDirty],
+  );
+
+  const updateBom = useCallback(
+    (index: number, patch: { profile?: Partial<WindowBom["profile"]>; glass?: Partial<WindowBom["glass"]>; hardware?: WindowBom["hardware"] }) => {
+      setMeasured((rows) => rows.map((r, i) => i === index ? {
+        ...r,
+        bom: {
+          ...r.bom,
+          ...patch,
+          profile: { ...r.bom.profile, ...(patch.profile || {}) },
+          glass: { ...r.bom.glass, ...(patch.glass || {}) },
+        },
+      } : r));
+      markDirty();
+    },
+    [markDirty],
+  );
+
+  const updateHardware = useCallback(
+    (index: number, value: string) => {
+      updateBom(index, { hardware: value.trim() ? [{ name: value, quantity: "1" }] : [] });
+    },
+    [updateBom],
   );
 
   const addUnmeasured = useCallback(() => {
@@ -443,6 +470,7 @@ export default function QuotationEditor({
             height: m.height,
             units: m.units,
             rate: m.rate,
+            bom: m.bom,
           })),
         unmeasured_items: unmeasured
           .filter((u) => u.description || u.rate)
@@ -1089,6 +1117,8 @@ export default function QuotationEditor({
           </div>
         </div>
 
+        <PhotoAttachments quotationId={savedId} />
+
         {/* ---- Measured items ---- */}
         <div className="vc-card">
           <div className="vc-card-head">
@@ -1240,6 +1270,7 @@ export default function QuotationEditor({
                   <th style={{ width: 52 }}>Qty</th>
                   <th style={{ width: 66 }}>Sqft</th>
                   <th style={{ width: 78 }}>Rate</th>
+                  <th style={{ width: 74 }}>BOM</th>
                   <th style={{ width: 92 }}>Amount</th>
                   <th className="vc-row-del" />
                 </tr>
@@ -1325,6 +1356,34 @@ export default function QuotationEditor({
                         />
                       </td>
                       <td className="vc-cell-calc vc-amt">{formatAmount(lineTotal)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="vc-btn vc-btn-sm"
+                          onClick={() => setBomOpen((v) => ({ ...v, [row.key]: !v[row.key] }))}
+                          title="Configure profile, glass and hardware for this window"
+                        >
+                          {bomOpen[row.key] ? "Close" : "Configure"}
+                        </button>
+                        {bomOpen[row.key] && (
+                          <div style={{ minWidth: 250, padding: 8, background: "#FFF7ED", borderRadius: 6, marginTop: 4 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", marginBottom: 4 }}>PROFILE</div>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <input className="vc-cell-input" placeholder="System / series" value={row.bom.profile.system} onChange={(e) => updateBom(i, { profile: { system: e.target.value } })} />
+                              <select className="vc-select" value={row.bom.profile.color} onChange={(e) => updateBom(i, { profile: { color: e.target.value } })}>
+                                {['white', 'brown', 'grey', 'black', 'woodgrain'].map((c) => <option key={c}>{c}</option>)}
+                              </select>
+                            </div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", margin: "6px 0 4px" }}>GLASS</div>
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <input className="vc-cell-input" placeholder="Type" value={row.bom.glass.type} onChange={(e) => updateBom(i, { glass: { type: e.target.value } })} />
+                              <input className="vc-cell-input vc-num" placeholder="mm" inputMode="decimal" value={row.bom.glass.thickness} onChange={(e) => updateBom(i, { glass: { thickness: e.target.value } })} />
+                            </div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", margin: "6px 0 4px" }}>HARDWARE</div>
+                            <input className="vc-cell-input" placeholder="Handle / lock / roller" value={row.bom.hardware[0]?.name || ""} onChange={(e) => updateHardware(i, e.target.value)} />
+                          </div>
+                        )}
+                      </td>
                        <td className="vc-row-del">
                          <button
                            type="button"
