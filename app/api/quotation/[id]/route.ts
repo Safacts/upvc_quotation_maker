@@ -117,8 +117,8 @@ export async function POST(
 
   const action = body.action;
   let newStatus: string | null = null;
-  if (action === "approve") newStatus = "won";
-  else if (action === "reject") newStatus = "lost";
+  if (action === "approve") newStatus = "approved";
+  else if (action === "reject") newStatus = "rejected";
   else if (action === "review") newStatus = "sent";
   else return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 

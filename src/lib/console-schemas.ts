@@ -70,7 +70,18 @@ const requiredText = (max: number, label: string) =>
  *
  * Input is lower-cased before parsing so the legacy 'Draft' rows match.
  */
-export const QUOTATION_STATUSES = ["draft", "sent", "won", "lost"] as const;
+export const QUOTATION_STATUSES = [
+  "draft",
+  "sent",
+  "viewed",
+  "approved",
+  "rejected",
+  "in_production",
+  "dispatched",
+  "installed",
+  "invoiced",
+  "paid",
+] as const;
 export type QuotationStatus = (typeof QUOTATION_STATUSES)[number];
 
 export const quotationStatusSchema = z
