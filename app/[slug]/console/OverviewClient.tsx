@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, TrendingUp, TrendingDown, Trophy, Clock } from "lucide-react";
+import { FileText, TrendingUp, TrendingDown, Trophy, Clock, Target } from "lucide-react";
 import { useConsole, useConsoleStatus } from "./ConsoleShell";
 import {
   formatMoneyCompact,
@@ -50,12 +50,19 @@ interface Stats {
   }>;
 }
 
+interface PipelineState { state: string; quote_count: number; total_value: number; average_value: number }
+interface Pipeline {
+  summary: { total_quotes: number; won_quotes: number; lost_quotes: number; open_quotes: number; pipeline_value: number };
+  states: PipelineState[];
+}
+
 export default function OverviewClient() {
   const router = useRouter();
   const { slug, toast } = useConsole();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pipeline, setPipeline] = useState<Pipeline | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +75,8 @@ export default function OverviewClient() {
           setError(data?.error || "Failed to load");
         } else {
           setStats(data);
+          fetch("/api/console/reports/win-loss", { credentials: "same-origin" })
+            .then((r) => r.ok ? r.json() : null).then((p) => { if (!cancelled && p?.summary) setPipeline(p); }).catch(() => undefined);
         }
       } catch (e: any) {
         if (!cancelled) setError(String(e?.message ?? e));
@@ -186,6 +195,32 @@ export default function OverviewClient() {
           <div className="vc-kpi-sub">Grand total {formatMoneyCompact(stats.totalGrand)}</div>
         </div>
       </div>
+
+      {pipeline && (
+        <div className="vc-card" style={{ marginTop: 10 }}>
+          <div className="vc-card-head">
+            <Target size={13} color="#128a4b" />
+            <span className="vc-card-title">Win / Loss Pipeline</span>
+            <span style={{ marginLeft: "auto", color: "#8a94a1", fontSize: 11 }}>
+              {pipeline.summary.total_quotes} quotes · {formatMoneyCompact(pipeline.summary.pipeline_value)} total
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, padding: "10px 0 2px" }}>
+            {pipeline.states.map((item) => (
+              <div key={item.state} style={{ border: "1px solid var(--vc-border)", borderRadius: 6, padding: "8px 9px", background: "var(--vc-surface-2)" }}>
+                <div style={{ fontSize: 11, color: "#5b6673", textTransform: "capitalize" }}>{item.state.replaceAll("_", " ")}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 2 }}>{item.quote_count}</div>
+                <div style={{ fontSize: 10.5, color: "#8a94a1" }}>{formatMoneyCompact(item.total_value)}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 16, borderTop: "1px solid var(--vc-border)", paddingTop: 8, marginTop: 8, color: "#5b6673", fontSize: 11.5 }}>
+            <span><b style={{ color: "#128a4b" }}>{pipeline.summary.won_quotes}</b> won</span>
+            <span><b style={{ color: "#c62828" }}>{pipeline.summary.lost_quotes}</b> lost</span>
+            <span><b>{pipeline.summary.open_quotes}</b> open</span>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 10 }}>
         <div className="vc-card">
