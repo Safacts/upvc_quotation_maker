@@ -110,7 +110,7 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
     expect(payload?.client_id).toBe("kprupvc");
   });
 
-  it("signs with HS256 and sets iat + 7-day exp", async () => {
+  it("signs with HS256 and sets iat + 8-hour exp", async () => {
     const { encrypt } = await loadSession();
     const token = await encrypt({
       role: "admin",
@@ -120,8 +120,8 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
     const { protectedHeader, payload } = await jwtVerify(token, key(TEST_SECRET));
     expect(protectedHeader.alg).toBe("HS256");
     expect(payload.iat).toBeTypeOf("number");
-    const sevenDays = 7 * 24 * 60 * 60;
-    expect((payload.exp as number) - (payload.iat as number)).toBe(sevenDays);
+    const eightHours = 8 * 60 * 60;
+    expect((payload.exp as number) - (payload.iat as number)).toBe(eightHours);
   });
 
   it("returns null for an empty / undefined token instead of throwing", async () => {
@@ -246,14 +246,14 @@ describe("createSession() — cookie hardening", () => {
     expect(c.options.path).toBe("/");
   });
 
-  it("sets an expiry roughly 7 days out, never a session-only cookie", async () => {
+  it("sets an expiry roughly 8 hours out, never a session-only cookie", async () => {
     const { createSession } = await loadSession();
     const before = Date.now();
     await createSession({ role: "admin", email: "a@b.com" });
     const exp = jar.get("session")!.options.expires as Date;
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    expect(exp.getTime() - before).toBeGreaterThan(sevenDays - 5000);
-    expect(exp.getTime() - before).toBeLessThan(sevenDays + 5000);
+    const eightHours = 8 * 60 * 60 * 1000;
+    expect(exp.getTime() - before).toBeGreaterThan(eightHours - 5000);
+    expect(exp.getTime() - before).toBeLessThan(eightHours + 5000);
   });
 
   it("stores a real verifiable JWT, not the raw payload", async () => {

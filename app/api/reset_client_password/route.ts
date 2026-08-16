@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomInt, createHash, timingSafeEqual } from "crypto";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { sendOtpEmail } from "@/lib/mail";
+import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
 
 /**
  * OTPs are stored as a SHA-256 hash, never in plaintext.
@@ -28,7 +29,7 @@ function safeEqualHex(a: string, b: string): boolean {
 }
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://app.vitharn.com",
   "Content-Type": "application/json",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
     const p = raw ? JSON.parse(raw) : {};
     const email = String(p.email || "").trim().toLowerCase();
     if (!email) return json({ error: "email required" }, 400);
+    const attemptKey = authAttemptKey(request, "password-reset", email);
+    const lockedFor = isAuthLocked(attemptKey);
+    if (lockedFor) return json({ error: "too many password reset attempts; try again later" }, 429);
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
     const admin = await findAdmin(email);
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
 
     // Verification path still requires a real account.
     if (!admin && !client) {
+      recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
 
@@ -132,13 +137,15 @@ export async function POST(request: NextRequest) {
       limit: "1",
     });
     if (!Array.isArray(sent) || sent.length === 0) {
+      recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
     const latest = sent[0];
     const body = latest.body || "";
     const match = body.match(/OTPHASH:\s*([a-f0-9]{64})/i);
-    if (!match) return json({ error: "invalid OTP" }, 403);
+    if (!match) { recordAuthFailure(attemptKey); return json({ error: "invalid OTP" }, 403); }
     if (!safeEqualHex(match[1].toLowerCase(), hashOtp(email, otp))) {
+      recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
     // BUG-SEC-004: expiry was BEST-EFFORT. A malformed/absent `created_at`, or a
@@ -175,6 +182,8 @@ export async function POST(request: NextRequest) {
     } else {
       await supaPatch("clients", { id: "eq." + client.id }, { password_hash: newHash });
     }
+
+    clearAuthFailures(attemptKey);
 
     return json({ success: true, role: admin ? "admin" : "customer" }, 200);
   } catch (e: any) {

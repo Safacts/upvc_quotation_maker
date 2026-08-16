@@ -1,7 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
 
 const SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 const SITE_URL = "https://app.vitharn.com/";
+const SITE_ORIGIN = "https://app.vitharn.com";
+const RATE_WINDOW_MS = 60_000;
+const MAX_REQUESTS_PER_WINDOW = 5;
+const requestLog = new Map<string, { count: number; resetAt: number }>();
+
+function clientAddress(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || request.headers.get("x-real-ip")
+    || "unknown";
+}
+
+function takeRateLimit(request: NextRequest): boolean {
+  const key = clientAddress(request);
+  const now = Date.now();
+  const current = requestLog.get(key);
+  if (!current || current.resetAt <= now) {
+    requestLog.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (current.count >= MAX_REQUESTS_PER_WINDOW) return false;
+  current.count += 1;
+  return true;
+}
+
+function validateInspectionUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.length < 1 || value.length > 2048) return null;
+  try {
+    const parsed = new URL(value);
+    if (parsed.origin !== SITE_ORIGIN || parsed.username || parsed.password) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
 
 async function getAccessToken(): Promise<string> {
   if (!SERVICE_ACCOUNT_JSON) {
@@ -68,11 +103,19 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session || session.role !== "admin") {
+      return NextResponse.json({ error: "Admin authentication required" }, { status: 401 });
+    }
+    if (!takeRateLimit(request)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": "60" } });
+    }
+
     const body = await request.json();
-    const { url } = body;
+    const url = validateInspectionUrl(body?.url);
 
     if (!url) {
-      return NextResponse.json({ error: "URL is required" }, { status: 400 });
+      return NextResponse.json({ error: "A valid app.vitharn.com HTTPS URL is required" }, { status: 400 });
     }
 
     const accessToken = await getAccessToken();

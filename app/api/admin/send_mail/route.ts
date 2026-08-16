@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session";
 import { sendAdminCompose } from "@/lib/mail";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://app.vitharn.com",
   "Content-Type": "application/json",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",

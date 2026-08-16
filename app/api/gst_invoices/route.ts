@@ -7,7 +7,7 @@ import { computeGstTotals, gstItemTaxableValue } from "@/lib/gst-calculations";
 import { amountInWords } from "@/lib/gst-invoice-pdf";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://app.vitharn.com",
   "Content-Type": "application/json",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
