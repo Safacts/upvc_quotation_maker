@@ -6,6 +6,7 @@ import Groq from "groq-sdk";
 import crypto from "crypto";
 
 const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://app.vitharn.com",
   "Content-Type": "application/json",
   "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 } as const;
