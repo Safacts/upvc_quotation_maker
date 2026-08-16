@@ -19,7 +19,10 @@
     "test:adversarial": "vitest run tests/adversarial-tenant-rate-limit.test.ts",
     "security:scan": "node scripts/secret-scan.mjs",
     "smoke": "node scripts/e2e-smoke.mjs",
-    "sync-hashes": "node scripts/sync_portal_hashes.mjs"
+    "sync-hashes": "node scripts/sync_portal_hashes.mjs",
+    "test:load": "vitest run tests/golden-workflow-load.test.ts",
+    "load:golden": "node scripts/load-golden-workflow.mjs",
+    "security:release-gate": "node scripts/security-release-gate.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^8.20.2",
