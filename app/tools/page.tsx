@@ -166,7 +166,7 @@ export default function ToolsHub() {
             branded website, customer portal, and payment tracking — all in one
             platform built for UPVC businesses.
           </p>
-          <a href="/#pricing" className="btn-white">
+          <a href="/upvc/pricing" className="btn-white">
             <IndianRupee size={18} /> View Pricing Plans
           </a>
           <p className="price-note">

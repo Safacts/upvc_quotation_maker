@@ -168,6 +168,12 @@ a:hover { color: var(--primary-dark); }
   box-shadow: 0 12px 32px rgba(26, 10, 0, 0.06);
 }
 .tool-card:hover { transform: translateY(-4px); box-shadow: 0 24px 60px rgba(26, 10, 0, 0.12); border-color: rgba(196, 74, 16, 0.2); }
+.tool-card { animation: tool-card-in 0.55s ease both; }
+.tool-card:nth-child(2) { animation-delay: 60ms; }
+.tool-card:nth-child(3) { animation-delay: 120ms; }
+.tool-card:nth-child(4) { animation-delay: 180ms; }
+.tool-card:nth-child(5) { animation-delay: 240ms; }
+@keyframes tool-card-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .tool-card .tool-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: rgba(196, 74, 16, 0.06); border: 1px solid rgba(196, 74, 16, 0.1); }
 .tool-card h3 { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -0.03em; }
 .tool-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; flex: 1; }
@@ -252,6 +258,10 @@ a:hover { color: var(--primary-dark); }
 .pricing-cta .btn-white { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; background: white; color: var(--ink); font-weight: 800; font-size: 16px; border-radius: var(--radius-pill); transition: transform 0.2s, box-shadow 0.2s; }
 .pricing-cta .btn-white:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); color: var(--rust); }
 .pricing-cta .price-note { position: relative; z-index: 2; font-size: 13px; color: rgba(255,251,246,0.5); margin-top: 16px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {

@@ -257,7 +257,7 @@ export default function RFSFConverter() {
           dimensions once — get accurate SFT, RF, and pricing instantly on every
           quotation.
         </p>
-        <a href="/#pricing" className="btn-white">
+        <a href="/upvc/pricing" className="btn-white">
           See Pricing Plans →
         </a>
       </div>

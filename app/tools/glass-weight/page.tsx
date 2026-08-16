@@ -230,7 +230,7 @@ export default function GlassWeightCalculator() {
           pricing. Generate quotations that auto-calculate everything — glass,
           hardware, labour, GST.
         </p>
-        <a href="/#pricing" className="btn-white">
+        <a href="/upvc/pricing" className="btn-white">
           See Pricing Plans →
         </a>
       </div>

@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/'],
+      disallow: ['/admin/', '/api/', '/login', '/signup', '/logout', '/upvc/login', '/*/home', '/*/console'],
     },
     sitemap: 'https://app.vitharn.com/sitemap.xml',
   };

@@ -46,8 +46,7 @@ export default async function ToolsLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <>
         {/* Skip to content for accessibility */}
         <a href="#tools-main" className="skip-link">
           Skip to content
@@ -64,7 +63,7 @@ export default async function ToolsLayout({
             <Link href="/tools/upvc-calculator">uPVC</Link>
             <Link href="/tools/gst-calculator">GST</Link>
             <Link href="/tools/upi-qr">UPI QR</Link>
-            <Link href="/#pricing" className="btn-primary">Get ERP →</Link>
+          <Link href="/upvc/pricing" className="btn-primary">Get ERP →</Link>
           </nav>
 
           <button
@@ -84,7 +83,7 @@ export default async function ToolsLayout({
           <Link href="/tools/gst-calculator">GST Calculator</Link>
           <Link href="/tools/rf-sf-converter">RF-SF Converter</Link>
           <Link href="/tools/upi-qr">UPI QR Generator</Link>
-          <Link href="/#pricing">Get Vitharn ERP →</Link>
+          <Link href="/upvc/pricing">Get Vitharn ERP →</Link>
         </div>
 
         <main id="tools-main" className="tools-main">
@@ -95,7 +94,7 @@ export default async function ToolsLayout({
           <div className="footer-links">
             <Link href="/">Home</Link>
             <Link href="/tools">Tools</Link>
-            <Link href="/#pricing">Pricing</Link>
+            <Link href="/upvc/pricing">Pricing</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
             <Link href="/login">Portal Login</Link>
@@ -145,7 +144,6 @@ export default async function ToolsLayout({
             `,
           }}
         />
-      </body>
-    </html>
+    </>
   );
 }

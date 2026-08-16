@@ -296,7 +296,7 @@ export default function GSTCalculator() {
           auto-generates GST-compliant invoices, and prepares GSTR-ready
           reports. No manual math.
         </p>
-        <a href="/#pricing" className="btn-white">
+        <a href="/upvc/pricing" className="btn-white">
           See Pricing Plans →
         </a>
       </div>

@@ -5,6 +5,7 @@ import UmamiTracker from "./UmamiTracker";
 import UmamiClickTracker from "./UmamiClickTracker";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://app.vitharn.com"),
   title: "Vitharn ERP Services — Business Software for Indian Fabricators",
   description:
     "Vitharn builds industry-specific software for UPVC, glass, and fabrication businesses. Branded quotations, customer portals, and business websites. Made in Hyderabad, India.",

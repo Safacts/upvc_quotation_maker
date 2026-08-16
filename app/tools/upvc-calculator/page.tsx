@@ -246,7 +246,7 @@ export default function UPVCCalculator() {
           your company logo — in under 30 seconds. Cloud-synced across phone and
           web.
         </p>
-        <a href="/#pricing" className="btn-white">
+        <a href="/upvc/pricing" className="btn-white">
           See Pricing Plans →
         </a>
       </div>
