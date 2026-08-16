@@ -16,6 +16,8 @@
     "test:isolation": "vitest run tests/client-isolation.test.ts",
     "test:auth": "vitest run tests/portal-auth.test.ts tests/auth-session.test.ts",
     "test:coverage": "vitest run --coverage",
+    "test:adversarial": "vitest run tests/adversarial-tenant-rate-limit.test.ts",
+    "security:scan": "node scripts/secret-scan.mjs",
     "smoke": "node scripts/e2e-smoke.mjs",
     "sync-hashes": "node scripts/sync_portal_hashes.mjs"
   },
