@@ -9,14 +9,16 @@ permissions:
   contents: read
 
 jobs:
-  adversarial:
+  security-release-gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: node scripts/secret-scan.mjs --range origin/main
-      - run: npx vitest run tests/adversarial-tenant-rate-limit.test.ts
+      - run: node scripts/security-release-gate.mjs --range origin/main
+      - run: npm run test:load
