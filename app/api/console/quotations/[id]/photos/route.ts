@@ -9,6 +9,15 @@ const BUCKET = "site-photos";
 const MAX_BYTES = 10 * 1024 * 1024;
 const MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 
+async function compressImage(input: Uint8Array) {
+  const sharp = (await import("sharp")).default;
+  return sharp(input)
+    .rotate()
+    .resize({ width: 1920, withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+}
+
 async function ownerFor(id: string) {
   const rows = await supaGet("quotations", {
     id: `eq.${id}`,
@@ -77,13 +86,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!MIME_TYPES.has(file.type)) return consoleJson({ error: "Only JPG, PNG, WebP, or HEIC images are supported" }, 400);
     if (file.size <= 0 || file.size > MAX_BYTES) return consoleJson({ error: "Images must be smaller than 10 MB" }, 400);
 
-    const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+    const compressed = await compressImage(new Uint8Array(await file.arrayBuffer()));
     const safeClient = String(auth.owner.client_id).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const path = `${safeClient}/${id}/${crypto.randomUUID()}.${ext}`;
+    const path = `${safeClient}/${id}/${crypto.randomUUID()}.webp`;
     await storageRequest(path, {
       method: "POST",
-      headers: { "Content-Type": file.type, "x-upsert": "false" },
-      body: new Uint8Array(await file.arrayBuffer()),
+      headers: { "Content-Type": "image/webp", "x-upsert": "false" },
+      body: new Uint8Array(compressed),
     });
 
     try {
@@ -93,9 +102,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         storage_path: path,
         public_url: publicUrl(path),
         caption: String(form.get("caption") || "").slice(0, 200),
-        bytes: file.size,
+        bytes: compressed.length,
         filename: file.name.slice(0, 255),
-        mime_type: file.type,
+        mime_type: "image/webp",
       });
       return consoleJson({ photo: Array.isArray(rows) ? rows[0] : rows }, 201);
     } catch (e) {
