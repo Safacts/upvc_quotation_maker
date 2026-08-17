@@ -30,6 +30,7 @@ import {
   PackagePlus,
   Factory,
   Scissors,
+  ClipboardList,
   FolderKanban,
   Box,
 } from "lucide-react";
@@ -191,6 +192,7 @@ const NAV = [
   { key: "products", label: "Products", icon: Package, hint: "4" },
   { key: "production", label: "Production", icon: Factory, hint: "5" },
   { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
+  { key: "factory-reports", label: "Factory Reports", icon: ClipboardList, hint: "0" },
   { key: "leads", label: "Leads", icon: UserPlus, hint: "7" },
   { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
   { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
