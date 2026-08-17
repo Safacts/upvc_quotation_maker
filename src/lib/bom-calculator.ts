@@ -1,3 +1,5 @@
+import { flattenWindowTopology, type WindowTopology } from "./window-topology";
+
 /**
  * Deterministic UPVC bill-of-quantities calculator.
  *
@@ -27,6 +29,7 @@ export interface BomWindow {
   width: number;
   height: number;
   units?: number;
+  topology?: WindowTopology;
   bom_config?: {
     profile?: { system?: string; type?: string; color?: string; panels?: number; leaves?: number; tracks?: number };
     glass?: { type?: string; thickness?: string | number };
@@ -100,6 +103,25 @@ function defaultWindowLines(item: BomWindow): BomLine[] {
   return lines;
 }
 
+function topologyLines(item: BomWindow): BomLine[] {
+  const topology = item.topology;
+  if (!topology) return [];
+  const units = Math.max(0, finite(item.units, 1));
+  const source = { sourceId: item.id, sourceDescription: item.description || topology.root.label };
+  const lines: BomLine[] = [];
+  for (const node of flattenWindowTopology(topology)) {
+    const quantity = Math.max(0, finite(node.quantity, 1)) * units;
+    if (node.kind === "frame" || node.kind === "mullion" || node.kind === "transom" || (node.kind === "hardware" && node.lengthMm)) {
+      add(lines, { ...source, material: node.material || topology.profileSystem, component: node.label, unit: "mm", quantity, lengthMm: Math.max(0, finite(node.lengthMm)) });
+    } else if (node.kind === "glass") {
+      add(lines, { ...source, material: node.material || "glass", component: node.label, unit: "sqm", quantity: Math.max(0, finite(node.widthMm) * finite(node.heightMm)) / 1_000_000 * units });
+    } else if (node.kind === "hardware") {
+      add(lines, { ...source, material: node.material || node.label, component: node.label, unit: "piece", quantity });
+    }
+  }
+  return lines;
+}
+
 function evaluateFormula(formula: string, values: Record<string, number>): number {
   // A tiny arithmetic evaluator: numbers, named dimensions, + - * / and parentheses.
   const tokens = formula.replace(/\s+/g, "").match(/[A-Za-z]+|\d+(?:\.\d+)?|[()+\-*/]/g) || [];
@@ -122,7 +144,7 @@ function evaluateFormula(formula: string, values: Record<string, number>): numbe
 }
 
 export function calculateWindowBom(item: BomWindow): BomLine[] {
-  const lines = defaultWindowLines(item);
+  const lines = item.topology ? topologyLines(item) : defaultWindowLines(item);
   const width = Math.max(0, finite(item.width));
   const height = Math.max(0, finite(item.height));
   const units = Math.max(0, finite(item.units, 1));
