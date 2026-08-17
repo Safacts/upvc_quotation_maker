@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
 import "./admin.css";
+import LegalDocFiller from "./LegalDocFiller";
 
 // Supabase project `gumpmnbjdtzajhysnnaz` (migrated 08-08-2026).
 // This is the PUBLIC anon key — safe in client bundles; RLS is the boundary.
@@ -271,6 +272,7 @@ export default function PlatformAdmin() {
   const [legalDraft, setLegalDraft] = useState("");
   const [legalLoading, setLegalLoading] = useState(false);
   const [legalSaving, setLegalSaving] = useState(false);
+  const [legalEditMode, setLegalEditMode] = useState(false);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -1092,11 +1094,25 @@ export default function PlatformAdmin() {
                 </div>
                 <div>
                   {legalLoading && <p>Loading document…</p>}
-                  {!legalLoading && legalSelected && <>
+                  {!legalLoading && legalSelected && !legalEditMode && (
+                    <LegalDocFiller 
+                      documentName={legalDocuments.find(d => d.id === legalSelected)?.filename.replace(".md", "").replaceAll("_", " ") || ""}
+                      templateMarkdown={legalDraft}
+                      onClose={() => setLegalOpen(false)}
+                      onEditTemplate={() => setLegalEditMode(true)}
+                    />
+                  )}
+                  {!legalLoading && legalSelected && legalEditMode && <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <strong>Template Editor</strong>
+                      <button type="button" className="btn-secondary" onClick={() => setLegalEditMode(false)} style={{ padding: "4px 10px", fontSize: 12 }}>
+                        Back to Fill & Download
+                      </button>
+                    </div>
                     <textarea value={legalDraft} onChange={(e) => setLegalDraft(e.target.value)} style={{ width: "100%", minHeight: "62vh", fontFamily: "monospace", fontSize: 13, lineHeight: 1.55, padding: 16, border: "1px solid var(--border)", borderRadius: 10, resize: "vertical" }} aria-label="Legal document markdown" />
                     <div className="editor-footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                      <button type="button" className="btn-primary" onClick={saveLegalDocument} disabled={legalSaving}>{legalSaving ? "Saving…" : "Save Document"}</button>
-                      <button type="button" className="btn-secondary" onClick={downloadLegalDocument}>Download Markdown</button>
+                      <button type="button" className="btn-primary" onClick={saveLegalDocument} disabled={legalSaving}>{legalSaving ? "Saving…" : "Save Template"}</button>
+                      <button type="button" className="btn-secondary" onClick={downloadLegalDocument}>Download Raw Markdown</button>
                     </div>
                   </>}
                 </div>
