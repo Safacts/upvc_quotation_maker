@@ -187,23 +187,26 @@ export async function uploadToStorage(
   return `${SUPABASE_URL}/storage/v1/object/public/assets/${filename}`;
 }
 
-export async function uploadLogoFile(
+export function uploadLogoFile(
   clientId: string,
   logoFile: { mime?: string; data: string },
   sub = "",
 ): Promise<string> {
+  const mime = logoFile.mime || "image/png";
+  const extMap: Record<string, string> = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/gif": "gif",
+    "image/webp": "webp",
+  };
+  const ext = extMap[mime] || "png";
   const safe = clientId.replace(/[^a-zA-Z0-9_-]/g, "_");
   const binary = Uint8Array.from(atob(logoFile.data), (c) => c.charCodeAt(0));
-  const sharp = (await import("sharp")).default;
-  const compressed = await sharp(binary)
-    .rotate()
-    .resize({ width: 1920, withoutEnlargement: true })
-    .webp({ quality: 82 })
-    .toBuffer();
   const filename = sub
-    ? `logos/${safe}-${sub}.webp`
-    : `logos/${safe}.webp`;
-  return uploadToStorage(filename, new Uint8Array(compressed), "image/webp");
+    ? `logos/${safe}-${sub}.${ext}`
+    : `logos/${safe}.${ext}`;
+  return uploadToStorage(filename, binary, mime);
 }
 
 /**
