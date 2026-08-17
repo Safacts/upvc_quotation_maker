@@ -2,6 +2,19 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
+import {
+  Box,
+  Columns3,
+  Grid3X3,
+  MousePointer2,
+  Move3d,
+  PanelTop,
+  Rows3,
+  Ruler,
+  Save,
+  Settings2,
+  Square,
+} from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import {
@@ -440,7 +453,7 @@ function RealisticTopologyModel({ topology }: { topology: WindowTopology }) {
       />
       <mesh position={[0, -height / 2 - 0.12, -0.4]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[Math.max(5, width * 3), Math.max(5, height * 2.2)]} />
-        <meshStandardMaterial color="#cfd6dc" roughness={0.92} />
+        <meshStandardMaterial color="#162231" roughness={0.92} />
       </mesh>
     </>
   );
@@ -450,6 +463,7 @@ export default function ConfiguratorPage() {
   const [width, setWidth] = useState(1800);
   const [height, setHeight] = useState(1200);
   const [configuration, setConfiguration] = useState<WindowTopology["configuration"]>("sliding");
+  const [activeTool, setActiveTool] = useState<"mullion" | "transom" | "sash" | "glass">("mullion");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const topology = useMemo(
     () => createWindowTopology({ widthMm: width, heightMm: height, configuration }),
@@ -485,218 +499,790 @@ export default function ConfiguratorPage() {
   }
 
   return (
-    <main className="vc-console-page" style={{ padding: 24, maxWidth: 1240, margin: "0 auto" }}>
-      <div className="configurator-heading">
-        <div>
-          <p className="vc-eyebrow">Factory tools</p>
-          <h1 style={{ margin: 0 }}>3D Window Configurator</h1>
-          <p style={{ color: "#64748b" }}>Build a realistic window topology that can be reused by the BOQ engine.</p>
+    <div className="configurator-page">
+      <section className="configurator-workspace">
+        <header className="workspace-header">
+          <div className="workspace-title">
+            <span className="workspace-mark" aria-hidden="true">
+              <Box size={21} strokeWidth={1.8} />
+            </span>
+            <div>
+              <p className="workspace-eyebrow">Design studio / Live model</p>
+              <h1>3D Window Configurator</h1>
+              <p>Shape production-ready uPVC windows in a precision workspace.</p>
+            </div>
+          </div>
+          <button className="save-design" type="button" onClick={saveDesign} disabled={saveState === "saving"}>
+            <Save size={17} aria-hidden="true" />
+            {saveState === "saving" ? "Saving…" : "Save design"}
+          </button>
+        </header>
+
+        <div className="studio-grid">
+          <aside className="glass-panel toolbox-panel" aria-labelledby="toolbox-title">
+            <div className="panel-heading">
+              <span className="panel-heading-icon" aria-hidden="true">
+                <Grid3X3 size={17} />
+              </span>
+              <div>
+                <span>Elements</span>
+                <h2 id="toolbox-title">Toolbox</h2>
+              </div>
+            </div>
+
+            <div className="tool-list" role="toolbar" aria-label="Window element tools">
+              <button
+                type="button"
+                className={`tool-button ${activeTool === "mullion" ? "is-active" : ""}`}
+                aria-pressed={activeTool === "mullion"}
+                onClick={() => setActiveTool("mullion")}
+              >
+                <span className="tool-icon"><Columns3 size={21} aria-hidden="true" /></span>
+                <span className="tool-copy"><strong>Mullion</strong><small>Vertical divider</small></span>
+                <span className="tool-key" aria-hidden="true">M</span>
+              </button>
+              <button
+                type="button"
+                className={`tool-button ${activeTool === "transom" ? "is-active" : ""}`}
+                aria-pressed={activeTool === "transom"}
+                onClick={() => setActiveTool("transom")}
+              >
+                <span className="tool-icon"><Rows3 size={21} aria-hidden="true" /></span>
+                <span className="tool-copy"><strong>Transom</strong><small>Horizontal divider</small></span>
+                <span className="tool-key" aria-hidden="true">T</span>
+              </button>
+              <button
+                type="button"
+                className={`tool-button ${activeTool === "sash" ? "is-active" : ""}`}
+                aria-pressed={activeTool === "sash"}
+                onClick={() => setActiveTool("sash")}
+              >
+                <span className="tool-icon"><PanelTop size={21} aria-hidden="true" /></span>
+                <span className="tool-copy"><strong>Sash</strong><small>Opening panel</small></span>
+                <span className="tool-key" aria-hidden="true">S</span>
+              </button>
+              <button
+                type="button"
+                className={`tool-button ${activeTool === "glass" ? "is-active" : ""}`}
+                aria-pressed={activeTool === "glass"}
+                onClick={() => setActiveTool("glass")}
+              >
+                <span className="tool-icon"><Square size={21} aria-hidden="true" /></span>
+                <span className="tool-copy"><strong>Glass</strong><small>Glazing area</small></span>
+                <span className="tool-key" aria-hidden="true">G</span>
+              </button>
+            </div>
+
+            <div className="tool-selection" aria-live="polite">
+              <MousePointer2 size={15} aria-hidden="true" />
+              <span><strong>{activeTool}</strong> tool selected</span>
+            </div>
+            <p className="tool-note">Choose an element, then refine the window configuration from Properties.</p>
+          </aside>
+
+          <section className="viewport-panel" aria-label="Interactive realistic 3D window preview">
+            <div className="viewport-toolbar" aria-hidden="true">
+              <span className="live-chip"><i /> Live viewport</span>
+              <span className="quality-chip">High quality</span>
+            </div>
+            <div className="viewport-canvas">
+              <Canvas
+                camera={{ position: [0, 0, 4], fov: 43 }}
+                dpr={[1, 1.75]}
+                gl={{ antialias: true, alpha: false }}
+                shadows
+                fallback={<div role="alert" className="webgl-fallback">3D preview needs WebGL support.</div>}
+              >
+                <color attach="background" args={["#0d1623"]} />
+                <fog attach="fog" args={["#0d1623", 7, 18]} />
+                <Suspense fallback={null}>
+                  <RealisticTopologyModel topology={topology} />
+                  <OrbitControls
+                    enablePan
+                    enableZoom
+                    enableRotate
+                    minDistance={0.6}
+                    maxDistance={24}
+                    target={[0, 0, 0]}
+                  />
+                </Suspense>
+              </Canvas>
+            </div>
+            <div className="viewport-footer">
+              <span><Move3d size={15} aria-hidden="true" /> Drag to orbit</span>
+              <span className="viewport-measurement">
+                <strong>{width} × {height}</strong> mm
+              </span>
+            </div>
+          </section>
+
+          <aside className="glass-panel properties-panel" aria-labelledby="properties-title">
+            <div className="panel-heading">
+              <span className="panel-heading-icon" aria-hidden="true">
+                <Settings2 size={17} />
+              </span>
+              <div>
+                <span>Selection</span>
+                <h2 id="properties-title">Properties</h2>
+              </div>
+            </div>
+
+            <div className="property-section">
+              <div className="property-title"><Ruler size={14} aria-hidden="true" /> Dimensions</div>
+              <label className="property-field">
+                <span>Width</span>
+                <span className="input-shell">
+                  <input
+                    type="number"
+                    min={300}
+                    max={12000}
+                    value={width}
+                    onChange={(event) => {
+                      setSaveState("idle");
+                      setWidth(Math.min(12000, Math.max(300, Number(event.target.value) || 300)));
+                    }}
+                  />
+                  <i>mm</i>
+                </span>
+              </label>
+              <label className="property-field">
+                <span>Height</span>
+                <span className="input-shell">
+                  <input
+                    type="number"
+                    min={300}
+                    max={12000}
+                    value={height}
+                    onChange={(event) => {
+                      setSaveState("idle");
+                      setHeight(Math.min(12000, Math.max(300, Number(event.target.value) || 300)));
+                    }}
+                  />
+                  <i>mm</i>
+                </span>
+              </label>
+            </div>
+
+            <div className="property-section">
+              <label className="property-field">
+                <span>Configuration</span>
+                <select
+                  value={configuration}
+                  onChange={(event) => {
+                    setSaveState("idle");
+                    setConfiguration(event.target.value as WindowTopology["configuration"]);
+                  }}
+                >
+                  <option value="sliding">Sliding window</option>
+                  <option value="casement">Casement window</option>
+                  <option value="tilt_turn">Tilt &amp; turn</option>
+                  <option value="fixed">Fixed window</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="model-summary">
+              <div><span>Panels</span><strong>{panels.toString().padStart(2, "0")}</strong></div>
+              <div><span>Frame members</span><strong>{frameMembers.toString().padStart(2, "0")}</strong></div>
+            </div>
+
+            <div className="design-health">
+              <span className="health-dot" aria-hidden="true" />
+              <span><strong>Design ready</strong><small>Topology is valid for BOQ</small></span>
+            </div>
+            <div className="save-message" aria-live="polite">
+              {saveState === "saved" && <div role="status" className="save-success">Design saved successfully.</div>}
+              {saveState === "error" && <div role="alert" className="save-error">The design could not be saved. Please try again.</div>}
+            </div>
+          </aside>
         </div>
-        <button className="vc-primary-btn" onClick={saveDesign} disabled={saveState === "saving"}>
-          {saveState === "saving" ? "Saving…" : "Save design"}
-        </button>
-      </div>
-      <div className="configurator-split">
-        <section className="vc-card configurator-controls">
-          <label>
-            Width (mm)
-            <input
-              type="number"
-              min={100}
-              max={12000}
-              value={width}
-              onChange={(event) => {
-                setSaveState("idle");
-                setWidth(Math.min(12000, Math.max(100, Number(event.target.value) || 100)));
-              }}
-            />
-          </label>
-          <label>
-            Height (mm)
-            <input
-              type="number"
-              min={100}
-              max={12000}
-              value={height}
-              onChange={(event) => {
-                setSaveState("idle");
-                setHeight(Math.min(12000, Math.max(100, Number(event.target.value) || 100)));
-              }}
-            />
-          </label>
-          <label>
-            Configuration
-            <select
-              value={configuration}
-              onChange={(event) => {
-                setSaveState("idle");
-                setConfiguration(event.target.value as WindowTopology["configuration"]);
-              }}
-            >
-              <option value="sliding">Sliding</option>
-              <option value="casement">Casement</option>
-              <option value="tilt_turn">Tilt &amp; turn</option>
-              <option value="fixed">Fixed</option>
-            </select>
-          </label>
-          <div className="configurator-summary">
-            <strong>{panels}</strong> panels · <strong>{frameMembers}</strong> extruded frame members
-          </div>
-          <div className="configurator-hint">Drag to rotate · Scroll to zoom · Right-drag to pan</div>
-          {saveState === "saved" && <div role="status" className="save-success">Design saved.</div>}
-          {saveState === "error" && <div role="alert" className="save-error">The design could not be saved. Please try again.</div>}
-        </section>
-        <section className="vc-card configurator-preview" aria-label="Interactive realistic 3D window preview">
-          <Canvas
-            camera={{ position: [0, 0, 4], fov: 43 }}
-            dpr={[1, 1.75]}
-            gl={{ antialias: true, alpha: false }}
-            shadows
-            fallback={<div role="alert" className="webgl-fallback">3D preview needs WebGL support.</div>}
-          >
-            <color attach="background" args={["#dfe7ee"]} />
-            <fog attach="fog" args={["#dfe7ee", 7, 18]} />
-            <Suspense fallback={null}>
-              <RealisticTopologyModel topology={topology} />
-              <OrbitControls
-                enablePan
-                enableZoom
-                enableRotate
-                minDistance={0.6}
-                maxDistance={24}
-                target={[0, 0, 0]}
-              />
-            </Suspense>
-          </Canvas>
-          <div className="preview-badge" aria-hidden="true">
-            <strong>{width} × {height} mm</strong>
-            <span>{configuration.replace(/_/g, " ")} · realistic profile preview</span>
-          </div>
-        </section>
-      </div>
+      </section>
       <style jsx>{`
-        .configurator-heading {
+        .configurator-page {
+          --studio-orange: #f97316;
+          --studio-orange-bright: #fb923c;
+          --studio-ink: #07101d;
+          box-sizing: border-box;
+          max-width: 1600px;
+          margin: 0 auto;
+          padding: 18px;
+          color: #e7edf5;
+        }
+        .configurator-workspace {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          min-height: calc(100vh - 72px);
+          border: 1px solid rgba(148, 163, 184, 0.14);
+          border-radius: 24px;
+          background:
+            radial-gradient(circle at 48% -20%, rgba(51, 65, 85, 0.72), transparent 42%),
+            radial-gradient(circle at 100% 100%, rgba(249, 115, 22, 0.08), transparent 32%),
+            linear-gradient(145deg, #0b1421 0%, #07101b 58%, #060c16 100%);
+          box-shadow: 0 28px 70px rgba(2, 6, 23, 0.32);
+          padding: 24px;
+        }
+        .configurator-workspace::before {
+          position: absolute;
+          z-index: -1;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(148, 163, 184, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148, 163, 184, 0.025) 1px, transparent 1px);
+          background-size: 44px 44px;
+          content: "";
+          mask-image: linear-gradient(to bottom, black, transparent 86%);
+        }
+        .workspace-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 16px;
-          margin-bottom: 18px;
+          gap: 24px;
+          margin-bottom: 24px;
+          padding: 0 2px;
         }
-        .configurator-split {
-          display: grid;
-          grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
-          gap: 18px;
-        }
-        .configurator-controls {
-          padding: 18px;
-          display: grid;
-          align-content: start;
+        .workspace-title {
+          display: flex;
+          align-items: center;
           gap: 14px;
+          min-width: 0;
         }
-        .configurator-controls label {
+        .workspace-mark {
           display: grid;
-          gap: 6px;
-          color: #334155;
-          font-size: 13px;
-          font-weight: 700;
+          flex: 0 0 44px;
+          width: 44px;
+          height: 44px;
+          place-items: center;
+          border: 1px solid rgba(249, 115, 22, 0.38);
+          border-radius: 13px;
+          background: linear-gradient(145deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.06));
+          box-shadow: inset 0 1px rgba(255, 255, 255, 0.08), 0 10px 30px rgba(249, 115, 22, 0.08);
+          color: var(--studio-orange-bright);
         }
-        .configurator-controls input,
-        .configurator-controls select {
-          box-sizing: border-box;
-          width: 100%;
-          min-height: 42px;
-          border: 1px solid #cbd5e1;
-          border-radius: 9px;
-          background: #ffffff;
-          color: #0f172a;
-          padding: 9px 11px;
-          font: inherit;
-          font-weight: 500;
+        .workspace-title h1 {
+          margin: 2px 0 4px;
+          color: #f8fafc;
+          font-size: clamp(21px, 2vw, 28px);
+          line-height: 1.12;
+          letter-spacing: -0.035em;
         }
-        .configurator-summary {
-          color: #475569;
-          font-size: 14px;
-          line-height: 1.6;
-        }
-        .configurator-hint {
-          padding-top: 4px;
-          color: #64748b;
+        .workspace-title p {
+          margin: 0;
+          color: #8190a5;
           font-size: 12px;
         }
-        .save-success {
-          color: #15803d;
-          font-size: 14px;
-          font-weight: 700;
+        .workspace-title .workspace-eyebrow {
+          color: var(--studio-orange-bright);
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
         }
-        .save-error {
-          color: #b91c1c;
-          font-size: 14px;
-          font-weight: 700;
+        .save-design {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          min-height: 44px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 11px;
+          background: linear-gradient(135deg, var(--studio-orange-bright), #ea580c);
+          box-shadow: 0 10px 30px rgba(234, 88, 12, 0.24), inset 0 1px rgba(255, 255, 255, 0.26);
+          padding: 0 18px;
+          color: #2b1003;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
         }
-        .configurator-preview {
-          position: relative;
-          min-height: 560px;
+        .save-design:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 34px rgba(234, 88, 12, 0.32), inset 0 1px rgba(255, 255, 255, 0.26);
+          filter: saturate(1.08);
+        }
+        .save-design:disabled {
+          cursor: wait;
+          opacity: 0.7;
+        }
+        .save-design:focus-visible,
+        .tool-button:focus-visible,
+        .property-field input:focus-visible,
+        .property-field select:focus-visible {
+          outline: 2px solid #fdba74;
+          outline-offset: 3px;
+        }
+        .studio-grid {
+          display: grid;
+          grid-template-columns: clamp(190px, 16vw, 226px) minmax(0, 1fr) clamp(250px, 20vw, 300px);
+          grid-template-areas: "toolbox viewport properties";
+          gap: 14px;
+          min-height: 0;
+        }
+        .glass-panel {
+          border: 1px solid rgba(148, 163, 184, 0.15);
+          border-radius: 16px;
+          background: linear-gradient(155deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.48));
+          box-shadow: inset 0 1px rgba(255, 255, 255, 0.045), 0 18px 44px rgba(2, 6, 23, 0.16);
+          backdrop-filter: blur(18px);
+        }
+        @supports not (backdrop-filter: blur(1px)) {
+          .glass-panel {
+            background: #111c2c;
+          }
+        }
+        .toolbox-panel {
+          grid-area: toolbox;
+          display: grid;
+          align-content: start;
+          min-width: 0;
+          padding: 17px;
+        }
+        .properties-panel {
+          grid-area: properties;
+          min-width: 0;
+          padding: 17px;
+        }
+        .panel-heading {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 17px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.11);
+        }
+        .panel-heading-icon {
+          display: grid;
+          width: 32px;
+          height: 32px;
+          place-items: center;
+          border: 1px solid rgba(249, 115, 22, 0.22);
+          border-radius: 9px;
+          background: rgba(249, 115, 22, 0.09);
+          color: var(--studio-orange-bright);
+        }
+        .panel-heading span {
+          color: #64748b;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+        .panel-heading h2 {
+          margin: 2px 0 0;
+          color: #e7edf5;
+          font-size: 15px;
+          letter-spacing: -0.01em;
+        }
+        .tool-list {
+          display: grid;
+          gap: 9px;
+        }
+        .tool-button {
+          display: grid;
+          grid-template-columns: 38px minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 9px;
+          width: 100%;
+          min-height: 58px;
+          border: 1px solid rgba(148, 163, 184, 0.12);
+          border-radius: 11px;
+          background: rgba(15, 23, 42, 0.54);
+          padding: 8px 9px;
+          color: #a8b3c3;
+          text-align: left;
+          cursor: pointer;
+          transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+        }
+        .tool-button:hover {
+          transform: translateX(2px);
+          border-color: rgba(249, 115, 22, 0.35);
+          background: rgba(30, 41, 59, 0.72);
+          color: #f8fafc;
+        }
+        .tool-button.is-active {
+          border-color: rgba(249, 115, 22, 0.58);
+          background: linear-gradient(100deg, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0.055));
+          box-shadow: inset 3px 0 var(--studio-orange), 0 10px 28px rgba(2, 6, 23, 0.14);
+          color: #fff7ed;
+        }
+        .tool-icon {
+          display: grid;
+          width: 36px;
+          height: 36px;
+          place-items: center;
+          border: 1px solid rgba(148, 163, 184, 0.11);
+          border-radius: 9px;
+          background: rgba(2, 6, 23, 0.25);
+          color: #8290a3;
+        }
+        .tool-button.is-active .tool-icon {
+          border-color: rgba(249, 115, 22, 0.28);
+          background: rgba(249, 115, 22, 0.13);
+          color: var(--studio-orange-bright);
+        }
+        .tool-copy {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+        }
+        .tool-copy strong {
           overflow: hidden;
-          background: #dfe7ee;
+          font-size: 12px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
-        .configurator-preview :global(canvas) {
+        .tool-copy small {
+          overflow: hidden;
+          color: #68778c;
+          font-size: 9px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .tool-key {
+          display: grid;
+          width: 21px;
+          height: 21px;
+          place-items: center;
+          border: 1px solid rgba(148, 163, 184, 0.14);
+          border-radius: 6px;
+          color: #59677a;
+          font-size: 8px;
+          font-weight: 800;
+        }
+        .tool-selection {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 16px;
+          color: #8190a5;
+          font-size: 10px;
+          text-transform: capitalize;
+        }
+        .tool-selection strong {
+          color: var(--studio-orange-bright);
+        }
+        .tool-note {
+          margin: 9px 0 0;
+          color: #566579;
+          font-size: 9px;
+          line-height: 1.55;
+        }
+        .viewport-panel {
+          position: relative;
+          grid-area: viewport;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr) auto;
+          min-width: 0;
+          min-height: clamp(560px, calc(100vh - 190px), 720px);
+          overflow: hidden;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 17px;
+          background: #0d1623;
+          box-shadow: inset 0 1px rgba(255, 255, 255, 0.055), 0 22px 48px rgba(2, 6, 23, 0.22);
+        }
+        .viewport-panel::after {
+          position: absolute;
+          inset: 44px 0 44px;
+          background: radial-gradient(circle at 50% 44%, rgba(56, 189, 248, 0.07), transparent 48%);
+          content: "";
+          pointer-events: none;
+        }
+        .viewport-toolbar,
+        .viewport-footer {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-height: 44px;
+          padding: 0 14px;
+          background: rgba(7, 15, 27, 0.78);
+          backdrop-filter: blur(14px);
+        }
+        .viewport-toolbar {
+          border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .viewport-footer {
+          border-top: 1px solid rgba(148, 163, 184, 0.1);
+          color: #64748b;
+          font-size: 9px;
+        }
+        .viewport-footer > span {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .live-chip,
+        .quality-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          border: 1px solid rgba(148, 163, 184, 0.11);
+          border-radius: 999px;
+          background: rgba(30, 41, 59, 0.36);
+          padding: 5px 9px;
+          color: #8694a8;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.09em;
+          text-transform: uppercase;
+        }
+        .live-chip i {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12), 0 0 10px rgba(34, 197, 94, 0.65);
+        }
+        .quality-chip {
+          color: #64748b;
+        }
+        .viewport-canvas {
+          position: relative;
+          z-index: 1;
+          min-height: 470px;
+        }
+        .viewport-canvas :global(canvas) {
           width: 100% !important;
-          height: 560px !important;
+          height: 100% !important;
+          min-height: 470px;
           touch-action: none;
           cursor: grab;
         }
-        .configurator-preview :global(canvas:active) {
+        .viewport-canvas :global(canvas:active) {
           cursor: grabbing;
         }
-        .preview-badge {
-          position: absolute;
-          right: 18px;
-          bottom: 18px;
-          display: grid;
-          gap: 3px;
-          max-width: calc(100% - 36px);
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          border-radius: 11px;
-          background: rgba(255, 255, 255, 0.9);
-          box-shadow: 0 8px 28px rgba(15, 23, 42, 0.14);
-          padding: 10px 14px;
-          color: #0f172a;
-          pointer-events: none;
-          backdrop-filter: blur(10px);
+        .viewport-measurement {
+          color: #77869a;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
-        .preview-badge span {
-          color: #64748b;
-          font-size: 11px;
-          text-transform: capitalize;
+        .viewport-measurement strong {
+          color: #d8e0ea;
+          font-size: 10px;
+        }
+        .property-section {
+          display: grid;
+          gap: 12px;
+          padding: 15px 0;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .property-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #8795a8;
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+        .property-field {
+          display: grid;
+          gap: 7px;
+          color: #93a1b3;
+          font-size: 10px;
+          font-weight: 700;
+        }
+        .input-shell {
+          position: relative;
+          display: block;
+        }
+        .property-field input,
+        .property-field select {
+          box-sizing: border-box;
+          width: 100%;
+          min-height: 43px;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 9px;
+          background: rgba(2, 6, 23, 0.3);
+          padding: 9px 11px;
+          color: #eef2f7;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 700;
+          color-scheme: dark;
+          transition: border-color 160ms ease, box-shadow 160ms ease;
+        }
+        .property-field input {
+          padding-right: 43px;
+          font-variant-numeric: tabular-nums;
+        }
+        .property-field input:hover,
+        .property-field select:hover {
+          border-color: rgba(249, 115, 22, 0.38);
+        }
+        .property-field input:focus,
+        .property-field select:focus {
+          border-color: var(--studio-orange);
+          box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+        .input-shell i {
+          position: absolute;
+          top: 50%;
+          right: 11px;
+          color: #59677a;
+          font-size: 9px;
+          font-style: normal;
+          font-weight: 800;
+          transform: translateY(-50%);
+          pointer-events: none;
+        }
+        .model-summary {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          padding: 15px 0;
+        }
+        .model-summary div {
+          display: grid;
+          gap: 7px;
+          border: 1px solid rgba(148, 163, 184, 0.1);
+          border-radius: 9px;
+          background: rgba(2, 6, 23, 0.2);
+          padding: 10px;
+        }
+        .model-summary span {
+          color: #627085;
+          font-size: 8px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+        .model-summary strong {
+          color: #e7edf5;
+          font-size: 16px;
+          font-variant-numeric: tabular-nums;
+        }
+        .design-health {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          border: 1px solid rgba(34, 197, 94, 0.14);
+          border-radius: 10px;
+          background: rgba(34, 197, 94, 0.045);
+          padding: 10px;
+        }
+        .health-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+        }
+        .design-health > span:last-child {
+          display: grid;
+          gap: 2px;
+        }
+        .design-health strong {
+          color: #bfe7cb;
+          font-size: 10px;
+        }
+        .design-health small {
+          color: #568068;
+          font-size: 8px;
+        }
+        .save-message {
+          min-height: 22px;
+          margin-top: 10px;
+        }
+        .save-success {
+          color: #86efac;
+          font-size: 10px;
+          font-weight: 700;
+        }
+        .save-error {
+          color: #fca5a5;
+          font-size: 10px;
+          line-height: 1.45;
+          font-weight: 700;
         }
         .webgl-fallback {
           display: grid;
-          min-height: 560px;
+          min-height: 470px;
           place-items: center;
           padding: 24px;
-          color: #334155;
+          color: #93a1b3;
           text-align: center;
         }
-        @media (max-width: 820px) {
-          .configurator-heading {
+        @media (max-width: 1120px) {
+          .studio-grid {
+            grid-template-columns: minmax(210px, 0.75fr) minmax(250px, 1fr);
+            grid-template-areas:
+              "viewport viewport"
+              "toolbox properties";
+          }
+          .viewport-panel {
+            min-height: 590px;
+          }
+          .tool-list {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+        @media (max-width: 700px) {
+          .configurator-page {
+            padding: 10px;
+          }
+          .configurator-workspace {
+            min-height: auto;
+            border-radius: 17px;
+            padding: 15px;
+          }
+          .workspace-header {
             align-items: flex-start;
             flex-direction: column;
           }
-          .configurator-split {
+          .save-design {
+            width: 100%;
+          }
+          .studio-grid {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+              "viewport"
+              "toolbox"
+              "properties";
+          }
+          .viewport-panel {
+            min-height: 450px;
+          }
+          .viewport-canvas,
+          .viewport-canvas :global(canvas) {
+            min-height: 362px;
+          }
+          .tool-list {
+            grid-template-columns: 1fr 1fr;
+          }
+          .tool-button {
+            grid-template-columns: 35px minmax(0, 1fr);
+          }
+          .tool-key {
+            display: none;
+          }
+        }
+        @media (max-width: 430px) {
+          .workspace-mark {
+            display: none;
+          }
+          .tool-list,
+          .model-summary {
             grid-template-columns: 1fr;
           }
-          .configurator-preview,
-          .configurator-preview :global(canvas) {
-            min-height: 440px;
-            height: 440px !important;
+          .viewport-panel {
+            min-height: 410px;
+          }
+          .viewport-canvas,
+          .viewport-canvas :global(canvas) {
+            min-height: 322px;
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .configurator-preview :global(canvas) {
-            scroll-behavior: auto;
+          .save-design,
+          .tool-button {
+            transition: none;
           }
         }
       `}</style>
-    </main>
+    </div>
   );
 }
