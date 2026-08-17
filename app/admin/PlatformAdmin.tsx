@@ -69,6 +69,11 @@ interface EditorForm {
   active: boolean;
 }
 
+interface LegalDocument {
+  id: string;
+  filename: string;
+}
+
 function defaultForm(): EditorForm {
   return {
     id: "",
@@ -260,6 +265,12 @@ export default function PlatformAdmin() {
   const [composeMail, setComposeMail] = useState<{ req: any; to: string; subject: string; body: string } | null>(null);
   const [sendingMail, setSendingMail] = useState(false);
   const [signupView, setSignupView] = useState<"active" | "archived">("active");
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([]);
+  const [legalSelected, setLegalSelected] = useState<string | null>(null);
+  const [legalDraft, setLegalDraft] = useState("");
+  const [legalLoading, setLegalLoading] = useState(false);
+  const [legalSaving, setLegalSaving] = useState(false);
 
   const logoFileRef = useRef<HTMLInputElement>(null);
   const heroFileRef = useRef<HTMLInputElement>(null);
@@ -551,6 +562,61 @@ export default function PlatformAdmin() {
     } catch (e: any) {
       showToast("Failed to delete: " + e.message, "error");
     }
+  }
+
+  async function openLegalDocuments() {
+    setEditorOpen(false);
+    setLegalOpen(true);
+    setLegalLoading(true);
+    try {
+      const list = await fetch("/api/admin/legal");
+      const data = await list.json();
+      if (!list.ok) throw new Error(data.error || "Failed to load legal documents");
+      setLegalDocuments(data.documents || []);
+      if (!legalSelected && data.documents?.[0]) await selectLegalDocument(data.documents[0].id);
+    } catch (e: any) {
+      showToast(e.message, "error");
+    } finally {
+      setLegalLoading(false);
+    }
+  }
+
+  async function selectLegalDocument(id: string) {
+    setLegalSelected(id);
+    setLegalLoading(true);
+    try {
+      const res = await fetch(`/api/admin/legal?key=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load document");
+      setLegalDraft(data.content || "");
+    } catch (e: any) {
+      showToast(e.message, "error");
+    } finally {
+      setLegalLoading(false);
+    }
+  }
+
+  async function saveLegalDocument() {
+    if (!legalSelected) return;
+    setLegalSaving(true);
+    try {
+      const res = await fetch("/api/admin/legal", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: legalSelected, content: legalDraft }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save document");
+      showToast("Legal document saved", "success");
+    } catch (e: any) {
+      showToast(e.message, "error");
+    } finally {
+      setLegalSaving(false);
+    }
+  }
+
+  function downloadLegalDocument() {
+    if (legalSelected) window.open(`/api/admin/legal?key=${encodeURIComponent(legalSelected)}&download=1`, "_blank");
   }
 
   async function handleLogoFileSelected(file: File) {
@@ -986,6 +1052,9 @@ export default function PlatformAdmin() {
                   >
                     🤖 AI Agent
                   </button>
+                  <button className="sidebar-action-btn" onClick={openLegalDocuments}>
+                    📄 Legal Docs
+                  </button>
                 </div>
               </>
             )}
@@ -998,7 +1067,42 @@ export default function PlatformAdmin() {
 
         {/* ─── MAIN PANEL ──────────────────────────────── */}
         <main className="admin-main">
-          {!editorOpen ? (
+          {legalOpen ? (
+            <div className="admin-editor legal-editor">
+              <div className="admin-editor-header">
+                <div className="editor-client-info">
+                  <div className="editor-client-logo">📄</div>
+                  <div className="editor-client-meta">
+                    <h2>Legal Documents</h2>
+                    <div className="editor-client-desc">Edit client-ready policies and agreements</div>
+                  </div>
+                  <div className="editor-client-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}>✕ Close</button>
+                  </div>
+                </div>
+              </div>
+              <div className="admin-editor-body" style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 20 }}>
+                <div>
+                  <div className="form-section-title">Documents</div>
+                  {legalDocuments.map((doc) => (
+                    <button key={doc.id} type="button" className={`admin-tab${legalSelected === doc.id ? " active" : ""}`} style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 8 }} onClick={() => selectLegalDocument(doc.id)}>
+                      {doc.filename.replace(".md", "").replaceAll("_", " ")}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  {legalLoading && <p>Loading document…</p>}
+                  {!legalLoading && legalSelected && <>
+                    <textarea value={legalDraft} onChange={(e) => setLegalDraft(e.target.value)} style={{ width: "100%", minHeight: "62vh", fontFamily: "monospace", fontSize: 13, lineHeight: 1.55, padding: 16, border: "1px solid var(--border)", borderRadius: 10, resize: "vertical" }} aria-label="Legal document markdown" />
+                    <div className="editor-footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                      <button type="button" className="btn-primary" onClick={saveLegalDocument} disabled={legalSaving}>{legalSaving ? "Saving…" : "Save Document"}</button>
+                      <button type="button" className="btn-secondary" onClick={downloadLegalDocument}>Download Markdown</button>
+                    </div>
+                  </>}
+                </div>
+              </div>
+            </div>
+          ) : !editorOpen ? (
             <div className="admin-welcome">
               <div className="admin-welcome-icon">🏢</div>
               <h2>Welcome back!</h2>
