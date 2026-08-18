@@ -21,6 +21,7 @@ import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
 import 'inventory_screen.dart';
+import 'items_units_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
@@ -331,6 +332,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               context,
               MaterialPageRoute(builder: (context) => const InventoryScreen()),
             ),
+      ),
+      _QuickAction(
+        title: 'Items & Units',
+        icon: Icons.category_outlined,
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ItemsUnitsScreen())),
       ),
       _QuickAction(
         title: 'Analytics',
