@@ -1,0 +1,12 @@
+import { NextRequest } from "next/server";
+import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
+import { supaCount, supaGet, supaPost } from "@/lib/supabase";
+import { formatZodError, MAX_PAGE_SIZE } from "@/lib/console-schemas";
+import { unitWriteSchema } from "../items/_lib";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) { try { const gate = await requireConsoleSession(request); if (!gate.ok) return gate.error; const url = new URL(request.url); const q = (url.searchParams.get("q") || "").trim().slice(0, 100); const page = Math.max(1, Math.floor(Number(url.searchParams.get("page")) || 1)); const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(Number(url.searchParams.get("page_size")) || 100))); const filters: Record<string, string | number | boolean> = { or: `(business_id.is.null,business_id.eq.${gate.clientId})`, is_active: "eq.true" }; if (q) { const safe = q.replace(/[(),*]/g, " ").trim(); if (safe) filters.or = `and(or(business_id.is.null,business_id.eq.${gate.clientId}),or(code.ilike.*${safe}*,name.ilike.*${safe}*,symbol.ilike.*${safe}*))`; } const total = await supaCount("units", filters); const rows = await supaGet("units", { ...filters, select: "id,business_id,code,name,symbol,decimal_places,is_system,is_active,created_at,updated_at", order: "is_system.desc,name.asc", limit: pageSize, offset: (page - 1) * pageSize }); return consoleJson({ rows: Array.isArray(rows) ? rows : [], page, page_size: pageSize, total_count: total >= 0 ? total : rows?.length ?? 0, total_pages: total > 0 ? Math.ceil(total / pageSize) : 1 }); } catch (e: any) { return consoleJson({ error: String(e?.message ?? e) }, 500); } }
+
+export async function POST(request: NextRequest) { try { let body: any; try { body = await request.json(); } catch { return consoleJson({ error: "Invalid JSON" }, 400); } const gate = await requireConsoleSession(request, body?.client_id); if (!gate.ok) return gate.error; const parsed = unitWriteSchema.safeParse(body); if (!parsed.success) return consoleJson({ error: "Validation failed", fields: formatZodError(parsed.error) }, 400); const inserted = await supaPost("units", { ...parsed.data, business_id: gate.clientId, is_system: false }); const unit = Array.isArray(inserted) ? inserted[0] : inserted; return unit?.id ? consoleJson({ unit }, 201) : consoleJson({ error: "Insert failed" }, 500); } catch (e: any) { return consoleJson({ error: String(e?.message ?? e) }, 500); } }
