@@ -20,6 +20,7 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
+import 'taxes_screen.dart';
 import 'inventory_screen.dart';
 import 'business/business_users_screen.dart';
 import 'items_units_screen.dart';
@@ -657,6 +658,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const PartiesScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.percent, color: Colors.deepOrange),
+              title: const Text('Taxes'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TaxesScreen()),
                 );
               },
             ),
