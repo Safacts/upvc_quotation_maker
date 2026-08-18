@@ -21,6 +21,7 @@ import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
 import 'inventory_screen.dart';
+import 'business/business_users_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
@@ -647,6 +648,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => EmailPortalScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.groups_outlined,
+                color: Colors.deepPurple,
+              ),
+              title: const Text('Business & Users'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BusinessUsersScreen(),
+                  ),
                 );
               },
             ),
