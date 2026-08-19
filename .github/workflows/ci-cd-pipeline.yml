@@ -98,16 +98,21 @@ jobs:
           echo "Target: vitharn-upvc-staging.vercel.app"
           echo "Branch: ${{ github.ref }}"
           echo ""
-          DEPLOY_URL=$(vercel --token=$VERCEL_TOKEN \
+          # Deploy and capture JSON output (contains the deployment url)
+          DEPLOY_JSON=$(vercel --token=$VERCEL_TOKEN \
             --scope=vitarn-dev-8132s-projects \
             --prod=false \
-            --yes 2>&1 | grep -E '^https://' | tail -1)
+            --yes --json 2>&1)
+          echo "$DEPLOY_JSON"
+          DEPLOY_URL=$(echo "$DEPLOY_JSON" | grep -oE '"url":"[^"]+"' | head -1 | sed -E 's/"url":"//; s/"$//')
           echo "Preview URL: $DEPLOY_URL"
-          # Alias to fixed staging domain
-          if [ -n "$DEPLOY_URL" ]; then
-            vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=vitarn-dev-8132s-projects
-            echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::Failed to capture deployment URL from vercel output"
+            exit 1
           fi
+          # Alias to fixed staging domain
+          vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=vitarn-dev-8132s-projects
+          echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
 
   # ============================================================
   # DEPLOY TO PRODUCTION - MANUAL TRIGGER ONLY (your approval)
