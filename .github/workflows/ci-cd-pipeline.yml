@@ -98,16 +98,20 @@ jobs:
           echo "Target: vitharn-upvc-staging.vercel.app"
           echo "Branch: ${{ github.ref }}"
           echo ""
+          set +e
           # Deploy and capture JSON output (contains the deployment url)
           DEPLOY_JSON=$(vercel --token=$VERCEL_TOKEN \
             --scope=vitarn-dev-8132s-projects \
             --prod=false \
             --yes --json 2>&1)
+          DEPLOY_RC=$?
+          set -e
+          echo "VERCEL EXIT CODE: $DEPLOY_RC"
           echo "$DEPLOY_JSON"
           DEPLOY_URL=$(echo "$DEPLOY_JSON" | grep -oE '"url":"[^"]+"' | head -1 | sed -E 's/"url":"//; s/"$//')
           echo "Preview URL: $DEPLOY_URL"
           if [ -z "$DEPLOY_URL" ]; then
-            echo "::error::Failed to capture deployment URL from vercel output"
+            echo "::error::Failed to capture deployment URL from vercel output (rc=$DEPLOY_RC)"
             exit 1
           fi
           # Alias to fixed staging domain
