@@ -90,11 +90,19 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Link Vercel project
+      - name: Link Vercel project (write project.json)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
         run: |
-          vercel link --yes --scope=${{ env.VERCEL_ORG_ID_STAGING }} --project-id=prj_dB375nzPc2Urtjkih0Xlqt
+          mkdir -p .vercel
+          cat > .vercel/project.json <<'EOF'
+          {
+            "projectId": "prj_dB375nzPc2Urtjkih0Xlqt",
+            "orgId": "${{ env.VERCEL_ORG_ID_STAGING }}",
+            "projectName": "upvc_quotation_maker"
+          }
+          EOF
+          echo "Linked project file written."
 
       - name: Set runtime env on staging Vercel project
         env:
