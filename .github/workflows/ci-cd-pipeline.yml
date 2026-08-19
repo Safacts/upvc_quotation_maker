@@ -26,7 +26,7 @@ env:
   NODE_VERSION: '20'
   VERCEL_ORG_ID_PRODUCTION: vitarndev-8132s-projects
   VERCEL_PROJECT_ID_PRODUCTION: upvc_quotation_maker
-  VERCEL_ORG_ID_STAGING: vitarn-dev-8132s-projects
+  VERCEL_ORG_ID_STAGING: team_6RAErY2LmBVNuVTByAXyXlqt
   VERCEL_PROJECT_ID_STAGING: upvc_quotation_maker
 
 jobs:
@@ -98,14 +98,10 @@ jobs:
           echo "Target: vitharn-upvc-staging.vercel.app"
           echo "Branch: ${{ github.ref }}"
           echo ""
-          echo "--- DEBUG: whoami ---"
-          vercel whoami --token=$VERCEL_TOKEN 2>&1 || true
-          echo "--- DEBUG: teams ls ---"
-          vercel teams ls --token=$VERCEL_TOKEN 2>&1 || true
           set +e
           # Deploy and capture JSON output (contains the deployment url)
           DEPLOY_JSON=$(vercel --token=$VERCEL_TOKEN \
-            --scope=vitarn-dev-8132s-projects \
+            --scope=${{ env.VERCEL_ORG_ID_STAGING }} \
             --prod=false \
             --yes --json 2>&1)
           DEPLOY_RC=$?
@@ -119,7 +115,7 @@ jobs:
             exit 1
           fi
           # Alias to fixed staging domain
-          vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=vitarn-dev-8132s-projects
+          vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=${{ env.VERCEL_ORG_ID_STAGING }}
           echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
 
   # ============================================================
