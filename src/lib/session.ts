@@ -15,6 +15,8 @@ export type SessionPayload = {
   expiresAt: Date;
 };
 
+export type CreateSessionPayload = Omit<SessionPayload, "session_id" | "expiresAt">;
+
 export async function encrypt(payload: SessionPayload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
@@ -35,8 +37,8 @@ export async function decrypt(session: string | undefined = "") {
   }
 }
 
-export async function createSession(payload: Omit<SessionPayload, "expiresAt">) {
-  const sessionId = payload.session_id || crypto.randomUUID();
+export async function createSession(payload: CreateSessionPayload) {
+  const sessionId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const session = await encrypt({ ...payload, session_id: sessionId, expiresAt });
   

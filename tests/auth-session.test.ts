@@ -19,6 +19,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT, jwtVerify } from "jose";
+import crypto from "crypto";
 
 const TEST_SECRET = "bugsy-test-jwt-secret-do-not-use-in-prod";
 
@@ -102,12 +103,14 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
       role: "customer",
       email: "kprupvc@gmail.com",
       client_id: "kprupvc",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 86_400_000),
     });
     const payload = await decrypt(token);
     expect(payload?.role).toBe("customer");
     expect(payload?.email).toBe("kprupvc@gmail.com");
     expect(payload?.client_id).toBe("kprupvc");
+    expect(payload?.session_id).toBeDefined();
   });
 
   it("signs with HS256 and sets iat + 8-hour exp", async () => {
@@ -115,6 +118,7 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
     const token = await encrypt({
       role: "admin",
       email: "kongaaadisheshu@gmail.com",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(),
     });
     const { protectedHeader, payload } = await jwtVerify(token, key(TEST_SECRET));
@@ -159,6 +163,7 @@ describe("decrypt() — forgery resistance", () => {
       role: "customer",
       email: "kprupvc@gmail.com",
       client_id: "kprupvc",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 86_400_000),
     });
     const [h, p, s] = token.split(".");
@@ -177,6 +182,7 @@ describe("decrypt() — forgery resistance", () => {
       role: "customer",
       email: "kprupvc@gmail.com",
       client_id: "kprupvc",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 86_400_000),
     });
     const [h, p, s] = token.split(".");
@@ -222,8 +228,10 @@ describe("decrypt() — forgery resistance", () => {
 
   it("REJECTS a signature copied from a different token", async () => {
     const { encrypt, decrypt } = await loadSession();
-    const a = await encrypt({ role: "customer", email: "a@x.com", client_id: "a", expiresAt: new Date() });
-    const b = await encrypt({ role: "customer", email: "b@x.com", client_id: "b", expiresAt: new Date() });
+    const a = await encrypt({
+      role: "customer", email: "a@x.com", client_id: "a", session_id: crypto.randomUUID(), expiresAt: new Date() });
+    const b = await encrypt({
+      role: "customer", email: "b@x.com", client_id: "b", session_id: crypto.randomUUID(), expiresAt: new Date() });
     const spliced = a.split(".").slice(0, 2).join(".") + "." + b.split(".")[2];
     await expect(decrypt(spliced)).resolves.toBeNull();
   });
@@ -232,7 +240,7 @@ describe("decrypt() — forgery resistance", () => {
 describe("createSession() — cookie hardening", () => {
   it("sets an HttpOnly cookie so XSS cannot read the session", async () => {
     const { createSession } = await loadSession();
-    await createSession({ role: "customer", email: "kprupvc@gmail.com", client_id: "kprupvc" });
+    await createSession({ role: "customer", email: "kprupvc@gmail.com", client_id: "kprupvc", session_id: crypto.randomUUID() });
     const c = jar.get("session");
     expect(c).toBeDefined();
     expect(c!.options.httpOnly).toBe(true);
@@ -240,7 +248,7 @@ describe("createSession() — cookie hardening", () => {
 
   it("sets SameSite=lax and path=/ (CSRF surface reduction)", async () => {
     const { createSession } = await loadSession();
-    await createSession({ role: "admin", email: "kongaaadisheshu@gmail.com" });
+    await createSession({ role: "admin", email: "kongaaadisheshu@gmail.com", session_id: crypto.randomUUID() });
     const c = jar.get("session")!;
     expect(c.options.sameSite).toBe("lax");
     expect(c.options.path).toBe("/");
@@ -249,7 +257,7 @@ describe("createSession() — cookie hardening", () => {
   it("sets an expiry roughly 8 hours out, never a session-only cookie", async () => {
     const { createSession } = await loadSession();
     const before = Date.now();
-    await createSession({ role: "admin", email: "a@b.com" });
+    await createSession({ role: "admin", email: "a@b.com", session_id: crypto.randomUUID() });
     const exp = jar.get("session")!.options.expires as Date;
     const eightHours = 8 * 60 * 60 * 1000;
     expect(exp.getTime() - before).toBeGreaterThan(eightHours - 5000);
@@ -259,7 +267,7 @@ describe("createSession() — cookie hardening", () => {
   it("stores a real verifiable JWT, not the raw payload", async () => {
     // Guards against a refactor that ever writes JSON straight into the cookie.
     const { createSession } = await loadSession();
-    await createSession({ role: "customer", email: "kprupvc@gmail.com", client_id: "kprupvc" });
+    await createSession({ role: "customer", email: "kprupvc@gmail.com", client_id: "kprupvc", session_id: crypto.randomUUID() });
     const value = jar.get("session")!.value;
     expect(value.split(".")).toHaveLength(3);
     expect(value).not.toContain("kprupvc@gmail.com"); // must not be plaintext
@@ -276,7 +284,7 @@ describe("getSession() / deleteSession()", () => {
 
   it("returns the payload for a valid cookie", async () => {
     const { createSession, getSession } = await loadSession();
-    await createSession({ role: "customer", email: "akshayaupvc@gmail.com", client_id: "akshaya" });
+    await createSession({ role: "customer", email: "akshayaupvc@gmail.com", client_id: "akshaya", session_id: crypto.randomUUID() });
     const s = await getSession();
     expect(s?.role).toBe("customer");
     expect(s?.client_id).toBe("akshaya");
@@ -284,7 +292,7 @@ describe("getSession() / deleteSession()", () => {
 
   it("returns null when the stored cookie has been tampered with", async () => {
     const { createSession, getSession } = await loadSession();
-    await createSession({ role: "customer", email: "a@b.com", client_id: "aaa" });
+    await createSession({ role: "customer", email: "a@b.com", client_id: "aaa", session_id: crypto.randomUUID() });
     const c = jar.get("session")!;
     jar.set("session", { ...c, value: c.value.slice(0, -3) + "xyz" });
     await expect(getSession()).resolves.toBeNull();
@@ -292,7 +300,7 @@ describe("getSession() / deleteSession()", () => {
 
   it("deleteSession() actually removes the cookie (logout works)", async () => {
     const { createSession, deleteSession, getSession } = await loadSession();
-    await createSession({ role: "admin", email: "a@b.com" });
+    await createSession({ role: "admin", email: "a@b.com", session_id: crypto.randomUUID() });
     expect(jar.has("session")).toBe(true);
     await deleteSession();
     expect(jar.has("session")).toBe(false);
@@ -303,7 +311,8 @@ describe("getSession() / deleteSession()", () => {
 describe("JWT_SECRET configuration", () => {
   it("a session minted under one secret is invalid under another (rotation works)", async () => {
     const { encrypt } = await loadSession();
-    const token = await encrypt({ role: "admin", email: "a@b.com", expiresAt: new Date() });
+    const token = await encrypt({
+      role: "admin", email: "a@b.com", session_id: crypto.randomUUID(), expiresAt: new Date() });
 
     vi.resetModules();
     process.env.JWT_SECRET = "a-completely-different-secret";
