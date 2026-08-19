@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.quotations (
     status TEXT DEFAULT 'Draft',
     transport_cost NUMERIC DEFAULT 0.0,
     client_id TEXT,
+    supplier_company TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS public.measured_items (
     units INTEGER DEFAULT 1,
     glass TEXT,
     rate NUMERIC DEFAULT 0,
+    client_id TEXT DEFAULT 'venkateshwara' NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -38,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.unmeasured_items (
     description TEXT,
     units INTEGER DEFAULT 1,
     rate NUMERIC DEFAULT 0,
+    client_id TEXT DEFAULT 'venkateshwara' NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
