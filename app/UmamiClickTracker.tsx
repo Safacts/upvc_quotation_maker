@@ -18,8 +18,13 @@ export default function UmamiClickTracker() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (window.location.hostname !== "app.vitharn.com") return;
-    setEnabled(true);
+    if (typeof window !== "undefined" && window.location.hostname === "app.vitharn.com") {
+      setEnabled(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
 
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element | null;
@@ -38,7 +43,7 @@ export default function UmamiClickTracker() {
 
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, []);
+  }, [enabled]);
 
   if (!enabled) return null;
 

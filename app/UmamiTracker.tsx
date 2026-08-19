@@ -8,14 +8,31 @@ const WEBSITE_ID = "13fc779a-eb5b-4e48-9011-f7b7b985a03d";
 
 export default function UmamiTracker() {
   const [enabled, setEnabled] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
 
   useEffect(() => {
-    if (window.location.hostname === "app.vitharn.com") {
+    if (typeof window !== "undefined" && window.location.hostname === "app.vitharn.com") {
       setEnabled(true);
     }
   }, []);
 
-  if (!enabled) return null;
+  if (!enabled || scriptError) return null;
 
-  return <Script defer src={UMAMI_SRC} data-website-id={WEBSITE_ID} />;
-}
+  return (
+    <Script
+      defer
+      src={UMAMI_SRC}
+      data-website-id={WEBSITE_ID}
+      onError={() => {
+        setScriptError(true);
+        if (typeof window !== "undefined" && (window as any).umami) {
+          delete (window as any).umami;
+        }
+      }}
+      onLoad={() => {
+        if (typeof window !== "undefined" && !(window as any).umami) {
+          setScriptError(true);
+        }
+      }}
+    />
+  );
