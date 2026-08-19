@@ -24,7 +24,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  VERCEL_ORG_ID_PRODUCTION: vitarndev-8132s-projects
+  VERCEL_ORG_ID_PRODUCTION: safacts-projects
   VERCEL_PROJECT_ID_PRODUCTION: upvc_quotation_maker
   VERCEL_ORG_ID_STAGING: team_6RAErY2LmBVNuVTByAXyXlqt
   VERCEL_PROJECT_ID_STAGING: upvc_quotation_maker
@@ -89,6 +89,28 @@ jobs:
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
+
+      - name: Set runtime env on staging Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          echo "Writing runtime env vars into staging Vercel project (preview target)..."
+          echo "These are what the serverless functions read at runtime (build-step env is NOT enough)."
+          for pair in \
+            "SUPABASE_URL:$STAGING_SUPABASE_URL" \
+            "SUPABASE_ANON_KEY:$STAGING_SUPABASE_ANON_KEY" \
+            "SUPABASE_SERVICE_ROLE_KEY:$STAGING_SUPABASE_SERVICE_ROLE_KEY" \
+            "SUPABASE_KEY:$STAGING_SUPABASE_SERVICE_ROLE_KEY" \
+            "JWT_SECRET:$JWT_SECRET"; do
+            name="${pair%%:*}"; val="${pair#*:}"
+            vercel env rm "$name" preview --yes --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN 2>/dev/null || true
+            echo "$val" | vercel env add "$name" preview --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN
+          done
+          echo "Env vars configured."
 
       - name: Auto-deploy to Staging (vitarn.dev Vercel)
         env:
@@ -161,6 +183,6 @@ jobs:
           echo "This deployment was explicitly triggered via workflow_dispatch."
           echo "Deploying to PRODUCTION..."
           vercel --token=$VERCEL_TOKEN \
-            --scope=vitarndev-8132s-projects \
+            --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }} \
             --prod=true \
             --yes
