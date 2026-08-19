@@ -108,15 +108,22 @@ jobs:
           set -e
           echo "VERCEL EXIT CODE: $DEPLOY_RC"
           echo "$DEPLOY_JSON"
-          DEPLOY_URL=$(echo "$DEPLOY_JSON" | grep -oE '"url":"[^"]+"' | head -1 | sed -E 's/"url":"//; s/"$//')
+          DEPLOY_URL=$(echo "$DEPLOY_JSON" | grep -oE 'https://[a-zA-Z0-9._-]+\.vercel\.app' | head -1)
           echo "Preview URL: $DEPLOY_URL"
           if [ -z "$DEPLOY_URL" ]; then
             echo "::error::Failed to capture deployment URL from vercel output (rc=$DEPLOY_RC)"
             exit 1
           fi
-          # Alias to fixed staging domain
+          # Alias to fixed staging domain (best-effort; do not fail job if domain not owned by team)
+          set +e
           vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=${{ env.VERCEL_ORG_ID_STAGING }}
-          echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
+          ALIAS_RC=$?
+          set -e
+          if [ $ALIAS_RC -eq 0 ]; then
+            echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
+          else
+            echo "⚠️ Staging alias skipped (domain not on team or already set); deployment live at preview URL above."
+          fi
 
   # ============================================================
   # DEPLOY TO PRODUCTION - MANUAL TRIGGER ONLY (your approval)
