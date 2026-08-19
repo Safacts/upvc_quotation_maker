@@ -1,0 +1,124 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - development-v1
+      - deployment-v1
+      - main
+  pull_request:
+    branches:
+      - development-v1
+      - deployment-v1
+      - main
+
+env:
+  NODE_VERSION: '20'
+  VERCEL_ORG_ID_PRODUCTION: vitarndev-8132s-projects
+  VERCEL_PROJECT_ID_PRODUCTION: upvc_quotation_maker
+  VERCEL_ORG_ID_STAGING: vitarn-dev-8132s-projects
+  VERCEL_PROJECT_ID_STAGING: upvc_quotation_maker
+
+jobs:
+  # ============================================================
+  # TEST & BUILD - Runs on all branches
+  # ============================================================
+  test-and-build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Build Next.js
+        run: npm run build
+
+  # ============================================================
+  # DEPLOY TO STAGING - Automatic on deployment-v1 branch
+  # Uses vitarn.dev Vercel account
+  # ============================================================
+  deploy-staging:
+    name: Deploy to Staging (vitarn.dev)
+    needs: test-and-build
+    if: github.ref == 'refs/heads/deployment-v1'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy to Staging (vitarn.dev)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
+        run: |
+          vercel --token=$VERCEL_TOKEN \
+            --scope=vitarn-dev-8132s-projects \
+            --prod=false \
+            --yes
+
+  # ============================================================
+  # DEPLOY TO PRODUCTION - MANUAL APPROVAL REQUIRED
+  # Only triggers on main branch, requires manual approval
+  # Uses safacts001@gmail.com Vercel account
+  # ============================================================
+  deploy-production:
+    name: Deploy to Production (app.vitharn.com)
+    needs: test-and-build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy to Production (REQUIRES MANUAL APPROVAL)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
+        run: |
+          echo "=== PRODUCTION DEPLOYMENT ==="
+          echo "This deployment targets app.vitharn.com (production)"
+          echo "Only proceed if you have verified staging and have explicit approval."
+          echo ""
+          vercel --token=$VERCEL_TOKEN \
+            --scope=vitarndev-8132s-projects \
+            --prod=true \
+            --yes
