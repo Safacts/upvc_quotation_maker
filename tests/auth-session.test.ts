@@ -284,7 +284,7 @@ describe("getSession() / deleteSession()", () => {
 
   it("returns the payload for a valid cookie", async () => {
     const { createSession, getSession } = await loadSession();
-    await createSession({ role: "customer", email: "akshayaupvc@gmail.com", client_id: "akshaya", session_id: crypto.randomUUID() });
+    await createSession({ role: "customer", email: "akshayaupvc@gmail.com", client_id: "akshaya" });
     const s = await getSession();
     expect(s?.role).toBe("customer");
     expect(s?.client_id).toBe("akshaya");
