@@ -69,3 +69,5 @@ $null
 backups/
 android/.kotlin/
 public/logo_b64.txt
+.vercel
+.env*
