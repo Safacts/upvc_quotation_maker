@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import PwaSwRegister from "./PwaSwRegister";
 import UmamiTracker from "./UmamiTracker";
@@ -40,14 +41,20 @@ export const viewport: Viewport = {
   themeColor: "#6366f1",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  // Get CSP nonce from middleware header (set via middleware)
+  const headersList = headers();
+  const nonce = headersList.get("x-csp-nonce") || "";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
         {children}
         <PwaSwRegister />
-        <UmamiTracker />
-        <UmamiClickTracker />
+        <UmamiTracker nonce={nonce} />
+        <UmamiClickTracker nonce={nonce} />
       </body>
     </html>
   );

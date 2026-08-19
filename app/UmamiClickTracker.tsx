@@ -14,7 +14,11 @@ function labelOf(el: Element): string {
   return text.slice(0, 80);
 }
 
-export default function UmamiClickTracker() {
+interface UmamiClickTrackerProps {
+  nonce?: string;
+}
+
+export default function UmamiClickTracker({ nonce }: UmamiClickTrackerProps) {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {

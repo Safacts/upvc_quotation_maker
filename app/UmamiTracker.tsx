@@ -6,7 +6,11 @@ import Script from "next/script";
 const UMAMI_SRC = "https://umami.novamymentor.cloud/umami.js";
 const WEBSITE_ID = "13fc779a-eb5b-4e48-9011-f7b7b985a03d";
 
-export default function UmamiTracker() {
+interface UmamiTrackerProps {
+  nonce?: string;
+}
+
+export default function UmamiTracker({ nonce }: UmamiTrackerProps) {
   const [enabled, setEnabled] = useState(false);
   const [scriptError, setScriptError] = useState(false);
 
@@ -23,6 +27,7 @@ export default function UmamiTracker() {
       defer
       src={UMAMI_SRC}
       data-website-id={WEBSITE_ID}
+      nonce={nonce}
       onError={() => {
         setScriptError(true);
         if (typeof window !== "undefined" && (window as any).umami) {
@@ -35,5 +40,6 @@ export default function UmamiTracker() {
         }
       }}
     />
-);
+  );
+}
 }

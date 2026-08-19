@@ -48,8 +48,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Passthrough for all other requests.
-  event.respondWith(fetch(req));
+  // Passthrough for all other requests - handle fetch failures gracefully
+  event.respondWith(
+    fetch(req).catch(() => {
+      // If fetch fails (e.g., CSP, network error), return a basic response
+      // instead of letting the error propagate
+      return new Response("", { status: 0, statusText: "Offline" });
+    })
+  );
 });
 `;
 
