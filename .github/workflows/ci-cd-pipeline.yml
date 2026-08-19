@@ -184,13 +184,13 @@ jobs:
           STAGING_URL: https://vitharn-upvc-staging.vercel.app
         run: |
           echo "Testing staging deployment..."
-          # Test main page loads
+          # Test main page loads (302 = Vercel Auth redirect, 200 = direct access)
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" --max-time 30)
-          if [ "$HTTP_CODE" != "200" ]; then
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
             echo "::error::Staging main page returned $HTTP_CODE"
             exit 1
           fi
-          echo "✅ Main page: 200"
+          echo "✅ Main page: $HTTP_CODE"
 
           # Test Flutter app loads
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/upvc/venkateshwara" --max-time 30)
