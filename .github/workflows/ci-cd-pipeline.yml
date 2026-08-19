@@ -98,6 +98,10 @@ jobs:
           echo "Target: vitharn-upvc-staging.vercel.app"
           echo "Branch: ${{ github.ref }}"
           echo ""
+          echo "--- DEBUG: whoami ---"
+          vercel whoami --token=$VERCEL_TOKEN 2>&1 || true
+          echo "--- DEBUG: teams ls ---"
+          vercel teams ls --token=$VERCEL_TOKEN 2>&1 || true
           set +e
           # Deploy and capture JSON output (contains the deployment url)
           DEPLOY_JSON=$(vercel --token=$VERCEL_TOKEN \
