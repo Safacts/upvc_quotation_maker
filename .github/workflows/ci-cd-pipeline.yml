@@ -12,6 +12,23 @@ on:
       - deployment-v1
       - main
 
+  # Manual trigger for explicit deployments (CURRENT MODE - with approval)
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+  # AUTOMATIC DEPLOYMENT (PAUSED - activate by removing 'if: false' below)
+  # push:
+  #   branches:
+  #     - deployment-v1    # -> auto-deploy staging
+  #     - main             # -> auto-deploy production (with environment protection)
+
 env:
   NODE_VERSION: '20'
   VERCEL_ORG_ID_PRODUCTION: vitarndev-8132s-projects
@@ -49,13 +66,12 @@ jobs:
         run: npm run build
 
   # ============================================================
-  # DEPLOY TO STAGING - Automatic on deployment-v1 branch
-  # Uses vitarn.dev Vercel account
+  # DEPLOY TO STAGING - MANUAL TRIGGER ONLY (current mode)
+  # Deploys to fixed domain: vitharn-upvc-staging.vercel.app
   # ============================================================
   deploy-staging:
-    name: Deploy to Staging (vitarn.dev)
-    needs: test-and-build
-    if: github.ref == 'refs/heads/deployment-v1'
+    name: Deploy to Staging (vitharn-upvc-staging.vercel.app)
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'staging'
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -74,24 +90,69 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Deploy to Staging (vitarn.dev)
+      - name: Deploy to Staging (vitarn.dev Vercel)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
         run: |
-          vercel --token=$VERCEL_TOKEN \
+          echo "=== DEPLOYING TO STAGING ==="
+          echo "Target: vitharn-upvc-staging.vercel.app"
+          echo "Branch: ${{ github.ref }}"
+          echo ""
+          # Deploy to preview with fixed alias
+          DEPLOY_URL=$(vercel --token=$VERCEL_TOKEN \
             --scope=vitarn-dev-8132s-projects \
             --prod=false \
-            --yes
+            --yes 2>&1 | grep -E '^https://' | tail -1)
+          echo "Preview URL: $DEPLOY_URL"
+          # Alias to fixed staging domain
+          if [ -n "$DEPLOY_URL" ]; then
+            vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=vitarn-dev-8132s-projects
+            echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
+          fi
 
   # ============================================================
-  # DEPLOY TO PRODUCTION - MANUAL APPROVAL REQUIRED
-  # Only triggers on main branch, requires manual approval
-  # Uses safacts001@gmail.com Vercel account
+  # AUTOMATIC STAGING DEPLOYMENT (PAUSED)
+  # Activate by removing 'if: false' below and removing workflow_dispatch condition
+  # ============================================================
+  # auto-deploy-staging:
+  #   name: Auto-deploy to Staging (PAUSED)
+  #   if: false  # REMOVE THIS LINE TO ACTIVATE
+  #   needs: test-and-build
+  #   if: github.ref == 'refs/heads/deployment-v1'
+  #   runs-on: ubuntu-latest
+  #   environment: staging
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #         cache: npm
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Install Vercel CLI
+  #       run: npm i -g vercel@latest
+  #     - name: Auto-deploy to Staging (vitarn.dev Vercel)
+  #       env:
+  #         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
+  #       run: |
+  #         echo "=== AUTO-DEPLOYING TO STAGING ==="
+  #         DEPLOY_URL=$(vercel --token=$VERCEL_TOKEN \
+  #           --scope=vitarn-dev-8132s-projects \
+  #           --prod=false \
+  #           --yes 2>&1 | grep -E '^https://' | tail -1)
+  #         if [ -n "$DEPLOY_URL" ]; then
+  #           vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=vitarn-dev-8132s-projects
+  #           echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
+  #         fi
+
+  # ============================================================
+  # DEPLOY TO PRODUCTION - MANUAL TRIGGER ONLY (current mode)
   # ============================================================
   deploy-production:
     name: Deploy to Production (app.vitharn.com)
-    needs: test-and-build
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'production'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -110,15 +171,49 @@ jobs:
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
-      - name: Deploy to Production (REQUIRES MANUAL APPROVAL)
+      - name: Deploy to Production (REQUIRES EXPLICIT CONFIRMATION)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
         run: |
-          echo "=== PRODUCTION DEPLOYMENT ==="
-          echo "This deployment targets app.vitharn.com (production)"
-          echo "Only proceed if you have verified staging and have explicit approval."
+          echo "=== PRODUCTION DEPLOYMENT CONFIRMED ==="
+          echo "Target: app.vitharn.com (PRODUCTION)"
+          echo "Branch: ${{ github.ref }}"
           echo ""
+          echo "This deployment was explicitly triggered via workflow_dispatch."
+          echo "Deploying to PRODUCTION..."
           vercel --token=$VERCEL_TOKEN \
             --scope=vitarndev-8132s-projects \
             --prod=true \
             --yes
+
+  # ============================================================
+  # AUTOMATIC PRODUCTION DEPLOYMENT (PAUSED)
+  # Activate by removing 'if: false' and adding environment protection rules
+  # ============================================================
+  # auto-deploy-production:
+  #   name: Auto-deploy to Production (PAUSED)
+  #   if: false  # REMOVE THIS LINE TO ACTIVATE
+  #   needs: test-and-build
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #         cache: npm
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Install Vercel CLI
+  #       run: npm i -g vercel@latest
+  #     - name: Auto-deploy to Production
+  #       env:
+  #         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
+  #       run: |
+  #         vercel --token=$VERCEL_TOKEN \
+  #           --scope=vitarndev-8132s-projects \
+  #           --prod=true \
+  #           --yes
