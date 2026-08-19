@@ -103,6 +103,7 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
       role: "customer",
       email: "kprupvc@gmail.com",
       client_id: "kprupvc",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 86_400_000),
     });
     const payload = await decrypt(token);
@@ -117,6 +118,7 @@ describe("encrypt() / decrypt() — JWT round trip", () => {
     const token = await encrypt({
       role: "admin",
       email: "kongaaadisheshu@gmail.com",
+      session_id: crypto.randomUUID(),
       expiresAt: new Date(),
     });
     const { protectedHeader, payload } = await jwtVerify(token, key(TEST_SECRET));
@@ -310,7 +312,7 @@ describe("JWT_SECRET configuration", () => {
   it("a session minted under one secret is invalid under another (rotation works)", async () => {
     const { encrypt } = await loadSession();
     const token = await encrypt({
-      role: "admin", email: "a@b.com", expiresAt: new Date() });
+      role: "admin", email: "a@b.com", session_id: crypto.randomUUID(), expiresAt: new Date() });
 
     vi.resetModules();
     process.env.JWT_SECRET = "a-completely-different-secret";
