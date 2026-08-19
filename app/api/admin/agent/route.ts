@@ -6,11 +6,33 @@ import Groq from "groq-sdk";
 import crypto from "crypto";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
   "Content-Type": "application/json",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 } as const;
+
+const MAX_PROMPT_CHARS = 4000;
+const MAX_HISTORY_MESSAGES = 12;
+const MAX_HISTORY_CHARS = 2500;
+const SAFE_UPDATE_KEYS = new Set([
+  "companyName",
+  "appName",
+  "companyEmail",
+  "adminEmails",
+  "quotePrefix",
+  "defaultGstPercentage",
+  "aiCanDelete",
+]);
+const SECRET_KEYS = new Set([
+  "password",
+  "passwordHash",
+  "portalPasswordHash",
+  "password_hash",
+  "bankAccountNo",
+  "bankIfsc",
+]);
+const requestWindows = new Map<string, { startedAt: number; count: number }>();
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 20;
 
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status, headers: CORS_HEADERS });
@@ -18,6 +40,31 @@ function json(data: any, status = 200) {
 
 function sha256(str: string) {
   return crypto.createHash("sha256").update(str).digest("hex");
+}
+
+function safeClientConfig(config: Record<string, any>) {
+  const safe: Record<string, any> = {};
+  for (const [key, value] of Object.entries(config ?? {})) {
+    if (!SECRET_KEYS.has(key)) safe[key] = value;
+  }
+  return safe;
+}
+
+function cleanHistory(history: unknown) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((item): item is { role: string; content: unknown } =>
+      !!item && typeof item === "object" &&
+      ((item as any).role === "user" || (item as any).role === "assistant"),
+    )
+    .slice(-MAX_HISTORY_MESSAGES)
+    .map((item) => ({
+      role: item.role,
+      content: typeof item.content === "string"
+        ? item.content.slice(0, MAX_HISTORY_CHARS)
+        : "",
+    }))
+    .filter((item) => item.content.trim().length > 0);
 }
 
 const PROTECTED_CLIENTS = ["venkateshwara", "kprupvc"];
@@ -174,9 +221,27 @@ export async function POST(request: NextRequest) {
       return json({ error: "not authorized" }, 403);
     }
 
-    const { prompt, history = [] } = await request.json();
+    const rateKey = String(session.email ?? "admin");
+    const now = Date.now();
+    const window = requestWindows.get(rateKey);
+    if (!window || now - window.startedAt >= RATE_WINDOW_MS) {
+      requestWindows.set(rateKey, { startedAt: now, count: 1 });
+    } else if (window.count >= RATE_LIMIT) {
+      return NextResponse.json(
+        { error: "Too many Tara requests. Please wait a minute and try again." },
+        { status: 429, headers: { ...CORS_HEADERS, "Retry-After": "60" } },
+      );
+    } else {
+      window.count += 1;
+    }
+
+    const body = await request.json();
+    const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) {
       return json({ error: "prompt is required" }, 400);
+    }
+    if (prompt.length > MAX_PROMPT_CHARS) {
+      return json({ error: `prompt is too long (maximum ${MAX_PROMPT_CHARS} characters)` }, 413);
     }
 
     if (!process.env.GROQ_API_KEY) {
@@ -197,7 +262,7 @@ CRITICAL INSTRUCTIONS:
 2. BE SMART & AGENTIC: Use get_client and list_clients to look up previous clients. If the user asks for a setup "like Akshaya" or "standard setup", fetch that client's config first and use it as a template, merging the new details over it. 
 3. SECURITY: When deleting or updating a client, you MUST respect the "aiCanDelete" flag for deletions. Never try to modify or delete protected clients: venkateshwara, kprupvc. You are permitted to use get_client to read them to use as templates.`,
       },
-      ...history,
+      ...cleanHistory(body?.history),
       { role: "user", content: prompt },
     ];
 
@@ -233,7 +298,20 @@ CRITICAL INSTRUCTIONS:
 
       for (const toolCall of toolCalls) {
         const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+        let args: Record<string, any>;
+        try {
+          const parsed = JSON.parse(toolCall.function.arguments);
+          args = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+        } catch {
+          messages.push({
+            tool_call_id: toolCall.id,
+            role: "tool",
+            name: functionName,
+            content: "Error: Tara produced invalid tool arguments; no action was taken.",
+          });
+          actionLogs.push(`Rejected malformed tool arguments for ${functionName}`);
+          continue;
+        }
         let result = "";
 
         if (functionName === "list_clients") {
@@ -253,7 +331,7 @@ CRITICAL INSTRUCTIONS:
           const { clientId } = args;
           const existing = await supaGet("clients", { id: "eq." + clientId });
           if (existing && existing.length > 0) {
-            result = JSON.stringify(existing[0].config || {});
+            result = JSON.stringify(safeClientConfig(existing[0].config || {}));
             actionLogs.push(`Read client: ${clientId}`);
           } else {
             result = "Error: Client not found.";
@@ -335,8 +413,10 @@ CRITICAL INSTRUCTIONS:
           }
         } else if (functionName === "update_client") {
           const { clientId, updates } = args;
-          if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
-            result = "Error: Cannot modify protected client.";
+          if (typeof clientId !== "string" || !clientId.trim() || !updates || typeof updates !== "object" || Array.isArray(updates)) {
+            result = "Error: clientId and a plain updates object are required.";
+          } else if (PROTECTED_CLIENTS.includes(clientId.toLowerCase())) {
+            result = "Error: Protected clients cannot be modified by Tara. Use the explicit admin controls.";
             actionLogs.push(`Error: Blocked modification of protected client ${clientId}`);
           } else {
             const existing = await supaGet("clients", { id: "eq." + clientId });
@@ -344,6 +424,18 @@ CRITICAL INSTRUCTIONS:
               result = "Error: Client not found.";
             } else {
               const currentConfig = existing[0].config || {};
+              const rejected = Object.keys(updates).filter((key) => !SAFE_UPDATE_KEYS.has(key));
+              if (rejected.length > 0) {
+                result = `Error: These fields cannot be changed by Tara: ${rejected.join(", ")}. Use the protected admin billing/security controls.`;
+                actionLogs.push(`Rejected unsafe update for ${clientId}: ${rejected.join(", ")}`);
+                messages.push({
+                  tool_call_id: toolCall.id,
+                  role: "tool",
+                  name: functionName,
+                  content: result,
+                });
+                continue;
+              }
               const newConfig = { ...currentConfig, ...updates };
               try {
                 await supaPatch("clients", { config: newConfig }, { id: "eq." + clientId });
@@ -527,5 +619,5 @@ CRITICAL INSTRUCTIONS:
 }
 
 export async function OPTIONS() {
-  return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
