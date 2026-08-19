@@ -113,8 +113,11 @@ jobs:
             "SUPABASE_KEY:$STAGING_SUPABASE_SERVICE_ROLE_KEY" \
             "JWT_SECRET:$JWT_SECRET"; do
             name="${pair%%:*}"; val="${pair#*:}"
-            vercel env rm "$name" preview --yes --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN 2>/dev/null || true
-            echo "$val" | vercel env add "$name" preview --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN
+            echo "len($name)=${#val}"
+            for tgt in preview production; do
+              vercel env rm "$name" $tgt --yes --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN 2>/dev/null || true
+              echo "$val" | vercel env add "$name" $tgt --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN
+            done
           done
           echo "Env vars configured."
 
