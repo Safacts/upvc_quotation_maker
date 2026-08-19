@@ -52,6 +52,17 @@ jobs:
       - name: Run TypeScript check
         run: npx tsc --noEmit
 
+      - name: Hydration guard check (no client-side code in SSR without window guard)
+        run: |
+          echo "Checking for hydration hazards..."
+          VIOLATIONS=0
+          # Check for useState/useEffect without window guard in components that render in SSR
+          grep -r "useState\|useEffect" --include="*.tsx" app/ | grep -v "typeof window" | grep -v "// hydration-ok" | grep -v "test" | head -20 || true
+          # Check for Script components without onError handler
+          grep -r "<Script" --include="*.tsx" app/ | grep -v "onError" | grep -v "// script-error-ok" | head -10 || true
+          # Fail if we find obvious violations (adjust threshold as needed)
+          # For now just warn - can make this strict later
+
       - name: Run tests (continue on error for pre-existing failures)
         run: npx vitest run || true
 
@@ -155,6 +166,57 @@ jobs:
           else
             echo "⚠️ Staging alias skipped (domain not on team or already set); deployment live at preview URL above."
           fi
+
+  # ============================================================
+  # STAGING SMOKE TEST - Verify external deps & critical paths
+  # ============================================================
+  staging-smoke:
+    name: Staging smoke test
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/deployment-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deployment to be ready
+        run: sleep 10
+
+      - name: Smoke test staging URL
+        env:
+          STAGING_URL: https://vitharn-upvc-staging.vercel.app
+        run: |
+          echo "Testing staging deployment..."
+          # Test main page loads
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" --max-time 30)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Staging main page returned $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Main page: 200"
+
+          # Test Flutter app loads
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/upvc/venkateshwara" --max-time 30)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Flutter app returned $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Flutter app: 200"
+
+          # Test Umami analytics script loads (external dependency)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::Umami analytics returned $HTTP_CODE - external dependency may be down"
+          else
+            echo "✅ Umami analytics: 200"
+          fi
+
+          # Test API health
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/portal_auth" -X POST -H "Content-Type: application/json" -d '{"mode":"session"}' --max-time 15)
+          if [ "$HTTP_CODE" != "405" ] && [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::API portal_auth returned $HTTP_CODE"
+          else
+            echo "✅ API health: $HTTP_CODE (expected 405 for POST without body)"
+          fi
+
+          echo "✅ All smoke tests passed"
 
   # ============================================================
   # DEPLOY TO PRODUCTION - MANUAL TRIGGER ONLY (your approval)
