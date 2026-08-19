@@ -212,18 +212,19 @@ function readFileAsBase64(file: File): Promise<FilePayload> {
   });
 }
 
-function ClientLinks({ id, config }: { id: string; config?: Record<string, any> | null }) {
+async function ClientLinks({ id, config }: { id: string; config?: Record<string, any> | null }) {
   const cfg = config || {};
   const marketSlug = slugify(cfg.companyName) || slugify(id);
   const appSlug = slugify(cfg.appName) || slugify(id);
   const marketUrl = window.location.origin + "/" + marketSlug;
-  const appUrl = window.location.origin + "/upvc/" + appSlug;
+  const ssoRedirectUrl = window.location.origin + "/api/sso/redirect?client_id=" + id;
+  
   return (
     <div className="client-links">
       <a href={marketUrl} target="_blank" rel="noreferrer">
         Market Page
       </a>
-      <a href={appUrl} target="_blank" rel="noreferrer">
+      <a href={ssoRedirectUrl} target="_blank" rel="noreferrer">
         App
       </a>
     </div>

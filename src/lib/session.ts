@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import crypto from "crypto";
 
 const secretKey = process.env.JWT_SECRET;
 if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
@@ -10,6 +11,7 @@ export type SessionPayload = {
   email: string;
   client_id?: string;
   signup_request_id?: string;
+  session_id: string;
   expiresAt: Date;
 };
 
@@ -34,8 +36,9 @@ export async function decrypt(session: string | undefined = "") {
 }
 
 export async function createSession(payload: Omit<SessionPayload, "expiresAt">) {
+  const sessionId = payload.session_id || crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000);
-  const session = await encrypt({ ...payload, expiresAt });
+  const session = await encrypt({ ...payload, session_id: sessionId, expiresAt });
   
   const cookieStore = await cookies();
   cookieStore.set("session", session, {

@@ -1,0 +1,13 @@
+-- PROD try 1 pw=AADISHESHu1.
+OK ref=gumpmnbjdtzajhysnnaz pw=AADISHESHu1. tables=43
+-- PROD try 2 pw=AADISHESHu1.
+OK ref=gumpmnbjdtzajhysnnaz pw=AADISHESHu1. tables=43
+-- PROD try 1 pw=AADISHESHU1.
+FAIL ref=gumpmnbjdtzajhysnnaz pw=AADISHESHU1.: password authentication failed for user "postgres"
+-- PROD try 2 pw=AADISHESHU1.
+FAIL ref=gumpmnbjdtzajhysnnaz pw=AADISHESHU1.: password authentication failed for user "postgres"
+-- PROD try 1 pw=Jvenkatesh@123
+FAIL ref=gumpmnbjdtzajhysnnaz pw=Jvenkatesh@123: password authentication failed for user "postgres"
+-- PROD try 2 pw=Jvenkatesh@123
+FAIL ref=gumpmnbjdtzajhysnnaz pw=Jvenkatesh@123: password authentication failed for user "postgres"
+DONE
