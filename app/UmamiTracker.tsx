@@ -42,4 +42,3 @@ export default function UmamiTracker({ nonce }: UmamiTrackerProps) {
     />
 );
   }
-}
