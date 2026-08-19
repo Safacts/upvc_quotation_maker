@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServer } from "@/lib/supabase/server";
 import { jwtVerify } from "jose";
 
 export async function POST(request: NextRequest) {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if token exists and not used
-    const supabase = await createClient();
+    const supabase = getSupabaseServer();
     const { data: tokenRecord, error } = await supabase
       .from("sso_tokens")
       .select("*")

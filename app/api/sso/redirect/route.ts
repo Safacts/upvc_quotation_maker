@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Verify user has access to this client
-    const supabase = await createClient();
+    const supabase = getSupabaseServer();
     const { data: client } = await supabase
       .from("clients")
       .select("id, config")
