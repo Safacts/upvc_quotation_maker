@@ -192,13 +192,13 @@ jobs:
           fi
           echo "✅ Main page: $HTTP_CODE"
 
-          # Test Flutter app loads
+          # Test Flutter app loads (302 = Vercel Auth redirect, 200 = direct access)
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/upvc/venkateshwara" --max-time 30)
-          if [ "$HTTP_CODE" != "200" ]; then
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
             echo "::error::Flutter app returned $HTTP_CODE"
             exit 1
           fi
-          echo "✅ Flutter app: 200"
+          echo "✅ Flutter app: $HTTP_CODE"
 
           # Test Umami analytics script loads (external dependency)
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15)
