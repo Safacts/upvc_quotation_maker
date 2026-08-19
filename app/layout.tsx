@@ -41,11 +41,11 @@ export const viewport: Viewport = {
   themeColor: "#6366f1",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   // Get CSP nonce from middleware header (set via middleware)
-  const headersList = headers();
+  const headersList = await headers();
   const nonce = headersList.get("x-csp-nonce") || "";
 
   return (
