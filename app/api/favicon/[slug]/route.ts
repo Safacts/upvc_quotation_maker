@@ -22,6 +22,19 @@ async function resolveFavicon(logoUrl: string): Promise<string> {
   return logoUrl;
 }
 
+function inferContentType(url: string, headerType: string | null): string {
+  if (headerType && headerType.toLowerCase().startsWith("image/")) {
+    return headerType.split(";")[0].trim().toLowerCase();
+  }
+  const clean = url.split("?")[0].split("#")[0].toLowerCase();
+  if (clean.endsWith(".ico")) return "image/x-icon";
+  if (clean.endsWith(".png")) return "image/png";
+  if (clean.endsWith(".svg")) return "image/svg+xml";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg")) return "image/jpeg";
+  if (clean.endsWith(".webp")) return "image/webp";
+  return "image/png";
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -32,16 +45,27 @@ export async function GET(
   const logoUrl = client?.config?.logoUrl;
   if (client && typeof logoUrl === "string" && logoUrl.trim()) {
     const target = await resolveFavicon(logoUrl.trim());
-    return NextResponse.redirect(target, {
-      status: 302,
-      headers: { "Cache-Control": "no-store" },
-    });
+    try {
+      const res = await fetch(target);
+      if (res.ok) {
+        const bytes = await res.arrayBuffer();
+        const contentType = inferContentType(target, res.headers.get("content-type"));
+        return new NextResponse(bytes, {
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+    } catch {}
   }
   const ico = readFileSync(join(process.cwd(), "public", "favicon.ico"));
   return new NextResponse(ico, {
     headers: {
       "Content-Type": "image/x-icon",
-      "Cache-Control": "no-store",
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

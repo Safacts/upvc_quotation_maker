@@ -327,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
         umamiTrack('login_success');
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
-        final effectiveClient = clientId ?? (data['role'] == 'admin' ? appState.clientId : null);
+        final effectiveClient = clientId ?? (data['role'] == 'admin' ? appState.clientConfig.clientId : null);
         if (effectiveClient != null && effectiveClient.isNotEmpty) {
           final config = await ClientLoader.loadConfig(clientId: effectiveClient);
           if (config is SsoPendingClientConfig) {

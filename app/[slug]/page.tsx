@@ -38,6 +38,30 @@ function kprMeta(html: string, key: "title" | "description"): string {
   return html.match(/<meta name="description" content="([^"]*)"/i)?.[1]?.trim() || "";
 }
 
+function cityFromAddress(addr: string): string {
+  const parts = (addr || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const pick = parts
+    .slice(-2)
+    .map((p) => p.replace(/[0-9]/g, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return pick[0] || "";
+}
+
+function serviceAreaFromAddress(addr: string): string {
+  const parts = (addr || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const pick = parts
+    .slice(-2)
+    .map((p) => p.replace(/[0-9]/g, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return pick.length ? pick.join(", ") : "";
+}
+
 export default async function MarketPageRoute({
   params,
 }: {
@@ -75,13 +99,29 @@ export async function generateMetadata({
   if (client.id === KPR_SLUG) {
     const html = readKprHtml();
     const cfg = parseClientConfig(client.config || {}, client.id);
+    const kprCity = cityFromAddress(cfg.companyAddress);
+    const kprBrandTitle = cfg.companyName || cfg.appName || "KPR UPVC";
+    const kprFallbackTitle = kprBrandTitle
+      ? kprCity
+        ? `${kprBrandTitle} \u2014 UPVC Windows & Doors in ${kprCity}`
+        : `${kprBrandTitle} \u2014 UPVC Windows & Doors`
+      : "Market Page";
+    const kprSeoTitle = cfg.seoTitle ? cfg.seoTitle : kprFallbackTitle;
+    const kprServiceArea = serviceAreaFromAddress(cfg.companyAddress);
+    const kprServices: string[] = Array.isArray(cfg.landingServices) ? cfg.landingServices : [];
+    const kprPositioning = cfg.landingHeroSubtitle || "";
+    const kprFallbackDescription = cfg.companyName && kprServiceArea && kprServices.length > 0 && kprPositioning
+      ? `${cfg.companyName} \u2014 ${kprServiceArea} \u2014 ${kprServices.slice(0, 2).join(", ")}. ${kprPositioning}`
+      : kprPositioning || "";
+    const kprSeoDescription = cfg.seoDescription ? cfg.seoDescription : kprFallbackDescription;
     return {
-      title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
-      description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
-      icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
+      title: html ? kprMeta(html, "title") : kprSeoTitle,
+      description: html ? kprMeta(html, "description") : kprSeoDescription,
+      keywords: cfg.seoKeywords || undefined,
+      icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
       openGraph: {
-        title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName,
-        description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
+        title: html ? kprMeta(html, "title") : kprSeoTitle,
+        description: html ? kprMeta(html, "description") : kprSeoDescription,
         url: `https://app.vitharn.com/${slug}`,
         siteName: cfg.companyName || cfg.appName || "KPR UPVC",
         type: "website",
@@ -89,8 +129,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title: html ? kprMeta(html, "title") : cfg.seoTitle || cfg.companyName || cfg.appName,
-        description: html ? kprMeta(html, "description") : cfg.seoDescription || cfg.landingHeroSubtitle || "",
+        title: html ? kprMeta(html, "title") : kprSeoTitle,
+        description: html ? kprMeta(html, "description") : kprSeoDescription,
       },
       alternates: {
         canonical: `https://app.vitharn.com/${slug}`,
@@ -98,14 +138,29 @@ export async function generateMetadata({
     };
   }
   const cfg = parseClientConfig(client.config || {}, client.id);
+  const city = cityFromAddress(cfg.companyAddress);
+  const brandName = cfg.companyName || cfg.appName || "";
+  const fallbackTitle = brandName
+    ? city
+      ? `${brandName} \u2014 UPVC Windows & Doors in ${city}`
+      : `${brandName} \u2014 UPVC Windows & Doors`
+    : "Market Page";
+  const seoTitle = cfg.seoTitle ? cfg.seoTitle : fallbackTitle;
+  const serviceArea = serviceAreaFromAddress(cfg.companyAddress);
+  const services: string[] = Array.isArray(cfg.landingServices) ? cfg.landingServices : [];
+  const positioning = cfg.landingHeroSubtitle || "";
+  const fallbackDescription = cfg.companyName && serviceArea && services.length > 0 && positioning
+    ? `${cfg.companyName} \u2014 ${serviceArea} \u2014 ${services.slice(0, 2).join(", ")}. ${positioning}`
+    : positioning || "";
+  const seoDescription = cfg.seoDescription ? cfg.seoDescription : fallbackDescription || "";
   return {
-    title: cfg.seoTitle || cfg.companyName || cfg.appName || "Market Page",
-    description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
-    keywords: cfg.seoKeywords || "",
-    icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
+    title: seoTitle,
+    description: seoDescription,
+    keywords: cfg.seoKeywords || undefined,
+    icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
     openGraph: {
-      title: cfg.seoTitle || cfg.companyName || cfg.appName,
-      description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
+      title: seoTitle,
+      description: seoDescription,
       url: `https://app.vitharn.com/${slug}`,
       siteName: cfg.companyName || cfg.appName,
       type: "website",
@@ -114,8 +169,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: cfg.seoTitle || cfg.companyName || cfg.appName,
-      description: cfg.seoDescription || cfg.landingHeroSubtitle || "",
+      title: seoTitle,
+      description: seoDescription,
     },
     alternates: {
       canonical: `https://app.vitharn.com/${slug}`,

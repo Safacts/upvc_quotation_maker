@@ -53,7 +53,7 @@ async function getAccessToken(): Promise<string> {
   const payload = btoa(
     JSON.stringify({
       iss: client_email,
-      scope: "https://www.googleapis.com/auth/webmasters",
+      scope: "https://www.googleapis.com/auth/webmasters https://www.googleapis.com/auth/indexing",
       aud: "https://oauth2.googleapis.com/token",
       exp: expiry,
       iat: now,
@@ -99,6 +99,26 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     view[i] = binary.charCodeAt(i);
   }
   return buffer;
+}
+
+async function requestIndexing(url: string, accessToken: string): Promise<void> {
+  const res = await fetch("https://indexing.googleapis.com/v3/urlNotifications:publish", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url, type: "URL_UPDATED" }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Indexing API error: ${JSON.stringify(data)}`);
+  }
+  console.log(`[SEO] Indexing publish: ${url}`, data);
+}
+
+function pingSitemap(): void {
+  fetch("https://www.google.com/ping?sitemap=https://app.vitharn.com/sitemap.xml", { method: "GET" }).catch(() => {});
 }
 
 export async function POST(request: NextRequest) {
@@ -147,6 +167,14 @@ export async function POST(request: NextRequest) {
 
     const verdict = data.inspectionResult?.indexStatusResult?.verdict;
     console.log(`[SEO] URL inspected: ${url} — verdict: ${verdict}`);
+
+    try {
+      await requestIndexing(url, accessToken);
+    } catch (e: any) {
+      console.warn(`[SEO] Indexing publish failed for ${url}:`, e?.message || e);
+    }
+
+    pingSitemap();
 
     return NextResponse.json({
       success: true,

@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   // dev server:  set NEXT_DIST_DIR=.next-verify&& npm run build
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
+  // Turbopack FS cache races on Windows (.next/dev/cache/*.meta EACCES).
+  // Dev-only — build keeps normal caching. Fixes "Persisting failed" noise.
+  experimental: {
+    turbopackFileSystemCacheForDev: false,
+  },
   async headers() {
     return [{
       source: "/(.*)",
