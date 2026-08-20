@@ -212,7 +212,7 @@ function readFileAsBase64(file: File): Promise<FilePayload> {
   });
 }
 
-async function ClientLinks({ id, config }: { id: string; config?: Record<string, any> | null }) {
+function ClientLinks({ id, config }: { id: string; config?: Record<string, any> | null }) {
   const cfg = config || {};
   const marketSlug = slugify(cfg.companyName) || slugify(id);
   const appSlug = slugify(cfg.appName) || slugify(id);

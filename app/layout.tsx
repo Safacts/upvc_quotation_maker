@@ -44,7 +44,6 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Get CSP nonce from middleware header (set via middleware)
   const headersList = await headers();
   const nonce = headersList.get("x-csp-nonce") || "";
 

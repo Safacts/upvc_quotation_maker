@@ -11,34 +11,15 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   reactStrictMode: true,
   async headers() {
-    // CSP with nonce support for inline scripts and event handlers
-    // When nonce is present, 'unsafe-inline' is ignored - all inline scripts/event handlers need nonce
-    const cspNonce = "'nonce-{NONCE}'"; // Will be replaced by middleware
-    const csp = [
-      "default-src 'self'",
-      `script-src 'self' ${cspNonce} 'unsafe-eval' https://accounts.google.com https://umami.novamymentor.cloud https://pagead2.googlesyndication.com https://apis.google.com`,
-      `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
-      "img-src 'self' data: blob: https:",
-      "connect-src 'self' https: https://umami.novamymentor.cloud https://pagead2.googlesyndication.com https://apis.google.com wss:",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      "frame-src 'self' https://accounts.google.com https://play.google.com",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'",
-    ].join("; ");
-
     return [{
       source: "/(.*)",
       headers: [
-        { key: "Content-Security-Policy", value: csp },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://umami.novamymentor.cloud https://pagead2.googlesyndication.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; connect-src 'self' https: https://umami.novamymentor.cloud https://pagead2.googlesyndication.com https://apis.google.com wss:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://accounts.google.com https://play.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" },
         { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-        { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
-        { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
       ],
     }];
   },

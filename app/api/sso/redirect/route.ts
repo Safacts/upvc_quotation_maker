@@ -35,14 +35,17 @@ export async function GET(request: NextRequest) {
     }
     
     const config = client.config || {};
-    const adminEmails = (config.adminEmails || []).map((e: string) => e.trim().toLowerCase());
     const userEmail = session.email.trim().toLowerCase();
     
-    const hasAccess = adminEmails.includes(userEmail) || 
-      (config.companyEmail?.trim().toLowerCase() === userEmail);
-    
-    if (!hasAccess) {
-      return NextResponse.redirect(new URL("/login?error=no_access", request.url));
+    // Platform admins bypass per-client email checks
+    if (session.role !== "admin") {
+      const adminEmails = (config.adminEmails || []).map((e: string) => e.trim().toLowerCase());
+      const hasAccess = adminEmails.includes(userEmail) || 
+        (config.companyEmail?.trim().toLowerCase() === userEmail);
+      
+      if (!hasAccess) {
+        return NextResponse.redirect(new URL("/login?error=no_access", request.url));
+      }
     }
     
     // Generate SSO token with session binding
