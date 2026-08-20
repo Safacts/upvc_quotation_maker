@@ -355,7 +355,7 @@ export default function ProductionClient() {
                           title="Advance to next stage"
                           style={{ padding: "0 6px", fontSize: 10.5 }}
                         >
-                          {advancingId === po.id ? "…" : "→"}
+                          {advancingId === po.id ? "..." : "→"}
                         </button>
                       )}
                     </div>

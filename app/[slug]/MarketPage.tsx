@@ -345,7 +345,7 @@ function EnquiryForm({ business, products }: { business: Business; products: Pro
       setStatus("Your enquiry is ready. Add the confirmed WhatsApp number in src/config.ts to enable sending.");
       return;
     }
-    setStatus("Opening WhatsApp with your enquiry…");
+    setStatus("Opening WhatsApp with your enquiry...");
     window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
   return (

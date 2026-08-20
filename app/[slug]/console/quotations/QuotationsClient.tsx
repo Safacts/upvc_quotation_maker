@@ -375,7 +375,7 @@ export default function QuotationsClient() {
               ref={searchRef}
               className="vc-input"
               style={{ paddingLeft: 27 }}
-              placeholder="Search customer, quote no, phone…"
+              placeholder="Search customer, quote no, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

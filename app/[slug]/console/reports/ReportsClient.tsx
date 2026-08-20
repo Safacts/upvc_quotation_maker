@@ -264,7 +264,7 @@ export default function ReportsClient() {
               disabled={!!exporting || loading}
               title="Export as Tally XML"
             >
-              <FileCode size={13} /> {exporting === "tally_xml" ? "Exporting…" : "Tally XML"}
+              <FileCode size={13} /> {exporting === "tally_xml" ? "Exporting..." : "Tally XML"}
             </button>
             <button
               type="button"

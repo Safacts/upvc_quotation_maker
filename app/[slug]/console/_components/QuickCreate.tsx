@@ -291,7 +291,7 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
                   className="vc-input"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Window, Door, Mesh…"
+                  placeholder="Window, Door, Mesh..."
                   // Free text by design — an enum would mean a migration every
                   // time KPR invents a category. See products/route.ts.
                   list="vc-quick-categories"

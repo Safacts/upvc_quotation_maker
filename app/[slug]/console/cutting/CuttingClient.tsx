@@ -344,7 +344,7 @@ export default function CuttingClient() {
               ref={searchRef}
               className="vc-input"
               style={{ paddingLeft: 27 }}
-              placeholder="Search profile type…"
+              placeholder="Search profile type..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

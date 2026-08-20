@@ -972,13 +972,13 @@ export default function QuotationEditor({
                         className="vc-input"
                         style={{ width: "100%" }}
                         autoFocus
-                        placeholder="Search customers…"
+                        placeholder="Search customers..."
                         value={customerQuery}
                         onChange={(e) => setCustomerQuery(e.target.value)}
                       />
                     </div>
                     {customerLoading ? (
-                      <div style={{ padding: 10, color: "#7C2D12" }}>Loading…</div>
+                      <div style={{ padding: 10, color: "#7C2D12" }}>Loading...</div>
                     ) : customerResults.length === 0 ? (
                       <div style={{ padding: 10, color: "#8a94a1" }}>No customers found</div>
                     ) : (
@@ -1090,7 +1090,7 @@ export default function QuotationEditor({
                 className="vc-input"
                 value={header.supplier_company}
                 onChange={(e) => setHeaderField("supplier_company", e.target.value)}
-                placeholder="APARNA, FENESTA…"
+                placeholder="APARNA, FENESTA..."
               />
             </div>
 

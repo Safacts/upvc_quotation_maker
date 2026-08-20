@@ -1094,7 +1094,7 @@ export default function PlatformAdmin() {
                   ))}
                 </div>
                 <div>
-                  {legalLoading && <p>Loading document…</p>}
+                  {legalLoading && <p>Loading document...</p>}
                   {!legalLoading && legalSelected && !legalEditMode && (
                     <LegalDocFiller 
                       documentName={legalDocuments.find(d => d.id === legalSelected)?.filename.replace(".md", "").replaceAll("_", " ") || ""}
@@ -1112,7 +1112,7 @@ export default function PlatformAdmin() {
                     </div>
                     <textarea value={legalDraft} onChange={(e) => setLegalDraft(e.target.value)} style={{ width: "100%", minHeight: "62vh", fontFamily: "monospace", fontSize: 13, lineHeight: 1.55, padding: 16, border: "1px solid var(--border)", borderRadius: 10, resize: "vertical" }} aria-label="Legal document markdown" />
                     <div className="editor-footer" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                      <button type="button" className="btn-primary" onClick={saveLegalDocument} disabled={legalSaving}>{legalSaving ? "Saving…" : "Save Template"}</button>
+                      <button type="button" className="btn-primary" onClick={saveLegalDocument} disabled={legalSaving}>{legalSaving ? "Saving..." : "Save Template"}</button>
                       <button type="button" className="btn-secondary" onClick={downloadLegalDocument}>Download Raw Markdown</button>
                     </div>
                   </>}
@@ -1334,7 +1334,7 @@ export default function PlatformAdmin() {
                         <input
                           type="password"
                           value={form.portalPassword}
-                          placeholder="Set a new password…"
+                          placeholder="Set a new password..."
                           autoComplete="new-password"
                           onChange={(e) => setF("portalPassword", e.target.value)}
                         />
@@ -1692,7 +1692,7 @@ export default function PlatformAdmin() {
                 type="text"
                 value={composeMail.subject}
                 onChange={(e) => setComposeMail({ ...composeMail, subject: e.target.value })}
-                placeholder="Email subject…"
+                placeholder="Email subject..."
               />
             </div>
             <div className="modal-field">
@@ -1700,7 +1700,7 @@ export default function PlatformAdmin() {
               <textarea
                 value={composeMail.body}
                 onChange={(e) => setComposeMail({ ...composeMail, body: e.target.value })}
-                placeholder="Write your message here…"
+                placeholder="Write your message here..."
               />
             </div>
             <div className="modal-actions">
@@ -1710,7 +1710,7 @@ export default function PlatformAdmin() {
                 onClick={sendAdminMail}
                 disabled={sendingMail || !composeMail.to.trim() || !composeMail.subject.trim() || !composeMail.body.trim()}
               >
-                {sendingMail ? "Sending…" : "Send Email"}
+                {sendingMail ? "Sending..." : "Send Email"}
               </button>
             </div>
           </div>

@@ -288,7 +288,7 @@ export default function LeadsClient() {
               ref={searchRef}
               className="vc-input"
               style={{ paddingLeft: 27 }}
-              placeholder="Search name, company, email, phone…"
+              placeholder="Search name, company, email, phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
