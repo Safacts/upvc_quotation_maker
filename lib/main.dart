@@ -44,7 +44,12 @@ void main() async {
   } catch (_) {}
 
   try {
-    initialConfig = await ClientLoader.loadConfig(clientId: sessionClientId);
+    // An explicit tenant in the URL is authoritative. Reusing a stale
+    // session tenant here caused KPR to send Venkateshwara branding and links
+    // when the same browser had previously logged into Venkateshwara.
+    initialConfig = await ClientLoader.loadConfig(
+      clientId: ClientLoader.getUrlClientId() ?? sessionClientId,
+    );
   } catch (e) {
     debugPrint('Config load error: $e');
   }

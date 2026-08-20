@@ -14,21 +14,37 @@ class ClientLoader {
     return t.replaceAll(RegExp(r'^-+|-+$'), '');
   }
 
+  /// Returns the tenant explicitly requested by the browser URL, if any.
+  ///
+  /// This must remain separate from [getClientId], which has a safe default
+  /// for generic `/app` launches. A stale session tenant must never override
+  /// an explicit `/upvc/<client>` URL.
+  static String? getUrlClientId() {
+    if (!kIsWeb) return null;
+    try {
+      final uri = Uri.base;
+      final clientParam = uri.queryParameters['client'];
+      if (clientParam != null && clientParam.trim().isNotEmpty) {
+        return clientParam.trim();
+      }
+      final path = uri.pathSegments;
+      if (path.isNotEmpty) {
+        final last = path.last;
+        const reserved = ['admin', 'client', 'api', 'app', 'upvc', 'jVenkateshwaraUPVC', 'flutter', 'icons', 'version', 'assets'];
+        if (last.isNotEmpty && !reserved.contains(last) && !last.startsWith('flutter') && !last.startsWith('icons')) {
+          return last;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static String? getClientId() {
     // On web, URL params/path take priority over compile-time CLIENT_ID
     if (kIsWeb) {
       try {
-        final uri = Uri.base;
-        final clientParam = uri.queryParameters['client'];
-        if (clientParam != null && clientParam.isNotEmpty) return clientParam;
-        final path = uri.pathSegments;
-        if (path.isNotEmpty) {
-          final last = path.last;
-          const reserved = ['admin', 'client', 'api', 'app', 'upvc', 'jVenkateshwaraUPVC', 'flutter', 'icons', 'version', 'assets'];
-          if (last.isNotEmpty && !reserved.contains(last) && !last.startsWith('flutter') && !last.startsWith('icons')) {
-            return last;
-          }
-        }
+        final urlClientId = getUrlClientId();
+        if (urlClientId != null) return urlClientId;
       } catch (_) {}
     }
 
