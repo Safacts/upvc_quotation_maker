@@ -77,7 +77,7 @@ export async function GET(
   <div id="loading">
     <img src="${esc(splashIcon)}" alt="${esc(splashName)}">
     <h2>${esc(splashName)}</h2>
-    <p>Loadingâ€¦</p>
+    <p>Loading...</p>
     <div class="spinner"></div>
   </div>
   <script src="flutter_bootstrap.js" async></script>
