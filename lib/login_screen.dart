@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
           final config = await ClientLoader.loadConfig(clientId: clientId);
-          if (config is _SsoPendingClientConfig) {
+          if (config is SsoPendingClientConfig) {
             await _handleSsoPending(config);
             return;
           }
@@ -196,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSsoPending(ClientConfig config) async {
-    if (config is! _SsoPendingClientConfig) return;
+    if (config is! SsoPendingClientConfig) return;
     
     final shouldSwitch = await _showTenantSwitchDialog(
       context: context,
@@ -293,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
           final config = await ClientLoader.loadConfig(clientId: clientId);
-          if (config is _SsoPendingClientConfig) {
+          if (config is SsoPendingClientConfig) {
             await _handleSsoPending(config);
             return;
           }

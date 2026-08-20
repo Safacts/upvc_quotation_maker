@@ -139,7 +139,7 @@ class ClientConfig {
   factory ClientConfig.ssoPending({
     required String clientId,
     required String currentClientId,
-  }) = _SsoPendingClientConfig;
+  }) = SsoPendingClientConfig;
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
 
@@ -262,8 +262,8 @@ class ClientConfig {
 }
 
 // Private subclass for SSO-pending state (tenant switch required)
-class _SsoPendingClientConfig extends ClientConfig {
-  const _SsoPendingClientConfig({
+class SsoPendingClientConfig extends ClientConfig {
+  const SsoPendingClientConfig({
     required String clientId,
     required String currentClientId,
   }) : super(

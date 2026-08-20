@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'client_config.dart';
 import '../supabase_config.dart';
 import '../utils/jwt_verifier.dart';
@@ -66,7 +67,7 @@ class ClientLoader {
             final currentClientId = await _getCurrentSessionClientId();
             if (currentClientId != null && currentClientId != validatedClientId) {
               // Signal to caller that tenant switch is needed
-              return ClientConfig.ssoPending(
+            return ClientConfig.ssoPending(
                 clientId: validatedClientId, 
                 currentClientId: currentClientId
               );
@@ -139,7 +140,7 @@ class ClientLoader {
     if (!kIsWeb) return;
     try {
       // Remove fragment without triggering navigation
-      html.window.history.replaceState(null, '', html.window.location.pathname + html.window.location.search);
+      html.window.history.replaceState(null, '', '${html.window.location.pathname}${html.window.location.search ?? ''}');
     } catch (_) {}
   }
 
