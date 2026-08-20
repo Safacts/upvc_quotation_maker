@@ -203,6 +203,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   Future<void> _shareToTelegram() async {
     final link = await _quoteLink();
     final text = await _shareMessage();
+    if (link == null) debugPrint('PdfConfirmationScreen: no quote link — t.me will share review URL only');
 
     final url = Uri.parse(
       link == null

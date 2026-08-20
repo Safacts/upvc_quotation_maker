@@ -288,7 +288,10 @@ class _QuotationScreenState extends State<QuotationScreen> {
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       // Keep one blank draft as a workspace, but do not create another blank
-      // quotation every time the user opens a new editor.
+      // quotation every time the user opens a new editor. If a blank draft
+      // exists, REUSE it (update its customer fields) instead of silently
+      // discarding the save — the old bare `return` threw away every
+      // customer-name/reference/address change made before adding a line item.
       if (data.id == null && !_hasLineItems()) {
         final existingIds = ((await SupabaseConfig.client
                     .from('quotations')
@@ -309,8 +312,13 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       .eq('client_id', clientId)) as List)
               .map((row) => row['quotation_id'].toString())
               .toSet();
-          if (existingIds.any((id) => !measuredIds.contains(id) && !unmeasuredIds.contains(id))) {
-            return;
+          final blankId = existingIds.firstWhere(
+            (id) => !measuredIds.contains(id) && !unmeasuredIds.contains(id),
+            orElse: () => '',
+          );
+          if (blankId.isNotEmpty) {
+            // Adopt the blank draft so customer fields are persisted there.
+            data.id = blankId;
           }
         }
       }
@@ -389,6 +397,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
       final quoteLink = await _quoteLink(data);
+      if (quoteLink == null) debugPrint('QuotationScreen: _sendEmail no quote link for ${data.quotationNo} — email will have only review CTA');
 
       // Only render the "Review & Confirm" CTA when we hold a working token.
       // A tokenless /quote link 403s, so an always-on button was actively
