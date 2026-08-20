@@ -30,15 +30,37 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
   }
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://app.vitharn.com",
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-} as const;
+const PROD_ORIGIN = "https://app.vitharn.com";
+const DEV_ORIGINS = new Set([
+  "http://localhost:3000",
+  "http://localhost:3100",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
+
+// Reflect the caller's Origin so dev (localhost), preview deploys, and
+// production all work. A hardcoded prod origin blocks every other origin and
+// the "fetch failed" cross-origin error appears in the Flutter web client.
+let _allowOrigin = PROD_ORIGIN;
+function resolveCors(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  _allowOrigin =
+    origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)
+      ? origin
+      : PROD_ORIGIN;
+}
 
 function json(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      "Access-Control-Allow-Origin": _allowOrigin,
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin",
+    },
+  });
 }
 
 async function findAdmin(email: string): Promise<any | null> {
@@ -145,6 +167,7 @@ async function findInactiveClientByEmail(email: string): Promise<any | null> {
 }
 
 export async function POST(request: NextRequest) {
+  resolveCors(request);
   try {
     let raw = "";
     try {
@@ -331,6 +354,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  resolveCors(request);
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": _allowOrigin,
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Methods": "POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin",
+    },
+  });
 }
