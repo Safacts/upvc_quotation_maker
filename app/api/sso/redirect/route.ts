@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     
-    if (session.role !== "customer") {
+    // Allow both admin and customer roles - admins can access client apps
+    if (session.role !== "customer" && session.role !== "admin") {
       return NextResponse.redirect(new URL("/login?error=not_customer", request.url));
     }
     
