@@ -5,10 +5,12 @@ import { supaGet } from "@/lib/supabase";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
+import VenkateshwaraMarketPage from "./VenkateshwaraMarketPage";
 
 export const dynamic = "force-dynamic";
 
 const KPR_SLUG = "kprupvc";
+const VENKATESHWARA_SLUG = "venkateshwara";
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
 
 function readKprHtml(): string | null {
@@ -84,6 +86,10 @@ export default async function MarketPageRoute({
       );
   }
 
+  if (client.id.toLowerCase() === VENKATESHWARA_SLUG || client.id === "venkateshwara") {
+    return <VenkateshwaraMarketPage client={client} slug={slug} />;
+  }
+
   return <MarketPage client={client} slug={slug} />;
 }
 
@@ -96,6 +102,34 @@ export async function generateMetadata({
   const rows = await getCachedClients();
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
+
+  if (client.id.toLowerCase() === VENKATESHWARA_SLUG || client.id === "venkateshwara") {
+    const cfg = parseClientConfig(client.config || {}, client.id);
+    const title = "Sri Venkateshwara UPVC Windows & Doors | Heavy-Duty Glazing Hyderabad";
+    const description = "Premium Soundproof UPVC Windows, Sliding Doors, Villa Security Windows with Grills & DGU Acoustic Glazing in Hyderabad. 10-Year Profile Warranty. Factory-direct pricing by J. Venkatesh.";
+    return {
+      title,
+      description,
+      keywords: "Venkateshwara UPVC, UPVC Windows Hyderabad, UPVC Doors Hyderabad, Soundproof Windows Hyderabad, Villa Windows with Grill, Sliding Balcony Doors, J Venkatesh UPVC",
+      icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
+      openGraph: {
+        title,
+        description,
+        url: `https://app.vitharn.com/${slug}`,
+        siteName: "Sri Venkateshwara UPVC Windows & Doors",
+        type: "website",
+        locale: "en_IN",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+      alternates: {
+        canonical: `https://app.vitharn.com/${slug}`,
+      },
+    };
+  }
   if (client.id === KPR_SLUG) {
     const html = readKprHtml();
     const cfg = parseClientConfig(client.config || {}, client.id);
