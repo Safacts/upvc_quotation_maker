@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'app_state.dart';
 import 'models.dart';
 import 'quotation_screen.dart';
@@ -143,6 +145,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _logout() async {
     umamiTrack('logout');
+
+    // Clear server-side session cookie first
+    try {
+      final String logoutUrl = kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
+      await http.post(
+        Uri.parse(logoutUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mode': 'logout'}),
+      );
+    } catch (e) {
+      debugPrint('Logout API error: $e');
+    }
+
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
@@ -161,7 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
