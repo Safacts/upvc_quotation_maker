@@ -27,7 +27,8 @@ const nextConfig: NextConfig = {
     if (isDev) {
       const flutter = "http://127.0.0.1:8080";
       return [
-        { source: "/upvc/:path*", destination: `${flutter}/:path*` },
+        { source: "/upvc/:slug/", destination: `${flutter}/` },
+        { source: "/upvc/:slug/:path*", destination: `${flutter}/:path*` },
         { source: "/app/:path*", destination: `${flutter}/:path*` },
         { source: "/flutter_bootstrap.js", destination: `${flutter}/flutter_bootstrap.js` },
         { source: "/main.dart.js", destination: `${flutter}/main.dart.js` },
