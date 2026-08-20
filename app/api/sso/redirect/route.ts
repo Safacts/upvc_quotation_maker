@@ -93,11 +93,11 @@ export async function GET(request: NextRequest) {
     const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const finalSlug = slugify(appName || targetClientId);
     
-    // Redirect with FRAGMENT (not query param)
+    // Redirect with query params and fragment
     // Use request origin so local dev (localhost:3000 / :3100) redirects correctly
     // Can be overridden via APP_ORIGIN env var for proxy deployments
     const appOrigin = process.env.APP_ORIGIN || request.nextUrl.origin;
-    const flutterUrl = `${appOrigin}/upvc/${finalSlug}#sso_token=${encodeURIComponent(ssoToken)}`;
+    const flutterUrl = `${appOrigin}/upvc/${finalSlug}?client=${encodeURIComponent(targetClientId)}&auto_login=true#sso_token=${encodeURIComponent(ssoToken)}`;
     
     return NextResponse.redirect(flutterUrl);
   } catch (e: any) {

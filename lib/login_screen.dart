@@ -29,9 +29,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isCheckingSession = kIsWeb;
   String _errorMessage = '';
   StreamSubscription<GoogleSignInResult>? _googleSub;
   bool _googleReady = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appState = Provider.of<AppState>(context);
+    if (_emailController.text.isEmpty && appState.companyEmail.isNotEmpty) {
+      _emailController.text = appState.companyEmail;
+    }
+  }
 
   Future<String?> _readSession() async {
     if (kIsWeb) {
@@ -168,30 +178,55 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final uri = Uri.base;
         openQuote = uri.queryParameters['open_quote'];
-        if (uri.queryParameters['auto_login'] == 'true') {
-          // Verify with Next.js backend using the secure HttpOnly cookie
-          final res = await http.post(
-            Uri.parse('/api/portal_auth'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'mode': 'session'}),
-          );
-          if (res.statusCode == 200) {
-            final data = _decodeJson(res);
-            if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
-              await _writeSession('true');
-              if (!mounted) return;
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
-              return;
+        final targetClientId = uri.queryParameters['client'] ?? ClientLoader.getUrlClientId();
+
+        // Always check session from HttpOnly cookie on web
+        final res = await http.post(
+          Uri.parse(_portalAuthUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'mode': 'session'}),
+        );
+        if (res.statusCode == 200) {
+          final data = _decodeJson(res);
+          if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
+            await _writeSession('true');
+            final effectiveClient = targetClientId ?? (data['client_id'] as String?)?.trim();
+            if (effectiveClient != null && effectiveClient.isNotEmpty) {
+              await _applyTenant(effectiveClient);
             }
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)),
+            );
+            return;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Web auto session check error: $e');
+      }
     }
 
     String? session = await _readSession();
     if (session == 'true') {
+      if (kIsWeb) {
+        final targetClientId = Uri.base.queryParameters['client'] ?? ClientLoader.getUrlClientId();
+        if (targetClientId != null && targetClientId.isNotEmpty) {
+          await _applyTenant(targetClientId);
+        }
+      }
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)),
+      );
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isCheckingSession = false;
+      });
     }
   }
 
@@ -275,6 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; _errorMessage = ''; });
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final appState = Provider.of<AppState>(context, listen: false);
 
     try {
       final res = await http.post(
@@ -291,13 +327,14 @@ class _LoginScreenState extends State<LoginScreen> {
         umamiTrack('login_success');
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
-        if (clientId != null && clientId.isNotEmpty) {
-          final config = await ClientLoader.loadConfig(clientId: clientId);
+        final effectiveClient = clientId ?? (data['role'] == 'admin' ? appState.clientId : null);
+        if (effectiveClient != null && effectiveClient.isNotEmpty) {
+          final config = await ClientLoader.loadConfig(clientId: effectiveClient);
           if (config is SsoPendingClientConfig) {
             await _handleSsoPending(config);
             return;
           }
-          await _applyTenant(clientId);
+          await _applyTenant(effectiveClient);
         }
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
@@ -305,7 +342,11 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
       } else {
         umamiTrack('login_failed');
-        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });
+        String errMsg = (data['error'] as String?) ?? 'Invalid email or password.';
+        if (appState.companyEmail.isNotEmpty && email.toLowerCase() != appState.companyEmail.toLowerCase() && !email.contains('safacts') && !email.contains('vitarn')) {
+          errMsg = 'This workspace is configured for ${appState.companyName}. Please sign in with ${appState.companyEmail} or your admin credentials.';
+        }
+        setState(() { _isLoading = false; _errorMessage = errMsg; });
       }
     } catch (e) {
       setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
@@ -434,6 +475,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appState = Provider.of<AppState>(context);
+    
+    if (_isCheckingSession && kIsWeb) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     
     return Scaffold(
       body: Center(

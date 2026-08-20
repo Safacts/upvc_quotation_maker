@@ -61,15 +61,27 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch feature flags for this client and tier
-    const flags = await supaGet("feature_flags", {
-      client_id: "eq." + clientId,
-      tier: "eq." + tier,
-      select: "feature_key,enabled,description",
-      order: "feature_key.asc",
-    });
-
-    const flagRows = Array.isArray(flags) ? flags : [];
+    // Fetch feature flags for this client and tier.
+    // If the table doesn't exist yet (migration 014 not applied), degrade
+    // gracefully: return an empty flag set instead of 500. The Flutter app
+    // treats missing flags as "off", so this is safe.
+    let flagRows: any[] = [];
+    try {
+      const flags = await supaGet("feature_flags", {
+        client_id: "eq." + clientId,
+        tier: "eq." + tier,
+        select: "feature_key,enabled,description",
+        order: "feature_key.asc",
+      });
+      flagRows = Array.isArray(flags) ? flags : [];
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+        console.warn("[feature-flags] table missing (migration 014 not applied) — returning empty flags");
+      } else {
+        throw err;
+      }
+    }
 
     // Convert to a simple key-value map
     const flagsMap: Record<string, boolean> = {};
@@ -94,6 +106,8 @@ export async function GET(request: NextRequest) {
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
+    console.error("[feature-flags] GET error:", e?.message ?? e);
+    console.error("[feature-flags] full error:", e);
     return NextResponse.json(
       { error: String(e?.message ?? e) },
       { status: 500, headers: CORS_HEADERS },

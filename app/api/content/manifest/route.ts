@@ -73,14 +73,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch all manifest rows for this client
-    const manifest = await supaGet("content_manifest", {
-      client_id: "eq." + clientId,
-      select: "content_type,version,last_modified,checksum,item_count",
-      order: "content_type.asc",
-    });
-
-    const items = Array.isArray(manifest) ? manifest : [];
+    // Fetch all manifest rows for this client.
+    // If the table doesn't exist yet (migration 014 not applied), degrade
+    // gracefully: return an empty manifest instead of 500. The Flutter app
+    // treats an empty manifest as "nothing to sync".
+    let items: any[] = [];
+    try {
+      const manifest = await supaGet("content_manifest", {
+        client_id: "eq." + clientId,
+        select: "content_type,version,last_modified,checksum,item_count",
+        order: "content_type.asc",
+      });
+      items = Array.isArray(manifest) ? manifest : [];
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+        console.warn("[manifest] table missing (migration 014 not applied) — returning empty manifest");
+      } else {
+        throw err;
+      }
+    }
 
     return NextResponse.json(
       {
@@ -91,6 +103,7 @@ export async function GET(request: NextRequest) {
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
+    console.error("[manifest] Unhandled error:", e);
     return NextResponse.json(
       { error: String(e?.message ?? e) },
       { status: 500, headers: CORS_HEADERS },
