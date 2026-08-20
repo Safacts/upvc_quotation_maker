@@ -496,8 +496,6 @@ export default function QuotationEditor({
       }
 
       setDirty(false);
-      toast("Saved", "ok");
-
       if (isNew && data.id) {
         setSavedId(data.id);
         // `replace`, not `push`: the user should not be able to press Back into

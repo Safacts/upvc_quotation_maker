@@ -281,6 +281,41 @@ export async function POST(request: NextRequest) {
     }
     const data = parsed.data;
 
+    // A blank draft is useful as the editor's first workspace, but repeated
+    // autosaves/new-editor visits must not create an endless list of blanks.
+    // Check child tables rather than trusting totals: a quotation with no
+    // measured or unmeasured rows is the only kind considered empty.
+    if (data.measured_items.length === 0 && data.unmeasured_items.length === 0) {
+      const quotations = await supaGet("quotations", {
+        client_id: "eq." + clientId,
+        select: "id",
+      });
+      if (Array.isArray(quotations) && quotations.length > 0) {
+        const measured = await supaGet("measured_items", {
+          client_id: "eq." + clientId,
+          select: "quotation_id",
+        });
+        const unmeasured = await supaGet("unmeasured_items", {
+          client_id: "eq." + clientId,
+          select: "quotation_id",
+        });
+        const itemQuoteIds = new Set(
+          [...(Array.isArray(measured) ? measured : []), ...(Array.isArray(unmeasured) ? unmeasured : [])]
+            .map((row: any) => String(row.quotation_id)),
+        );
+        const existingBlank = quotations.find((row: any) => !itemQuoteIds.has(String(row.id)));
+        if (existingBlank) {
+          return consoleJson(
+            {
+              error: "Only one empty quotation is allowed",
+              existing_id: existingBlank.id,
+            },
+            409,
+          );
+        }
+      }
+    }
+
     // A supplied `customer_id` names a row in another table. Verify it belongs
     // to THIS tenant before storing the link — otherwise a legitimately
     // logged-in user can graft their quotation onto a stranger's customer

@@ -37,6 +37,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   late QuotationData data;
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _saveQueued = false;
   bool _isExporting = false;
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
@@ -279,9 +280,40 @@ class _QuotationScreenState extends State<QuotationScreen> {
   }
 
   Future<void> _autoSaveToDatabase() async {
+    if (_isSaving) {
+      _saveQueued = true;
+      return;
+    }
     setState(() => _isSaving = true);
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      // Keep one blank draft as a workspace, but do not create another blank
+      // quotation every time the user opens a new editor.
+      if (data.id == null && !_hasLineItems()) {
+        final existingIds = ((await SupabaseConfig.client
+                    .from('quotations')
+                    .select('id')
+                    .eq('client_id', clientId)) as List)
+            .map((row) => row['id'].toString())
+            .toSet();
+        if (existingIds.isNotEmpty) {
+          final measuredIds = ((await SupabaseConfig.client
+                      .from('measured_items')
+                      .select('quotation_id')
+                      .eq('client_id', clientId)) as List)
+              .map((row) => row['quotation_id'].toString())
+              .toSet();
+          final unmeasuredIds = ((await SupabaseConfig.client
+                      .from('unmeasured_items')
+                      .select('quotation_id')
+                      .eq('client_id', clientId)) as List)
+              .map((row) => row['quotation_id'].toString())
+              .toSet();
+          if (existingIds.any((id) => !measuredIds.contains(id) && !unmeasuredIds.contains(id))) {
+            return;
+          }
+        }
+      }
       final quotationMap = data.toMap(clientId: clientId);
       if (data.id == null) {
         final res = await SupabaseConfig.client.from('quotations').insert(quotationMap).select().single();
@@ -312,14 +344,6 @@ class _QuotationScreenState extends State<QuotationScreen> {
       }
       if (mounted) {
         setState(() { _lastSaved = DateTime.now(); _lastSaveError = null; });
-        toastification.show(
-          context: context,
-          title: Text('Saved ${data.quotationNo}'),
-          type: ToastificationType.success,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 2),
-          alignment: Alignment.bottomCenter,
-        );
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
@@ -337,7 +361,24 @@ class _QuotationScreenState extends State<QuotationScreen> {
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
+      if (_saveQueued && mounted) {
+        _saveQueued = false;
+        unawaited(_autoSaveToDatabase());
+      }
     }
+  }
+
+  bool _hasLineItems() {
+    final measured = data.measuredItems.any((item) =>
+        item.code.trim().isNotEmpty ||
+        item.description.trim().isNotEmpty ||
+        item.glass.trim().isNotEmpty ||
+        item.width > 0 ||
+        item.height > 0 ||
+        item.rate > 0);
+    final unmeasured = data.unmeasuredItems.any((item) =>
+        item.description.trim().isNotEmpty || item.rate > 0);
+    return measured || unmeasured;
   }
 
   Future<void> _sendEmail(String targetEmail) async {
@@ -634,25 +675,20 @@ $reviewCta
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          _lastSaveError != null ? Icons.error : (_isSaving ? Icons.sync : Icons.cloud_done),
-                          size: 14,
-                          color: _lastSaveError != null ? Colors.red : Colors.green,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            _lastSaveError != null
-                                ? 'Save ERROR: $_lastSaveError'
-                                : (_isSaving ? 'Saving...' : (_lastSaved != null ? 'Saved to ${Provider.of<AppState>(context, listen: false).clientConfig.clientId} at ${DateFormat('HH:mm:ss').format(_lastSaved!)}' : 'Not saved yet')),
-                            style: TextStyle(fontSize: 11, color: _lastSaveError != null ? Colors.red : Colors.green.shade700),
-                            overflow: TextOverflow.ellipsis,
+                    if (_lastSaveError != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.error, size: 14, color: Colors.red),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Save ERROR: $_lastSaveError',
+                              style: const TextStyle(fontSize: 11, color: Colors.red),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),
