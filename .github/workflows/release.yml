@@ -1,8 +1,8 @@
 name: Build and Release
 
 on:
-  push:
-    branches: [ main ]
+  # APK releases are manual only. Keeping this workflow off branch pushes
+  # prevents the broken matrix/input expression from failing web CI runs.
   workflow_dispatch:
     inputs:
       clients:
