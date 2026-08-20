@@ -6,14 +6,30 @@ const secretKey = process.env.JWT_SECRET;
 if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
 const encodedKey = new TextEncoder().encode(secretKey);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
+
+  // Base response (also used to attach PWA service-worker headers)
+  const response = NextResponse.next();
+
+  // Service worker cache headers
+  if (path === '/pwa-sw.js') {
+    response.headers.set('Service-Worker-Allowed', '/');
+    response.headers.set(
+      'Cache-Control',
+      'no-cache, no-store, must-revalidate',
+    );
+  }
+
   // Only protect dynamic slug routes and admin routes
-  const isProtectedPath = path.includes('/home') || path.includes('/business-admin') || path.startsWith('/admin') || path.startsWith('/dashboard');
+  const isProtectedPath =
+    path.includes('/home') ||
+    path.includes('/business-admin') ||
+    path.startsWith('/admin') ||
+    path.startsWith('/dashboard');
 
   if (!isProtectedPath) {
-    return NextResponse.next();
+    return response;
   }
 
   const sessionCookie = request.cookies.get('session')?.value;
@@ -24,7 +40,7 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { payload } = await jwtVerify(sessionCookie, encodedKey, {
-      algorithms: ["HS256"],
+      algorithms: ['HS256'],
     });
 
     // If accessing admin area, must be admin
@@ -32,18 +48,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Optional: if accessing /[slug]/home, verify they own this slug
-    // We can extract slug from path: /[slug]/home
-    const match = path.match(/^\/([^\/]+)\/(home|business-admin)/);
-    if (match && payload.role === 'customer') {
-      const slug = match[1];
-      // Note: Full tenant verification by slug requires hitting the DB, 
-      // which middleware can't natively do easily if not using Edge DB clients. 
-      // We will let the page.tsx handle the strict tenant validation (since it hits the DB anyway)
-      // For now, just ensure they are logged in.
-    }
+    // Note: Full tenant verification by slug requires hitting the DB,
+    // which the proxy can't natively do easily. The page.tsx handles the
+    // strict tenant validation since it hits the DB anyway. For now, just
+    // ensure they are logged in.
 
-    return NextResponse.next();
+    return response;
   } catch (error) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
