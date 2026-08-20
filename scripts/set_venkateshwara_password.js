@@ -6,6 +6,7 @@
  */
 
 const { Pool } = require('pg');
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 
 const NEW_PASSWORD = 'Jvenkatesh@1234';
@@ -18,7 +19,7 @@ const PROD_DB = {
   port: 5432,
   database: 'postgres',
   user: 'postgres.gumpmnbjdtzajhysnnaz',
-  password: 'weRCL38blulCQHRd',  // From .env - need to verify this is correct for new project
+  password: process.env.SUPABASE_DB_PASSWORD,  // from .env, never hardcoded
   ssl: { rejectUnauthorized: false }
 };
 
@@ -27,7 +28,7 @@ const STAGING_DB = {
   port: 5432,
   database: 'postgres',
   user: 'postgres.effxrwrbsjduvhmorvrq',
-  password: 'weRCL38blulCQHRd',  // Same password? Need to verify
+  password: process.env.SUPABASE_DB_PASSWORD,  // from .env, never hardcoded
   ssl: { rejectUnauthorized: false }
 };
 
