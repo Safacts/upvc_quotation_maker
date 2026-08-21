@@ -1140,6 +1140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   _fetchQuotations();
                                 },
                                 onLongPress: () => _showStatusSheet(q),
+                                onSecondaryTap: () => _showStatusSheet(q),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Row(
