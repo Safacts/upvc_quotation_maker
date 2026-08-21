@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
+import VaishnaviMarketPage from "./VaishnaviMarketPage";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,10 @@ export default async function MarketPageRoute({
       );
   }
 
+  if (client.id === "VAISHNAVI UPVC WINDOWS AND DOORS" || slug.toLowerCase().includes("vaishnavi")) {
+    return <VaishnaviMarketPage client={client} slug={slug} />;
+  }
+
   return <MarketPage client={client} slug={slug} />;
 }
 
@@ -111,6 +116,28 @@ export async function generateMetadata({
   const rows = await getCachedClients();
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
+
+  if (client.id === "VAISHNAVI UPVC WINDOWS AND DOORS" || slug.toLowerCase().includes("vaishnavi")) {
+    const title = "Vaishnavi UPVC Windows & Doors | Hyderabad | For Better View, Better Life";
+    const description = "Premium soundproof UPVC windows, 3-track sliding balcony doors & villa security windows with SS304 mesh in Hyderabad. 10-year warranty. Free measurement by Kiran Chary.";
+    return {
+      title,
+      description,
+      keywords: "Vaishnavi UPVC, UPVC Windows Hyderabad, UPVC Doors LB Nagar, Kharmanghat UPVC, Jillelaguda UPVC, Kiran Chary UPVC",
+      icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
+      openGraph: {
+        title,
+        description,
+        url: `https://app.vitharn.com/${slug}`,
+        siteName: "Vaishnavi UPVC Windows & Doors",
+        type: "website",
+        locale: "en_IN",
+        images: [{ url: "/vaishnavi/images/hero.jpg", width: 1200, height: 675, alt: "Vaishnavi UPVC Windows & Doors" }],
+      },
+      twitter: { card: "summary_large_image", title, description },
+      alternates: { canonical: `https://app.vitharn.com/${slug}` },
+    };
+  }
 
   if (client.id === VENKATESHWARA_SLUG) {
     const html = readStaticHtml(VENKATESHWARA_INDEX_PATH);
