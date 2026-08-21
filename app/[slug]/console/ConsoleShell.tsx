@@ -193,12 +193,8 @@ const NAV = [
   { key: "products", label: "Products", icon: Package, hint: "4" },
   { key: "production", label: "Production", icon: Factory, hint: "5" },
   { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
-<<<<<<< Updated upstream
   { key: "factory-reports", label: "Factory Reports", icon: ClipboardList, hint: "0" },
-  { key: "leads", label: "Leads", icon: UserPlus, hint: "7" },
-=======
   { key: "leads", label: "CRM (Leads)", icon: PhoneCall, hint: "7" },
->>>>>>> Stashed changes
   { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
   { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
 ] as const;
