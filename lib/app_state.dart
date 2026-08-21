@@ -57,6 +57,9 @@ class AppState extends ChangeNotifier {
   ElementDensity _elementDensity = ElementDensity.comfortable;
   bool _loaded = false;
 
+  // Site Photos toggle (local per-device setting, default ON)
+  bool _enableSitePhotos = true;
+
   ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
 
   String get companyName => _companyName.isNotEmpty ? _companyName : clientConfig.companyName;
@@ -75,6 +78,15 @@ class AppState extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   double get fontScale => _fontScale;
   ElementDensity get elementDensity => _elementDensity;
+  bool get enableSitePhotos => _enableSitePhotos;
+
+  /// Helper to read the Site Photos toggle from persistent storage.
+  /// Default is `true` (ON) — mirrors [_enableSitePhotos] initial value.
+  Future<bool> isSitePhotosEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('enable_site_photos') ?? true;
+  }
+
   String get appName => clientConfig.appName;
   String get quotePrefix => clientConfig.quotePrefix;
   List<String> get adminEmails => clientConfig.adminEmails;
@@ -201,6 +213,7 @@ class AppState extends ChangeNotifier {
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
     _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
+    _enableSitePhotos = prefs.getBool('enable_site_photos') ?? true;
     // BUGFIX: Only apply loaded values if no explicit update has been made
     // since the constructor fired _loadSettings. Without this guard, a late-
     // completing _loadSettings could overwrite user changes made via
@@ -236,6 +249,14 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('fontScale', fontScale);
     await prefs.setString('elementDensity', elementDensity.name);
+    notifyListeners();
+  }
+
+  /// Persist the Site Photos toggle (local per-device, default ON).
+  Future<void> setEnableSitePhotos(bool value) async {
+    _enableSitePhotos = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enable_site_photos', value);
     notifyListeners();
   }
 
