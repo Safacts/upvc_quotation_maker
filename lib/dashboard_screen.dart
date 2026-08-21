@@ -94,7 +94,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select()
+          // Embed line items via FK relationship — WITHOUT these, every quote
+          // loaded with empty item lists and grandTotal collapsed to transport
+          // (+GST on transport only), which is exactly what the client saw.
+          .select('*, measured_items(*), unmeasured_items(*)')
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 

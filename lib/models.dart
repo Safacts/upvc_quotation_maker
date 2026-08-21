@@ -133,6 +133,21 @@ class QuotationData {
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     q.status = QuotationStatusX.fromString(map['status']);
     q.supplierCompany = map['supplier_company'] ?? '';
+    // Embedded line items (PostgREST FK embedding, e.g. dashboard
+    // `select('*, measured_items(*), unmeasured_items(*)')`). Absent keys are a
+    // no-op so every existing bare-row caller stays unaffected.
+    if (map['measured_items'] is List) {
+      q.measuredItems = (map['measured_items'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map(MeasuredItem.fromMap)
+          .toList();
+    }
+    if (map['unmeasured_items'] is List) {
+      q.unmeasuredItems = (map['unmeasured_items'] as List)
+          .whereType<Map<String, dynamic>>()
+          .map(UnmeasuredItem.fromMap)
+          .toList();
+    }
     return q;
   }
 }
