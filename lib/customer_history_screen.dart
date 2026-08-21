@@ -95,7 +95,7 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen>
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select()
+          .select('*, measured_items(*), unmeasured_items(*)')
           .eq('id', quote.id)
           .eq('client_id', clientId)
           .single();

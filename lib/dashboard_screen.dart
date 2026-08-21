@@ -104,7 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select()
+          .select('*, measured_items(*), unmeasured_items(*)')
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 
