@@ -28,7 +28,7 @@ async function ownerFor(id: string) {
 }
 
 async function storageRequest(path: string, init: RequestInit) {
-  const base = process.env.SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
+  const base = process.env.SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   const res = await fetch(`${base}/storage/v1/object/${BUCKET}/${path}`, {
     ...init,
@@ -43,7 +43,7 @@ async function storageRequest(path: string, init: RequestInit) {
 }
 
 function publicUrl(path: string) {
-  const base = process.env.SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
+  const base = process.env.SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
   return `${base}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
