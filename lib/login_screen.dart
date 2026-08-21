@@ -13,10 +13,10 @@ import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
 import 'client_logo.dart';
 import 'google_signin.dart';
-import 'google_signin.dart';
 import 'supabase_config.dart';
 import 'config/client_loader.dart';
 import 'umami_tracker.dart';
+import 'utils/http_client.dart';
 
 // Helper: Use absolute URL for mobile, relative for web
 String get _apiBase => kIsWeb ? '' : 'https://app.vitharn.com';
@@ -185,23 +185,25 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final uri = Uri.base;
         openQuote = uri.queryParameters['open_quote'];
-        if (uri.queryParameters['auto_login'] == 'true') {
-          // Verify with Next.js backend using the secure HttpOnly cookie
-          final res = await http.post(
-            Uri.parse('$_apiBase/api/portal_auth'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'mode': 'session'}),
-          );
-          if (res.statusCode == 200) {
-            final data = _decodeJson(res);
-            if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
-              await _writeSession('true');
-              // CRITICAL FIX: Store password_hash for save_client authentication
-              await _writeSessionPasswordHash(data['password_hash'] as String?);
-              if (!mounted) return;
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
-              return;
+        // Verify with Next.js backend using the secure HttpOnly cookie
+        final res = await postWithCredentials(
+          Uri.parse('$_apiBase/api/portal_auth'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'mode': 'session'}),
+        );
+        if (res.statusCode == 200) {
+          final data = _decodeJson(res);
+          if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
+            await _writeSession('true');
+            // CRITICAL FIX: Store password_hash for save_client authentication
+            await _writeSessionPasswordHash(data['password_hash'] as String?);
+            final clientId = (data['client_id'] as String?)?.trim();
+            if (clientId != null && clientId.isNotEmpty) {
+              await _applyTenant(clientId);
             }
+            if (!mounted) return;
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
+            return;
           }
         }
       } catch (_) {}
@@ -266,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // SERVER-SIDE AUTH (web always; native fallback when local hash empty).
     try {
-      final res = await http.post(
+      final res = await postWithCredentials(
         Uri.parse('$_apiBase/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'mode': 'login', 'email': email.trim(), 'password': password}),

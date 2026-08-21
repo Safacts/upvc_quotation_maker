@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
 import 'services/feature_flag_service.dart';
 import 'services/white_label_service.dart';
 import 'favicon_service.dart';
+import 'utils/http_client.dart';
 
 /// Element density options for UI customization.
 enum ElementDensity { compact, comfortable, spacious }
@@ -394,11 +394,14 @@ class AppState extends ChangeNotifier {
         },
       };
       
-      final res = await http.post(
+      final res = await postWithCredentials(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
+      if (res.statusCode != 200) {
+        debugPrint('Settings sync failed with status ${res.statusCode}: ${res.body}');
+      }
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('Settings sync to server failed: $e');

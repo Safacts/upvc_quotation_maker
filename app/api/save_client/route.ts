@@ -63,30 +63,47 @@ export async function POST(request: NextRequest) {
         return json({ error: "hash mismatch", hint: "admin auth: hash does not match stored value" }, 403);
       }
     } else {
-      // BUG-FUNC-001: this selected only "id,config", then compared
-      // `clientMatch.password_hash` below — a column that was never fetched, so
-      // it was ALWAYS undefined and the compare ALWAYS failed. Every non-admin
-      // save died with "hash mismatch" (403). Fetch the column we authenticate on.
+      // Fetch clients with id, config, and password_hash
       const clients = await supaGet("clients", {
         select: "id,config,password_hash",
         limit: 1000,
       });
       let clientMatch: any = null;
       if (Array.isArray(clients)) {
-        for (const c of clients) {
-          const cfg = c.config || {};
+        // 1. Try exact match on cid first
+        const byId = clients.find((c) => c.id === cid);
+        if (byId) {
+          const cfg = byId.config || {};
           const adminEmails = cfg.adminEmails || [];
           if (
+            !email ||
             cfg.companyEmail === email ||
             (Array.isArray(adminEmails) && adminEmails.includes(email))
           ) {
-            clientMatch = c;
-            break;
+            clientMatch = byId;
           }
+        }
+        // 2. If not matched, scan by email
+        if (!clientMatch) {
+          for (const c of clients) {
+            const cfg = c.config || {};
+            const adminEmails = cfg.adminEmails || [];
+            if (
+              cfg.companyEmail === email ||
+              (Array.isArray(adminEmails) && adminEmails.includes(email))
+            ) {
+              clientMatch = c;
+              break;
+            }
+          }
+        }
+        // 3. Fallback: if cid matches and user has a valid session for cid
+        if (!clientMatch && byId) {
+          clientMatch = byId;
         }
       }
       
-      // STRICTURE: Ensure client authentication requires the correct portal hash
+      // STRICTURE: Ensure client authentication requires the correct portal hash or valid session
       if (!clientMatch) return json({ error: "not authorized", hint: "no client found for email " + email }, 403);
       
       // Accept either a matching password_hash OR a valid session cookie.
@@ -94,12 +111,13 @@ export async function POST(request: NextRequest) {
       // Session fallback handles Google-signed-in clients (no password) and
       // Flutter web callers that rely on the HttpOnly session cookie.
       let authedBySession = false;
-      if (phash && clientMatch.password_hash === phash) {
+      const expectedHash = clientMatch.password_hash || clientMatch.config?.portalPasswordHash;
+      if (phash && (clientMatch.password_hash === phash || expectedHash === phash)) {
         // Password hash matches — primary auth succeeded
       } else {
         // Password hash missing or mismatch — try session-based auth
         const session = await getSession();
-        if (session && session.role === "customer" && session.client_id === clientMatch.id) {
+        if (session && (session.role === "admin" || (session.role === "customer" && (session.client_id === clientMatch.id || session.client_id === cid)))) {
           authedBySession = true;
         } else {
           const hasSession = !!session;
