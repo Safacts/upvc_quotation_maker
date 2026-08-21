@@ -315,9 +315,13 @@ class AppState extends ChangeNotifier {
     required List<String> supplierCompanies,
   }) async {
     final cfg = clientConfig;
-    final url = kIsWeb
-        ? '/api/save_client'
-        : 'https://app.vitharn.com/api/save_client';
+    // On Flutter web dev (127.0.0.1:8080) there is no /api — route via gateway.
+    final String baseOrigin = kIsWeb ? Uri.base.origin : '';
+    final url = (!kIsWeb)
+        ? 'https://app.vitharn.com/api/save_client'
+        : (baseOrigin.contains('127.0.0.1:8080') || baseOrigin.contains('localhost:8080'))
+            ? 'http://localhost:3000/api/save_client'
+            : '/api/save_client';
     try {
       // CRITICAL FIX: Include admin_password_hash for save_client authentication.
       // For web: hash comes from login/session response stored in secure storage.
@@ -357,6 +361,9 @@ class AppState extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
+      if (res.statusCode != 200) {
+        debugPrint('Settings sync failed ${res.statusCode}: ${res.body}');
+      }
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('Settings sync to server failed: $e');
