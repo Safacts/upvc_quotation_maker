@@ -3,7 +3,7 @@ name: QA adversarial gate
 on:
   pull_request:
   push:
-    branches: [main, staging]
+    branches: [deployment-v1, main]
 
 permissions:
   contents: read
