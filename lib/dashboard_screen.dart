@@ -20,6 +20,11 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
+import 'inventory_screen.dart';
+import 'production_screen.dart';
+import 'cutting_screen.dart';
+import 'leads_screen.dart';
+import 'project_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
@@ -94,7 +99,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select()
+          // Embed line items via FK relationship — WITHOUT these, every quote
+          // loaded with empty item lists and grandTotal collapsed to transport
+          // (+GST on transport only), which is exactly what the client saw.
+          .select('*, measured_items(*), unmeasured_items(*)')
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 
@@ -505,6 +513,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.pop(context);
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => QuotationScreen()));
                 _fetchQuotations();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined, color: Colors.brown),
+              title: const Text('Inventory'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InventoryScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.factory_outlined, color: Colors.orange),
+              title: const Text('Production'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProductionScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_cut, color: Colors.blue),
+              title: const Text('Cutting'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CuttingScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_outline, color: Colors.teal),
+              title: const Text('Leads / CRM'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LeadsScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_copy_outlined, color: Colors.indigo),
+              title: const Text('Projects'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProjectScreen(),
+                  ),
+                );
               },
             ),
             ListTile(

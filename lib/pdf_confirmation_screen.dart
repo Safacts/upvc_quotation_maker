@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:printing/printing.dart' deferred as printLib;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'config/client_config.dart';
@@ -205,7 +206,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay) {
+  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay, {Widget? brandIcon}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -219,7 +220,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: color),
+            brandIcon ?? Icon(icon, size: 32, color: color),
             const SizedBox(height: 8),
             Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
           ],
@@ -281,8 +282,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
                 runSpacing: 16,
                 alignment: WrapAlignment.center,
                 children: [
-                  _buildActionButton('WhatsApp', Icons.chat, Color(0xFF25D366), _shareToWhatsApp, 300),
-                  _buildActionButton('Share', Icons.chat, Colors.blue, _sharePdf, 400),
+                  _buildActionButton('WhatsApp', Icons.chat, Color(0xFF25D366), _shareToWhatsApp, 300, brandIcon: const FaIcon(FontAwesomeIcons.whatsapp, size: 32, color: Color(0xFF25D366))),
+                  _buildActionButton('Share', Icons.share, Colors.blue, _sharePdf, 400),
                   _buildActionButton('Save', Icons.download, Colors.indigo, _savePdfToDevice, 500),
                   _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 600),
                   _buildActionButton('Telegram', Icons.send, Colors.lightBlue, _shareToTelegram, 700),

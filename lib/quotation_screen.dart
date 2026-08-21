@@ -275,9 +275,72 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _initQuoteNumber() async {
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
     final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    // Empty quotations are blocked from saving while a blank draft exists
+    // (only ONE empty draft is kept). So "New Quotation" must OPEN the
+    // existing blank draft — adopting BOTH its id and its quote_no — instead
+    // of minting a fresh sequence the save-side can never persist.
+    try {
+      final blankDraft = await _findFirstBlankDraft(clientId);
+      if (blankDraft != null) {
+        final existingNo = (blankDraft['quote_no'] ?? '') as String;
+        if (!mounted) return;
+        setState(() {
+          data.id = blankDraft['id'].toString();
+          data.quotationNo = existingNo;
+        });
+        if (existingNo.isNotEmpty) {
+          return; // Fully adopted: reuse the draft's number, skip minting/autosave.
+        }
+        // Draft has no usable quote_no: keep its id (don't multiply blanks)
+        // but fall through and generate the next number for it.
+      }
+    } catch (_) {
+      // Never block quote creation because the draft search failed —
+      // fall back to the normal minting behaviour below.
+    }
     String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
     setState(() => data.quotationNo = nextNo);
     _autoSaveToDatabase();
+  }
+
+  /// Finds the client's oldest quotation that is completely blank: no
+  /// measured/unmeasured items reference it AND its customer_name,
+  /// reference and address are all null or whitespace-empty. Returns the raw
+  /// row (id, quote_no, customer_name, reference, address) or null.
+  Future<Map<String, dynamic>?> _findFirstBlankDraft(String clientId) async {
+    final rows = (((await SupabaseConfig.client
+                .from('quotations')
+                .select('id, quote_no, customer_name, reference, address')
+                .eq('client_id', clientId)
+                .order('created_at', ascending: true)
+                .limit(200))) as List)
+        .cast<Map<String, dynamic>>();
+    if (rows.isEmpty) return null;
+    final measuredIds = ((await SupabaseConfig.client
+                .from('measured_items')
+                .select('quotation_id')
+                .eq('client_id', clientId)) as List)
+        .map((row) => row['quotation_id'].toString())
+        .toSet();
+    final unmeasuredIds = ((await SupabaseConfig.client
+                .from('unmeasured_items')
+                .select('quotation_id')
+                .eq('client_id', clientId)) as List)
+        .map((row) => row['quotation_id'].toString())
+        .toSet();
+
+    bool isBlankText(Object? value) =>
+        value == null || value.toString().trim().isEmpty;
+
+    for (final row in rows) {
+      final id = row['id'].toString();
+      if (measuredIds.contains(id) || unmeasuredIds.contains(id)) continue;
+      if (!isBlankText(row['customer_name'])) continue;
+      if (!isBlankText(row['reference'])) continue;
+      if (!isBlankText(row['address'])) continue;
+      return row;
+    }
+    return null;
   }
 
   Future<void> _autoSaveToDatabase() async {

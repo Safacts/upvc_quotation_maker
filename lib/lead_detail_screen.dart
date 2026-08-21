@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -377,7 +378,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _openWhatsApp,
-                      icon: const Icon(Icons.chat, size: 18),
+                      icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
                       label: const Text('WhatsApp'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.green,
