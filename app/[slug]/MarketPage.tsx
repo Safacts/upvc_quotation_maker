@@ -1,89 +1,40 @@
 "use client";
 
-import "./market.css";
-
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import "./venkateshwara.css";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
-  ArrowRight,
-  ChevronRight,
-  CircleCheck,
-  Gauge,
-  Hammer,
-  Layers3,
-  MapPin,
-  Menu,
-  MessageCircle,
-  Phone,
-  Ruler,
-  ShieldCheck,
-  Sparkles,
-  Volume2,
+  Shield,
+  VolumeX,
   Wind,
-  X,
+  Layers,
+  Sparkles,
+  Phone,
+  MessageCircle,
+  MapPin,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  Sliders,
+  Calculator,
+  Compass,
+  Award,
+  ChevronRight,
+  Lock,
+  Building2,
+  Send,
+  Star,
+  Grid
 } from "lucide-react";
 import { parseClientConfig } from "@/lib/types";
 
-type FormValues = {
-  name: string;
-  phone: string;
-  area: string;
-  product: string;
-  message: string;
-};
-
-type Business = {
-  name: string;
-  logoUrl?: string;
-  positioning: string;
-  years: string;
-  serviceArea: string;
-  phone: string;
-  whatsapp: string;
-  address: string;
-  workingHours: string;
-  googleMapsEmbed: string;
-};
-
-type Product = { name: string; description: string };
-
-const nav = ["Home", "Why uPVC", "Products", "Projects", "Process", "Contact"];
-
-const DEFAULT_PRODUCTS: Product[] = [
-  { name: "Sliding windows", description: "Space-efficient panels for balconies, bedrooms and everyday openings." },
-  { name: "Casement windows", description: "Hinged openings designed for wide ventilation and a firm perimeter seal." },
-  { name: "French doors", description: "Double-door configurations that create a broad, elegant opening." },
-  { name: "Mesh solutions", description: "Integrated insect-screen options selected to suit the chosen opening style." },
-];
-
-const DEFAULT_BUSINESS_NAME = "uPVC";
-const DEFAULT_POSITIONING = "Precisely fitted uPVC windows, doors and facade solutions";
-const DEFAULT_SERVICE_AREA = "Hyderabad, Telangana";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
-};
-
-function firstPhoneDigits(contact: string): string {
-  const matches = (contact || "").match(/\+?[\d][\d\s()-]*/g) || [];
-  for (const m of matches) {
-    const digits = m.replace(/\D/g, "");
-    if (digits.length >= 10) return digits;
-  }
-  return "";
+interface Props {
+  client: any;
+  slug: string;
 }
 
-function toWhatsapp(phone: string): string {
-  if (!phone) return "";
-  if (phone.length === 10) return "91" + phone;
-  if (phone.startsWith("91")) return phone;
-  return "";
-}
-
-function serviceAreaFrom(address: string): string {
-  const parts = (address || "")
+function cityFromAddress(addr: string): string {
+  const parts = (addr || "")
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean);
@@ -91,376 +42,982 @@ function serviceAreaFrom(address: string): string {
     .slice(-2)
     .map((p) => p.replace(/[0-9]/g, "").replace(/\s+/g, " ").trim())
     .filter(Boolean);
-  return pick.length ? pick.join(", ") : DEFAULT_SERVICE_AREA;
+  return pick[0] || "Hyderabad";
 }
 
-function buildProducts(services: string[]): Product[] {
-  const names = services.length > 0 ? services : DEFAULT_PRODUCTS.map((p) => p.name);
-  return names.slice(0, 6).map((name) => {
-    const n = name.toLowerCase();
-    let description = "Professionally fabricated and installed to suit your site.";
-    if (n.includes("sliding")) description = "Space-efficient panels for balconies, bedrooms and everyday openings.";
-    else if (n.includes("casement")) description = "Hinged openings designed for wide ventilation and a firm perimeter seal.";
-    else if (n.includes("french")) description = "Double-door configurations that create a broad, elegant opening.";
-    else if (n.includes("mesh")) description = "Integrated insect-screen options selected to suit the chosen opening style.";
-    else if (n.includes("glass")) description = "Precision-cut glazing options to match the chosen opening.";
-    return { name, description };
-  });
+function serviceAreaFromAddress(addr: string): string {
+  const parts = (addr || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const pick = parts
+    .slice(-2)
+    .map((p) => p.replace(/[0-9]/g, "").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return pick.length ? pick.join(", ") : "Hyderabad, Telangana";
 }
 
-function Brand({ business }: { business: Business }) {
-  return (
-    <a className="brand" href="#home" aria-label={`${business.name} home`}>
-      {business.logoUrl ? (
-        <img src={business.logoUrl} alt={`${business.name} Logo`} style={{ height: "40px", width: "auto", marginRight: "12px", objectFit: "contain", borderRadius: "4px" }} />
-      ) : (
-        <span className="brand-symbol"><span /></span>
-      )}
-      <span className="brand-copy"><strong>{business.name}</strong><small>WINDOWS · DOORS · FACADES</small></span>
-    </a>
-  );
-}
+export default function MarketPage({ client, slug }: Props) {
+  const cfg = parseClientConfig(client.config || {}, client.id);
 
-function SessionLink({ slug, clientId }: { slug: string; clientId: string }) {
-  const [isCustomer, setIsCustomer] = useState(false);
+  // Business Meta
+  const brandName = cfg.companyName || cfg.appName || "UPVC Windows & Doors";
+  const proprietor = cfg.companyProprietor || "Authorized Fabricator";
+  const phone = cfg.companyContact || "+91 99890 28453";
+  const email = cfg.companyEmail || "info@vitharn.com";
+  const address = cfg.companyAddress || "Hyderabad, Telangana, India";
+  const city = cityFromAddress(address);
+  const serviceArea = serviceAreaFromAddress(address);
+  const logoUrl = cfg.logoUrl;
+  const logoInitial = (brandName || "U").trim().charAt(0).toUpperCase();
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const isLoggedIn =
-      window.localStorage.getItem("portal_session") === "active" &&
-      window.localStorage.getItem("portal_role") === "customer" &&
-      window.localStorage.getItem("portal_client_id") === clientId;
-    setIsCustomer(isLoggedIn);
-  }, [clientId]);
+  const rawWhatsapp = phone.replace(/\D/g, "");
+  const whatsappNum = rawWhatsapp.length === 10 ? `91${rawWhatsapp}` : (rawWhatsapp || "919989028453");
 
-  return <a href={isCustomer ? `/${slug}/home` : "/login"}>{isCustomer ? "Dashboard" : "Login"}</a>;
-}
-
-function Header({ business, slug, clientId }: { business: Business; slug: string; clientId: string }) {
-  const [open, setOpen] = useState(false);
+  // Header Scroll State
   const [scrolled, setScrolled] = useState(false);
-
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
+  // Calculator State
+  const [calcType, setCalcType] = useState<"sliding" | "casement" | "villa" | "french">("sliding");
+  const [calcWidth, setCalcWidth] = useState<number>(5);
+  const [calcHeight, setCalcHeight] = useState<number>(4);
+  const [calcGlass, setCalcGlass] = useState<"single" | "dgu" | "tinted">("single");
+  const [calcMesh, setCalcMesh] = useState<boolean>(true);
 
-  return (
-    <header className={scrolled || open ? "site-header scrolled" : "site-header"}>
-      <div className="header-inner">
-        <Brand business={business} />
-        <nav className="desktop-nav" aria-label="Main navigation">
-          {nav.map((item) => <a href={`#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>{item}</a>)}
-          <SessionLink slug={slug} clientId={clientId} />
-        </nav>
-        <a className="quote-pill" href="#contact">Get a free quote <ArrowRight size={16} /></a>
-        <button className="menu-button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Open navigation">
-          {open ? <X /> : <Menu />}
-        </button>
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.nav className="mobile-nav" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }} aria-label="Mobile navigation">
-            {nav.map((item, index) => (
-              <motion.a key={item} href={`#${item.toLowerCase().replaceAll(" ", "-")}`} onClick={() => setOpen(false)} initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04 }}>
-                {item}<ChevronRight />
-              </motion.a>
-            ))}
-            <SessionLink slug={slug} clientId={clientId} />
-            <a className="mobile-quote" href="#contact" onClick={() => setOpen(false)}>Get a free quote</a>
-          </motion.nav>
-        )}
-      </AnimatePresence>
-    </header>
+  // Price Calculation Logic
+  const sqft = Math.max(1, Math.round(calcWidth * calcHeight * 10) / 10);
+  let baseRatePerSqft = 450;
+  if (calcType === "sliding") baseRatePerSqft = 480;
+  if (calcType === "casement") baseRatePerSqft = 560;
+  if (calcType === "villa") baseRatePerSqft = 680;
+  if (calcType === "french") baseRatePerSqft = 620;
+
+  if (calcGlass === "dgu") baseRatePerSqft += 140;
+  if (calcGlass === "tinted") baseRatePerSqft += 60;
+  if (calcMesh) baseRatePerSqft += 80;
+
+  const minTotal = Math.round(sqft * baseRatePerSqft);
+  const maxTotal = Math.round(sqft * (baseRatePerSqft + 90));
+
+  const whatsappQuoteMsg = encodeURIComponent(
+    `Hello ${proprietor}! I visited your ${brandName} website and calculated an estimate for:\n\n` +
+    `• Type: ${calcType.toUpperCase()} Windows/Doors\n` +
+    `• Dimensions: ${calcWidth} ft (W) × ${calcHeight} ft (H) = ${sqft} Sq.Ft\n` +
+    `• Glass: ${calcGlass.toUpperCase()} Glazing\n` +
+    `• Insect Mesh: ${calcMesh ? "Yes (SS304)" : "No"}\n` +
+    `• Estimated Range: ₹${minTotal.toLocaleString("en-IN")} - ₹${maxTotal.toLocaleString("en-IN")}\n\n` +
+    `Please arrange a free site measurement and final quotation.`
   );
-}
 
-function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <motion.div className={className} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.18 }} variants={fadeUp}>{children}</motion.div>;
-}
+  // Form State
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formArea, setFormArea] = useState("");
+  const [formType, setFormType] = useState("Sliding Windows");
+  const [formSent, setFormSent] = useState(false);
 
-function Hero({ business, heroImage }: { business: Business; heroImage: string }) {
-  const reduced = useReducedMotion();
+  const handleLeadSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formPhone) return;
+    const msg = encodeURIComponent(
+      `Hi ${proprietor}! I would like to request a Free Site Measurement:\n\n` +
+      `• Name: ${formName || "Homeowner"}\n` +
+      `• Phone: ${formPhone}\n` +
+      `• Location/Area: ${formArea || city}\n` +
+      `• Requirements: ${formType}\n\n` +
+      `Please contact me to schedule a visit.`
+    );
+    window.open(`https://wa.me/${whatsappNum}?text=${msg}`, "_blank");
+    setFormSent(true);
+  };
+
   return (
-    <section id="home" className="hero">
-      <div className="hero-grid" aria-hidden="true" />
-      <div className="hero-frame" aria-label="Project image placeholder">
-        {heroImage ? (
-          <img src={heroImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <>
-            <div className="window-visual"><span /><span /><i /><b /></div>
-            <p>REAL INSTALLED-PROJECT PHOTO<br />TO BE ADDED</p>
-          </>
-        )}
-      </div>
-      <motion.div className="hero-copy" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: reduced ? 0 : 0.09, delayChildren: 0.14 } } }}>
-        <motion.div className="eyebrow" variants={fadeUp}><span /> {business.name} — Built for {business.serviceArea} homes</motion.div>
-        <h1>
-          <motion.span variants={fadeUp}>Windows that</motion.span>
-          <motion.span variants={fadeUp}>hold their <em>line.</em></motion.span>
-        </h1>
-        <motion.p variants={fadeUp}>{business.positioning}. Designed around your opening, measured on site, and installed by a specialist team.</motion.p>
-        <motion.div className="hero-actions" variants={fadeUp}>
-          <a className="button primary" href="#contact">Get a free quote <ArrowRight /></a>
-          <a className="button secondary" href="#projects">View our work</a>
-        </motion.div>
-        <motion.div className="hero-trust" variants={fadeUp}>
-          <span><strong>{business.years}</strong> years listed in Hyderabad</span>
-          <span><strong>01</strong> site-measured solution</span>
-          <span><strong>04</strong> clear project steps</span>
-        </motion.div>
-      </motion.div>
-    </section>
-  );
-}
+    <div className="venkateshwara-root">
+      <div className="v-bg-mesh" />
+      <div className="v-grid-overlay" />
 
-const benefits = [
-  [Gauge, "Efficient by design", "Multi-chamber uPVC systems are designed to help limit unwanted heat transfer. Final performance depends on the selected profile and glass."],
-  [Volume2, "Quieter interiors", "A correctly specified, glazed and installed system can reduce outside noise. Ask us to recommend the right build-up for your site."],
-  [Sparkles, "Low upkeep", "No routine painting or polishing. Smooth frames are easy to wipe clean and do not rust."],
-  [ShieldCheck, "Made for weather", "Sealed frames and purpose-selected hardware help manage rain, dust and daily exposure when properly installed."],
-] as const;
-
-function WhyUpvc() {
-  return (
-    <section id="why-upvc" className="section why-section">
-      <div className="shell">
-        <Reveal className="section-heading split">
-          <div><span className="kicker">Why homeowners choose uPVC</span><h2>Comfort that works<br />quietly, every day.</h2></div>
-          <p>Good windows are a system—not just a frame. Profile, reinforcement, glass, hardware, sealing and installation all matter.</p>
-        </Reveal>
-        <div className="benefit-grid">
-          {benefits.map(([Icon, title, copy], index) => (
-            <Reveal className="benefit-card" key={title}>
-              <span className="index">0{index + 1}</span><Icon /><h3>{title}</h3><p>{copy}</p>
-            </Reveal>
-          ))}
+      {/* Top Banner */}
+      <div className="v-topbar">
+        <div className="v-container">
+          <div className="v-topbar-inner">
+            <div className="v-topbar-left">
+              <span className="v-badge-pill">
+                <Sparkles size={12} /> {city.toUpperCase()}'S PREMIER UPVC FABRICATOR
+              </span>
+              <span>10+ Years Trust • 10-Year Profile Warranty • German Hardware</span>
+            </div>
+            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+              <a href={`tel:${phone.replace(/\s+/g, "")}`} style={{ color: "#fff", display: "flex", alignItems: "center", gap: "6px", textDecoration: "none", fontWeight: 600 }}>
+                <Phone size={13} color="#00d2ff" /> {phone}
+              </a>
+              <a href={`/${slug}/home`} style={{ color: "#94a3b8", textDecoration: "none", fontSize: "12px", borderLeft: "1px solid rgba(255,255,255,0.15)", paddingLeft: "14px" }}>
+                Client Portal
+              </a>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
-  );
-}
 
-function Products({ products }: { products: Product[] }) {
-  return (
-    <section id="products" className="section products-section">
-      <div className="shell">
-        <Reveal className="section-heading split light">
-          <div><span className="kicker">Product range</span><h2>One material.<br />Many ways to open.</h2></div>
-          <p>Choose a starting point below. Exact sizes, configurations, glass and hardware are confirmed after a site visit.</p>
-        </Reveal>
-        <div className="product-grid">
-          {products.map((product, index) => (
-            <motion.article className="product-card" key={product.name} whileHover={{ y: -6 }} transition={{ duration: 0.25 }}>
-              <div className={`product-diagram diagram-${index + 1}`} aria-hidden="true"><span /><i /><b /></div>
-              <div className="product-copy"><span>0{index + 1}</span><h3>{product.name}</h3><p>{product.description}</p><a href="#contact">Enquire <ArrowRight /></a></div>
-            </motion.article>
-          ))}
+      {/* Main Sticky Navigation */}
+      <header className={`v-header ${scrolled ? "scrolled" : ""}`}>
+        <div className="v-container">
+          <div className="v-header-inner">
+            <a href="#hero" className="v-logo-brand">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={brandName}
+                  style={{ height: "42px", width: "auto", objectFit: "contain", borderRadius: "8px", background: "#fff", padding: "4px" }}
+                />
+              ) : (
+                <div className="v-logo-emblem">{logoInitial}</div>
+              )}
+              <div className="v-logo-text">
+                <h1>{brandName.toUpperCase()}</h1>
+                <p>PREMIUM UPVC WINDOWS & DOORS</p>
+              </div>
+            </a>
+
+            <nav className="v-nav-menu">
+              <a href="#products" className="v-nav-link">Products</a>
+              <a href="#calculator" className="v-nav-link">Estimate Calculator</a>
+              <a href="#engineering" className="v-nav-link">German Engineering</a>
+              <a href="#soundproofing" className="v-nav-link">Acoustic Shield</a>
+              <a href="#process" className="v-nav-link">Installation Process</a>
+              <a href="#reviews" className="v-nav-link">Reviews</a>
+            </nav>
+
+            <div className="v-header-actions">
+              <a
+                href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}! I am looking for UPVC windows/doors for my home in ${city}.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="v-btn-primary v-btn-whatsapp"
+              >
+                <MessageCircle size={16} /> WhatsApp Quote
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-  );
-}
+      </header>
 
-function Projects({ gallery }: { gallery: string[] }) {
-  const placeholders = ["Sliding window installation", "French door installation", "Casement window installation", "Mesh screen detail"];
-  return (
-    <section id="projects" className="section projects-section">
-      <div className="shell">
-        <Reveal className="section-heading split">
-          <div><span className="kicker">Completed projects</span><h2>Proof belongs<br />in the details.</h2></div>
-          <p>Real installation photography has not been supplied yet. These clearly marked frames are ready for the client’s own project images.</p>
-        </Reveal>
-        <div className="project-grid">
-          {placeholders.map((label, index) => {
-            const url = gallery[index] || "";
-            return (
-              <motion.div className={`project-placeholder project-${index + 1}`} key={label} initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: index * 0.07 }}>
-                {url ? (
-                  <img src={url} alt={label} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      {/* Hero Section */}
+      <section id="hero" className="v-hero">
+        <div className="v-container">
+          <div className="v-hero-grid">
+            <motion.div
+              className="v-hero-content"
+              initial={{ opacity: 0, y: 25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+            >
+              <div className="v-hero-badge">
+                <Shield size={14} /> Certified 100% Lead-Free Multi-Chamber Profiles
+              </div>
+              <h1 className="v-hero-title">
+                Engineered For <span className="highlight">Silence.</span><br />
+                Crafted For A Lifetime.
+              </h1>
+              <p className="v-hero-desc">
+                {city}’s premier custom manufacturer of soundproof, rainproof & energy-efficient UPVC windows and doors. Designed for extreme monsoon durability and zero maintenance.
+              </p>
+
+              <div className="v-hero-cta">
+                <a href="#calculator" className="v-btn-primary">
+                  <Calculator size={17} /> Instant Price Calculator <ArrowRight size={16} />
+                </a>
+                <a href={`tel:${phone.replace(/\s+/g, "")}`} className="v-btn-secondary">
+                  <Phone size={16} /> Call {proprietor}
+                </a>
+              </div>
+
+              <div className="v-hero-stats">
+                <div className="v-stat-item">
+                  <h3>10<span>+</span></h3>
+                  <p>Years Experience in {city}</p>
+                </div>
+                <div className="v-stat-item">
+                  <h3>500<span>+</span></h3>
+                  <p>Homes & Villas Glazed</p>
+                </div>
+                <div className="v-stat-item">
+                  <h3>10<span>Yr</span></h3>
+                  <p>Comprehensive Warranty</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Hero Interactive Showcase Card */}
+            <motion.div
+              className="v-hero-card-preview"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <div className="v-hero-card-header">
+                <div>
+                  <span style={{ fontSize: "11px", textTransform: "uppercase", color: "#00d2ff", fontWeight: 700, letterSpacing: "0.1em" }}>FACTORY SPECIFICATION</span>
+                  <h3 style={{ margin: "4px 0 0", fontSize: "19px", color: "#fff" }}>Heavy-Duty UPVC Standard</h3>
+                </div>
+                <div className="v-badge-pill" style={{ background: "rgba(16, 185, 129, 0.15)", borderColor: "rgba(16, 185, 129, 0.4)", color: "#34d399" }}>
+                  <CheckCircle2 size={12} /> In Stock
+                </div>
+              </div>
+
+              <div className="v-spec-item">
+                <div className="v-spec-icon"><VolumeX size={18} /></div>
+                <div className="v-spec-text">
+                  <h4>35dB+ Acoustic Cancellation</h4>
+                  <p>Double Glazed DGU glass blocks heavy traffic & city noise</p>
+                </div>
+              </div>
+
+              <div className="v-spec-item">
+                <div className="v-spec-icon"><Shield size={18} /></div>
+                <div className="v-spec-text">
+                  <h4>Galvanized Steel Reinforcement</h4>
+                  <p>1.5mm thick internal steel core prevents bending & sagging</p>
+                </div>
+              </div>
+
+              <div className="v-spec-item">
+                <div className="v-spec-icon"><Wind size={18} /></div>
+                <div className="v-spec-text">
+                  <h4>100% Monsoon Water-Tightness</h4>
+                  <p>EPDM co-extruded gaskets completely stop rain seepage</p>
+                </div>
+              </div>
+
+              <div className="v-spec-item">
+                <div className="v-spec-icon"><Lock size={18} /></div>
+                <div className="v-spec-text">
+                  <h4>Multi-Point European Locking</h4>
+                  <p>High-security anti-burglary locks with key & shootbolts</p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: "24px", paddingTop: "18px", borderTop: "1px solid var(--v-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", color: "#94a3b8" }}>Free {city} Measurement</span>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#00d2ff" }}>Within 24 Hours</span>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Price Estimator / Quote Calculator */}
+      <section id="calculator" className="v-section v-section-alt">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">Transparent Pricing</span>
+            <h2 className="v-section-title">Instant Window & Door Cost Estimator</h2>
+            <p className="v-section-desc">
+              Get an accurate estimate for your home or villa in 10 seconds. Select your specifications below and directly send the blueprint to {proprietor} for fabrication.
+            </p>
+          </div>
+
+          <div className="v-calc-card">
+            <div className="v-calc-grid">
+              <div>
+                <div className="v-calc-section-title">
+                  <Sliders size={16} /> 1. Select Opening Style
+                </div>
+                <div className="v-calc-type-selector">
+                  <button
+                    type="button"
+                    className={`v-type-btn ${calcType === "sliding" ? "active" : ""}`}
+                    onClick={() => setCalcType("sliding")}
+                  >
+                    <Grid size={20} />
+                    <span>Sliding Window</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`v-type-btn ${calcType === "casement" ? "active" : ""}`}
+                    onClick={() => setCalcType("casement")}
+                  >
+                    <Compass size={20} />
+                    <span>Openable Casement</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`v-type-btn ${calcType === "villa" ? "active" : ""}`}
+                    onClick={() => setCalcType("villa")}
+                  >
+                    <Shield size={20} />
+                    <span>Villa (Grill+Mesh)</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`v-type-btn ${calcType === "french" ? "active" : ""}`}
+                    onClick={() => setCalcType("french")}
+                  >
+                    <Building2 size={20} />
+                    <span>French Balcony Door</span>
+                  </button>
+                </div>
+
+                <div className="v-calc-section-title">
+                  <Compass size={16} /> 2. Dimensions (Feet)
+                </div>
+                <div className="v-input-row">
+                  <div className="v-input-group">
+                    <label>Width (Feet): {calcWidth} ft</label>
+                    <input
+                      type="range"
+                      min="2"
+                      max="14"
+                      step="0.5"
+                      value={calcWidth}
+                      onChange={(e) => setCalcWidth(parseFloat(e.target.value))}
+                      style={{ width: "100%", accentColor: "#00d2ff" }}
+                    />
+                  </div>
+                  <div className="v-input-group">
+                    <label>Height (Feet): {calcHeight} ft</label>
+                    <input
+                      type="range"
+                      min="2"
+                      max="10"
+                      step="0.5"
+                      value={calcHeight}
+                      onChange={(e) => setCalcHeight(parseFloat(e.target.value))}
+                      style={{ width: "100%", accentColor: "#00d2ff" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="v-calc-section-title">
+                  <Sparkles size={16} /> 3. Glass & Mesh Options
+                </div>
+                <div className="v-input-row">
+                  <div className="v-input-group">
+                    <label>Glass Selection</label>
+                    <select
+                      className="v-input-control"
+                      value={calcGlass}
+                      onChange={(e) => setCalcGlass(e.target.value as any)}
+                    >
+                      <option value="single">5mm Toughened Clear Glass</option>
+                      <option value="dgu">12mm Double Glazed (Soundproof DGU)</option>
+                      <option value="tinted">Sun-Control Tinted / Frosted Glass</option>
+                    </select>
+                  </div>
+                  <div className="v-input-group">
+                    <label>SS304 Mosquito Mesh</label>
+                    <select
+                      className="v-input-control"
+                      value={calcMesh ? "yes" : "no"}
+                      onChange={(e) => setCalcMesh(e.target.value === "yes")}
+                    >
+                      <option value="yes">Include SS304 Mosquito Mesh</option>
+                      <option value="no">Without Insect Mesh</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calculator Summary Panel */}
+              <div className="v-calc-summary-panel">
+                <div>
+                  <h4 style={{ margin: "0 0 16px", fontSize: "16px", color: "#fff", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Calculated Summary
+                  </h4>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#94a3b8", marginBottom: "8px" }}>
+                    <span>Total Area:</span>
+                    <strong style={{ color: "#fff" }}>{sqft} Sq.Ft</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#94a3b8", marginBottom: "8px" }}>
+                    <span>Style:</span>
+                    <strong style={{ color: "#00d2ff" }}>{calcType.toUpperCase()}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#94a3b8", marginBottom: "8px" }}>
+                    <span>Hardware:</span>
+                    <strong style={{ color: "#fff" }}>Multi-Point German</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#94a3b8", marginBottom: "16px" }}>
+                    <span>Reinforcement:</span>
+                    <strong style={{ color: "#fff" }}>1.5mm GI Steel</strong>
+                  </div>
+                </div>
+
+                <div className="v-calc-total-box">
+                  <div className="lbl">Estimated Price Range</div>
+                  <div className="price-range">
+                    ₹{minTotal.toLocaleString("en-IN")} - ₹{maxTotal.toLocaleString("en-IN")}
+                  </div>
+                  <div className="disclaimer">
+                    Includes fabrication, high-grade hardware & delivery in {city}.
+                  </div>
+                </div>
+
+                <a
+                  href={`https://wa.me/${whatsappNum}?text=${whatsappQuoteMsg}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="v-btn-primary v-btn-whatsapp"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  <MessageCircle size={16} /> WhatsApp This Quote to {proprietor}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Product Spectrum */}
+      <section id="products" className="v-section">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">Complete Product Range</span>
+            <h2 className="v-section-title">Architectural Systems Built for {city}</h2>
+            <p className="v-section-desc">
+              Every window and door is fabricated using calibrated machinery with high-precision steel reinforcement and seamless multi-chamber thermal fusion.
+            </p>
+          </div>
+
+          <div className="v-product-grid">
+            {/* 1. Sliding */}
+            <div className="v-product-card">
+              <span className="v-product-badge">Top Seller</span>
+              <div className="v-product-icon-wrap"><Grid size={28} /></div>
+              <h3>2 & 3-Track Sliding Systems</h3>
+              <p>
+                Space-efficient gliding panels on smooth nylon tracks. Ideal for living room balconies, wide bedroom windows, and outdoor garden access.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Integrated SS304 mosquito mesh track</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Heavy-duty brass/nylon tandem rollers</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Wool-pile dust and weather barrier</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for 2/3 Track Sliding Windows.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for Sliding <ArrowRight size={14} />
+              </a>
+            </div>
+
+            {/* 2. Casement */}
+            <div className="v-product-card">
+              <span className="v-product-badge">Max Ventilation</span>
+              <div className="v-product-icon-wrap"><Compass size={28} /></div>
+              <h3>Openable Casement Windows</h3>
+              <p>
+                Side-hung or top-hung windows offering 100% opening area and supreme acoustic isolation through compression gaskets.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> 90-degree opening for easy glass cleaning</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Multi-point perimeter compression locking</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Up to 40dB noise reduction with DGU</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for Casement Openable Windows.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for Casement <ArrowRight size={14} />
+              </a>
+            </div>
+
+            {/* 3. Villa Style */}
+            <div className="v-product-card">
+              <span className="v-product-badge">Total Security</span>
+              <div className="v-product-icon-wrap"><Shield size={28} /></div>
+              <h3>Villa Windows (Grill + Mesh)</h3>
+              <p>
+                The complete Indian homeowner package: elegant openable UPVC sashes, heavy-duty built-in steel security grill, and mosquito mesh.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Powder-coated welded security grill</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Dual sashes for glass & insect screen</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Eliminates external civil grill welding</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for Villa Security Windows.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for Villa Style <ArrowRight size={14} />
+              </a>
+            </div>
+
+            {/* 4. French Doors */}
+            <div className="v-product-card">
+              <div className="v-product-icon-wrap"><Building2 size={28} /></div>
+              <h3>French Balcony & Patio Doors</h3>
+              <p>
+                Majestic double-door configurations bringing maximum natural light, luxury aesthetics, and seamless transition to sit-outs.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Heavy-gauge profile for door heights up to 9ft</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Multi-point shootbolts top and bottom</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Low-threshold aluminium sill available</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for French Doors.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for French Doors <ArrowRight size={14} />
+              </a>
+            </div>
+
+            {/* 5. Tilt & Turn */}
+            <div className="v-product-card">
+              <div className="v-product-icon-wrap"><Layers size={28} /></div>
+              <h3>Tilt & Turn European Systems</h3>
+              <p>
+                Dual action mechanism: tilt from top for gentle draft-free rain-safe ventilation, or swing fully open like a door for maximum access.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> German Roto / Siegenia hardware</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Safe for high-rise apartment children</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Superior thermal insulation</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for Tilt & Turn Windows.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for Tilt & Turn <ArrowRight size={14} />
+              </a>
+            </div>
+
+            {/* 6. Custom Facades & Arches */}
+            <div className="v-product-card">
+              <div className="v-product-icon-wrap"><Compass size={28} /></div>
+              <h3>Arch & Combination Facades</h3>
+              <p>
+                Bespoke architectural bending and fixed glass curtain designs. Custom-engineered for stairwells, double-height living rooms, and villa gables.
+              </p>
+              <div className="v-product-specs">
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Accurate template-based bending</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> Structural silicone & EPDM fusion</div>
+                <div className="v-spec-row"><CheckCircle2 size={14} /> High wind-pressure load compliance</div>
+              </div>
+              <a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hi ${proprietor}, I want a quote for Custom Arch Windows & Facades.`)}`} target="_blank" rel="noreferrer" className="v-btn-secondary" style={{ marginTop: "auto" }}>
+                Enquire for Custom Arches <ArrowRight size={14} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Soundproofing & Acoustic Shield Visualizer */}
+      <section id="soundproofing" className="v-section v-section-alt">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">Acoustic Engineering</span>
+            <h2 className="v-section-title">Block {city} Noise (35dB+ Drop)</h2>
+            <p className="v-section-desc">
+              Living near main roads, metro lines, or bustling areas? {brandName} UPVC windows with Double Glazed Units (DGU) turn noisy chaos into quiet peace.
+            </p>
+          </div>
+
+          <div className="v-acoustic-box">
+            <div>
+              <h3 style={{ fontSize: "24px", color: "#fff", margin: "0 0 14px", fontFamily: "var(--v-font-heading)" }}>
+                Acoustic Multi-Barrier Technology
+              </h3>
+              <p style={{ color: "#94a3b8", lineHeight: 1.7, fontSize: "14px", marginBottom: "24px" }}>
+                Unlike traditional aluminium or wooden frames that leak sound through joints and single thin glass, our UPVC windows combine three noise cancellation barriers:
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#00d2ff", color: "#070d18", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "12px", flexShrink: 0 }}>1</div>
+                  <div>
+                    <strong style={{ color: "#fff", fontSize: "14px" }}>Multi-Chamber UPVC Extrusion</strong>
+                    <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "12px" }}>Dead air chambers trap acoustic vibrations and break sound waves.</p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#00d2ff", color: "#070d18", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "12px", flexShrink: 0 }}>2</div>
+                  <div>
+                    <strong style={{ color: "#fff", fontSize: "14px" }}>Argon/Air Gap Double Glazing (DGU)</strong>
+                    <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "12px" }}>5mm Glass + 12mm Air Gap + 5mm Glass cuts ambient decibels dramatically.</p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "#00d2ff", color: "#070d18", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "12px", flexShrink: 0 }}>3</div>
+                  <div>
+                    <strong style={{ color: "#fff", fontSize: "14px" }}>Dual EPDM Compression Gaskets</strong>
+                    <p style={{ margin: "2px 0 0", color: "#94a3b8", fontSize: "12px" }}>Creates an airtight perimeter seal with zero air or sound leakage.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="v-sound-meter">
+              <div className="v-sound-bar">
+                <div className="v-sound-bar-header">
+                  <span style={{ color: "#f87171" }}>Outside Traffic / Street Horns</span>
+                  <span style={{ color: "#f87171" }}>85 dB (Disturbing)</span>
+                </div>
+                <div className="v-sound-track">
+                  <div className="v-sound-fill-red" />
+                </div>
+              </div>
+
+              <div className="v-sound-bar">
+                <div className="v-sound-bar-header">
+                  <span style={{ color: "#fbbf24" }}>Old Single Glass Aluminium Windows</span>
+                  <span style={{ color: "#fbbf24" }}>65 dB (Loud)</span>
+                </div>
+                <div className="v-sound-track">
+                  <div style={{ height: "100%", width: "65%", background: "#fbbf24" }} />
+                </div>
+              </div>
+
+              <div className="v-sound-bar" style={{ borderColor: "#10b981", background: "rgba(16, 185, 129, 0.08)" }}>
+                <div className="v-sound-bar-header">
+                  <span style={{ color: "#34d399", fontWeight: 700 }}>{brandName} DGU UPVC Window</span>
+                  <span style={{ color: "#34d399", fontWeight: 700 }}>32 dB (Whisper Quiet)</span>
+                </div>
+                <div className="v-sound-track">
+                  <div className="v-sound-fill-green" />
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(0, 210, 255, 0.1)", padding: "16px", borderRadius: "12px", border: "1px solid rgba(0, 210, 255, 0.3)", textAlign: "center" }}>
+                <span style={{ fontSize: "13px", color: "#00d2ff", fontWeight: 600 }}>
+                  ✨ Experience deep sleep and peaceful focus in your home.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Anatomy of Quality */}
+      <section id="engineering" className="v-section">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">German Standard</span>
+            <h2 className="v-section-title">The Anatomy of a {brandName} Window</h2>
+            <p className="v-section-desc">
+              We never compromise on internal materials. Here is what is built inside every frame we deliver to your home.
+            </p>
+          </div>
+
+          <div className="v-anatomy-grid">
+            <div className="v-anatomy-card">
+              <div className="v-spec-icon"><Layers size={20} /></div>
+              <h4>Multi-Chamber Profiles</h4>
+              <p>Tropical-grade UPVC compound tested against harsh Indian sun. Will not yellow, warp, or crack.</p>
+            </div>
+            <div className="v-anatomy-card">
+              <div className="v-spec-icon"><Shield size={20} /></div>
+              <h4>1.5mm GI Steel Core</h4>
+              <p>Full-perimeter galvanized steel reinforcement provides rigid structural stability against cyclones.</p>
+            </div>
+            <div className="v-anatomy-card">
+              <div className="v-spec-icon"><Wind size={20} /></div>
+              <h4>EPDM Weather Gaskets</h4>
+              <p>High-elasticity synthetic rubber seals maintain airtight contact for over 15 years.</p>
+            </div>
+            <div className="v-anatomy-card">
+              <div className="v-spec-icon"><Lock size={20} /></div>
+              <h4>Precision German Hardware</h4>
+              <p>Corrosion-resistant multi-point handles, friction hinges, and stainless steel rollers.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4-Step Process */}
+      <section id="process" className="v-section v-section-alt">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">Hassle-Free Experience</span>
+            <h2 className="v-section-title">4 Simple Steps to Perfection</h2>
+            <p className="v-section-desc">
+              From site measurement to clean installation, our in-house technicians ensure zero headaches.
+            </p>
+          </div>
+
+          <div className="v-process-grid">
+            <div className="v-process-card">
+              <div className="v-step-num">01</div>
+              <h4>Free Site Survey</h4>
+              <p>Our expert visits your site in {city} with samples and takes laser-accurate measurements.</p>
+            </div>
+            <div className="v-process-card">
+              <div className="v-step-num">02</div>
+              <h4>Itemized 3D Quote</h4>
+              <p>Receive an itemized digital quotation with zero hidden fees, custom specs, and clear delivery timeline.</p>
+            </div>
+            <div className="v-process-card">
+              <div className="v-step-num">03</div>
+              <h4>Factory CNC Fabrication</h4>
+              <p>Precision corner fusion welding and steel reinforcement at our modern facility.</p>
+            </div>
+            <div className="v-process-card">
+              <div className="v-step-num">04</div>
+              <h4>Clean Installation</h4>
+              <p>Dust-protected installation by trained specialists backed by a 10-year warranty card.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews & Testimonials */}
+      <section id="reviews" className="v-section">
+        <div className="v-container">
+          <div className="v-section-header">
+            <span className="v-section-kicker">Customer Satisfaction</span>
+            <h2 className="v-section-title">Trusted by 500+ Homeowners</h2>
+            <p className="v-section-desc">
+              See what architects, interior designers, and villa owners say about {brandName}.
+            </p>
+          </div>
+
+          <div className="v-review-grid">
+            <div className="v-review-card">
+              <div>
+                <div className="v-review-stars">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="#ffb703" />)}
+                </div>
+                <p className="v-review-quote">
+                  "{proprietor} and the team completed 18 villa windows for our residence. The soundproofing against outer highway noise is unbelievable. Very honest pricing and delivered right on time."
+                </p>
+              </div>
+              <div className="v-reviewer-meta">
+                <div className="v-reviewer-avatar">RK</div>
+                <div className="v-reviewer-info">
+                  <h5>Ravi Kumar Reddy</h5>
+                  <p>Villa Owner, {city}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="v-review-card">
+              <div>
+                <div className="v-review-stars">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="#ffb703" />)}
+                </div>
+                <p className="v-review-quote">
+                  "We installed 3-track sliding balcony doors with mosquito mesh in our high-rise apartment. Heavy monsoon rains had zero leakage. The sliding action is super smooth."
+                </p>
+              </div>
+              <div className="v-reviewer-meta">
+                <div className="v-reviewer-avatar">SP</div>
+                <div className="v-reviewer-info">
+                  <h5>Sunil Prabhakar</h5>
+                  <p>Apartment Owner, {city}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="v-review-card">
+              <div>
+                <div className="v-review-stars">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="#ffb703" />)}
+                </div>
+                <p className="v-review-quote">
+                  "As an interior designer, I regularly recommend {brandName}. {proprietor} personally inspects every site and ensures perfect corner finishes and top-tier German hardware."
+                </p>
+              </div>
+              <div className="v-reviewer-meta">
+                <div className="v-reviewer-avatar">AN</div>
+                <div className="v-reviewer-info">
+                  <h5>Ananya Narang</h5>
+                  <p>Architect & Interior Consultant, {city}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact & Free Measurement Booking Form */}
+      <section id="contact" className="v-section v-section-alt">
+        <div className="v-container">
+          <div className="v-contact-card">
+            <div>
+              <span className="v-section-kicker">Book Inspection</span>
+              <h2 style={{ fontSize: "32px", color: "#fff", margin: "0 0 16px", fontFamily: "var(--v-font-heading)" }}>
+                Get Your Free Site Measurement
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: 1.7, margin: "0 0 28px" }}>
+                Speak directly with <strong>{proprietor}</strong>. We will visit your site anywhere in {city}, bring profile samples, and provide a digital itemized quotation with zero obligation.
+              </p>
+
+              <div className="v-contact-info-list">
+                <div className="v-contact-item">
+                  <div className="v-contact-icon"><Phone size={20} /></div>
+                  <div className="v-contact-text">
+                    <h5>Direct Phone / Mobile</h5>
+                    <p><a href={`tel:${phone.replace(/\s+/g, "")}`} style={{ color: "#fff", textDecoration: "none" }}>{phone}</a></p>
+                  </div>
+                </div>
+
+                <div className="v-contact-item">
+                  <div className="v-contact-icon"><MessageCircle size={20} /></div>
+                  <div className="v-contact-text">
+                    <h5>WhatsApp Direct</h5>
+                    <p><a href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hello ${proprietor}! I want a site visit in ${city}.`)}`} target="_blank" rel="noreferrer" style={{ color: "#00d2ff", textDecoration: "none" }}>Chat with {proprietor}</a></p>
+                  </div>
+                </div>
+
+                <div className="v-contact-item">
+                  <div className="v-contact-icon"><MapPin size={20} /></div>
+                  <div className="v-contact-text">
+                    <h5>Factory & Service Area</h5>
+                    <p>{address}</p>
+                  </div>
+                </div>
+
+                <div className="v-contact-item">
+                  <div className="v-contact-icon"><Clock size={20} /></div>
+                  <div className="v-contact-text">
+                    <h5>Working Hours</h5>
+                    <p>Mon - Sat: 9:00 AM - 8:30 PM (Sun: On Call)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Request Form */}
+            <div style={{ background: "rgba(10, 19, 36, 0.85)", padding: "32px", borderRadius: "20px", border: "1px solid var(--v-border)" }}>
+              <h3 style={{ margin: "0 0 20px", fontSize: "20px", color: "#fff" }}>Schedule Your Site Visit</h3>
+              {formSent ? (
+                <div style={{ background: "rgba(16, 185, 129, 0.15)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
+                  <CheckCircle2 size={32} color="#34d399" style={{ margin: "0 auto 10px" }} />
+                  <h4 style={{ color: "#fff", margin: "0 0 6px" }}>Request Received!</h4>
+                  <p style={{ color: "#94a3b8", fontSize: "13px", margin: 0 }}>WhatsApp chat opened with {proprietor}. We will be in touch shortly!</p>
+                </div>
+              ) : (
+                <form onSubmit={handleLeadSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="v-input-group">
+                    <label>Your Name</label>
+                    <input
+                      type="text"
+                      className="v-input-control"
+                      placeholder="e.g. Ramesh Reddy"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="v-input-group">
+                    <label>Phone Number (WhatsApp) *</label>
+                    <input
+                      type="tel"
+                      required
+                      className="v-input-control"
+                      placeholder="e.g. 98480 12345"
+                      value={formPhone}
+                      onChange={(e) => setFormPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="v-input-group">
+                    <label>Site Location / Area in {city}</label>
+                    <input
+                      type="text"
+                      className="v-input-control"
+                      placeholder="e.g. Jubilee Hills, Gachibowli, Kukatpally"
+                      value={formArea}
+                      onChange={(e) => setFormArea(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="v-input-group">
+                    <label>Windows / Doors Needed</label>
+                    <select
+                      className="v-input-control"
+                      value={formType}
+                      onChange={(e) => setFormType(e.target.value)}
+                    >
+                      <option value="Sliding Windows">Sliding Windows & Balcony Doors</option>
+                      <option value="Casement Windows">Openable Casement Windows</option>
+                      <option value="Villa Security Windows">Villa Windows (Grill + Mesh)</option>
+                      <option value="Entire House/Villa Glazing">Full House / Villa Glazing Project</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="v-btn-primary"
+                    style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
+                  >
+                    <Send size={16} /> Request Free Measurement
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="v-footer">
+        <div className="v-container">
+          <div className="v-footer-grid">
+            <div className="v-footer-brand">
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#fff", fontWeight: 700, fontSize: "17px" }}>
+                {logoUrl ? (
+                  <img src={logoUrl} alt={brandName} style={{ height: "36px", width: "auto", objectFit: "contain", borderRadius: "6px", background: "#fff", padding: "2px" }} />
                 ) : (
-                  <div className="mini-frame"><span /><i /></div>
+                  <div className="v-logo-emblem" style={{ width: "36px", height: "36px", fontSize: "16px" }}>{logoInitial}</div>
                 )}
-                <small>PHOTO PLACEHOLDER</small><strong>{label}</strong>
-              </motion.div>
-            );
-          })}
+                {brandName}
+              </div>
+              <p>
+                Authorized manufacturer and installer of precision-engineered UPVC window & door systems for residential villas, apartments and commercial projects across {serviceArea}.
+              </p>
+            </div>
+
+            <div className="v-footer-col">
+              <h4>Quick Links</h4>
+              <ul className="v-footer-links">
+                <li><a href="#products">Sliding Windows</a></li>
+                <li><a href="#products">Casement Windows</a></li>
+                <li><a href="#products">Villa Security Windows</a></li>
+                <li><a href="#products">French Doors</a></li>
+                <li><a href="#calculator">Price Calculator</a></li>
+              </ul>
+            </div>
+
+            <div className="v-footer-col">
+              <h4>Service Areas</h4>
+              <ul className="v-footer-links">
+                <li><a href="#contact">Central & City Limits</a></li>
+                <li><a href="#contact">Gated Communities & Villas</a></li>
+                <li><a href="#contact">High-Rise Apartments</a></li>
+                <li><a href="#contact">Commercial & Offices</a></li>
+                <li><a href="#contact">Surrounding Suburbs</a></li>
+              </ul>
+            </div>
+
+            <div className="v-footer-col">
+              <h4>Contact Factory</h4>
+              <p style={{ margin: "0 0 8px", color: "#fff", fontWeight: 600 }}>{proprietor}</p>
+              <p style={{ margin: "0 0 8px", fontSize: "13px" }}>{phone}</p>
+              <p style={{ margin: "0 0 16px", fontSize: "13px" }}>{email}</p>
+              <a href={`/${slug}/home`} className="v-btn-secondary" style={{ padding: "8px 14px", fontSize: "12px" }}>
+                Client Portal Login
+              </a>
+            </div>
+          </div>
+
+          <div className="v-footer-bottom">
+            <div>
+              © {new Date().getFullYear()} {brandName}. All rights reserved.
+            </div>
+            <div>
+              Powered by <span style={{ color: "#00d2ff", fontWeight: 600 }}>Vitharn ERP Services</span>
+            </div>
+          </div>
         </div>
+      </footer>
+
+      {/* Floating Quick Action Buttons */}
+      <div className="v-floating-bar">
+        <a
+          href={`tel:${phone.replace(/\s+/g, "")}`}
+          className="v-float-btn"
+          style={{ background: "#0f172a", color: "#fff", border: "1px solid var(--v-border)" }}
+        >
+          <Phone size={16} color="#00d2ff" /> Call
+        </a>
+        <a
+          href={`https://wa.me/${whatsappNum}?text=${encodeURIComponent(`Hello ${proprietor}! I visited your ${brandName} website and would like a quote for UPVC windows.`)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="v-float-btn v-btn-whatsapp"
+        >
+          <MessageCircle size={16} /> WhatsApp Quote
+        </a>
       </div>
-    </section>
-  );
-}
-
-const steps = [
-  [MessageCircle, "Share your requirement", "Tell us the opening type, location and what you want to improve."],
-  [Ruler, "Site measurement", "The team checks the opening, access and practical installation details."],
-  [Layers3, "Clear quotation", "Configuration, glass, hardware, finish and scope are documented for review."],
-  [Hammer, "Fabrication & installation", "The approved system is prepared and fitted, followed by a final walkthrough."],
-] as const;
-
-function Process() {
-  return (
-    <section id="process" className="section process-section">
-      <div className="shell">
-        <Reveal className="section-heading center"><span className="kicker">How a project moves</span><h2>Measured once. Managed clearly.</h2></Reveal>
-        <div className="process-line">
-          {steps.map(([Icon, title, copy], index) => (
-            <Reveal className="step" key={title}><div><Icon /><span>{index + 1}</span></div><h3>{title}</h3><p>{copy}</p></Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Trust() {
-  return (
-    <section className="trust-section">
-      <div className="trust-copy">
-        <Reveal><span className="kicker">What we will confirm with you</span><h2>A quote you can<br />actually compare.</h2><p>Before work begins, the proposed configuration should be clear—so you know what is included and what still needs a decision.</p></Reveal>
-        <div className="check-list">{["Opening style and dimensions", "Profile and reinforcement", "Glass specification", "Hardware and locking", "Mesh requirement", "Installation scope"].map((item) => <span key={item}><CircleCheck />{item}</span>)}</div>
-      </div>
-      <div className="spec-card">
-        <div className="spec-window"><span /><i /><b /></div>
-        <div><small>SPECIFICATION FIRST</small><h3>Frame + glass + hardware + installation</h3><p>Every element plays a part. We help you choose them as one complete system.</p></div>
-      </div>
-    </section>
-  );
-}
-
-function EnquiryForm({ business, products }: { business: Business; products: Product[] }) {
-  const [status, setStatus] = useState("");
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>();
-  const onSubmit = (data: FormValues) => {
-    const text = `Hi ${business.name}, I'd like a free quote for uPVC windows or doors.\n\nName: ${data.name}\nPhone: ${data.phone}\nArea: ${data.area}\nProduct: ${data.product}\nMessage: ${data.message || "Not provided"}`;
-    if (!business.whatsapp) {
-      setStatus("Your enquiry is ready. Add the confirmed WhatsApp number in src/config.ts to enable sending.");
-      return;
-    }
-    setStatus("Opening WhatsApp with your enquiry...");
-    window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  };
-  return (
-    <form className="quote-form" onSubmit={handleSubmit(onSubmit)} noValidate>
-      <div className="form-field"><label htmlFor="name">Name</label><input id="name" placeholder="Your name" {...register("name", { required: "Please enter your name" })} />{errors.name && <small>{errors.name.message}</small>}</div>
-      <div className="form-field"><label htmlFor="phone">Phone</label><input id="phone" inputMode="tel" placeholder="Your mobile number" {...register("phone", { required: "Please enter your phone number", pattern: { value: /^[0-9+ ()-]{7,}$/, message: "Enter a valid phone number" } })} />{errors.phone && <small>{errors.phone.message}</small>}</div>
-      <div className="form-field"><label htmlFor="area">City / area</label><input id="area" placeholder="e.g. Gachibowli" {...register("area", { required: "Please enter your area" })} />{errors.area && <small>{errors.area.message}</small>}</div>
-      <div className="form-field"><label htmlFor="product">Interested in</label><select id="product" defaultValue="" {...register("product", { required: "Select a product" })}><option value="" disabled>Select a product</option>{products.map((product) => <option key={product.name}>{product.name}</option>)}</select>{errors.product && <small>{errors.product.message}</small>}</div>
-      <div className="form-field full"><label htmlFor="message">Message</label><textarea id="message" rows={3} placeholder="Tell us about the openings or project" {...register("message")} /></div>
-      <button type="submit">Prepare WhatsApp enquiry <ArrowRight /></button>
-      {status && <p className="form-status" role="status">{status}</p>}
-    </form>
-  );
-}
-
-function Contact({ business, products }: { business: Business; products: Product[] }) {
-  return (
-    <section id="contact" className="contact-section">
-      <div className="contact-copy">
-        <Reveal><span className="kicker light-kicker">Start with your openings</span><h2>Tell us what<br />you’re planning.</h2><p>Share your area, product type and a short note. We’ll prepare a WhatsApp enquiry for review before anything is sent.</p></Reveal>
-        <div className="contact-facts">
-          <div><MapPin /><span>Service area<strong>{business.serviceArea}</strong></span></div>
-          <div><Phone /><span>Phone<strong>{business.phone || "To be confirmed"}</strong></span></div>
-          <div><Wind /><span>Speciality<strong>uPVC windows, doors & facade solutions</strong></span></div>
-        </div>
-      </div>
-      <div className="form-panel"><span className="kicker">Request a quote</span><h3>Project details</h3><EnquiryForm business={business} products={products} /></div>
-    </section>
-  );
-}
-
-function Footer({ business }: { business: Business }) {
-  return (
-    <footer>
-      <div className="footer-main"><div><Brand business={business} /><p>Precisely measured uPVC windows and doors for homes, renovations and building projects across Hyderabad.</p></div><div><h4>Explore</h4>{nav.slice(1).map((item) => <a href={`#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>{item}</a>)}</div><div><h4>Contact</h4><span>{business.serviceArea}</span><span>{business.phone || "Phone to be confirmed"}</span><a href="#contact">Request a quote</a></div></div>
-      <div className="footer-bottom"><span>© {new Date().getFullYear()} {business.name}</span><span>Business details, claims and project images require final client confirmation.</span><span>Powered by Vitharn ERP Services — Sole Proprietorship, Hyderabad.</span></div>
-    </footer>
-  );
-}
-
-function WhatsAppButton({ business }: { business: Business }) {
-  const href = business.whatsapp ? `https://wa.me/${business.whatsapp}?text=${encodeURIComponent(`Hi ${business.name}, I'd like a free quote for uPVC windows or doors.`)}` : "#contact";
-  return <a className="floating-whatsapp" href={href} aria-label={business.whatsapp ? "Enquire on WhatsApp" : "Open quote form"}><MessageCircle /><span>{business.whatsapp ? "WhatsApp" : "Get quote"}</span></a>;
-}
-
-export default function MarketPage({ client, slug }: { client: any; slug: string }) {
-  const cfg = parseClientConfig(client.config || {}, client.id);
-  const phone = firstPhoneDigits(cfg.companyContact);
-  const business: Business = {
-    name: cfg.companyName || cfg.appName || DEFAULT_BUSINESS_NAME,
-    logoUrl: cfg.logoUrl,
-    positioning: cfg.landingHeroSubtitle || DEFAULT_POSITIONING,
-    years: "7+",
-    serviceArea: serviceAreaFrom(cfg.companyAddress),
-    address: cfg.companyAddress,
-    phone,
-    whatsapp: toWhatsapp(phone),
-    googleMapsEmbed: cfg.landingMapUrl,
-    workingHours: "",
-  };
-  const products = buildProducts(cfg.landingServices);
-
-  const cfgAnyForSocial: any = cfg as any;
-  const socialCandidates: string[] = [];
-  const possibleSocialKeys = ["facebookUrl","instagramUrl","linkedinUrl","twitterUrl","youtubeUrl","facebook","instagram","linkedin","twitter","youtube","socialUrl","website"];
-  for (const k of possibleSocialKeys) {
-    const v = cfgAnyForSocial[k];
-    if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
-  }
-  if (Array.isArray(cfgAnyForSocial.socialLinks)) {
-    for (const v of cfgAnyForSocial.socialLinks) if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
-  }
-  if (Array.isArray(cfgAnyForSocial.sameAs)) {
-    for (const v of cfgAnyForSocial.sameAs) if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
-  }
-  const logoUrl = (cfg.logoUrl || "").trim();
-  const localBusinessSchema: Record<string, any> = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": business.name,
-    "description": business.positioning,
-    "url": `https://app.vitharn.com/${slug}`,
-    "telephone": business.phone || "",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": cfg.companyAddress || "",
-      "addressLocality": "Hyderabad",
-      "addressRegion": "Telangana",
-      "addressCountry": "IN"
-    },
-    "areaServed": business.serviceArea,
-    "serviceType": cfg.landingServices?.length > 0 ? cfg.landingServices : ["UPVC Windows", "UPVC Doors", "Structural Glazing", "Glass Facades"],
-    "priceRange": "$$",
-    ...(logoUrl ? { "image": logoUrl, "logo": logoUrl } : {}),
-    ...(socialCandidates.length > 0 ? { "sameAs": [...new Set(socialCandidates)] } : {}),
-  };
-
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
-      />
-      <Header business={business} slug={slug} clientId={client.id} />
-      <main>
-        <Hero business={business} heroImage={cfg.landingHeroImage} />
-        <WhyUpvc />
-        <Products products={products} />
-        <Projects gallery={cfg.landingGallery} />
-        <Process />
-        <Trust />
-        <Contact business={business} products={products} />
-      </main>
-      <Footer business={business} />
-      <WhatsAppButton business={business} />
-    </>
+    </div>
   );
 }
