@@ -65,6 +65,21 @@ class ClientLoader {
     return ClientConfig.fromJson(cfg);
   }
 
+  static bool _matchesClient(Map<String, dynamic> r, String target) {
+    final rid = _slugify((r['id'] as String?) ?? '');
+    final cfg = (r['config'] as Map?) ?? {};
+    final appName = _slugify(cfg['appName'] as String? ?? '');
+    final companyName = _slugify(cfg['companyName'] as String? ?? '');
+
+    if (rid == target || appName == target || companyName == target) return true;
+    if (target == '$rid-quote' || target == '$rid-upvc-quote' || target == '$rid-quotation') return true;
+    if (appName.isNotEmpty && (target == '$appName-quote' || target == '$appName-upvc-quote')) return true;
+    if (rid.isNotEmpty && (target.startsWith('$rid-') || rid.startsWith('$target-'))) return true;
+    if (appName.isNotEmpty && (target.startsWith('$appName-') || appName.startsWith('$target-'))) return true;
+    if (companyName.isNotEmpty && (target.startsWith('$companyName-') || companyName.startsWith('$target-'))) return true;
+    return false;
+  }
+
   static Future<ClientConfig> loadConfig({String? clientId}) async {
     final rawId = (clientId ?? getClientId() ?? 'venkateshwara').trim();
 
@@ -123,13 +138,9 @@ class ClientLoader {
       // If the URL used a slug (e.g. /upvc/<app name>), resolve it to the real id
       if (row == null || row['config'] == null) {
         final all = await supabase.from('client_public').select();
+        final target = _slugify(rawId);
         for (final r in all) {
-          final rid = (r['id'] as String?) ?? '';
-          final cfg = (r['config'] as Map?) ?? {};
-          final appName = cfg['appName'] as String? ?? '';
-          final companyName = cfg['companyName'] as String? ?? '';
-          final target = _slugify(rawId);
-          if (_slugify(rid) == target || _slugify(appName) == target || _slugify(companyName) == target) {
+          if (_matchesClient(r, target)) {
             row = r;
             break;
           }

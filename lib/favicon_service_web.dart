@@ -10,30 +10,35 @@ class FaviconService {
       return;
     }
 
-    // Test if the client logo loads successfully; fall back to Vitharn logo if unavailable
+    // Apply the client logo immediately as the browser favicon
+    _applyFavicon(cleanUrl);
+
+    // Fallback to Vitharn favicon if the image fails to load
     final testImg = html.ImageElement();
     testImg.src = cleanUrl;
-    testImg.onLoad.first.then((_) {
-      _applyFavicon(cleanUrl);
-    }).catchError((_) {
-      _applyFavicon(fallbackFavicon);
-    });
     testImg.onError.first.then((_) {
       _applyFavicon(fallbackFavicon);
     });
   }
 
   static void _applyFavicon(String href) {
-    var link = html.document.querySelector('link[rel*="icon"]') as html.LinkElement?;
-    if (link != null) {
-      link.href = href;
-    } else {
-      link = html.LinkElement()
-        ..rel = 'icon'
-        ..type = 'image/png'
-        ..href = href;
-      html.document.head?.append(link);
-    }
+    try {
+      final links = html.document.querySelectorAll("link[rel*='icon']");
+      if (links.isNotEmpty) {
+        for (final el in links) {
+          if (el is html.LinkElement) {
+            el.href = href;
+          }
+        }
+      } else {
+        final link = html.LinkElement()
+          ..rel = 'shortcut icon'
+          ..type = 'image/png'
+          ..href = href;
+        html.document.head?.append(link);
+      }
+    } catch (_) {}
   }
 }
+
 

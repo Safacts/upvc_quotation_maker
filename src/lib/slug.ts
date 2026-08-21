@@ -28,13 +28,22 @@ export interface ClientRow {
 }
 
 export function clientMatchesSlug(row: ClientRow, slug: string): boolean {
+  const s = slugify(slug);
+  if (!s) return false;
   const cfg = row.config || {};
   const candidates = [
-    row.id,
-    cfg.appName,
-    cfg.companyName,
-  ];
-  return candidates.some((c) => slugify(String(c || "")) === slug);
+    slugify(row.id),
+    slugify(String(cfg.appName || "")),
+    slugify(String(cfg.companyName || "")),
+  ].filter(Boolean);
+
+  if (candidates.some((c) => c === s)) return true;
+  if (candidates.some((c) => s === `${c}-quote` || s === `${c}-upvc-quote` || s === `${c}-quotation`)) return true;
+
+  const sId = slugify(row.id);
+  if (sId && (s === sId || s.startsWith(`${sId}-`) || sId.startsWith(`${s}-`))) return true;
+
+  return false;
 }
 
 export function findClientBySlug(rows: ClientRow[], slug: string): ClientRow | null {
