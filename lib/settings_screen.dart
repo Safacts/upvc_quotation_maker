@@ -25,8 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     double _marginPercent = 65.0;
     List<String> _supplierCompanies = [];
     final _supplierController = TextEditingController();
-    double _fontScale = 1.0;
-    ElementDensity _elementDensity = ElementDensity.comfortable;
+     double _fontScale = 1.0;
+     ElementDensity _elementDensity = ElementDensity.comfortable;
+     bool _enableSitePhotos = true;
 
    @override
   void initState() {
@@ -46,8 +47,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _gstNoController = TextEditingController(text: appState.gstNumber);
      _marginPercent = appState.costMarginPercent;
      _supplierCompanies = List<String>.from(appState.supplierCompanies);
-     _fontScale = appState.fontScale;
-     _elementDensity = appState.elementDensity;
+      _fontScale = appState.fontScale;
+      _elementDensity = appState.elementDensity;
+      _enableSitePhotos = appState.enableSitePhotos;
    }
 
    @override
@@ -84,12 +86,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       proprietor: _proprietorController.text,
        gstNumber: _gstNoController.text,
        supplierCompanies: _supplierCompanies,
-     ).then((synced) {
+     ).then((result) {
       if (!mounted) return;
+      final synced = result.synced;
+      final err = result.error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(synced
             ? 'Settings saved successfully'
-            : 'Saved on this device, but failed to sync to server'),
+            : err != null && err.isNotEmpty
+                ? 'Saved on this device, but failed to sync: $err'
+                : 'Saved on this device, but failed to sync to server'),
+        duration: synced ? const Duration(seconds: 2) : const Duration(seconds: 5),
       ));
     });
   }
@@ -126,10 +133,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
            const SizedBox(height: 16),
-           _buildSectionHeader('Display & Layout'),
-           _buildDisplaySection(),
-           const SizedBox(height: 16),
-           _buildSectionHeader('Company Information'),
+            _buildSectionHeader('Display & Layout'),
+            _buildDisplaySection(),
+            const SizedBox(height: 16),
+            _buildSectionHeader('Quotation Maker'),
+            Card(
+              child: SwitchListTile(
+                title: const Text('Enable Site Photos'),
+                subtitle: Text(_enableSitePhotos
+                    ? 'Site photos are shown in the Quotation Maker'
+                    : 'Site photos are hidden'),
+                value: _enableSitePhotos,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
+                onChanged: (val) async {
+                  setState(() => _enableSitePhotos = val);
+                  final appState = Provider.of<AppState>(context, listen: false);
+                  await appState.setEnableSitePhotos(val);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(val ? 'Site photos enabled' : 'Site photos hidden')),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildSectionHeader('Company Information'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),

@@ -393,7 +393,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       await pdfGen.loadLibrary();
-      final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: _photos);
+      final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
+      final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: effectivePhotos);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
       final quoteLink = await _quoteLink(data);
@@ -537,7 +538,8 @@ $reviewCta
     // Generate PDF bytes
     final appState = Provider.of<AppState>(context, listen: false);
     await pdfGen.loadLibrary();
-    final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: _photos);
+    final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
+    final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: effectivePhotos);
     
     // 2. If email exists, send automatically in background
     Future<void>? emailTask;
@@ -1139,18 +1141,21 @@ if (_usePresets) ...[
             ).animate().fade(delay: 600.ms),
 
             // ===== SITE PHOTOS SECTION (delegated to SitePhotoPicker) =====
-            _buildSectionTitle('Site Photos').animate().fade(delay: 650.ms),
-            SitePhotoPicker(
-              quotationId: data.id,
-              initialPhotos: _photos,
-              onPhotosChanged: (photos) {
-                setState(() => _photos = photos);
-              },
-              onRequestSave: () async {
-                await _autoSaveToDatabase();
-                return data.id;
-              },
-            ),
+            // Gated by Settings > Enable Site Photos (default ON, local SharedPreferences)
+            if (Provider.of<AppState>(context).enableSitePhotos) ...[
+              _buildSectionTitle('Site Photos').animate().fade(delay: 650.ms),
+              SitePhotoPicker(
+                quotationId: data.id,
+                initialPhotos: _photos,
+                onPhotosChanged: (photos) {
+                  setState(() => _photos = photos);
+                },
+                onRequestSave: () async {
+                  await _autoSaveToDatabase();
+                  return data.id;
+                },
+              ),
+            ],
 
             _buildSectionTitle('Final Computations').animate().fade(delay: 700.ms),
             Card(

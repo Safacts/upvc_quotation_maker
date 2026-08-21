@@ -367,6 +367,12 @@ class _SitePhotoPickerState extends State<SitePhotoPicker> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Defensive gate: if Site Photos disabled in Settings, hide entirely.
+    // Parent (quotation_screen.dart) already hides this widget, but this covers
+    // any other caller that might embed the picker directly.
+    if (!Provider.of<AppState>(context).enableSitePhotos) {
+      return const SizedBox.shrink();
+    }
 
     return Card(
       child: Padding(

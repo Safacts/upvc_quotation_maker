@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
 import 'services/feature_flag_service.dart';
 import 'services/white_label_service.dart';
+import 'utils/http_client.dart' as cred_http;
 
 /// Element density options for UI customization.
 enum ElementDensity { compact, comfortable, spacious }
@@ -57,6 +58,9 @@ class AppState extends ChangeNotifier {
   ElementDensity _elementDensity = ElementDensity.comfortable;
   bool _loaded = false;
 
+  // Site Photos toggle (local per-device setting, default ON)
+  bool _enableSitePhotos = true;
+
   ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
 
   String get companyName => _companyName.isNotEmpty ? _companyName : clientConfig.companyName;
@@ -75,6 +79,15 @@ class AppState extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   double get fontScale => _fontScale;
   ElementDensity get elementDensity => _elementDensity;
+  bool get enableSitePhotos => _enableSitePhotos;
+
+  /// Helper to read the Site Photos toggle from persistent storage.
+  /// Default is `true` (ON) — mirrors [_enableSitePhotos] initial value.
+  Future<bool> isSitePhotosEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('enable_site_photos') ?? true;
+  }
+
   String get appName => clientConfig.appName;
   String get quotePrefix => clientConfig.quotePrefix;
   List<String> get adminEmails => clientConfig.adminEmails;
@@ -201,6 +214,7 @@ class AppState extends ChangeNotifier {
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
     _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
+    _enableSitePhotos = prefs.getBool('enable_site_photos') ?? true;
     // BUGFIX: Only apply loaded values if no explicit update has been made
     // since the constructor fired _loadSettings. Without this guard, a late-
     // completing _loadSettings could overwrite user changes made via
@@ -239,7 +253,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> updateSettings({
+  /// Persist the Site Photos toggle (local per-device, default ON).
+  Future<void> setEnableSitePhotos(bool value) async {
+    _enableSitePhotos = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enable_site_photos', value);
+    notifyListeners();
+  }
+
+  /// Returns (synced, error). `error` is null on success, otherwise the
+  /// server body / exception to surface in the UI. Local save always succeeds.
+  Future<({bool synced, String? error})> updateSettings({
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
     required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
@@ -287,16 +311,20 @@ class AppState extends ChangeNotifier {
   // Persists the settings edit to the server so every device/client sees it
   // (local SharedPreferences are per-device only). Uses merge mode so only the
   // fields edited here are written; server-side secrets are left untouched.
-  Future<bool> _pushSettingsToServer({
+  Future<({bool synced, String? error})> _pushSettingsToServer({
     required String name, required String address, required String contact, required String email,
     required String bankName, required String bankBranch, required String accountNo, required String ifsc,
     required String terms, required double gstPercentage, required String proprietor, required String gstNumber,
     required List<String> supplierCompanies,
   }) async {
     final cfg = clientConfig;
-    final url = kIsWeb
-        ? '/api/save_client'
-        : 'https://app.vitharn.com/api/save_client';
+    // On Flutter web dev (127.0.0.1:8080) there is no /api — route via gateway.
+    final String baseOrigin = kIsWeb ? Uri.base.origin : '';
+    final url = (!kIsWeb)
+        ? 'https://app.vitharn.com/api/save_client'
+        : (baseOrigin.contains('127.0.0.1:8080') || baseOrigin.contains('localhost:8080'))
+            ? 'http://localhost:3000/api/save_client'
+            : '/api/save_client';
     try {
       // CRITICAL FIX: Include admin_password_hash for save_client authentication.
       // For web: hash comes from login/session response stored in secure storage.
@@ -304,7 +332,9 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final storedHash = prefs.getString('session_password_hash') ?? '';
       final passwordHash = storedHash.isNotEmpty ? storedHash : cfg.portalPasswordHash;
-      
+      // Also read session_client_id for diagnostic retry hint.
+      final sessionClientId = prefs.getString('session_client_id') ?? '';
+
       final Map<String, dynamic> body = {
         'admin_email': cfg.companyEmail,
         'admin_password_hash': passwordHash,
@@ -330,16 +360,74 @@ class AppState extends ChangeNotifier {
               .toList(),
         },
       };
-      
-      final res = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('Settings sync to server failed: $e');
-      return false;
+
+      // On web, use BrowserClient with withCredentials=true so the HttpOnly
+      // `session` cookie is included. This is required for Google-auth'd users
+      // where passwordHash is empty and auth falls back to `getSession()`.
+      // The http package's default BrowserClient uses `same-origin` which works
+      // for same-origin prod, but fails for cross-origin dev (localhost:3000)
+      // and is brittle if the app is ever hosted elsewhere.
+      Future<http.Response> doPost() {
+        if (kIsWeb) {
+          return cred_http.postWithCredentials(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          );
+        }
+        return http.post(
+          Uri.parse(url),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        );
+      }
+
+      http.Response res = await doPost();
+
+      // Verbose logging for prod diagnosis: include hash/session hint.
+      // Do not log the hash value itself, only whether it was empty.
+      if (res.statusCode != 200) {
+        // Session fallback retry: if hash is empty (Google user) and we got 403,
+        // the cookie may have been omitted (http default) — already using
+        // withCredentials=true, but retry once in case of transient race.
+        if (res.statusCode == 403 && passwordHash.isEmpty && kIsWeb && sessionClientId.isNotEmpty) {
+          debugPrint('Settings sync 403 with empty hash — retrying with session (withCredentials) ...');
+          res = await doPost();
+          if (res.statusCode == 200) {
+            debugPrint('Settings sync retry succeeded');
+            return (synced: true, error: null);
+          }
+        }
+        final hashHint = passwordHash.isEmpty ? 'empty' : 'present';
+        final sessionHint = sessionClientId.isNotEmpty ? sessionClientId : 'none';
+        String errorDetail;
+        String hintDetail = '';
+        try {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map) {
+            errorDetail = (decoded['error'] ?? res.body).toString();
+            if (decoded['hint'] != null) hintDetail = ' hint:${decoded['hint']}';
+          } else {
+            errorDetail = res.body;
+          }
+        } catch (_) {
+          errorDetail = res.body;
+        }
+        debugPrint(
+          'Settings sync failed ${res.statusCode}: $errorDetail$hintDetail '
+          '(hash:$hashHint sessionClient:$sessionHint url:$url kIsWeb:$kIsWeb)',
+        );
+        if (res.body.isNotEmpty) {
+          debugPrint('Settings sync raw body: ${res.body}');
+        }
+        // Surface server body to UI so production shows actionable error.
+        final displayError = hintDetail.isNotEmpty ? '$errorDetail ($hintDetail)' : errorDetail;
+        return (synced: false, error: displayError.isNotEmpty ? displayError : 'HTTP ${res.statusCode}');
+      }
+      return (synced: true, error: null);
+    } catch (e, st) {
+      debugPrint('Settings sync to server failed: $e\n$st');
+      return (synced: false, error: e.toString());
     }
   }
 }
