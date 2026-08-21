@@ -3,6 +3,15 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
+  // Native SVG rasterizer — must load at runtime, never bundled (Turbopack
+  // cannot resolve its platform-specific .node optional dependency).
+  serverExternalPackages: ["@resvg/resvg-js"],
+  // Ship the Vaishnavi SVG templates + fonts into the render route's serverless
+  // bundle — runtime fs paths are not auto-traced, and without this production
+  // silently fell back to the generic PDF (local worked, prod didn't).
+  outputFileTracingIncludes: {
+    "/api/vaishnavi-estimate/render": ["./src/templates/vaishnavi/**/*"],
+  },
   // Defaults to ".next" — identical behaviour on Vercel and in CI, where the env
   // var is never set. The override exists for Windows: `next build` deletes and
   // recreates .next, but a running `npm run start` holds a lock on
