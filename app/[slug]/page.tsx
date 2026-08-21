@@ -114,7 +114,7 @@ export async function generateMetadata({
 
   if (client.id === VENKATESHWARA_SLUG) {
     const html = readStaticHtml(VENKATESHWARA_INDEX_PATH);
-    const title = html ? htmlMeta(html, "title") : "Sri Venkateshwara UPVC Windows & Doors | Hyderabad";
+    const title = html ? htmlMeta(html, "title") : "Venkateshwara UPVC Windows & Doors | Hyderabad";
     const description = html ? htmlMeta(html, "description") : "Premium UPVC Windows & Doors in Hyderabad. German hardware, 10-year warranty. Free site measurement by J. Venkatesh.";
     return {
       title,
@@ -125,7 +125,7 @@ export async function generateMetadata({
         title,
         description,
         url: `https://app.vitharn.com/venkateshwara/`,
-        siteName: "Sri Venkateshwara UPVC Windows & Doors",
+        siteName: "Venkateshwara UPVC Windows & Doors",
         type: "website",
         locale: "en_IN",
       },
