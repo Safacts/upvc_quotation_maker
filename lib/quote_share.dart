@@ -180,12 +180,22 @@ class QuoteShare {
   }
 
   /// Public review page for the tenant, pre-filled with this quotation.
+  ///
+  /// The client id is slugified exactly like ClientLoader._slugify so ids with
+  /// spaces/casing ("VAISHNAVI UPVC WINDOWS AND DOORS") produce a clean,
+  /// mail-safe path instead of a raw-space URL that email clients break.
   static String reviewUrl(
     QuotationData data, {
     required ClientConfig config,
-  }) =>
-      '${origin()}/${config.clientId}/review'
-      '?q=${Uri.encodeComponent(data.quotationNo)}';
+  }) {
+    final slug = config.clientId
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    return '${origin()}/$slug/review'
+        '?q=${Uri.encodeComponent(data.quotationNo)}';
+  }
 
   /// Builds the message the customer receives.
   ///

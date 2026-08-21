@@ -334,6 +334,26 @@ export async function requireTier(
     return { ok: false, error: denial(feature, null, need) };
   }
 
+  // LAUNCH UNLOCK (Aadi, 21-08-2026): the first 25 clients get EVERY feature
+  // until he explicitly asks to re-enable the paywall. One switch to flip
+  // later — set LAUNCH_UNLOCK_CLIENTS back to 0.
+  const LAUNCH_UNLOCK_CLIENTS = 25;
+  if (LAUNCH_UNLOCK_CLIENTS > 0) {
+    try {
+      const rows = await supaGet("clients", {
+        select: "id",
+        order: "created_at.asc",
+        limit: LAUNCH_UNLOCK_CLIENTS,
+      });
+      if (Array.isArray(rows) && rows.some((r: any) => r?.id === id)) {
+        return { ok: true, tier: "final" };
+      }
+    } catch (e: any) {
+      // Lookup failed — fall through to normal tier check (fail closed there).
+      console.warn(`[tier] launch-unlock lookup failed client=${id}: ${String(e?.message ?? e)}`);
+    }
+  }
+
   let have: Tier | null;
   try {
     have = await getClientTier(id);
