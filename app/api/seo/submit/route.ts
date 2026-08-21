@@ -32,9 +32,9 @@ export async function POST(request: NextRequest) {
     const siteUrl = "https://app.vitharn.com/";
 
     const response = await searchconsole.urlInspection.index.inspect({
-      url: url,
+      inspectionUrl: url,
       siteUrl: siteUrl,
-    });
+    } as any);
 
     console.log(`[SEO] URL submitted for indexing: ${url}`, response.data);
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "URL submitted for indexing",
       url: url,
-      result: response.data,
+      result: (response as any).data,
     });
   } catch (error: any) {
     console.error("[SEO] Error submitting URL:", error.message);

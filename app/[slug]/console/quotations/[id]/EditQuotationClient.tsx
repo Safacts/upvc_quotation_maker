@@ -6,8 +6,8 @@ import QuotationEditor, {
   type EditorInitial,
   type MeasuredRow,
   type UnmeasuredRow,
-  emptyBom,
 } from "../QuotationEditor";
+import { emptyBom } from "@/lib/quotation-editor";
 import { useConsole } from "../../ConsoleShell";
 import { toDateInputValue } from "@/lib/console-format";
 
