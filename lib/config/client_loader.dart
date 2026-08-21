@@ -6,7 +6,8 @@ import 'client_config.dart';
 import '../supabase_config.dart';
 import '../utils/jwt_verifier.dart';
 
-import 'dart:html' as html;
+import 'client_loader_html_stub.dart'
+    if (dart.library.html) 'client_loader_html_web.dart' as loader_html;
 
 class ClientLoader {
   static String _slugify(String s) {
@@ -157,21 +158,12 @@ class ClientLoader {
 
   static String? _getFragmentSsoToken() {
     if (!kIsWeb) return null;
-    try {
-      final fragment = html.window.location.hash; // e.g., "#sso_token=xyz"
-      if (fragment.startsWith('#sso_token=')) {
-        return fragment.substring('#sso_token='.length);
-      }
-    } catch (_) {}
-    return null;
+    return loader_html.readSsoFragmentToken();
   }
 
   static void _clearFragment() {
     if (!kIsWeb) return;
-    try {
-      // Remove fragment without triggering navigation
-      html.window.history.replaceState(null, '', '${html.window.location.pathname}${html.window.location.search ?? ''}');
-    } catch (_) {}
+    loader_html.clearUrlFragment();
   }
 
   static Future<String?> _getCurrentSessionClientId() async {
