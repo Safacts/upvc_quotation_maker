@@ -108,6 +108,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     _usePresets = Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets;
     if (widget.existingData != null) {
       data = widget.existingData!;
+      _lastSaved = widget.existingData!.createdAt;
       _loadItems();
     } else {
       data = QuotationData();
@@ -628,29 +629,33 @@ $reviewCta
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
+    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.existingData == null ? 'New Quotation' : 'Edit Quotation'),
         actions: [
           if (_isSaving)
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+              padding: EdgeInsets.symmetric(horizontal: 14.0),
+              child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))),
             )
           else if (_lastSaveError != null)
             Tooltip(
               message: 'Save error: $_lastSaveError',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Center(child: Icon(Icons.error, color: Colors.red, size: 18)),
+                child: Center(child: Icon(Icons.cloud_off, color: Colors.red, size: 22)),
               ),
             )
-          else if (_lastSaved != null)
+          else
             Tooltip(
-              message: 'Last saved ${DateFormat('HH:mm:ss').format(_lastSaved!)}',
+              message: _lastSaved != null
+                  ? 'Saved to $clientId at ${DateFormat('HH:mm:ss').format(_lastSaved!)}'
+                  : 'Connected to $clientId',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Center(child: Icon(Icons.cloud_done, color: Colors.green, size: 18)),
+                child: Center(child: Icon(Icons.cloud_done, color: Colors.green, size: 22)),
               ),
             ),
           IconButton(icon: const Icon(Icons.email), onPressed: _manualEmailPrompt, tooltip: 'Send to custom email'),
@@ -665,6 +670,7 @@ $reviewCta
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -685,21 +691,40 @@ $reviewCta
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    if (_lastSaveError != null)
-                      Row(
-                        children: [
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (_isSaving) ...[
+                          const SizedBox(
+                            width: 13,
+                            height: 13,
+                            child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.green),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Saving to $clientId...',
+                            style: TextStyle(fontSize: 11.5, color: Colors.blue.shade700, fontWeight: FontWeight.w500),
+                          ),
+                        ] else if (_lastSaveError != null) ...[
                           const Icon(Icons.error, size: 14, color: Colors.red),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Save ERROR: $_lastSaveError',
+                              'Save error: $_lastSaveError',
                               style: const TextStyle(fontSize: 11, color: Colors.red),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                        ] else ...[
+                          const Icon(Icons.cloud_done, size: 15, color: Colors.green),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Saved to $clientId at ${DateFormat('HH:mm:ss').format(_lastSaved ?? data.createdAt)}',
+                            style: TextStyle(fontSize: 11.5, color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                          ),
                         ],
-                      ),
+                      ],
+                    ),
                   ],
                 ),
               ),
