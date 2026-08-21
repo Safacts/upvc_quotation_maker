@@ -2,9 +2,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-const secretKey = process.env.JWT_SECRET;
-if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
-const encodedKey = new TextEncoder().encode(secretKey);
+function getEncodedKey(): Uint8Array {
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
+  return new TextEncoder().encode(secretKey);
+}
 
 export type SessionPayload = {
   role: "admin" | "customer" | "signup";
@@ -22,13 +24,13 @@ export async function encrypt(payload: SessionPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("8h")
-    .sign(encodedKey);
+    .sign(getEncodedKey());
 }
 
 export async function decrypt(session: string | undefined = "") {
   if (!session) return null;
   try {
-    const { payload } = await jwtVerify(session, encodedKey, {
+    const { payload } = await jwtVerify(session, getEncodedKey(), {
       algorithms: ["HS256"],
     });
     return payload as SessionPayload;

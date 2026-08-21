@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-client";
+import { getSupabaseAdmin } from "@/lib/supabase-client";
 import { hashQuotationToken } from "@/lib/quotation-token";
 
 
@@ -43,6 +43,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const supabaseAdmin = getSupabaseAdmin();
   const url = new URL(req.url);
   const token = url.searchParams.get("token");
 
@@ -105,6 +106,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const supabaseAdmin = getSupabaseAdmin();
   let body: any = {};
   try {
     body = await req.json();

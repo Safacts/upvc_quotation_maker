@@ -1,21 +1,17 @@
 import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
-}
-
 let _supabaseServer: SupabaseClient | null = null;
 
 export function getSupabaseServer(): SupabaseClient {
   if (!_supabaseServer) {
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
+    }
     _supabaseServer = createSupabaseClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
   }
   return _supabaseServer;
 }
-
-export { supabaseUrl, supabaseServiceRoleKey };

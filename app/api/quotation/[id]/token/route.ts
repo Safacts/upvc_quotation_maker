@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { getSession } from "@/lib/session";
-import { supabaseAdmin } from "@/lib/supabase-client";
+import { getSupabaseAdmin } from "@/lib/supabase-client";
 import { requireTier } from "@/lib/tiers";
 import {
   createQuotationToken,
@@ -85,6 +85,7 @@ async function resolveCaller(
   // accept both so the Dart side has one consistent payload shape.
   const phash = String(body.admin_password_hash ?? body.password_hash ?? "").trim();
   if (!clientId || !phash) return null;
+  const supabaseAdmin = getSupabaseAdmin();
 
   const { data: client, error } = await supabaseAdmin
     .from("clients")
@@ -107,6 +108,7 @@ async function resolveCaller(
  * from the request.
  */
 async function issue(id: string, body: Record<string, any> | null) {
+  const supabaseAdmin = getSupabaseAdmin();
   const caller = await resolveCaller(body);
   if (!caller) {
     return json({ error: "Unauthorized" }, 401);
