@@ -19,6 +19,8 @@ const allowlist = {
   "run_foundation_migration.py": ["database URI password"],
   // Test fixtures only (hash fixtures, fake logins) — no live credentials.
   "tests/portal-auth.test.ts": ["credential assignment"],
+  // Fake HMAC secret for token-derivation tests ("bugsy-test-quote-token-secret").
+  "tests/api-quotation.test.ts": ["credential assignment"],
   // PUBLIC anon key baked for client bundles (role=anon, RLS is the boundary).
   "src/lib/supabase-public.ts": ["JWT"],
 };
