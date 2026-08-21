@@ -31,6 +31,7 @@ import {
   Factory,
   Scissors,
   ClipboardList,
+  PhoneCall,
   FolderKanban,
   Box,
 } from "lucide-react";
@@ -192,8 +193,12 @@ const NAV = [
   { key: "products", label: "Products", icon: Package, hint: "4" },
   { key: "production", label: "Production", icon: Factory, hint: "5" },
   { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
+<<<<<<< Updated upstream
   { key: "factory-reports", label: "Factory Reports", icon: ClipboardList, hint: "0" },
   { key: "leads", label: "Leads", icon: UserPlus, hint: "7" },
+=======
+  { key: "leads", label: "CRM (Leads)", icon: PhoneCall, hint: "7" },
+>>>>>>> Stashed changes
   { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
   { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
 ] as const;
@@ -338,6 +343,26 @@ export default function ConsoleShell({
         hint: "Go to",
         run: () => router.push(n.key ? `${base}/${n.key}` : base),
       })),
+      {
+        label: "3D Design",
+        hint: "Open",
+        run: () => window.open("/upvc/3d-viewer", "_blank", "noopener,noreferrer"),
+      },
+      {
+        label: "Cutting Optimization",
+        hint: "Go to",
+        run: () => router.push(`${base}/cutting`),
+      },
+      {
+        label: "Production Board",
+        hint: "Go to",
+        run: () => router.push(`${base}/production`),
+      },
+      {
+        label: "CRM",
+        hint: "Go to",
+        run: () => router.push(`${base}/leads`),
+      },
       {
         label: "New Quotation",
         hint: "Alt+N",

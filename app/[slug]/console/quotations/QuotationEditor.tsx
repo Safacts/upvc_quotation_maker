@@ -18,7 +18,11 @@ import {
 export { emptyBom } from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
+<<<<<<< Updated upstream
   ChevronLeft, ChevronRight, ChevronDown, Copy, Box,
+=======
+  ChevronLeft, ChevronRight, Cuboid,
+>>>>>>> Stashed changes
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
@@ -861,11 +865,23 @@ export default function QuotationEditor({
                 type="button"
                 className="vc-btn vc-btn-sm"
                 onClick={() =>
+<<<<<<< Updated upstream
                   window.open(`/upvc/3d-viewer?fromQuotation=${savedId}`, "_blank", "noopener,noreferrer")
                 }
                 title="Open this quotation in the 3D window viewer"
               >
                 <Box size={12} /> View in 3D
+=======
+                  window.open(
+                    `/upvc/3d-viewer?fromQuotation=${savedId}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+                title="Open the measured opening as a 3D model"
+              >
+                <Cuboid size={12} /> 3D
+>>>>>>> Stashed changes
               </button>
             )}
             <button

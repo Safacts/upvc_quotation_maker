@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -5,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'app_state.dart';
 import 'models.dart';
 import 'quotation_screen.dart';
@@ -102,7 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select()
+          .select('*, measured_items(*), unmeasured_items(*)')
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 
@@ -143,6 +145,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _logout() async {
     umamiTrack('logout');
+
+    // Clear server-side session cookie first
+    try {
+      final String logoutUrl = kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
+      await http.post(
+        Uri.parse(logoutUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'mode': 'logout'}),
+      );
+    } catch (e) {
+      debugPrint('Logout API error: $e');
+    }
+
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
@@ -161,7 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
@@ -242,12 +257,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 );
               }),
+              const Divider(height: 24),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text(
+                  'Delete Quotation',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Permanently remove with double confirmation',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteQuotation(q);
+                },
+              ),
               const SizedBox(height: 8),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _confirmDeleteQuotation(QuotationData q) async {
+    if (q.id == null || q.id!.isEmpty) return;
+
+    // First Confirmation Dialog
+    final firstConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 10),
+            Text('Delete Quotation?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete quotation "${q.quotationNo}" for ${q.customerName}?\n\nThis will remove all window measurements and cost breakdowns.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continue to Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (firstConfirm != true || !mounted) return;
+
+    // Second (Double) Confirmation Dialog
+    final secondConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Text('Final Confirmation'),
+          ],
+        ),
+        content: Text(
+          'Permanent action: Quotation "${q.quotationNo}" will be permanently erased from the server and cannot be recovered.\n\nConfirm permanent deletion?',
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Quotation'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            icon: const Icon(Icons.delete_forever, size: 18),
+            onPressed: () => Navigator.pop(ctx, true),
+            label: const Text('Yes, Permanently Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (secondConfirm != true || !mounted) return;
+
+    // Perform Deletion
+    try {
+      final clientId = Provider.of<AppState>(
+        context,
+        listen: false,
+      ).clientConfig.clientId;
+
+      // Delete child items first then parent quotation
+      await SupabaseConfig.client
+          .from('measured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+
+      await SupabaseConfig.client
+          .from('unmeasured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+
+      await SupabaseConfig.client
+          .from('quotations')
+          .delete()
+          .eq('id', q.id!)
+          .eq('client_id', clientId);
+
+      setState(() {
+        _quotations.removeWhere((item) => item.id == q.id);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Quotation ${q.quotationNo} deleted permanently.'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Delete error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete quotation: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Color _statusColor(QuotationStatus s) {
@@ -986,6 +1140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   _fetchQuotations();
                                 },
                                 onLongPress: () => _showStatusSheet(q),
+                                onSecondaryTap: () => _showStatusSheet(q),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Row(
