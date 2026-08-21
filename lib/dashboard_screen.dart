@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -6,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'app_state.dart';
 import 'models.dart';
 import 'quotation_screen.dart';
@@ -22,11 +20,12 @@ import 'theme.dart';
 import 'client_logo.dart';
 import 'umami_tracker.dart';
 import 'gst_invoice_list_screen.dart';
-import 'taxes_screen.dart';
 import 'inventory_screen.dart';
-import 'business/business_users_screen.dart';
-import 'items_units_screen.dart';
-import 'parties_screen.dart';
+import 'production_screen.dart';
+import 'cutting_screen.dart';
+import 'leads_screen.dart';
+import 'project_screen.dart';
+import 'order_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
@@ -51,7 +50,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _searchQuery = '';
   String _filterType = 'Newest';
   bool _hasHandledOpenQuote = false;
-  bool _showQuickActions = false; // collapsed by default
 
   /// Number of locally-queued records awaiting push to the server.
   int _pendingSyncCount = 0;
@@ -68,10 +66,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Never throws — OfflineDatabase is a no-op on Flutter Web.
   Future<void> _refreshPendingSyncCount() async {
     try {
-      final clientId = Provider.of<AppState>(
-        context,
-        listen: false,
-      ).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       if (clientId.isEmpty) return;
       final count = await OfflineDatabase.instance.getPendingSyncCount(
         clientId,
@@ -98,20 +94,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _fetchQuotations() async {
     setState(() => _isLoading = true);
     try {
-      final clientId = Provider.of<AppState>(
-        context,
-        listen: false,
-      ).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
-          .select('*, measured_items(*), unmeasured_items(*)')
+          .select()
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 
       setState(() {
-        _quotations = (response as List)
-            .map((e) => QuotationData.fromMap(e))
-            .toList();
+        _quotations =
+            (response as List).map((e) => QuotationData.fromMap(e)).toList();
         _isLoading = false;
       });
 
@@ -127,8 +120,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          QuotationScreen(existingData: _quotations[qIndex]),
+                      builder:
+                          (context) => QuotationScreen(
+                            existingData: _quotations[qIndex],
+                          ),
                     ),
                   ).then((_) => _fetchQuotations());
                 }
@@ -145,19 +140,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _logout() async {
     umamiTrack('logout');
-
-    // Clear server-side session cookie first
-    try {
-      final String logoutUrl = kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
-      await http.post(
-        Uri.parse(logoutUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'logout'}),
-      );
-    } catch (e) {
-      debugPrint('Logout API error: $e');
-    }
-
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
@@ -176,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (context) => LoginScreen()),
     );
   }
 
@@ -186,10 +168,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
     try {
-      final clientId = Provider.of<AppState>(
-        context,
-        listen: false,
-      ).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       await SupabaseConfig.client
           .from('quotations')
           .update({'status': newStatus.value})
@@ -243,165 +223,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   title: Text(
                     s.label,
                     style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
-                  trailing: isSelected
-                      ? Icon(Icons.check_circle, color: theme.primaryColor)
-                      : null,
+                  trailing:
+                      isSelected
+                          ? Icon(Icons.check_circle, color: theme.primaryColor)
+                          : null,
                   onTap: () async {
                     Navigator.pop(ctx);
                     await _updateStatus(q, s);
                   },
                 );
               }),
-              const Divider(height: 24),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                title: const Text(
-                  'Delete Quotation',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: const Text(
-                  'Permanently remove with double confirmation',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _confirmDeleteQuotation(q);
-                },
-              ),
               const SizedBox(height: 8),
             ],
           ),
         );
       },
     );
-  }
-
-  Future<void> _confirmDeleteQuotation(QuotationData q) async {
-    if (q.id == null || q.id!.isEmpty) return;
-
-    // First Confirmation Dialog
-    final firstConfirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            SizedBox(width: 10),
-            Text('Delete Quotation?'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete quotation "${q.quotationNo}" for ${q.customerName}?\n\nThis will remove all window measurements and cost breakdowns.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continue to Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (firstConfirm != true || !mounted) return;
-
-    // Second (Double) Confirmation Dialog
-    final secondConfirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.delete_forever, color: Colors.red, size: 28),
-            SizedBox(width: 10),
-            Text('Final Confirmation'),
-          ],
-        ),
-        content: Text(
-          'Permanent action: Quotation "${q.quotationNo}" will be permanently erased from the server and cannot be recovered.\n\nConfirm permanent deletion?',
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep Quotation'),
-          ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-            icon: const Icon(Icons.delete_forever, size: 18),
-            onPressed: () => Navigator.pop(ctx, true),
-            label: const Text('Yes, Permanently Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (secondConfirm != true || !mounted) return;
-
-    // Perform Deletion
-    try {
-      final clientId = Provider.of<AppState>(
-        context,
-        listen: false,
-      ).clientConfig.clientId;
-
-      // Delete child items first then parent quotation
-      await SupabaseConfig.client
-          .from('measured_items')
-          .delete()
-          .eq('quotation_id', q.id!)
-          .eq('client_id', clientId);
-
-      await SupabaseConfig.client
-          .from('unmeasured_items')
-          .delete()
-          .eq('quotation_id', q.id!)
-          .eq('client_id', clientId);
-
-      await SupabaseConfig.client
-          .from('quotations')
-          .delete()
-          .eq('id', q.id!)
-          .eq('client_id', clientId);
-
-      setState(() {
-        _quotations.removeWhere((item) => item.id == q.id);
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Quotation ${q.quotationNo} deleted permanently.'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Delete error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete quotation: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 
   Color _statusColor(QuotationStatus s) {
@@ -486,50 +327,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<_QuickAction> _quickActions() {
     return [
       _QuickAction(
+        title: 'Production',
+        icon: Icons.factory_outlined,
+        color: Colors.orange,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProductionScreen()),
+            ),
+      ),
+      _QuickAction(
+        title: 'Cutting',
+        icon: Icons.content_cut,
+        color: Colors.blue,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CuttingScreen()),
+            ),
+      ),
+      _QuickAction(
+        title: 'Leads',
+        icon: Icons.people_outline,
+        color: Colors.teal,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const LeadsScreen()),
+            ),
+      ),
+      _QuickAction(
+        title: 'Projects',
+        icon: Icons.folder_copy_outlined,
+        color: Colors.indigo,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProjectScreen()),
+            ),
+      ),
+      _QuickAction(
+        title: '3D Design',
+        icon: Icons.view_in_ar,
+        color: Colors.deepPurple,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const OrderScreen()),
+            ),
+      ),
+      _QuickAction(
         title: 'Inventory',
         icon: Icons.inventory_2_outlined,
         color: Colors.brown,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const InventoryScreen()),
-        ),
-      ),
-      _QuickAction(
-        title: 'Items & Units',
-        icon: Icons.category_outlined,
-        color: Colors.deepOrange,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ItemsUnitsScreen())),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const InventoryScreen()),
+            ),
       ),
       _QuickAction(
         title: 'Analytics',
         icon: Icons.analytics_outlined,
         color: Colors.green,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AnalyticsScreen(quotations: _quotations),
-          ),
-        ),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AnalyticsScreen(quotations: _quotations),
+              ),
+            ),
       ),
       _QuickAction(
         title: 'Market Page',
         icon: Icons.web,
         color: Colors.indigo,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const MarketPagePreviewScreen(),
-          ),
-        ),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MarketPagePreviewScreen(),
+              ),
+            ),
       ),
       _QuickAction(
         title: 'GST Invoices',
         icon: Icons.receipt_long,
         color: Colors.teal,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const GstInvoiceListScreen()),
-        ),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GstInvoiceListScreen(),
+              ),
+            ),
       ),
     ];
   }
@@ -583,16 +474,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildSummaryRow(List<QuotationData> quotations) {
     final thisMonth = DateTime.now();
-    final monthQuotes = quotations
-        .where(
-          (q) =>
-              q.createdAt.year == thisMonth.year &&
-              q.createdAt.month == thisMonth.month,
-        )
-        .toList();
-    final wonQuotes = quotations
-        .where((q) => q.status == QuotationStatus.won)
-        .toList();
+    final monthQuotes =
+        quotations
+            .where(
+              (q) =>
+                  q.createdAt.year == thisMonth.year &&
+                  q.createdAt.month == thisMonth.month,
+            )
+            .toList();
+    final wonQuotes =
+        quotations.where((q) => q.status == QuotationStatus.won).toList();
     final currFmt = NumberFormat.compactCurrency(locale: 'en_IN', symbol: '₹');
 
     return Row(
@@ -661,11 +552,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final filteredQuotations = _quotations.where((q) {
-      final query = _searchQuery.toLowerCase();
-      return q.customerName.toLowerCase().contains(query) ||
-          q.quotationNo.toLowerCase().contains(query);
-    }).toList();
+    final filteredQuotations =
+        _quotations.where((q) {
+          final query = _searchQuery.toLowerCase();
+          return q.customerName.toLowerCase().contains(query) ||
+              q.quotationNo.toLowerCase().contains(query);
+        }).toList();
 
     if (_filterType == 'Oldest') {
       filteredQuotations.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -695,8 +587,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      AnalyticsScreen(quotations: _quotations),
+                  builder:
+                      (context) => AnalyticsScreen(quotations: _quotations),
                 ),
               );
             },
@@ -728,10 +620,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       decoration: const BoxDecoration(shape: BoxShape.circle),
                       clipBehavior: Clip.antiAlias,
                       child: ClientLogo(
-                        config: Provider.of<AppState>(
-                          context,
-                          listen: false,
-                        ).clientConfig,
+                        config:
+                            Provider.of<AppState>(
+                              context,
+                              listen: false,
+                            ).clientConfig,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
@@ -772,23 +665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.receipt_long, color: Colors.green),
-              title: const Text('GST Invoices'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const GstInvoiceListScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.inventory_2_outlined,
-                color: Colors.brown,
-              ),
+              leading: const Icon(Icons.inventory_2_outlined, color: Colors.brown),
               title: const Text('Inventory'),
               onTap: () {
                 Navigator.pop(context);
@@ -801,28 +678,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.people_alt_outlined,
-                color: Colors.deepOrange,
-              ),
-              title: const Text('Parties ledger'),
-              subtitle: const Text('Customers & suppliers'),
+              leading: const Icon(Icons.factory_outlined, color: Colors.orange),
+              title: const Text('Production'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PartiesScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const ProductionScreen(),
+                  ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.percent, color: Colors.deepOrange),
-              title: const Text('Taxes'),
+              leading: const Icon(Icons.content_cut, color: Colors.blue),
+              title: const Text('Cutting'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TaxesScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const CuttingScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_outline, color: Colors.teal),
+              title: const Text('Leads / CRM'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LeadsScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_copy_outlined, color: Colors.indigo),
+              title: const Text('Projects'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProjectScreen(),
+                  ),
                 );
               },
             ),
@@ -839,22 +742,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             ListTile(
               leading: const Icon(
-                Icons.groups_outlined,
-                color: Colors.deepPurple,
-              ),
-              title: const Text('Business & Users'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const BusinessUsersScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(
                 Icons.analytics_outlined,
                 color: Colors.green,
               ),
@@ -864,8 +751,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AnalyticsScreen(quotations: _quotations),
+                    builder:
+                        (context) => AnalyticsScreen(quotations: _quotations),
                   ),
                 );
               },
@@ -930,11 +817,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               return OfflineBanner(
                 isOffline: isOffline,
                 pendingSyncCount: _pendingSyncCount,
-                onTap: isOffline
-                    ? null
-                    : () => SyncEngine.instance.syncAll().whenComplete(
-                        _refreshPendingSyncCount,
-                      ),
+                onTap:
+                    isOffline
+                        ? null
+                        : () => SyncEngine.instance.syncAll().whenComplete(
+                          _refreshPendingSyncCount,
+                        ),
               );
             },
           ),
@@ -1000,54 +888,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          // Secondary/overflow actions — hidden by default behind a "More" button
-          // so the dashboard stays clean. Expand on tap.
+          // Secondary/overflow actions — horizontally scrollable so adding new
+          // features never grows the layout vertically and never "destroys the look".
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!_showQuickActions)
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () => setState(() => _showQuickActions = true),
-                      icon: const Icon(Icons.expand_more, size: 20),
-                      label: const Text('More tools'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.primary,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 16,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  Column(
-                    children: [
-                      _buildQuickActionsStrip(),
-                      const SizedBox(height: 4),
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: () =>
-                              setState(() => _showQuickActions = false),
-                          icon: const Icon(Icons.expand_less, size: 20),
-                          label: const Text('Show less'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: _buildQuickActionsStrip(),
           ),
 
           Padding(
@@ -1068,154 +913,161 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.filter_list, size: 28),
                   tooltip: 'Filter',
                   onSelected: (value) => setState(() => _filterType = value),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'Newest',
-                      child: Text('Newest First'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'Oldest',
-                      child: Text('Oldest First'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'Highest Amount',
-                      child: Text('Highest Amount'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'Lowest Amount',
-                      child: Text('Lowest Amount'),
-                    ),
-                    const PopupMenuItem(value: 'Won', child: Text('Won Only')),
-                  ],
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'Newest',
+                          child: Text('Newest First'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Oldest',
+                          child: Text('Oldest First'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Highest Amount',
+                          child: Text('Highest Amount'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Lowest Amount',
+                          child: Text('Lowest Amount'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Won',
+                          child: Text('Won Only'),
+                        ),
+                      ],
                 ),
               ],
             ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredQuotations.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox,
-                          size: 60,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No quotations found',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 18,
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : filteredQuotations.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox,
+                            size: 60,
+                            color: Colors.grey.shade400,
                           ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fade()
-                : RefreshIndicator(
-                    onRefresh: _fetchQuotations,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                          const SizedBox(height: 16),
+                          Text(
+                            'No quotations found',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
                       ),
-                      itemCount: filteredQuotations.length,
-                      itemBuilder: (context, index) {
-                        final q = filteredQuotations[index];
-                        return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          QuotationScreen(existingData: q),
-                                    ),
-                                  );
-                                  _fetchQuotations();
-                                },
-                                onLongPress: () => _showStatusSheet(q),
-                                onSecondaryTap: () => _showStatusSheet(q),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        backgroundColor: theme
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: 0.1),
-                                        child: Icon(
-                                          Icons.description,
-                                          color: theme.colorScheme.primary,
-                                        ),
+                    ).animate().fade()
+                    : RefreshIndicator(
+                      onRefresh: _fetchQuotations,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: filteredQuotations.length,
+                        itemBuilder: (context, index) {
+                          final q = filteredQuotations[index];
+                          return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
+                                  onTap: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => QuotationScreen(
+                                              existingData: q,
+                                            ),
                                       ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
+                                    );
+                                    _fetchQuotations();
+                                  },
+                                  onLongPress: () => _showStatusSheet(q),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: theme
+                                              .colorScheme
+                                              .primary
+                                              .withValues(alpha: 0.1),
+                                          child: Icon(
+                                            Icons.description,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                q.customerName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                q.quotationNo,
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              _buildStatusChip(q.status),
+                                            ],
+                                          ),
+                                        ),
+                                        Column(
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                              CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              q.customerName,
-                                              style: const TextStyle(
+                                              '₹${q.grandTotal.toStringAsFixed(0)}',
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.bold,
+                                                color:
+                                                    theme.colorScheme.primary,
                                                 fontSize: 16,
                                               ),
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              q.quotationNo,
+                                              DateFormat(
+                                                'MMM dd, yyyy',
+                                              ).format(q.date),
                                               style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                                fontSize: 13,
+                                                color: Colors.grey.shade500,
+                                                fontSize: 12,
                                               ),
                                             ),
-                                            const SizedBox(height: 6),
-                                            _buildStatusChip(q.status),
                                           ],
                                         ),
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            '₹${q.grandTotal.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.colorScheme.primary,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            DateFormat(
-                                              'MMM dd, yyyy',
-                                            ).format(q.date),
-                                            style: TextStyle(
-                                              color: Colors.grey.shade500,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .animate()
-                            .fade(delay: Duration(milliseconds: 50 * index))
-                            .slideX(begin: 0.1);
-                      },
+                              )
+                              .animate()
+                              .fade(delay: Duration(milliseconds: 50 * index))
+                              .slideX(begin: 0.1);
+                        },
+                      ),
                     ),
-                  ),
           ),
           CraftedWithLoveWidget(),
         ],
