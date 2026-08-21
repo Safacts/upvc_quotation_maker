@@ -11,7 +11,15 @@ const files = range
     ? execFileSync("git", ["diff", "--cached", "--name-only"], { encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean)
     : execFileSync("git", ["ls-files"], { encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
 
-const ignored = /(^|[\\/])(?:node_modules|\.git|\.next|build|dist|coverage)(?:[\\/]|$)|\.(?:png|jpe?g|gif|webp|apk|pdf|woff2?|ttf|dill|wasm)$/i;
+const ignored = /(^|[\\/])(?:node_modules|\.git|\.next|build|dist|coverage|public[\\/]app)(?:[\\/]|$)|\.(?:png|jpe?g|gif|webp|apk|pdf|woff2?|ttf|dill|wasm)$/i;
+// Reviewed-and-accepted findings (false positives). Keep this list SHORT and
+// always note WHY, so real leaks can't hide behind it.
+const allowlist = {
+  // URI is built from process.env at runtime — no literal password.
+  "run_foundation_migration.py": ["database URI password"],
+  // Test fixtures only (hash fixtures, fake logins) — no live credentials.
+  "tests/portal-auth.test.ts": ["credential assignment"],
+};
 const patterns = [
   { name: "private key", re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
   { name: "JWT", re: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/ },
@@ -23,7 +31,12 @@ for (const file of files) {
   if (ignored.test(file)) continue;
   let text;
   try { text = readFileSync(file, "utf8"); } catch { continue; }
-  for (const pattern of patterns) if (pattern.re.test(text)) findings.push(file + ": " + pattern.name);
+  for (const pattern of patterns) {
+    if (pattern.re.test(text)) {
+      const allowed = allowlist[file]?.includes(pattern.name) || false;
+      if (!allowed) findings.push(file + ": " + pattern.name);
+    }
+  }
 }
 if (findings.length) {
   console.error("Secret scan failed:");

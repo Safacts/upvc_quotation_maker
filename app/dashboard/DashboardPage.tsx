@@ -4,11 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { measuredLineTotal, unmeasuredLineTotal, quotationTotals } from "@/lib/pricing";
 import "./dashboard.css";
 
-// Supabase project `gumpmnbjdtzajhysnnaz` (migrated 08-08-2026).
-// This is the PUBLIC anon key — safe in client bundles; RLS is the boundary.
-const SUPABASE_URL = "https://gumpmnbjdtzajhysnnaz.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs";
+// LIVE Supabase project (Mumbai, effxrwrbsjduvhmorvrq) via client-safe config.
+// Anon key is PUBLIC by design — safe in client bundles; RLS is the boundary.
+import { SUPABASE_PUBLIC_URL as SUPABASE_URL, SUPABASE_PUBLIC_ANON_KEY as SUPABASE_KEY } from "@/lib/supabase-public";
 const SUPERUSER_EMAIL = "kongaaadisheshu@gmail.com";
 const APK_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk`;
 
