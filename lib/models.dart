@@ -133,6 +133,16 @@ class QuotationData {
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     q.status = QuotationStatusX.fromString(map['status']);
     q.supplierCompany = map['supplier_company'] ?? '';
+    if (map['measured_items'] != null && map['measured_items'] is List) {
+      q.measuredItems = (map['measured_items'] as List)
+          .map((m) => MeasuredItem.fromMap(m is Map<String, dynamic> ? m : Map<String, dynamic>.from(m as Map)))
+          .toList();
+    }
+    if (map['unmeasured_items'] != null && map['unmeasured_items'] is List) {
+      q.unmeasuredItems = (map['unmeasured_items'] as List)
+          .map((m) => UnmeasuredItem.fromMap(m is Map<String, dynamic> ? m : Map<String, dynamic>.from(m as Map)))
+          .toList();
+    }
     return q;
   }
 }
