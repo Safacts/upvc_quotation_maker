@@ -16,7 +16,6 @@ import 'google_signin.dart';
 import 'umami_tracker.dart';
 import 'supabase_config.dart';
 import 'config/client_loader.dart';
-import 'config/client_config.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -117,11 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
-          final config = await ClientLoader.loadConfig(clientId: clientId);
-          if (config is SsoPendingClientConfig) {
-            await _handleSsoPending(config);
-            return;
-          }
           await _applyTenant(clientId);
         }
         if (!mounted) return;
@@ -195,59 +189,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleSsoPending(ClientConfig config) async {
-    if (config is! SsoPendingClientConfig) return;
-    
-    final shouldSwitch = await _showTenantSwitchDialog(
-      context: context,
-      currentClientId: config.ssoCurrentClientId!,
-      newClientId: config.clientId,
-    );
-    
-    if (!shouldSwitch) {
-      // User declined - stay on current client, load that config
-      final currentConfig = await ClientLoader.loadConfig(clientId: config.ssoCurrentClientId);
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.applyClientConfig(currentConfig);
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-      return;
-    }
-    
-    // User accepted - proceed with new client
-    await _applyTenant(config.clientId);
-    if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-  }
-
-  Future<bool> _showTenantSwitchDialog({
-    required BuildContext context,
-    required String currentClientId,
-    required String newClientId,
-  }) async {
-    return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Switch Client?'),
-        content: Text(
-          'You are currently viewing "$currentClientId". '
-          'Switch to "$newClientId"?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Switch'),
-          ),
-        ],
-      ),
-    ) ?? false;
-  }
-
   String get _portalAuthUrl =>
       kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
 
@@ -292,11 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
-          final config = await ClientLoader.loadConfig(clientId: clientId);
-          if (config is SsoPendingClientConfig) {
-            await _handleSsoPending(config);
-            return;
-          }
           await _applyTenant(clientId);
         }
         if (!mounted) return;
