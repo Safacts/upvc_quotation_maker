@@ -60,10 +60,11 @@ function makeBuilder(table: string) {
   return builder;
 }
 
-vi.mock("@/lib/supabase-client", () => ({
-  supabaseAdmin: { from: (table: string) => makeBuilder(table) },
-  supabase: { from: (table: string) => makeBuilder(table) },
-}));
+vi.mock("@/lib/supabase-client", () => {
+  const supabase = { from: (table: string) => makeBuilder(table) };
+  const supabaseAdmin = { from: (table: string) => makeBuilder(table) };
+  return { supabase, supabaseAdmin, getSupabase: () => supabase, getSupabaseAdmin: () => supabaseAdmin };
+});
 
 /** Import the route AFTER env + mocks are in place (it reads env at module scope). */
 async function loadRoute() {

@@ -113,10 +113,11 @@ function makeBuilder(table: string) {
   return builder;
 }
 
-vi.mock("@/lib/supabase-client", () => ({
-  supabase: { from: (t: string) => makeBuilder(t) },
-  supabaseAdmin: { from: (t: string) => makeBuilder(t) },
-}));
+vi.mock("@/lib/supabase-client", () => {
+  const supabase = { from: (t: string) => makeBuilder(t) };
+  const supabaseAdmin = { from: (t: string) => makeBuilder(t) };
+  return { supabase, supabaseAdmin, getSupabase: () => supabase, getSupabaseAdmin: () => supabaseAdmin };
+});
 
 // ---------------------------------------------------------------------------
 // Session mock — a real signed JWT would also work, but we control the payload

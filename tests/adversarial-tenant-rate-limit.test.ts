@@ -27,9 +27,10 @@ const tables: Record<string, any> = {
   clients: chain({ data: { config: {} }, error: null }),
 };
 
-vi.mock("@/lib/supabase-client", () => ({
-  supabaseAdmin: { from: (table: string) => tables[table] },
-}));
+vi.mock("@/lib/supabase-client", () => {
+  const supabaseAdmin = { from: (table: string) => tables[table] };
+  return { supabaseAdmin, getSupabaseAdmin: () => supabaseAdmin, getSupabase: () => supabaseAdmin };
+});
 vi.mock("@/lib/quotation-token", () => ({ hashQuotationToken: (value: string) => `hash:${value}` }));
 
 describe("adversarial tenant and quotation isolation", () => {

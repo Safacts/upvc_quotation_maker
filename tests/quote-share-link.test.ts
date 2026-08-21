@@ -60,10 +60,11 @@ function makeBuilder(table: string) {
   return builder;
 }
 
-vi.mock("@/lib/supabase-client", () => ({
-  supabaseAdmin: { from: (t: string) => makeBuilder(t) },
-  supabase: { from: (t: string) => makeBuilder(t) },
-}));
+vi.mock("@/lib/supabase-client", () => {
+  const supabase = { from: (t: string) => makeBuilder(t) };
+  const supabaseAdmin = { from: (t: string) => makeBuilder(t) };
+  return { supabase, supabaseAdmin, getSupabase: () => supabase, getSupabaseAdmin: () => supabaseAdmin };
+});
 
 /** Session cookie state, controlled per-test. */
 let sessionValue: any = null;
