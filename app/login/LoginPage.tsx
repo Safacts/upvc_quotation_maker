@@ -343,7 +343,7 @@ export default function LoginPage() {
 
       <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
         {loginLoading && <span className="spinner" id="loginSpinner" />}
-        <span id="loginText">{loginLoading ? "Signing in…" : "Login"}</span>
+        <span id="loginText">{loginLoading ? "Signing in..." : "Login"}</span>
       </button>
       <button className="forgot-link" onClick={() => triggerForgotPassword()}>
         Forgot Password?
@@ -417,7 +417,7 @@ export default function LoginPage() {
               </button>
               <button onClick={saveNewPassword} id="resetBtn" disabled={resetLoading}>
                 {resetLoading && <span className="spinner" id="resetSpinner" />}
-                <span>{resetLoading ? "Saving…" : "Save Password"}</span>
+                <span>{resetLoading ? "Saving..." : "Save Password"}</span>
               </button>
             </div>
           </div>

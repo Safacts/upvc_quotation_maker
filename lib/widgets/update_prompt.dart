@@ -88,7 +88,7 @@ class _UpdatePromptState extends State<UpdatePrompt> {
             return PopScope(
               canPop: !_installing && !force,
               child: AlertDialog(
-                title: Text(_installing ? 'Updating app…' : 'Update available'),
+                title: Text(_installing ? 'Updating app...' : 'Update available'),
                 content: _installing ? _buildProgress(info) : _buildInfo(force),
                 actions: _installing ? const [] : _buildActions(force),
               ),
@@ -142,7 +142,7 @@ class _UpdatePromptState extends State<UpdatePrompt> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Downloading v${info.versionName}…'),
+              Text('Downloading v${info.versionName}...'),
               const SizedBox(height: 8),
               LinearProgressIndicator(
                 value: _progress > 0 ? _progress : null,

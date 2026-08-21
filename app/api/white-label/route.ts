@@ -43,14 +43,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch all dynamic config for this client
-    const configRows = await supaGet("client_config_dynamic", {
-      client_id: "eq." + clientId,
-      select: "config_key,config_value,value_type,updated_at",
-      order: "config_key.asc",
-    });
-
-    const rows = Array.isArray(configRows) ? configRows : [];
+    // Fetch all dynamic config for this client.
+    // If the table doesn't exist yet (migration 014 not applied), degrade
+    // gracefully: return an empty config instead of 500. The Flutter app
+    // treats missing config as defaults, so this is safe.
+    let rows: any[] = [];
+    try {
+      const configRows = await supaGet("client_config_dynamic", {
+        client_id: "eq." + clientId,
+        select: "config_key,config_value,value_type,updated_at",
+        order: "config_key.asc",
+      });
+      rows = Array.isArray(configRows) ? configRows : [];
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+        console.warn("[white-label] table missing (migration 014 not applied) — returning empty config");
+      } else {
+        throw err;
+      }
+    }
 
     // Build config map
     const config: Record<string, any> = {};
@@ -93,8 +105,13 @@ export async function GET(request: NextRequest) {
       if (Array.isArray(manifest) && manifest.length > 0) {
         version = manifest[0].version || 1;
       }
-    } catch {
-      // Manifest might not exist yet, use default version
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+        console.warn("[white-label] content_manifest table missing (migration 014 not applied) — using default version");
+      } else {
+        throw err;
+      }
     }
 
     return NextResponse.json(
@@ -108,6 +125,8 @@ export async function GET(request: NextRequest) {
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
+    console.error("[white-label] GET error:", e?.message ?? e);
+    console.error("[white-label] full error:", e);
     return NextResponse.json(
       { error: String(e?.message ?? e) },
       { status: 500, headers: CORS_HEADERS },

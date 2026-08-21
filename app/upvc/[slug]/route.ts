@@ -58,7 +58,7 @@ export async function GET(
   <meta name="apple-mobile-web-app-title" content="${esc(splashName)}">
   <meta name="theme-color" content="${themeColor}">
   <link rel="apple-touch-icon" href="${esc(splashIcon)}">
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="/api/favicon/${esc(slug)}"/>
   <title>${esc(splashName)}</title>
   <link rel="manifest" href="/api/pwa/${esc(appSlug)}">
   <style>
@@ -77,7 +77,7 @@ export async function GET(
   <div id="loading">
     <img src="${esc(splashIcon)}" alt="${esc(splashName)}">
     <h2>${esc(splashName)}</h2>
-    <p>Loadingâ€¦</p>
+    <p>Loading...</p>
     <div class="spinner"></div>
   </div>
   <script src="flutter_bootstrap.js" async></script>

@@ -514,7 +514,7 @@ export default function ConfiguratorPage() {
           </div>
           <button className="save-design" type="button" onClick={saveDesign} disabled={saveState === "saving"}>
             <Save size={17} aria-hidden="true" />
-            {saveState === "saving" ? "Saving…" : "Save design"}
+            {saveState === "saving" ? "Saving..." : "Save design"}
           </button>
         </header>
 

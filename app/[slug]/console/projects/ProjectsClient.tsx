@@ -326,7 +326,7 @@ export default function ProjectsClient() {
               ref={searchRef}
               className="vc-input"
               style={{ paddingLeft: 27 }}
-              placeholder="Search project, notes…"
+              placeholder="Search project, notes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

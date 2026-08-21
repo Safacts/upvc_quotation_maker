@@ -228,7 +228,7 @@ export default function ProductsClient() {
               ref={searchRef}
               className="vc-input"
               style={{ paddingLeft: 27 }}
-              placeholder="Search product, category…"
+              placeholder="Search product, category..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

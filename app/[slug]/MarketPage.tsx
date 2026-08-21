@@ -202,7 +202,7 @@ function Hero({ business, heroImage }: { business: Business; heroImage: string }
         )}
       </div>
       <motion.div className="hero-copy" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: reduced ? 0 : 0.09, delayChildren: 0.14 } } }}>
-        <motion.div className="eyebrow" variants={fadeUp}><span /> Built for Hyderabad homes</motion.div>
+        <motion.div className="eyebrow" variants={fadeUp}><span /> {business.name} — Built for {business.serviceArea} homes</motion.div>
         <h1>
           <motion.span variants={fadeUp}>Windows that</motion.span>
           <motion.span variants={fadeUp}>hold their <em>line.</em></motion.span>
@@ -345,7 +345,7 @@ function EnquiryForm({ business, products }: { business: Business; products: Pro
       setStatus("Your enquiry is ready. Add the confirmed WhatsApp number in src/config.ts to enable sending.");
       return;
     }
-    setStatus("Opening WhatsApp with your enquiry…");
+    setStatus("Opening WhatsApp with your enquiry...");
     window.open(`https://wa.me/${business.whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
   return (
@@ -408,7 +408,21 @@ export default function MarketPage({ client, slug }: { client: any; slug: string
   };
   const products = buildProducts(cfg.landingServices);
 
-  const localBusinessSchema = {
+  const cfgAnyForSocial: any = cfg as any;
+  const socialCandidates: string[] = [];
+  const possibleSocialKeys = ["facebookUrl","instagramUrl","linkedinUrl","twitterUrl","youtubeUrl","facebook","instagram","linkedin","twitter","youtube","socialUrl","website"];
+  for (const k of possibleSocialKeys) {
+    const v = cfgAnyForSocial[k];
+    if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
+  }
+  if (Array.isArray(cfgAnyForSocial.socialLinks)) {
+    for (const v of cfgAnyForSocial.socialLinks) if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
+  }
+  if (Array.isArray(cfgAnyForSocial.sameAs)) {
+    for (const v of cfgAnyForSocial.sameAs) if (typeof v === "string" && v.trim().startsWith("http")) socialCandidates.push(v.trim());
+  }
+  const logoUrl = (cfg.logoUrl || "").trim();
+  const localBusinessSchema: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": business.name,
@@ -422,16 +436,11 @@ export default function MarketPage({ client, slug }: { client: any; slug: string
       "addressRegion": "Telangana",
       "addressCountry": "IN"
     },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": 17.2444,
-      "longitude": 78.9164
-    },
     "areaServed": business.serviceArea,
     "serviceType": cfg.landingServices?.length > 0 ? cfg.landingServices : ["UPVC Windows", "UPVC Doors", "Structural Glazing", "Glass Facades"],
     "priceRange": "$$",
-    "image": cfg.logoUrl || "",
-    "sameAs": []
+    ...(logoUrl ? { "image": logoUrl, "logo": logoUrl } : {}),
+    ...(socialCandidates.length > 0 ? { "sameAs": [...new Set(socialCandidates)] } : {}),
   };
 
   return (

@@ -11,7 +11,6 @@ function isFlutterPath(url) {
   if (p === "/favicon.png" || p === "/manifest.json") return true;
   if (p === "/app" || p.startsWith("/app/")) return true;
   if (
-    p.startsWith("/upvc/") ||
     p.startsWith("/dwds/") ||
     p.startsWith("/packages/") ||
     p.startsWith("/assets/") ||
@@ -29,7 +28,7 @@ function isFlutterWs(url) {
   const p = (url || "").split("?")[0];
   if (p.startsWith("$dwdsSseHandler") || p === "/$dwdsSseHandler") return true;
   if (p === "/app" || p.startsWith("/app/")) return true;
-  if (p.startsWith("/upvc/") || p.startsWith("/dwds/")) return true;
+  if (p.startsWith("/dwds/")) return true;
   return false;
 }
 
@@ -59,11 +58,17 @@ const server = http.createServer((req, res) => {
   }
 
   const port = targetFor(req.url);
+  
+  let proxyPath = req.url;
+  if (port === FLUTTER_PORT && proxyPath.startsWith("/app")) {
+    proxyPath = proxyPath.replace(/^\/app/, "") || "/";
+  }
+
   const proxyReq = http.request(
     {
       host: "127.0.0.1",
       port,
-      path: req.url,
+      path: proxyPath,
       method: req.method,
       headers: { ...req.headers, host: `127.0.0.1:${port}` },
     },

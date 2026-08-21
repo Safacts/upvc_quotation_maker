@@ -460,7 +460,7 @@ export default function ReviewForm({
               maxLength={1000}
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
-              placeholder="Share your experience…"
+              placeholder="Share your experience..."
               className="review-input"
               style={{ ...inputStyle, resize: "vertical" }}
             />
@@ -493,7 +493,7 @@ export default function ReviewForm({
               transition: "background-color 0.15s ease",
             }}
           >
-            {status === "submitting" ? "Submitting…" : "Submit review"}
+            {status === "submitting" ? "Submitting..." : "Submit review"}
           </button>
         </form>
       </section>

@@ -110,14 +110,26 @@ export async function GET(request: NextRequest) {
       filters.content_type = "eq." + contentType;
     }
 
-    // Fetch manifest rows
-    const manifest = await supaGet("content_manifest", {
-      ...filters,
-      select: "content_type,version,last_modified,checksum,item_count",
-      order: "content_type.asc",
-    });
-
-    const manifestItems = Array.isArray(manifest) ? manifest : [];
+    // Fetch manifest rows — graceful on missing table (migration 014)
+    let manifestItems: any[] = [];
+    try {
+      const manifest = await supaGet("content_manifest", {
+        ...filters,
+        select: "content_type,version,last_modified,checksum,item_count",
+        order: "content_type.asc",
+      });
+      manifestItems = Array.isArray(manifest) ? manifest : [];
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+        console.warn("[content/sync] table missing (migration 014 not applied) — returning empty");
+        return NextResponse.json(
+          { client_id: clientId, changes: [], deleted: [], timestamp: new Date().toISOString() },
+          { headers: CORS_HEADERS },
+        );
+      }
+      throw err;
+    }
 
     // Fetch actual content for each changed type
     const changes: any[] = [];
@@ -138,52 +150,32 @@ export async function GET(request: NextRequest) {
           break;
 
         case "terms":
-          // Terms are stored in client_config_dynamic
-          const termsConfig = await supaGet("client_config_dynamic", {
-            client_id: "eq." + clientId,
-            config_key: "eq.terms_and_conditions",
-            select: "config_value",
-          });
-          if (Array.isArray(termsConfig) && termsConfig.length > 0) {
-            data = termsConfig[0]?.config_value || [];
-          }
-          break;
-
         case "bank_details":
-          // Bank details are stored in client_config_dynamic
-          const bankConfig = await supaGet("client_config_dynamic", {
-            client_id: "eq." + clientId,
-            config_key: "eq.bank_details",
-            select: "config_value",
-          });
-          if (Array.isArray(bankConfig) && bankConfig.length > 0) {
-            data = bankConfig[0]?.config_value || {};
-          }
-          break;
-
         case "supplier_companies":
-          // Supplier companies are stored in client_config_dynamic
-          const supplierConfig = await supaGet("client_config_dynamic", {
-            client_id: "eq." + clientId,
-            config_key: "eq.supplier_companies",
-            select: "config_value",
-          });
-          if (Array.isArray(supplierConfig) && supplierConfig.length > 0) {
-            data = supplierConfig[0]?.config_value || [];
+        case "pricing_templates": {
+          const keyMap: Record<string, string> = {
+            terms: "terms_and_conditions",
+            bank_details: "bank_details",
+            supplier_companies: "supplier_companies",
+            pricing_templates: "pricing_templates",
+          };
+          try {
+            const cfg = await supaGet("client_config_dynamic", {
+              client_id: "eq." + clientId,
+              config_key: "eq." + keyMap[type],
+              select: "config_value",
+            });
+            if (Array.isArray(cfg) && cfg.length > 0) {
+              data = cfg[0]?.config_value ?? (type === "bank_details" ? {} : []);
+            }
+          } catch (err: any) {
+            const msg = String(err?.message ?? err);
+            if (msg.includes("PGRST205") || msg.includes("Could not find the table")) {
+              console.warn(`[content/sync] client_config_dynamic missing — skipping ${type}`);
+            } else throw err;
           }
           break;
-
-        case "pricing_templates":
-          // Pricing templates are stored in client_config_dynamic
-          const pricingConfig = await supaGet("client_config_dynamic", {
-            client_id: "eq." + clientId,
-            config_key: "eq.pricing_templates",
-            select: "config_value",
-          });
-          if (Array.isArray(pricingConfig) && pricingConfig.length > 0) {
-            data = pricingConfig[0]?.config_value || [];
-          }
-          break;
+        }
 
         default:
           // Unknown content type, skip
@@ -210,6 +202,7 @@ export async function GET(request: NextRequest) {
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
+    console.error("[content/sync] Unhandled error:", e);
     return NextResponse.json(
       { error: String(e?.message ?? e) },
       { status: 500, headers: CORS_HEADERS },

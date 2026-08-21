@@ -163,25 +163,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     final contactNo = widget.data.contactNo;
 
-    // Venkateshwara: share PDF + auto-open WhatsApp with customer's number.
-    if (clientId == 'venkateshwara' && contactNo.isNotEmpty) {
-      final path = await _writeTempPdf();
-      if (path != null) {
-        await Share.shareXFiles([XFile(path)], text: text);
-      } else if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')],
-          text: text,
-        );
-      }
-      // Auto-open WhatsApp with customer's number.
-      await QuoteShare.openWhatsApp(text: text, phone: contactNo);
-      await _markAsSent();
-      _toast('PDF shared & WhatsApp opened!');
-      return;
-    }
-
-    // Default: share PDF via OS share sheet.
+    // Unified: share PDF via OS share sheet.
     final path = await _writeTempPdf();
     if (path != null) {
       await Share.shareXFiles([XFile(path)], text: text);
@@ -204,6 +186,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   Future<void> _shareToTelegram() async {
     final link = await _quoteLink();
     final text = await _shareMessage();
+    if (link == null) debugPrint('PdfConfirmationScreen: no quote link — t.me will share review URL only');
 
     final url = Uri.parse(
       link == null

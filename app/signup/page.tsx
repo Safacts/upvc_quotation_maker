@@ -29,7 +29,7 @@ const YEARS_IN_BUSINESS = [
 ];
 
 const SAVE_STATUS_TEXT: Record<string, string> = {
-  saving: "Saving…",
+  saving: "Saving...",
   saved: "Saved just now",
   error: "Save failed — will retry",
 };
@@ -180,7 +180,7 @@ export default function SignupPage() {
             onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
             alt="Vitharn UPVC"
           />
-          <p className="signup-loading">Loading your profile…</p>
+          <p className="signup-loading">Loading your profile...</p>
         </div>
       </div>
     );
@@ -248,7 +248,7 @@ export default function SignupPage() {
               </div>
             )}
             <button className="signup-logout" onClick={handleLogout} disabled={logoutLoading}>
-              {logoutLoading ? "Signing out…" : "Sign out"}
+              {logoutLoading ? "Signing out..." : "Sign out"}
             </button>
           </div>
         ) : (
@@ -388,12 +388,12 @@ export default function SignupPage() {
               {submitError && <div className="signup-error">{submitError}</div>}
 
               <button type="submit" className="signup-submit" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit for Review"}
+                {submitting ? "Submitting..." : "Submit for Review"}
               </button>
             </form>
 
             <button className="signup-logout" onClick={handleLogout} disabled={logoutLoading}>
-              {logoutLoading ? "Signing out…" : "Sign out"}
+              {logoutLoading ? "Signing out..." : "Sign out"}
             </button>
           </>
         )}

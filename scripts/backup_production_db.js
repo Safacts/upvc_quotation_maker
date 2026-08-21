@@ -2,6 +2,11 @@
 // Full production backup via node-postgres (NOT REST API).
 // Uses ::text casts for timestamptz to avoid JS Date truncation (the microsecond-fidelity gotcha).
 // Output: C:\Users\aadi\supabase-backups\<ISO-timestamp>.json
+//
+// SECURITY: credentials are loaded from the environment (.env), never hardcoded.
+// Set SUPABASE_DB_PASSWORD (and optionally SUPABASE_DB_HOST / SUPABASE_DB_USER)
+// before running. See .env.example.
+require('dotenv').config();
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
@@ -10,11 +15,19 @@ const CONFIG = {
   host: 'aws-0-ap-northeast-1.pooler.supabase.com',
   port: 5432,
   user: 'postgres.gumpmnbjdtzajhysnnaz',
-  password: 'weRCL38blulCQHRd',
+  password: process.env.SUPABASE_DB_PASSWORD,
   database: 'postgres',
+  ssl: { rejectUnauthorized: false },
 };
 
-// Tables in public schema (verified 09-08-2026: 18 tables)
+if (!CONFIG.password) {
+  console.error('FATAL: SUPABASE_DB_PASSWORD is not set. Add it to .env and retry.');
+  process.exit(1);
+}
+
+// Tables in public schema (verified 20-08-2026 via Supabase MCP: 43 tables).
+// The backup loop casts timestamptz/timestamp columns to text automatically
+// (see the information_schema query), so new tables need only be added here.
 const TABLES = [
   'admins',
   'audit_logs',
@@ -34,6 +47,30 @@ const TABLES = [
   'vitharn_invoice_counters',
   'vitharn_invoice_items',
   'vitharn_invoices',
+  'production_db_backup_20260812',
+  'stock_movements',
+  'tax_rates',
+  'gst_reports',
+  'upvc_product_config',
+  'quote_approval_tokens',
+  'data_export_log',
+  'orders',
+  'production_orders',
+  'batches',
+  'barcodes',
+  'shopfloor_updates',
+  'cutting_lists',
+  'materials',
+  'hardware',
+  'offcuts',
+  'leads',
+  'lead_activities',
+  'projects',
+  'quotation_photos',
+  'window_designs',
+  'renders',
+  'item_templates',
+  'sso_tokens',
 ];
 
 // Columns that are timestamptz — cast to text to preserve microsecond precision

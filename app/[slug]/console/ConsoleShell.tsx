@@ -793,7 +793,7 @@ export default function ConsoleShell({
 
           <button type="button" className="vc-goto" onClick={() => setPaletteOpen(true)}>
             <Search size={13} />
-            Go To…
+            Go To...
             <span className="vc-kbd">Ctrl K</span>
           </button>
           <button
@@ -952,7 +952,7 @@ function CommandPalette({
         <input
           ref={inputRef}
           className="vc-palette-input"
-          placeholder="Go to… (type a screen or action)"
+          placeholder="Go to... (type a screen or action)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}

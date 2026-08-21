@@ -404,7 +404,7 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
                       ),
                     )
                     : const Icon(Icons.save_outlined),
-            label: Text(_saving ? 'Saving…' : 'Save changes'),
+            label: Text(_saving ? 'Saving...' : 'Save changes'),
           ),
         ),
       ],

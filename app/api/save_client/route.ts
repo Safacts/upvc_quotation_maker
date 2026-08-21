@@ -10,25 +10,47 @@ import {
 import { sendWelcomeEmail } from "@/lib/mail";
 import { getSession } from "@/lib/session";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://app.vitharn.com",
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-} as const;
+const PROD_ORIGIN = "https://app.vitharn.com";
+const DEV_ORIGINS = new Set([
+  "http://localhost:3000",
+  "http://localhost:3100",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
+let _allowOrigin = PROD_ORIGIN;
+
+function resolveCors(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  _allowOrigin =
+    origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)
+      ? origin
+      : PROD_ORIGIN;
+}
+
+function corsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": _allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
 
 function json(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+  return NextResponse.json(data, { status, headers: corsHeaders() });
 }
 
 export async function POST(request: NextRequest) {
+  resolveCors(request);
   try {
     const p = await request.json();
     const email = p.admin_email || "";
     const phash = p.admin_password_hash || "";
     const cid = p.id || "";
-    if (!email || !cid) return json({ error: "missing params" }, 400);
-    if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
+    if (!email || !cid) return json({ error: "missing params", hint: "admin_email and id are required" }, 400);
+    if (!isServiceKeyConfigured()) return json({ error: "no service key", hint: "server misconfigured" }, 500);
 
     let isCustomer = false;
     const admins = await supaGet("admins", {
@@ -36,9 +58,9 @@ export async function POST(request: NextRequest) {
       select: "email,password_hash",
     });
     if (Array.isArray(admins) && admins.length > 0) {
-      if (!phash) return json({ error: "password hash required" }, 403);
+      if (!phash) return json({ error: "password hash required", hint: "admin auth: hash missing (re-login required)" }, 403);
       if (admins[0].password_hash !== phash) {
-        return json({ error: "hash mismatch" }, 403);
+        return json({ error: "hash mismatch", hint: "admin auth: hash does not match stored value" }, 403);
       }
     } else {
       // BUG-FUNC-001: this selected only "id,config", then compared
@@ -65,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
       
       // STRICTURE: Ensure client authentication requires the correct portal hash
-      if (!clientMatch) return json({ error: "not authorized" }, 403);
+      if (!clientMatch) return json({ error: "not authorized", hint: "no client found for email " + email }, 403);
       
       // Accept either a matching password_hash OR a valid session cookie.
       // Password hash is the primary auth (proves knowledge of the secret).
@@ -80,14 +102,25 @@ export async function POST(request: NextRequest) {
         if (session && session.role === "customer" && session.client_id === clientMatch.id) {
           authedBySession = true;
         } else {
-          if (!phash) return json({ error: "password hash required" }, 403);
-          return json({ error: "hash mismatch" }, 403);
+          const hasSession = !!session;
+          const sessionRole = session?.role ?? "none";
+          const sessionClient = (session as any)?.client_id ?? "none";
+          if (!phash) {
+            return json({
+              error: "password hash required",
+              hint: `client auth: hash empty and session invalid (hasSession:${hasSession} role:${sessionRole} sessionClient:${sessionClient} expected:${clientMatch.id}) — re-login or ensure cookie is sent (withCredentials)`,
+            }, 403);
+          }
+          return json({
+            error: "hash mismatch",
+            hint: `client auth: hash mismatch and session fallback failed (hasSession:${hasSession} role:${sessionRole} sessionClient:${sessionClient} expected:${clientMatch.id})`,
+          }, 403);
         }
       }
       
       isCustomer = true;
       if (cid !== clientMatch.id) {
-        return json({ error: "can only manage own client" }, 403);
+        return json({ error: "can only manage own client", hint: `cid ${cid} != ${clientMatch.id}` }, 403);
       }
     }
 
@@ -265,6 +298,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  resolveCors(request);
+  return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }

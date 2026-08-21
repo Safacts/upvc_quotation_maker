@@ -71,8 +71,19 @@ class QuoteShare {
   /// Where the Next.js backend lives. On web we stay same-origin so the browser
   /// keeps attaching the session cookie (and so localhost dev works); on mobile
   /// there is no origin, so we target production explicitly.
-  static String origin() =>
-      kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
+  ///
+  /// On Flutter web dev (127.0.0.1:8080) there is no /api — Next lives at :3000
+  /// (gateway) / :3100. Detect that and use the gateway so token mint works
+  /// locally; otherwise same-origin.
+  static String origin() {
+    if (!kIsWeb) return 'https://app.vitharn.com';
+    final o = Uri.base.origin;
+    // Flutter web dev server has no API — route to Next via gateway.
+    if (o.contains('127.0.0.1:8080') || o.contains('localhost:8080')) {
+      return 'http://localhost:3000';
+    }
+    return o;
+  }
 
   /// Best available proof-of-tenancy this app holds.
   ///
@@ -199,6 +210,10 @@ class QuoteShare {
         ..writeln()
         ..writeln('View the full quotation, download the PDF and confirm here:')
         ..writeln(quoteLink);
+    } else {
+      b
+        ..writeln()
+        ..writeln('Note: secure quotation link could not be created — please share the PDF directly.');
     }
 
     b
