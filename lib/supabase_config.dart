@@ -1,12 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
-  // Supabase project `gumpmnbjdtzajhysnnaz` (migrated 08-08-2026).
+  // LIVE production project (Mumbai, effxrwrbsjduvhmorvrq) — cutover completed
+  // 20-08-2026. Aadi approved this change 21-08-2026 (was locked on Tokyo
+  // `gumpmnbjdtzajhysnnaz`, which is now the staging/archive project).
   // Anon key is public by design — RLS + the `x-client-id` header are the
   // tenant boundary. Keep in sync with lib/config/client_config.dart defaults.
-  static const String supabaseUrl = 'https://gumpmnbjdtzajhysnnaz.supabase.co';
+  static const String supabaseUrl = 'https://effxrwrbsjduvhmorvrq.supabase.co';
   static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs';
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmZnhyd3Jic2pkdXZobW9ydnJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI2ODgsImV4cCI6MjA5NTkwODY4OH0.47s0OUVmo3aeeICiLL_j-cfaiI_Z8i7l7tGIukKgs7I';
 
   static Future<void> initialize() async {
     await Supabase.initialize(
