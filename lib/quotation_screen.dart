@@ -12,6 +12,7 @@ import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
 import 'pdf_generator.dart' deferred as pdfGen;
+import 'vaishnavi_pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
@@ -459,7 +460,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
       await pdfGen.loadLibrary();
       final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
-      final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: effectivePhotos);
+      final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
       final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
       final quoteLink = await _quoteLink(data);
@@ -615,16 +616,30 @@ $reviewCta
     );
   }
 
+  /// Tenant-routed PDF generation. Vaishnavi's client-specific request is a
+  /// pixel-faithful replica of their supplied reference: the SVG templates in
+  /// `src/templates/vaishnavi/` get the quotation data baked in and are then
+  /// rendered to PDF server-side (`/api/vaishnavi-estimate/render`), with an
+  /// inline pw.Document fallback inside the generator itself.
+  Future<Uint8List> _generateClientPdfBytes(AppState appState, List<QuotationPhoto> photos) async {
+    final id = appState.clientConfig.clientId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    if (id.startsWith('vaishnavi')) {
+      return generateVaishnaviPdfBytes(data, appState, photos: photos);
+    }
+    await pdfGen.loadLibrary();
+    return pdfGen.generatePdfBytes(data, appState, photos: photos);
+  }
+
   Future<void> _generateAndProcessPdf() async {
     // 1. Force Save
     umamiTrack('generate_pdf');
     await _autoSaveToDatabase();
-    
+
     // Generate PDF bytes
     final appState = Provider.of<AppState>(context, listen: false);
     await pdfGen.loadLibrary();
     final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
-    final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: effectivePhotos);
+    final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
     
     // 2. If email exists, send automatically in background
     Future<void>? emailTask;
