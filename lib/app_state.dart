@@ -57,6 +57,10 @@ class AppState extends ChangeNotifier {
   ElementDensity _elementDensity = ElementDensity.comfortable;
   bool _loaded = false;
 
+  // Trial expiry warning state
+  String _trialWarning = ''; // '', 'TRIAL_EXPIRING_SOON', 'TRIAL_EXPIRED'
+  int _trialDaysRemaining = -1; // -1 = unknown / not applicable
+
   ClientConfig get clientConfig => _clientConfig ?? ClientConfig();
 
   String get companyName => _companyName.isNotEmpty ? _companyName : clientConfig.companyName;
@@ -156,6 +160,33 @@ class AppState extends ChangeNotifier {
     return wlConfig.invoiceBackgroundLogoUrl.isNotEmpty
         ? wlConfig.invoiceBackgroundLogoUrl
         : clientConfig.invoiceBackgroundLogoUrl;
+  }
+
+  /// Trial warning status — '' (none), 'TRIAL_EXPIRING_SOON', 'TRIAL_EXPIRED'.
+  String get trialWarning => _trialWarning;
+
+  /// Days remaining in the trial. -1 when unknown / not applicable.
+  int get trialDaysRemaining => _trialDaysRemaining;
+
+  /// Whether the trial has fully expired (blocking state).
+  bool get isTrialExpired => _trialWarning == 'TRIAL_EXPIRED';
+
+  /// Whether the trial is expiring soon (within 2 days).
+  bool get isTrialExpiringSoon => _trialWarning == 'TRIAL_EXPIRING_SOON';
+
+  /// Set the trial warning from the login response.
+  /// Call this immediately after a successful login.
+  void setTrialWarning({required String warning, int daysRemaining = -1}) {
+    _trialWarning = warning;
+    _trialDaysRemaining = daysRemaining;
+    notifyListeners();
+  }
+
+  /// Clear the trial warning (e.g. on logout).
+  void clearTrialWarning() {
+    _trialWarning = '';
+    _trialDaysRemaining = -1;
+    notifyListeners();
   }
 
   AppState() {

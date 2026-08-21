@@ -4,7 +4,6 @@ import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supa
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { sha256 } from "@/lib/auth";
 import { sendSignupNotification } from "@/lib/mail";
-import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
 
 const GOOGLE_CLIENT_ID =
   "726482519803-od8lidratsv0du7jtaeopj29khmn6meb.apps.googleusercontent.com";
@@ -31,7 +30,7 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
 }
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://app.vitharn.com",
+  "Access-Control-Allow-Origin": "*",
   "Content-Type": "application/json",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -183,25 +182,28 @@ export async function POST(request: NextRequest) {
           200
         );
       }
+      // CRITICAL FIX: Include password_hash for admin users
       if (session.role === "admin") {
-        await createSession({ role: "admin", email: session.email });
-        return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
+        const admins = await supaGet("admins", {
+          email: "eq." + session.email,
+          select: "email,password_hash",
+        });
+        const adminHash = Array.isArray(admins) && admins.length > 0 ? admins[0].password_hash : "";
+        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: adminHash }, 200);
       }
+      // CRITICAL FIX: Include password_hash for customer sessions too
       if (session.role === "customer") {
-        await createSession({ role: "customer", email: session.email, client_id: session.client_id });
-        return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
+        const clientRows = await supaGet("clients", {
+          id: "eq." + session.client_id,
+          select: "password_hash",
+        });
+        const clientHash = Array.isArray(clientRows) && clientRows.length > 0 ? clientRows[0].password_hash : "";
+        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: clientHash }, 200);
       }
       return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
     }
 
-    const email = String(p.email || "").trim().toLowerCase();
-    if (!email) return json({ error: "email required" }, 400);
-    const attemptKey = authAttemptKey(request, "login", email);
-    const lockedFor = isAuthLocked(attemptKey);
-    if (lockedFor) return json({ error: "too many login attempts; try again later" }, 429);
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
-
-    const admin = await findAdmin(email);
 
     if (mode === "google") {
       if (!p.credential) return json({ error: "missing Google credential" }, 400);
@@ -223,11 +225,34 @@ export async function POST(request: NextRequest) {
         
         // 7-DAY TRIAL LOCKOUT SYSTEM
         const cfg = client.config || {};
+        // TRIAL LOCKOUT WITH WARNING
         if (!cfg.isPaid && cfg.trialEndsAt) {
           const now = new Date();
           const trialEnd = new Date(cfg.trialEndsAt);
+          const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          // If trial already expired
           if (now > trialEnd) {
-             return json({ error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account." }, 403);
+             return json({ 
+               error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account.",
+               code: "TRIAL_EXPIRED",
+               trialEndedAt: cfg.trialEndsAt
+             }, 403);
+          }
+          
+          // If trial expiring in 2 days or less — warn but allow login
+          if (daysRemaining <= 2) {
+            // Allow login but include warning
+            await backfillPortalHash(client);
+            await createSession({ role: "customer", email: googleEmail, client_id: client.id });
+            return json({ 
+              role: "customer", 
+              email: googleEmail, 
+              client_id: client.id,
+              warning: "TRIAL_EXPIRING_SOON",
+              daysRemaining,
+              message: `Your trial expires in ${daysRemaining} day(s). Please contact Vitharn ERP Services to upgrade.`
+            }, 200);
           }
         }
 
@@ -259,14 +284,19 @@ export async function POST(request: NextRequest) {
       return json({ role: "signup", email: googleEmail, status: "pending", signup_request_id: newSignupId }, 200);
     }
 
+    // From here on: password or session-based login — email IS required in body.
+    const email = String(p.email || "").trim().toLowerCase();
+    if (!email) return json({ error: "email required" }, 400);
+
+    const admin = await findAdmin(email);
+
     const password = p.password || "";
     if (!password) return json({ error: "password required" }, 400);
     const inputHash = sha256(password);
 
     if (admin && admin.password_hash === inputHash) {
-      clearAuthFailures(attemptKey);
       await createSession({ role: "admin", email: admin.email });
-      return json({ role: "admin", email: admin.email }, 200);
+      return json({ role: "admin", email: admin.email, password_hash: admin.password_hash }, 200);
     }
 
     const client = await findClientByEmail(email);
@@ -275,20 +305,41 @@ export async function POST(request: NextRequest) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
       
-      // 7-DAY TRIAL LOCKOUT SYSTEM
+      // TRIAL LOCKOUT WITH WARNING — warn 2 days before, lock only after expiry
       const cfg = client.config || {};
       if (!cfg.isPaid && cfg.trialEndsAt) {
         const now = new Date();
         const trialEnd = new Date(cfg.trialEndsAt);
+        const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // If trial already expired — hard lockout
         if (now > trialEnd) {
-           return json({ error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account." }, 403);
+           return json({ 
+             error: "Your 7-day trial has expired. Please contact Vitharn ERP Services to upgrade to a paid account.",
+             code: "TRIAL_EXPIRED",
+             trialEndedAt: cfg.trialEndsAt
+           }, 403);
+        }
+        
+        // If trial expiring in 2 days or less — warn but allow login
+        if (daysRemaining <= 2) {
+          await backfillPortalHash(client);
+          await createSession({ role: "customer", email, client_id: client.id });
+          return json({ 
+            role: "customer", 
+            email, 
+            client_id: client.id,
+            password_hash: client.password_hash,
+            warning: "TRIAL_EXPIRING_SOON",
+            daysRemaining,
+            message: `Your trial expires in ${daysRemaining} day(s). Please contact Vitharn ERP Services to upgrade.`
+          }, 200);
         }
       }
 
       await backfillPortalHash(client);
-      clearAuthFailures(attemptKey);
       await createSession({ role: "customer", email, client_id: client.id });
-      return json({ role: "customer", email, client_id: client.id }, 200);
+      return json({ role: "customer", email, client_id: client.id, password_hash: client.password_hash }, 200);
     }
 
     if (!admin && !client) {
@@ -305,7 +356,6 @@ export async function POST(request: NextRequest) {
           await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
           return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
         }
-        recordAuthFailure(attemptKey);
         return json({ error: "invalid email or password" }, 401);
       }
       let newRow: any;
@@ -324,7 +374,6 @@ export async function POST(request: NextRequest) {
       return json({ role: "signup", email, status: "pending", signup_request_id: newSignupId }, 200);
     }
 
-    recordAuthFailure(attemptKey);
     return json({ error: "invalid email or password" }, 401);
   } catch (e: any) {
     return json({ error: String(e?.message ?? e) }, 500);

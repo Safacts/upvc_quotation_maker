@@ -305,8 +305,17 @@ describe("/api/portal_auth — session / logout / validation", () => {
     expect(currentSession).toBeNull();
   });
 
-  it("rejects an empty email (400)", async () => {
+  it("google mode ignores empty email — relies on credential instead (10-08-2026 fix)", async () => {
+    // Google Sign-In extracts email from the verified JWT credential, NOT the
+    // request body. An empty body email must NOT cause "email required".
+    // (No credential provided → expect 400 "missing Google credential".)
     const res = await authReq({ mode: "google", email: "  " });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "missing Google credential" });
+  });
+
+  it("password mode rejects empty email (400)", async () => {
+    const res = await authReq({ mode: "login", email: "  " });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: "email required" });
   });

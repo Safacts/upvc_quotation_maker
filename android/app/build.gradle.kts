@@ -14,6 +14,27 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+/// WHITELABELING KNOBS (Vitharn ERP per-client APK builds).
+///
+/// Every value below has a default that reproduces the previous hard-coded
+/// build byte-for-byte, so the existing CI workflows (`release.yml`,
+/// `build_client_apk.yml`) keep working untouched. Override per client with
+/// Gradle properties, e.g.:
+///
+///   flutter build apk --release \
+///     -Pvitharn.appLabel="KPR UPVC Quote" \
+///     -Pvitharn.applicationId="com.vitharn.kprupvc"
+///
+/// applicationId MUST differ per client if two clients' APKs are ever installed
+/// on the same device; Android treats a duplicate applicationId as the same app
+/// and the second install overwrites the first.
+val vitharnAppLabel: String =
+    (project.findProperty("vitharn.appLabel") as String?)
+        ?: "VENKATESHWARA UPVC Quote"
+val vitharnApplicationId: String =
+    (project.findProperty("vitharn.applicationId") as String?)
+        ?: "com.example.upvc_quotation_maker"
+
 android {
     namespace = "com.example.upvc_quotation_maker"
     compileSdk = flutter.compileSdkVersion
@@ -30,11 +51,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.upvc_quotation_maker"
+        applicationId = vitharnApplicationId
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Consumed by android:label in AndroidManifest.xml.
+        manifestPlaceholders["appLabel"] = vitharnAppLabel
     }
 
     signingConfigs {
