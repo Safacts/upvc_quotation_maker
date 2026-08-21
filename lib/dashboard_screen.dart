@@ -31,7 +31,6 @@ import 'services/sync_engine.dart';
 import 'widgets/offline_indicator.dart';
 import 'widgets/sync_status_widget.dart';
 import 'widgets/update_banner.dart';
-import 'services/auto_update_service.dart';
 import 'services/smart_auto_update.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -181,37 +180,189 @@ class _DashboardScreenState extends State<DashboardScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Update Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.primaryColor)),
-              const SizedBox(height: 8),
-              Text(q.customerName, style: TextStyle(color: Colors.grey.shade600)),
-              const SizedBox(height: 20),
-              ...QuotationStatus.values.map((s) {
-                final isSelected = q.status == s;
-                return ListTile(
-                  leading: Container(
-                    width: 12, height: 12,
-                    decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle),
-                  ),
-                  title: Text(s.label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                  trailing: isSelected ? Icon(Icons.check_circle, color: theme.primaryColor) : null,
-                  onTap: () async {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Quotation Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.primaryColor)),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('${q.quotationNo} · ${q.customerName}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                const SizedBox(height: 16),
+                Text('CHANGE STATUS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Colors.grey.shade500)),
+                const SizedBox(height: 6),
+                ...QuotationStatus.values.map((s) {
+                  final isSelected = q.status == s;
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 12, height: 12,
+                      decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle),
+                    ),
+                    title: Text(s.label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                    trailing: isSelected ? Icon(Icons.check_circle, color: theme.primaryColor) : null,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      await _updateStatus(q, s);
+                    },
+                  );
+                }),
+                const Divider(height: 20),
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Delete Quotation', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Permanently remove this quotation', style: TextStyle(fontSize: 11, color: Colors.redAccent)),
+                  onTap: () {
                     Navigator.pop(ctx);
-                    await _updateStatus(q, s);
+                    _confirmDeleteQuotation(q);
                   },
-                );
-              }),
-              const SizedBox(height: 8),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  void _confirmDeleteQuotation(QuotationData q) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800, size: 28),
+            const SizedBox(width: 10),
+            const Text('Delete Quotation?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete quotation ${q.quotationNo} for "${q.customerName}"?\n\n'
+          'Amount: ₹${q.grandTotal.toStringAsFixed(0)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              _secondConfirmationDelete(q);
+            },
+            child: const Text('Continue to Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _secondConfirmationDelete(QuotationData q) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red.shade700, size: 28),
+            const SizedBox(width: 10),
+            const Text('Final Confirmation'),
+          ],
+        ),
+        content: Text(
+          'This is your final confirmation.\n\n'
+          'Are you ABSOLUTELY sure you want to permanently delete quotation ${q.quotationNo}?\n\n'
+          'This action CANNOT be undone.',
+          style: const TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Keep Quotation'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade800,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await _deleteQuotation(q);
+            },
+            child: const Text('Yes, Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteQuotation(QuotationData q) async {
+    if (q.id == null) {
+      debugPrint('Delete skipped: quotation has null id');
+      return;
+    }
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      // Delete child line items first to ensure database clean-up
+      await SupabaseConfig.client
+          .from('measured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+      await SupabaseConfig.client
+          .from('unmeasured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+      await SupabaseConfig.client
+          .from('quotations')
+          .delete()
+          .eq('id', q.id!)
+          .eq('client_id', clientId);
+
+      if (mounted) {
+        setState(() {
+          _quotations.removeWhere((item) => item.id == q.id);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Quotation ${q.quotationNo} deleted successfully'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Delete quotation error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete quotation: $e'),
+            backgroundColor: Colors.red.shade900,
+          ),
+        );
+      }
+    }
   }
 
   Color _statusColor(QuotationStatus s) {
