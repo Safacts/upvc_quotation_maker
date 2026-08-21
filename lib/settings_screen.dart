@@ -6,7 +6,7 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  _SettingsScreenState createState() => _SettingsScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
@@ -22,36 +22,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _gstPercentageController;
   late TextEditingController _proprietorController;
   late TextEditingController _gstNoController;
-    double _marginPercent = 65.0;
-    List<String> _supplierCompanies = [];
-    final _supplierController = TextEditingController();
-    double _fontScale = 1.0;
-    ElementDensity _elementDensity = ElementDensity.comfortable;
+  late TextEditingController _supplierController;
+  double _marginPercent = 65.0;
+  List<String> _supplierCompanies = [];
+  double _fontScale = 1.0;
+  ElementDensity _elementDensity = ElementDensity.comfortable;
 
-   @override
-  void initState() {
-    super.initState();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final appState = Provider.of<AppState>(context, listen: false);
-    _nameController = TextEditingController(text: appState.companyName);
-    _addressController = TextEditingController(text: appState.companyAddress);
-    _contactController = TextEditingController(text: appState.companyContact);
-    _emailController = TextEditingController(text: appState.companyEmail);
-    _bankNameController = TextEditingController(text: appState.bankName);
-    _bankBranchController = TextEditingController(text: appState.bankBranch);
-    _bankAccountController = TextEditingController(text: appState.bankAccountNo);
-    _bankIfscController = TextEditingController(text: appState.bankIfsc);
-    _termsController = TextEditingController(text: appState.termsAndConditions);
-    _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
-    _proprietorController = TextEditingController(text: appState.companyProprietor);
-    _gstNoController = TextEditingController(text: appState.gstNumber);
-     _marginPercent = appState.costMarginPercent;
-     _supplierCompanies = List<String>.from(appState.supplierCompanies);
-     _fontScale = appState.fontScale;
-     _elementDensity = appState.elementDensity;
-   }
+    _nameController.text = appState.companyName;
+    _addressController.text = appState.companyAddress;
+    _contactController.text = appState.companyContact;
+    _emailController.text = appState.companyEmail;
+    _bankNameController.text = appState.bankName;
+    _bankBranchController.text = appState.bankBranch;
+    _bankAccountController.text = appState.bankAccountNo;
+    _bankIfscController.text = appState.bankIfsc;
+    _termsController.text = appState.termsAndConditions;
+    _gstPercentageController.text = appState.defaultGstPercentage.toString();
+    _proprietorController.text = appState.companyProprietor;
+    _gstNoController.text = appState.gstNumber;
+    _supplierCompanies = List<String>.from(appState.supplierCompanies);
+    _fontScale = appState.fontScale;
+    _elementDensity = appState.elementDensity;
+  }
 
-   @override
-   void dispose() {
+  @override
+  void dispose() {
     _nameController.dispose();
     _addressController.dispose();
     _contactController.dispose();
@@ -63,9 +62,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _termsController.dispose();
     _gstPercentageController.dispose();
     _proprietorController.dispose();
-     _gstNoController.dispose();
-     _supplierController.dispose();
-     super.dispose();
+    _gstNoController.dispose();
+    _supplierController.dispose();
+    super.dispose();
   }
 
   void _saveSettings() {
@@ -82,9 +81,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       terms: _termsController.text,
       gstPercentage: double.tryParse(_gstPercentageController.text) ?? 18.0,
       proprietor: _proprietorController.text,
-       gstNumber: _gstNoController.text,
-       supplierCompanies: _supplierCompanies,
-     ).then((synced) {
+      gstNumber: _gstNoController.text,
+      supplierCompanies: _supplierCompanies,
+    ).then((synced) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(synced
@@ -98,6 +97,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
+    final clientId = appState.clientConfig.clientId;
+    final isKprupvc = appState.clientConfig.clientId == 'kprupvc';
 
     return Scaffold(
       appBar: AppBar(
@@ -125,11 +126,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-           const SizedBox(height: 16),
-           _buildSectionHeader('Display & Layout'),
-           _buildDisplaySection(),
-           const SizedBox(height: 16),
-           _buildSectionHeader('Company Information'),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Display & Layout'),
+          _buildDisplaySection(),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Company Information'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -238,68 +239,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-           if (Provider.of<AppState>(context).clientConfig.clientId == 'kprupvc') ...[
-             const SizedBox(height: 16),
-             _buildSectionHeader('Supplier Companies'),
-             Card(
-               child: Padding(
-                 padding: const EdgeInsets.all(16.0),
-                 child: Column(
-                   children: [
-                     ..._supplierCompanies.asMap().entries.map((entry) {
-                       return Padding(
-                         padding: const EdgeInsets.only(bottom: 8.0),
-                         child: Row(
-                           children: [
-                             Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 15))),
-                             IconButton(
-                               icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
-                               onPressed: () {
-                                 setState(() => _supplierCompanies.removeAt(entry.key));
-                               },
-                             ),
-                           ],
-                         ),
-                       );
-                     }),
-                     Row(
-                       children: [
-                         Expanded(
-                           child: TextField(
-                             controller: _supplierController,
-                             textAlign: TextAlign.center,
-                             textInputAction: TextInputAction.done,
-                             decoration: const InputDecoration(labelText: 'Add Company Name'),
-                             onSubmitted: (_) {
-                               if (_supplierController.text.trim().isNotEmpty) {
-                                 setState(() {
-                                   _supplierCompanies.add(_supplierController.text.trim());
-                                   _supplierController.clear();
-                                 });
-                               }
-                             },
-                           ),
-                         ),
-                         IconButton(
-                           icon: const Icon(Icons.add_circle, color: Colors.green),
-                           onPressed: () {
-                             if (_supplierController.text.trim().isNotEmpty) {
-                               setState(() {
-                                 _supplierCompanies.add(_supplierController.text.trim());
-                                 _supplierController.clear();
-                               });
-                             }
-                           },
-                         ),
-                       ],
-                     ),
-                   ],
-                 ),
-               ),
-             ),
-           ],
-           const SizedBox(height: 32),
-           SizedBox(
+          const SizedBox(height: 16),
+          _buildSectionHeader('Quotation Maker'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Enable Site Photos'),
+                    subtitle: const Text('Show site photos in Quotation Maker'),
+                    value: appState.enableSitePhotos,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) => appState.setEnableSitePhotos(val),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Share as PDF'),
+                    subtitle: const Text('OFF = Share as Link instead of PDF'),
+                    value: appState.enablePdfLink,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) => appState.setEnablePdfLink(val),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (appState.clientConfig.clientId == 'kprupvc')
+            Column(
+              children: [
+                const SizedBox(height: 16),
+                _buildSectionHeader('Supplier Companies'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        ..._supplierCompanies.asMap().entries.map((entry) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 15))),
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                                  onPressed: () {
+                                    setState(() => _supplierCompanies.removeAt(entry.key));
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _supplierController,
+                              textAlign: TextAlign.center,
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(labelText: 'Add Company Name'),
+                              onSubmitted: (_) {
+                                if (_supplierController.text.trim().isNotEmpty) {
+                                  setState(() {
+                                    _supplierCompanies.add(_supplierController.text.trim());
+                                    _supplierController.clear();
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle, color: Colors.green),
+                            onPressed: () {
+                              if (_supplierController.text.trim().isNotEmpty) {
+                                setState(() {
+                                  _supplierCompanies.add(_supplierController.text.trim());
+                                  _supplierController.clear();
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 32),
+          SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
@@ -364,7 +393,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  final appState = Provider.of<AppState>(context, listen: false);
                   appState.updateUiPreferences(
                     fontScale: _fontScale,
                     elementDensity: _elementDensity,
@@ -379,8 +407,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
+    }
   }
 
   Widget _buildSectionHeader(String title) {
