@@ -86,12 +86,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       proprietor: _proprietorController.text,
        gstNumber: _gstNoController.text,
        supplierCompanies: _supplierCompanies,
-     ).then((synced) {
+     ).then((result) {
       if (!mounted) return;
+      final synced = result.synced;
+      final err = result.error;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(synced
             ? 'Settings saved successfully'
-            : 'Saved on this device, but failed to sync to server'),
+            : err != null && err.isNotEmpty
+                ? 'Saved on this device, but failed to sync: $err'
+                : 'Saved on this device, but failed to sync to server'),
+        duration: synced ? const Duration(seconds: 2) : const Duration(seconds: 5),
       ));
     });
   }
