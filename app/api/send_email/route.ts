@@ -1,64 +1,119 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { sendMail } from "@/lib/mail";
 import { getSession } from "@/lib/session";
 import { requireTier } from "@/lib/tiers";
+import { supaGet } from "@/lib/supabase";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://app.vitharn.com",
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-} as const;
+const PROD_ORIGIN = "https://app.vitharn.com";
+const DEV_ORIGINS = new Set([
+  "http://localhost:3000",
+  "http://localhost:3100",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
+let _allowOrigin = PROD_ORIGIN;
+
+function resolveCors(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  _allowOrigin =
+    origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)
+      ? origin
+      : PROD_ORIGIN;
+}
+
+function corsHeaders(): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": _allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
 
 const MAX_BODY = 4_000_000;
 const MAX_ATTACH = 3_500_000;
 
 function json(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+  return NextResponse.json(data, { status, headers: corsHeaders() });
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(String(a ?? ""), "utf8");
+  const bb = Buffer.from(String(b ?? ""), "utf8");
+  if (ba.length !== bb.length || ba.length === 0) return false;
+  return timingSafeEqual(ba, bb);
 }
 
 export async function POST(request: NextRequest) {
+  resolveCors(request);
   try {
-    const session = await getSession();
-    if (!session || !session.email) {
-      return json({ error: "Unauthorized" }, 401);
-    }
-    // BUG-SEC-005: this route was an authenticated OPEN MAIL RELAY.
-    // `/api/portal_auth` mints a valid signed session with role "signup" for ANY
-    // unrecognised email, with no verification and no approval. A stranger could
-    // POST one novel email, receive a real cookie, then send arbitrary HTML to
-    // arbitrary recipients through Vitharn's SMTP — phishing from our own domain
-    // and a fast route to having the sending domain blacklisted.
-    // "signup" is a pre-account role: it grants the signup wizard and nothing else.
-    if (session.role !== "admin" && session.role !== "customer") {
-      return json({ error: "Forbidden" }, 403);
-    }
-
-    // TIER GATE — outbound email is the Rs.35,000 `next` feature.
-    //
-    // Checked AFTER authentication so an anonymous caller cannot read the
-    // difference between a 401 and a 402 to learn which tenants have paid.
-    //
-    // Admins are exempt: an admin sending mail is us doing support (password
-    // resets, onboarding), not a customer consuming their plan.
-    //
-    // A customer session with no client_id is malformed — `requireTier` fails
-    // closed on an empty id, which is exactly the behaviour we want here rather
-    // than a silent allow.
-    if (session.role === "customer") {
-      const paid = await requireTier(session.client_id, "email_notifications");
-      // Re-emit through `json()` rather than returning `paid.error` as-is: the
-      // denial NextResponse carries no CORS headers, and this endpoint is called
-      // cross-origin by the Flutter web build. Without them the browser blocks
-      // the 402 and the app shows a network error instead of an upgrade prompt.
-      if (!paid.ok) return json(await paid.error.json(), paid.error.status);
-    }
-
     const raw = await request.text();
     if (raw.length > MAX_BODY) {
       return json({ error: "Payload too large" }, 413);
     }
     const body = raw ? JSON.parse(raw) : {};
+
+    // 1. Check Web Session Cookie
+    const session = await getSession();
+    let authenticatedClientId: string | null = null;
+    let isAdmin = false;
+
+    if (session && session.email) {
+      // BUG-SEC-005: "signup" is a pre-account role and must not relay mail.
+      if (session.role !== "admin" && session.role !== "customer") {
+        return json({ error: "Forbidden" }, 403);
+      }
+      if (session.role === "admin") {
+        isAdmin = true;
+      } else if (session.role === "customer") {
+        authenticatedClientId = session.client_id ? String(session.client_id) : null;
+      }
+    } else {
+      // 2. Flutter Native/API Credentials in body (for Android APK & tokenless callers)
+      const clientId = String(body.client_id ?? body.clientId ?? "").trim();
+      const phash = String(body.admin_password_hash ?? body.password_hash ?? "").trim();
+
+      if (clientId && phash) {
+        // Check if admin
+        const adminEmail = String(body.admin_email ?? body.email ?? "").trim();
+        if (adminEmail) {
+          const admins = await supaGet("admins", {
+            email: `eq.${adminEmail}`,
+            select: "email,password_hash",
+          });
+          if (Array.isArray(admins) && admins.length > 0 && admins[0].password_hash) {
+            if (safeEqual(String(admins[0].password_hash), phash)) {
+              isAdmin = true;
+            }
+          }
+        }
+
+        if (!isAdmin) {
+          // Check if client tenant
+          const clients = await supaGet("clients", {
+            id: `eq.${clientId}`,
+            select: "id,password_hash",
+          });
+          if (Array.isArray(clients) && clients.length > 0 && clients[0].password_hash) {
+            if (safeEqual(String(clients[0].password_hash), phash)) {
+              authenticatedClientId = String(clients[0].id);
+            }
+          }
+        }
+      }
+    }
+
+    if (!isAdmin && !authenticatedClientId) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+    if (!isAdmin && authenticatedClientId) {
+      const paid = await requireTier(authenticatedClientId, "email_notifications");
+      if (!paid.ok) return json(await paid.error.json(), paid.error.status);
+    }
 
     const to = String(body.to ?? "").trim();
     const subject = String(body.subject ?? "").trim();
@@ -80,7 +135,7 @@ export async function POST(request: NextRequest) {
       return json({ error: "Too many attachments" }, 400);
     }
     for (const a of rawAttachments) {
-      const b64 = String(a?.content ?? "");
+      const b64 = String(a?.content ?? "").trim();
       if (!b64 || b64.length > MAX_ATTACH) {
         return json({ error: "Invalid attachment" }, 400);
       }
@@ -98,6 +153,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  resolveCors(request);
+  return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
+

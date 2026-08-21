@@ -9,6 +9,7 @@ import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 import 'client_logo.dart';
+import 'quote_share.dart';
 import 'umami_tracker.dart';
 
 class EmailPortalScreen extends StatefulWidget {
@@ -25,90 +26,127 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
   bool _isSending = false;
   String _selectedTemplate = 'Custom';
 
-  Map<String, String> _templates = {};
+  static const List<String> _templateKeys = ['Custom', 'Follow Up', 'Payment Reminder', 'Thank You'];
 
-  void _applyTemplate(String? templateName) {
-    if (templateName == null) return;
-    final appState = Provider.of<AppState>(context, listen: false);
-    final companyName = appState.companyName;
-    _templates = {
+  @override
+  void dispose() {
+    _toController.dispose();
+    _subjectController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  Map<String, String> _buildTemplates(String companyName) {
+    return {
       'Custom': '',
       'Follow Up': 'Dear Customer,\n\nI am following up on the quotation we provided for your UPVC windows/doors. Please let me know if you have any questions or if you are ready to proceed.\n\nBest regards,\n$companyName',
       'Payment Reminder': 'Dear Customer,\n\nThis is a gentle reminder regarding the pending payment for your recent UPVC order. We kindly request you to process it at your earliest convenience.\n\nThank you,\n$companyName',
       'Thank You': 'Dear Customer,\n\nThank you for choosing $companyName! We appreciate your business and hope you are completely satisfied with your new windows and doors.\n\nBest regards,\n$companyName',
     };
+  }
+
+  void _applyTemplate(String? templateName) {
+    if (templateName == null) return;
+    final appState = Provider.of<AppState>(context, listen: false);
+    final companyName = appState.companyName;
+    final templates = _buildTemplates(companyName);
     setState(() {
       _selectedTemplate = templateName;
-      if (templateName != 'Custom') {
-        _bodyController.text = _templates[templateName]!;
+      if (templateName != 'Custom' && templates.containsKey(templateName)) {
+        _bodyController.text = templates[templateName]!;
         _subjectController.text = templateName == 'Thank You' ? 'Thank you for choosing us!' : templateName;
       }
     });
   }
 
   Future<void> _sendEmail() async {
-    if (_toController.text.isEmpty || _subjectController.text.isEmpty || _bodyController.text.isEmpty) {
+    final to = _toController.text.trim();
+    final subject = _subjectController.text.trim();
+    final body = _bodyController.text.trim();
+
+    if (to.isEmpty || subject.isEmpty || body.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
     final appState = Provider.of<AppState>(context, listen: false);
-    final companyName = appState.companyName;
+    final companyName = appState.companyName.isNotEmpty ? appState.companyName : appState.clientConfig.appName;
     setState(() => _isSending = true);
 
     try {
       final logoBytes = await loadLogoBytes(appState.clientConfig);
+      final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
+
+      final hasLogo = logoBytes.isNotEmpty;
+      final logoHeader = hasLogo
+          ? '<img src="cid:logo" alt="${htmlEscape(companyName)}" style="max-height: 80px; margin-bottom: 10px;" />'
+          : '';
 
       String htmlBody = '''
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <img src="cid:logo" alt="$companyName" style="max-height: 100px; margin-bottom: 10px;" />
-            <h1 style="color: #4f46e5; margin: 0; font-size: 28px;">$companyName</h1>
-            <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Premium Windows & Doors</p>
+          <div style="text-align: center; margin-bottom: 25px;">
+            $logoHeader
+            <h1 style="color: #4f46e5; margin: 0; font-size: 24px;">${htmlEscape(companyName)}</h1>
+            <p style="color: #6b7280; margin-top: 5px; font-size: 14px;">Premium Windows &amp; Doors</p>
           </div>
-          <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); color: #374151; font-size: 16px; line-height: 1.6;">
-            ${_bodyController.text.replaceAll('\n', '<br>')}
+          <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); color: #374151; font-size: 15px; line-height: 1.6;">
+            ${htmlEscape(body).replaceAll('\n', '<br>')}
           </div>
-          <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
-            <p>© ${DateTime.now().year} $companyName. All rights reserved.</p>
-            <p>Crafted with 💖 by Aadi</p>
+          <div style="margin-top: 25px; text-align: center; color: #9ca3af; font-size: 12px;">
+            <p>© ${DateTime.now().year} ${htmlEscape(companyName)}. All rights reserved.</p>
           </div>
         </div>
       ''';
 
-      final url = kIsWeb
-          ? '/api/send_email'
-          : 'https://app.vitharn.com/api/send_email';
+      final attachments = <Map<String, dynamic>>[];
+      if (hasLogo) {
+        attachments.add({
+          'filename': 'logo.png',
+          'cid': 'logo',
+          'content': base64Encode(logoBytes),
+        });
+      }
+
+      final url = '${QuoteShare.origin()}/api/send_email';
       final res = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'to': _toController.text.trim(),
-          'subject': _subjectController.text,
+          'client_id': appState.clientConfig.clientId,
+          'admin_password_hash': passwordHash,
+          'to': to,
+          'subject': subject,
           'html': htmlBody,
-          'attachments': [
-            {
-              'filename': 'logo.png',
-              'cid': 'logo',
-              'content': base64Encode(logoBytes),
-            },
-          ],
+          if (attachments.isNotEmpty) 'attachments': attachments,
         }),
       );
+
       if (res.statusCode != 200) {
-        throw Exception('Server returned ${res.statusCode}: ${res.body}');
+        String errorMsg = 'HTTP ${res.statusCode}';
+        try {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map && decoded['error'] != null) {
+            errorMsg = decoded['error'].toString();
+          }
+        } catch (_) {}
+        throw Exception(errorMsg);
       }
 
       umamiTrack('send_email');
 
-      // Save to Supabase History
-      await SupabaseConfig.client.from('sent_emails').insert({
-        'recipient': _toController.text.trim(),
-        'subject': _subjectController.text,
-        'body': _bodyController.text,
-        'client_id': appState.clientConfig.clientId,
-      });
+      // Save to Supabase History (non-blocking)
+      try {
+        await SupabaseConfig.client.from('sent_emails').insert({
+          'recipient': to,
+          'subject': subject,
+          'body': body,
+          'client_id': appState.clientConfig.clientId,
+        });
+      } catch (dbErr) {
+        debugPrint('sent_emails insert log skipped: $dbErr');
+      }
 
+      if (!mounted) return;
       toastification.show(
         context: context,
         type: ToastificationType.success,
@@ -123,19 +161,32 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       setState(() => _selectedTemplate = 'Custom');
       
     } catch (e) {
+      if (!mounted) return;
       toastification.show(
         context: context,
         type: ToastificationType.error,
         style: ToastificationStyle.flat,
         title: const Text('Failed to send email'),
-        description: Text(e.toString()),
+        description: Text(e.toString().replaceAll('Exception: ', '')),
         alignment: Alignment.topCenter,
         autoCloseDuration: const Duration(seconds: 5),
       );
     } finally {
-      setState(() => _isSending = false);
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
+
+  static String htmlEscape(String text) {
+    return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +248,7 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
                         ),
                         icon: const Icon(Icons.expand_more, color: Colors.grey),
                         dropdownColor: Colors.white,
-                        items: _templates.keys.map((String key) {
+                        items: _templateKeys.map((String key) {
                           return DropdownMenuItem<String>(value: key, child: Text(key, style: const TextStyle(fontWeight: FontWeight.w500)));
                         }).toList(),
                         onChanged: _applyTemplate,

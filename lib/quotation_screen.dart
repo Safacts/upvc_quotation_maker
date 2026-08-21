@@ -456,6 +456,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _sendEmail(String targetEmail) async {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
+      final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
       await pdfGen.loadLibrary();
       final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
       final pdfBytes = await pdfGen.generatePdfBytes(data, appState, photos: effectivePhotos);
@@ -464,9 +465,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final quoteLink = await _quoteLink(data);
       if (quoteLink == null) debugPrint('QuotationScreen: _sendEmail no quote link for ${data.quotationNo} — email will have only review CTA');
 
+      final hasLogo = logoBytes.isNotEmpty;
+      final logoHeader = hasLogo
+          ? '<img src="cid:logo" alt="${appState.companyName}" style="max-height: 80px; margin-bottom: 10px;" />'
+          : '';
+
       // Only render the "Review & Confirm" CTA when we hold a working token.
-      // A tokenless /quote link 403s, so an always-on button was actively
-      // harmful — it taught customers the link was broken.
       final reviewCta = quoteLink == null
           ? ''
           : '''
@@ -476,7 +480,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       final htmlBody = '''
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="cid:logo" alt="${appState.companyName}" style="max-height: 100px; margin-bottom: 10px;" />
+          $logoHeader
         </div>
         <h2 style="color: #1E3A5F; text-align: center; margin-top: 0;">Quotation from ${appState.companyName}</h2>
         <p style="color: #334155; font-size: 16px;">Dear <b>${data.customerName}</b>,</p>
@@ -495,31 +499,43 @@ $reviewCta
       </div>
       ''';
 
-      final url = kIsWeb
-          ? '/api/send_email'
-          : 'https://app.vitharn.com/api/send_email';
+      final attachments = <Map<String, dynamic>>[];
+      if (pdfBytes.isNotEmpty) {
+        attachments.add({
+          'filename': '${data.quotationNo}.pdf',
+          'content': base64Encode(pdfBytes),
+        });
+      }
+      if (hasLogo) {
+        attachments.add({
+          'filename': 'logo.png',
+          'cid': 'logo',
+          'content': base64Encode(logoBytes),
+        });
+      }
+
+      final url = '${QuoteShare.origin()}/api/send_email';
       final res = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'client_id': appState.clientConfig.clientId,
+          'admin_password_hash': passwordHash,
           'to': targetEmail.trim(),
           'subject': 'Quotation ${data.quotationNo} from ${appState.companyName}',
           'html': htmlBody,
-          'attachments': [
-            {
-              'filename': '${data.quotationNo}.pdf',
-              'content': base64Encode(pdfBytes),
-            },
-            {
-              'filename': 'logo.png',
-              'cid': 'logo',
-              'content': base64Encode(logoBytes),
-            },
-          ],
+          if (attachments.isNotEmpty) 'attachments': attachments,
         }),
       );
       if (res.statusCode != 200) {
-        throw Exception('Server returned ${res.statusCode}: ${res.body}');
+        String errorMsg = 'HTTP ${res.statusCode}';
+        try {
+          final decoded = jsonDecode(res.body);
+          if (decoded is Map && decoded['error'] != null) {
+            errorMsg = decoded['error'].toString();
+          }
+        } catch (_) {}
+        throw Exception(errorMsg);
       }
       await _markAsSent();
     } catch (e) {
@@ -571,21 +587,26 @@ $reviewCta
               ),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                ElevatedButton(
-                  onPressed: isSending ? null : () async {
-                    if (emailController.text.isEmpty) return;
-                    setDialogState(() => isSending = true);
-                    try {
-                      await _sendEmail(emailController.text);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sent successfully!')));
-                    } catch (e) {
-                      setDialogState(() => isSending = false);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                    }
-                  },
-                  child: isSending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Send'),
-                ),
+                  ElevatedButton(
+                    onPressed: isSending ? null : () async {
+                      final email = emailController.text.trim();
+                      if (email.isEmpty) return;
+                      setDialogState(() => isSending = true);
+                      try {
+                        await _sendEmail(email);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sent successfully!')));
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSending = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))));
+                        }
+                      }
+                    },
+                    child: isSending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Send'),
+                  ),
               ],
             );
           }
