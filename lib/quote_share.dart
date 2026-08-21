@@ -199,6 +199,10 @@ class QuoteShare {
         ..writeln()
         ..writeln('View the full quotation, download the PDF and confirm here:')
         ..writeln(quoteLink);
+    } else {
+      b
+        ..writeln()
+        ..writeln('Note: secure quotation link could not be created — please share the PDF directly.');
     }
 
     b

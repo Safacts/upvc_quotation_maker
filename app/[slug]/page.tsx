@@ -1,27 +1,26 @@
 import { notFound, redirect } from "next/navigation";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { supaGet } from "@/lib/supabase";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
-import VenkateshwaraMarketPage from "./VenkateshwaraMarketPage";
 
 export const dynamic = "force-dynamic";
 
 const KPR_SLUG = "kprupvc";
 const VENKATESHWARA_SLUG = "venkateshwara";
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
+const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLUG, "index.html");
 
-function readKprHtml(): string | null {
+function readStaticHtml(path: string): string | null {
   try {
-    return readFileSync(KPR_INDEX_PATH, "utf8");
+    return readFileSync(path, "utf8");
   } catch {
     return null;
   }
 }
 
-function kprShell(html: string): string {
+function buildShell(html: string): string {
   const links = [...html.matchAll(/<link[^>]*>/gi)]
     .map((m) => m[0])
     .filter((l) => !/rel=["']icon/i.test(l));
@@ -33,7 +32,7 @@ function kprShell(html: string): string {
   return shell.replace(/\s*\/>/g, ">");
 }
 
-function kprMeta(html: string, key: "title" | "description"): string {
+function htmlMeta(html: string, key: "title" | "description"): string {
   if (key === "title") {
     return html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]?.trim() || "";
   }
@@ -76,18 +75,28 @@ export default async function MarketPageRoute({
 
   if (client.id === KPR_SLUG) {
     if (slug !== KPR_SLUG) redirect(`/${KPR_SLUG}/`);
-    const html = readKprHtml();
+    const html = readStaticHtml(KPR_INDEX_PATH);
     if (html)
       return (
         <div
           suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: kprShell(html) }}
+          dangerouslySetInnerHTML={{ __html: buildShell(html) }}
         />
       );
   }
 
-  if (client.id.toLowerCase() === VENKATESHWARA_SLUG || client.id === "venkateshwara") {
-    return <VenkateshwaraMarketPage client={client} slug={slug} />;
+  if (client.id === VENKATESHWARA_SLUG) {
+    // Canonical URL is /venkateshwara/ — served directly as static by Next.js
+    // This branch handles alias slugs e.g. /venkateshwara-upvc-windows-doors
+    if (slug !== VENKATESHWARA_SLUG) redirect(`/${VENKATESHWARA_SLUG}/`);
+    const html = readStaticHtml(VENKATESHWARA_INDEX_PATH);
+    if (html)
+      return (
+        <div
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: buildShell(html) }}
+        />
+      );
   }
 
   return <MarketPage client={client} slug={slug} />;
@@ -103,35 +112,29 @@ export async function generateMetadata({
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
 
-  if (client.id.toLowerCase() === VENKATESHWARA_SLUG || client.id === "venkateshwara") {
-    const cfg = parseClientConfig(client.config || {}, client.id);
-    const title = "Sri Venkateshwara UPVC Windows & Doors | Heavy-Duty Glazing Hyderabad";
-    const description = "Premium Soundproof UPVC Windows, Sliding Doors, Villa Security Windows with Grills & DGU Acoustic Glazing in Hyderabad. 10-Year Profile Warranty. Factory-direct pricing by J. Venkatesh.";
+  if (client.id === VENKATESHWARA_SLUG) {
+    const html = readStaticHtml(VENKATESHWARA_INDEX_PATH);
+    const title = html ? htmlMeta(html, "title") : "Sri Venkateshwara UPVC Windows & Doors | Hyderabad";
+    const description = html ? htmlMeta(html, "description") : "Premium UPVC Windows & Doors in Hyderabad. German hardware, 10-year warranty. Free site measurement by J. Venkatesh.";
     return {
       title,
       description,
-      keywords: "Venkateshwara UPVC, UPVC Windows Hyderabad, UPVC Doors Hyderabad, Soundproof Windows Hyderabad, Villa Windows with Grill, Sliding Balcony Doors, J Venkatesh UPVC",
+      keywords: "Venkateshwara UPVC, UPVC Windows Hyderabad, UPVC Doors Hyderabad, Villa Windows Grill Mesh, Sliding Windows Hyderabad, J Venkatesh UPVC",
       icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
       openGraph: {
         title,
         description,
-        url: `https://app.vitharn.com/${slug}`,
+        url: `https://app.vitharn.com/venkateshwara/`,
         siteName: "Sri Venkateshwara UPVC Windows & Doors",
         type: "website",
         locale: "en_IN",
       },
-      twitter: {
-        card: "summary_large_image",
-        title,
-        description,
-      },
-      alternates: {
-        canonical: `https://app.vitharn.com/${slug}`,
-      },
+      twitter: { card: "summary_large_image", title, description },
+      alternates: { canonical: `https://app.vitharn.com/venkateshwara/` },
     };
   }
   if (client.id === KPR_SLUG) {
-    const html = readKprHtml();
+    const html = readStaticHtml(KPR_INDEX_PATH);
     const cfg = parseClientConfig(client.config || {}, client.id);
     const kprCity = cityFromAddress(cfg.companyAddress);
     const kprBrandTitle = cfg.companyName || cfg.appName || "KPR UPVC";
@@ -149,13 +152,13 @@ export async function generateMetadata({
       : kprPositioning || "";
     const kprSeoDescription = cfg.seoDescription ? cfg.seoDescription : kprFallbackDescription;
     return {
-      title: html ? kprMeta(html, "title") : kprSeoTitle,
-      description: html ? kprMeta(html, "description") : kprSeoDescription,
+      title: html ? htmlMeta(html, "title") : kprSeoTitle,
+      description: html ? htmlMeta(html, "description") : kprSeoDescription,
       keywords: cfg.seoKeywords || undefined,
       icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
       openGraph: {
-        title: html ? kprMeta(html, "title") : kprSeoTitle,
-        description: html ? kprMeta(html, "description") : kprSeoDescription,
+        title: html ? htmlMeta(html, "title") : kprSeoTitle,
+        description: html ? htmlMeta(html, "description") : kprSeoDescription,
         url: `https://app.vitharn.com/${slug}`,
         siteName: cfg.companyName || cfg.appName || "KPR UPVC",
         type: "website",
@@ -163,8 +166,8 @@ export async function generateMetadata({
       },
       twitter: {
         card: "summary_large_image",
-        title: html ? kprMeta(html, "title") : kprSeoTitle,
-        description: html ? kprMeta(html, "description") : kprSeoDescription,
+        title: html ? htmlMeta(html, "title") : kprSeoTitle,
+        description: html ? htmlMeta(html, "description") : kprSeoDescription,
       },
       alternates: {
         canonical: `https://app.vitharn.com/${slug}`,
