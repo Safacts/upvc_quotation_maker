@@ -10,7 +10,7 @@ import 'dart:html' as html;
 
 class ClientLoader {
   static String _slugify(String s) {
-    final t = (s ?? '').trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final t = s.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
     return t.replaceAll(RegExp(r'^-+|-+$'), '');
   }
 
@@ -125,8 +125,11 @@ class ClientLoader {
         final all = await supabase.from('client_public').select();
         for (final r in all) {
           final rid = (r['id'] as String?) ?? '';
-          final appName = ((r['config'] as Map?) ?? {})['appName'] as String? ?? '';
-          if (_slugify(rid) == rawId || _slugify(appName) == rawId) {
+          final cfg = (r['config'] as Map?) ?? {};
+          final appName = cfg['appName'] as String? ?? '';
+          final companyName = cfg['companyName'] as String? ?? '';
+          final target = _slugify(rawId);
+          if (_slugify(rid) == target || _slugify(appName) == target || _slugify(companyName) == target) {
             row = r;
             break;
           }
@@ -195,8 +198,11 @@ class ClientLoader {
         final all = await supabase.from('client_public').select();
         for (final r in all) {
           final rid = (r['id'] as String?) ?? '';
-          final appName = ((r['config'] as Map?) ?? {})['appName'] as String? ?? '';
-          if (_slugify(rid) == clientId || _slugify(appName) == clientId) {
+          final cfg = (r['config'] as Map?) ?? {};
+          final appName = cfg['appName'] as String? ?? '';
+          final companyName = cfg['companyName'] as String? ?? '';
+          final target = _slugify(clientId);
+          if (_slugify(rid) == target || _slugify(appName) == target || _slugify(companyName) == target) {
             row = r;
             break;
           }

@@ -97,7 +97,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final isDark = appState.isDarkMode;
-    final clientId = appState.clientConfig.clientId;
     final isKprupvc = appState.clientConfig.clientId == 'kprupvc';
 
     return Scaffold(
@@ -128,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _buildSectionHeader('Display & Layout'),
-          _buildDisplaySection(),
+          _buildDisplaySection(appState),
           const SizedBox(height: 16),
           _buildSectionHeader('Company Information'),
           Card(
@@ -263,54 +262,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-          ),
-          if (appState.clientConfig.clientId == 'kprupvc')
-            Column(
-              children: [
-                const SizedBox(height: 16),
-                _buildSectionHeader('Supplier Companies'),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        ..._supplierCompanies.asMap().entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Row(
-                              children: [
-                                Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 15))),
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
-                                  onPressed: () {
-                                    setState(() => _supplierCompanies.removeAt(entry.key));
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _supplierController,
-                              textAlign: TextAlign.center,
-                              textInputAction: TextInputAction.done,
-                              decoration: const InputDecoration(labelText: 'Add Company Name'),
-                              onSubmitted: (_) {
-                                if (_supplierController.text.trim().isNotEmpty) {
-                                  setState(() {
-                                    _supplierCompanies.add(_supplierController.text.trim());
-                                    _supplierController.clear();
-                                  });
-                                }
+          ),          if (isKprupvc) ...[
+            const SizedBox(height: 16),
+            _buildSectionHeader('Supplier Companies'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    ..._supplierCompanies.asMap().entries.map((entry) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(entry.value, style: const TextStyle(fontSize: 15))),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                              onPressed: () {
+                                setState(() => _supplierCompanies.removeAt(entry.key));
                               },
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle, color: Colors.green),
-                            onPressed: () {
+                          ],
+                        ),
+                      );
+                    }),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _supplierController,
+                            textAlign: TextAlign.center,
+                            textInputAction: TextInputAction.done,
+                            decoration: const InputDecoration(labelText: 'Add Company Name'),
+                            onSubmitted: (_) {
                               if (_supplierController.text.trim().isNotEmpty) {
                                 setState(() {
                                   _supplierCompanies.add(_supplierController.text.trim());
@@ -319,10 +303,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               }
                             },
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle, color: Colors.green),
+                          onPressed: () {
+                            if (_supplierController.text.trim().isNotEmpty) {
+                              setState(() {
+                                _supplierCompanies.add(_supplierController.text.trim());
+                                _supplierController.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -343,7 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDisplaySection() {
+  Widget _buildDisplaySection(AppState appState) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -407,8 +402,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title) {

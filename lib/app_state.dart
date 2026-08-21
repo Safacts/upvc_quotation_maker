@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/client_config.dart';
 import 'services/feature_flag_service.dart';
 import 'services/white_label_service.dart';
+import 'favicon_service.dart';
 
 /// Element density options for UI customization.
 enum ElementDensity { compact, comfortable, spacious }
@@ -238,6 +239,8 @@ class AppState extends ChangeNotifier {
     _companyProprietor = config.companyProprietor;
     _gstNumber = config.gstNumber;
     _supplierCompanies = config.supplierCompanies;
+
+    FaviconService.setFromUrl(config.logoUrl);
 
     notifyListeners();
   }

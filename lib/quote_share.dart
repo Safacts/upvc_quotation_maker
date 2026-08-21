@@ -90,7 +90,7 @@ class QuoteShare {
   /// Mirrors `AppState._pushSettingsToServer`: prefer the hash handed back by
   /// `/api/portal_auth` at login, fall back to the one baked into the client
   /// config (the native/APK login path verifies against exactly that value).
-  static Future<String> _passwordHash(ClientConfig cfg) async {
+  static Future<String> passwordHash(ClientConfig cfg) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString('session_password_hash') ?? '';
@@ -123,7 +123,7 @@ class QuoteShare {
         body: jsonEncode({
           'client_id': config.clientId,
           'admin_email': config.companyEmail,
-          'admin_password_hash': await _passwordHash(config),
+          'admin_password_hash': await passwordHash(config),
         }),
       );
       final token = _readToken(res);
