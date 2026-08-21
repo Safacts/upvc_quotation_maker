@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { supaGet } from "@/lib/supabase";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 
 const KPR_SLUG = "kprupvc";
 const VENKATESHWARA_SLUG = "venkateshwara";
+const VAISHNAVI_SLUGS = new Set(["vaishnavi", "vaishnavi-upvc-windows-and-doors"]);
+const VAISHNAVI_INDEX_PATH = join(process.cwd(), "public", "vaishnavi", "index.html");
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
 const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLUG, "index.html");
 
@@ -63,12 +66,76 @@ function serviceAreaFromAddress(addr: string): string {
   return pick.length ? pick.join(", ") : "";
 }
 
+function readVaishnaviHtml(): string | null {
+  try {
+    return readFileSync(VAISHNAVI_INDEX_PATH, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function stars(rating: unknown): string {
+  const n = Math.max(1, Math.min(5, Number(rating) || 5));
+  return "★★★★★".slice(0, n);
+}
+
+async function vaishnaviReviewsHtml(): Promise<string> {
+  try {
+    const reviews = await supaGet("service_reviews", {
+      select: "customer_name,role,rating,review_text,created_at",
+      client_id: "eq.vaishnavi",
+      is_visible: "eq.true",
+      order: "created_at.desc",
+      limit: 6,
+    });
+
+    if (!Array.isArray(reviews) || reviews.length === 0) {
+      return `<div class="vv-empty"><b>No public reviews yet.</b><br>Approved Vaishnavi customer reviews will appear here automatically from the Vitharn review system. Use the review form link after customer handover.</div>`;
+    }
+
+    return reviews
+      .map((review: any) => {
+        const role = review.role ? ` · ${escapeHtml(review.role)}` : "";
+        return `<article class="vv-review"><div class="vv-stars" aria-label="${escapeHtml(review.rating)} out of 5 stars">${stars(review.rating)}</div><blockquote>${escapeHtml(review.review_text)}</blockquote><footer><b>${escapeHtml(review.customer_name)}</b>${role}</footer></article>`;
+      })
+      .join("");
+  } catch {
+    return `<div class="vv-empty"><b>Reviews are temporarily unavailable.</b><br>The page still links to Vaishnavi's review form, and the live review area will recover when the review API/database is reachable.</div>`;
+  }
+}
+
+function vaishnaviShell(html: string, reviewMarkup: string): string {
+  const styles = [...html.matchAll(/<style[^>]*>[\s\S]*?<\/style>/gi)].map((m) => m[0]).join("\n");
+  const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || "";
+  // Scripts are intentionally omitted: the page is presentation-first and
+  // all primary navigation/WhatsApp actions remain ordinary accessible links.
+  return `${styles}\n${body
+    .replace("<!--VITHARN_VAISHNAVI_REVIEWS-->", reviewMarkup)
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")}`;
+}
+
 export default async function MarketPageRoute({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (VAISHNAVI_SLUGS.has(slug.toLowerCase())) {
+    const html = readVaishnaviHtml();
+    if (html) {
+      const reviewMarkup = await vaishnaviReviewsHtml();
+      return <div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: vaishnaviShell(html, reviewMarkup) }} />;
+    }
+  }
   const rows = await getCachedClients();
   const client = findClientBySlug(rows, slug);
   if (!client) notFound();
@@ -108,6 +175,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (VAISHNAVI_SLUGS.has(slug.toLowerCase())) {
+    return {
+      title: "Vaishnavi uPVC Windows & Doors | Hyderabad",
+      description: "Measured, specified and professionally installed uPVC windows and doors for Hyderabad homes and projects.",
+      icons: { icon: "/api/favicon/vaishnavi" },
+      alternates: { canonical: `https://app.vitharn.com/${slug}` },
+    };
+  }
   const rows = await getCachedClients();
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
