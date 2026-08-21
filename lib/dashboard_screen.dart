@@ -257,12 +257,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 );
               }),
+              const Divider(height: 24),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text(
+                  'Delete Quotation',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Permanently remove with double confirmation',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteQuotation(q);
+                },
+              ),
               const SizedBox(height: 8),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _confirmDeleteQuotation(QuotationData q) async {
+    if (q.id == null || q.id!.isEmpty) return;
+
+    // First Confirmation Dialog
+    final firstConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 10),
+            Text('Delete Quotation?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete quotation "${q.quotationNo}" for ${q.customerName}?\n\nThis will remove all window measurements and cost breakdowns.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continue to Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (firstConfirm != true || !mounted) return;
+
+    // Second (Double) Confirmation Dialog
+    final secondConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Text('Final Confirmation'),
+          ],
+        ),
+        content: Text(
+          'Permanent action: Quotation "${q.quotationNo}" will be permanently erased from the server and cannot be recovered.\n\nConfirm permanent deletion?',
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Quotation'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            icon: const Icon(Icons.delete_forever, size: 18),
+            onPressed: () => Navigator.pop(ctx, true),
+            label: const Text('Yes, Permanently Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (secondConfirm != true || !mounted) return;
+
+    // Perform Deletion
+    try {
+      final clientId = Provider.of<AppState>(
+        context,
+        listen: false,
+      ).clientConfig.clientId;
+
+      // Delete child items first then parent quotation
+      await SupabaseConfig.client
+          .from('measured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+
+      await SupabaseConfig.client
+          .from('unmeasured_items')
+          .delete()
+          .eq('quotation_id', q.id!)
+          .eq('client_id', clientId);
+
+      await SupabaseConfig.client
+          .from('quotations')
+          .delete()
+          .eq('id', q.id!)
+          .eq('client_id', clientId);
+
+      setState(() {
+        _quotations.removeWhere((item) => item.id == q.id);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Quotation ${q.quotationNo} deleted permanently.'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Delete error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete quotation: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   Color _statusColor(QuotationStatus s) {
