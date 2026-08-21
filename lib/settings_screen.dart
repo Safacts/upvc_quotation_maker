@@ -238,6 +238,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Quotation Maker'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Enable Site Photos'),
+                    subtitle: const Text('Show site photos in Quotation Maker'),
+                    value: appState.enableSitePhotos,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) => appState.setEnableSitePhotos(val),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Share as PDF'),
+                    subtitle: const Text('OFF = Share as Link instead of PDF'),
+                    value: appState.enablePdfLink,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) => appState.setEnablePdfLink(val),
+                  ),
+                ],
+              ),
+            ),
+          ),
            if (Provider.of<AppState>(context).clientConfig.clientId == 'kprupvc') ...[
              const SizedBox(height: 16),
              _buildSectionHeader('Supplier Companies'),
