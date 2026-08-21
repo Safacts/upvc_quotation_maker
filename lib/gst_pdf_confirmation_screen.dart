@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:printing/printing.dart' deferred as printLib;
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'gst_invoice_model.dart';
@@ -67,7 +68,7 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
     await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay) {
+  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay, {Widget? brandIcon}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -81,7 +82,7 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: color),
+            brandIcon ?? Icon(icon, size: 32, color: color),
             const SizedBox(height: 8),
             Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
           ],
@@ -129,8 +130,8 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
                   _buildActionButton('Save', Icons.download, Colors.indigo, _savePdf, 300),
                   _buildActionButton('Print', Icons.print, Colors.deepPurple, _printPdf, 400),
                   _buildActionButton('Share', Icons.share, Colors.blue, () => _sharePdf(_shareMessage(app: 'Share')), 500),
-                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, () => _sharePdf(_shareMessage(app: 'WhatsApp')), 600),
-                  _buildActionButton('Telegram', Icons.send, Colors.lightBlue, () => _sharePdf(_shareMessage(app: 'Telegram')), 700),
+                  _buildActionButton('WhatsApp', Icons.chat, Colors.green, () => _sharePdf(_shareMessage(app: 'WhatsApp')), 600, brandIcon: const FaIcon(FontAwesomeIcons.whatsapp, size: 32, color: Colors.green)),
+                  _buildActionButton('Telegram', Icons.send, Colors.lightBlue, () => _sharePdf(_shareMessage(app: 'Telegram')), 700, brandIcon: const FaIcon(FontAwesomeIcons.telegram, size: 32, color: Color(0xFF229ED9))),
                 ],
               ),
 
