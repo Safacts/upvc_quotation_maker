@@ -30,7 +30,7 @@ import {
   PackagePlus,
   Factory,
   Scissors,
-  ClipboardList,
+  PhoneCall,
   FolderKanban,
   Box,
 } from "lucide-react";
@@ -192,8 +192,7 @@ const NAV = [
   { key: "products", label: "Products", icon: Package, hint: "4" },
   { key: "production", label: "Production", icon: Factory, hint: "5" },
   { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
-  { key: "factory-reports", label: "Factory Reports", icon: ClipboardList, hint: "0" },
-  { key: "leads", label: "Leads", icon: UserPlus, hint: "7" },
+  { key: "leads", label: "CRM (Leads)", icon: PhoneCall, hint: "7" },
   { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
   { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
 ] as const;
@@ -338,6 +337,26 @@ export default function ConsoleShell({
         hint: "Go to",
         run: () => router.push(n.key ? `${base}/${n.key}` : base),
       })),
+      {
+        label: "3D Design",
+        hint: "Open",
+        run: () => window.open("/upvc/3d-viewer", "_blank", "noopener,noreferrer"),
+      },
+      {
+        label: "Cutting Optimization",
+        hint: "Go to",
+        run: () => router.push(`${base}/cutting`),
+      },
+      {
+        label: "Production Board",
+        hint: "Go to",
+        run: () => router.push(`${base}/production`),
+      },
+      {
+        label: "CRM",
+        hint: "Go to",
+        run: () => router.push(`${base}/leads`),
+      },
       {
         label: "New Quotation",
         hint: "Alt+N",
@@ -728,16 +747,6 @@ export default function ConsoleShell({
               <PanelLeft size={15} strokeWidth={2} />
               <span className="vc-nav-label">Lite Portal</span>
             </button>
-            <a
-              className="vc-nav-item"
-              href="/upvc/3d-viewer"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="3D window preview"
-            >
-              <Box size={15} strokeWidth={2} />
-              <span className="vc-nav-label">3D Viewer</span>
-            </a>
           </nav>
 
           <div className="vc-sidebar-foot">

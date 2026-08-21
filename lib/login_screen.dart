@@ -13,10 +13,13 @@ import 'dashboard_screen.dart';
 import 'crafted_widget.dart';
 import 'client_logo.dart';
 import 'google_signin.dart';
-import 'umami_tracker.dart';
+import 'google_signin.dart';
 import 'supabase_config.dart';
 import 'config/client_loader.dart';
-import 'config/client_config.dart';
+import 'umami_tracker.dart';
+
+// Helper: Use absolute URL for mobile, relative for web
+String get _apiBase => kIsWeb ? '' : 'https://app.vitharn.com';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,19 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _isCheckingSession = kIsWeb;
   String _errorMessage = '';
   StreamSubscription<GoogleSignInResult>? _googleSub;
   bool _googleReady = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final appState = Provider.of<AppState>(context);
-    if (_emailController.text.isEmpty && appState.companyEmail.isNotEmpty) {
-      _emailController.text = appState.companyEmail;
-    }
-  }
+  bool _passwordVisible = false;
 
   Future<String?> _readSession() async {
     if (kIsWeb) {
@@ -113,9 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; _errorMessage = ''; });
     try {
       final res = await http.post(
-        Uri.parse(_portalAuthUrl),
+        Uri.parse('$_apiBase/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'google', 'email': email, 'credential': credential ?? ''}),
+        body: jsonEncode({'mode': 'google', email: email.trim(), credential: credential}),
       );
       final data = _decodeJson(res);
       if (data == null) {
@@ -127,11 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
-          final config = await ClientLoader.loadConfig(clientId: clientId);
-          if (config is SsoPendingClientConfig) {
-            await _handleSsoPending(config);
-            return;
-          }
           await _applyTenant(clientId);
         }
         if (!mounted) return;
@@ -172,119 +161,58 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Stores the password hash received from login/session API for use in
+  /// save_client authentication (proves the caller knows the password).
+  Future<void> _writeSessionPasswordHash(String? hash) async {
+    if (hash == null || hash.isEmpty) return;
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_password_hash', hash);
+      return;
+    }
+    try {
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'session_password_hash', value: hash);
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('session_password_hash', hash);
+    }
+  }
+
   Future<void> _checkExistingSession() async {
     String? openQuote;
     if (kIsWeb) {
       try {
         final uri = Uri.base;
         openQuote = uri.queryParameters['open_quote'];
-        final targetClientId = uri.queryParameters['client'] ?? ClientLoader.getUrlClientId();
-
-        // Always check session from HttpOnly cookie on web
-        final res = await http.post(
-          Uri.parse(_portalAuthUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'mode': 'session'}),
-        );
-        if (res.statusCode == 200) {
-          final data = _decodeJson(res);
-          if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
-            await _writeSession('true');
-            final effectiveClient = targetClientId ?? (data['client_id'] as String?)?.trim();
-            if (effectiveClient != null && effectiveClient.isNotEmpty) {
-              await _applyTenant(effectiveClient);
+        if (uri.queryParameters['auto_login'] == 'true') {
+          // Verify with Next.js backend using the secure HttpOnly cookie
+          final res = await http.post(
+            Uri.parse('$_apiBase/api/portal_auth'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'mode': 'session'}),
+          );
+          if (res.statusCode == 200) {
+            final data = _decodeJson(res);
+            if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
+              await _writeSession('true');
+              // CRITICAL FIX: Store password_hash for save_client authentication
+              await _writeSessionPasswordHash(data['password_hash'] as String?);
+              if (!mounted) return;
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
+              return;
             }
-            if (!mounted) return;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)),
-            );
-            return;
           }
         }
-      } catch (e) {
-        debugPrint('Web auto session check error: $e');
-      }
+      } catch (_) {}
     }
 
     String? session = await _readSession();
     if (session == 'true') {
-      if (kIsWeb) {
-        final targetClientId = Uri.base.queryParameters['client'] ?? ClientLoader.getUrlClientId();
-        if (targetClientId != null && targetClientId.isNotEmpty) {
-          await _applyTenant(targetClientId);
-        }
-      }
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)),
-      );
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _isCheckingSession = false;
-      });
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
     }
   }
-
-  Future<void> _handleSsoPending(ClientConfig config) async {
-    if (config is! SsoPendingClientConfig) return;
-    
-    final shouldSwitch = await _showTenantSwitchDialog(
-      context: context,
-      currentClientId: config.ssoCurrentClientId!,
-      newClientId: config.clientId,
-    );
-    
-    if (!shouldSwitch) {
-      // User declined - stay on current client, load that config
-      final currentConfig = await ClientLoader.loadConfig(clientId: config.ssoCurrentClientId);
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.applyClientConfig(currentConfig);
-      if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-      return;
-    }
-    
-    // User accepted - proceed with new client
-    await _applyTenant(config.clientId);
-    if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
-  }
-
-  Future<bool> _showTenantSwitchDialog({
-    required BuildContext context,
-    required String currentClientId,
-    required String newClientId,
-  }) async {
-    return await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Switch Client?'),
-        content: Text(
-          'You are currently viewing "$currentClientId". '
-          'Switch to "$newClientId"?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Switch'),
-          ),
-        ],
-      ),
-    ) ?? false;
-  }
-
-  String get _portalAuthUrl =>
-      kIsWeb ? '/api/portal_auth' : 'https://app.vitharn.com/api/portal_auth';
 
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
@@ -310,13 +238,38 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = true; _errorMessage = ''; });
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final appState = Provider.of<AppState>(context, listen: false);
 
+    // NATIVE (Android) PATH: offline comparison ONLY when the local config
+    // actually has a password hash. The `client_public` Supabase view
+    // deliberately strips password material, so `portalPasswordHash` is
+    // usually empty — in that case we fall through to server-side auth
+    // (same endpoint the web path uses) instead of failing locally.
+    if (!kIsWeb) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final localHash = appState.clientConfig.portalPasswordHash;
+      if (appState.clientConfig.adminEmails.contains(email) &&
+          localHash.isNotEmpty) {
+        if (localHash == _hashPassword(password)) {
+          umamiTrack('login_success');
+          await _writeSession('true');
+          if (!mounted) return;
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+          return;
+        }
+        // Hash available but password doesn't match — fail immediately.
+        umamiTrack('login_failed');
+        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+        return;
+      }
+      // No local hash available — fall through to server-side auth below.
+    }
+
+    // SERVER-SIDE AUTH (web always; native fallback when local hash empty).
     try {
       final res = await http.post(
-        Uri.parse(_portalAuthUrl),
+        Uri.parse('$_apiBase/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'login', 'email': email, 'password': password}),
+        body: jsonEncode({'mode': 'login', 'email': email.trim(), 'password': password}),
       );
       final data = _decodeJson(res);
       if (data == null) {
@@ -326,15 +279,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
+        // Store password_hash for save_client authentication
+        await _writeSessionPasswordHash(data['password_hash'] as String?);
         final clientId = (data['client_id'] as String?)?.trim();
-        final effectiveClient = clientId ?? (data['role'] == 'admin' ? appState.clientConfig.clientId : null);
-        if (effectiveClient != null && effectiveClient.isNotEmpty) {
-          final config = await ClientLoader.loadConfig(clientId: effectiveClient);
-          if (config is SsoPendingClientConfig) {
-            await _handleSsoPending(config);
-            return;
-          }
-          await _applyTenant(effectiveClient);
+        if (clientId != null && clientId.isNotEmpty) {
+          await _applyTenant(clientId);
         }
         if (!mounted) return;
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
@@ -342,11 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
       } else {
         umamiTrack('login_failed');
-        String errMsg = (data['error'] as String?) ?? 'Invalid email or password.';
-        if (appState.companyEmail.isNotEmpty && email.toLowerCase() != appState.companyEmail.toLowerCase() && !email.contains('safacts') && !email.contains('vitarn')) {
-          errMsg = 'This workspace is configured for ${appState.companyName}. Please sign in with ${appState.companyEmail} or your admin credentials.';
-        }
-        setState(() { _isLoading = false; _errorMessage = errMsg; });
+        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });
       }
     } catch (e) {
       setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
@@ -365,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final res = await http.post(
-        Uri.parse('/api/reset_client_password'),
+        Uri.parse('$_apiBase/api/reset_client_password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': appState.companyEmail}),
       );
@@ -440,7 +385,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   setState(() => _isLoading = true);
                   try {
                     final res = await http.post(
-                      Uri.parse('/api/reset_client_password'),
+                      Uri.parse('$_apiBase/api/reset_client_password'),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode({'email': appState.companyEmail, 'otp': otp, 'new_hash': newHash}),
                     );
@@ -475,14 +420,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appState = Provider.of<AppState>(context);
-    
-    if (_isCheckingSession && kIsWeb) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
     
     return Scaffold(
       body: Center(
@@ -564,8 +501,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: _passwordController,
-                        decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock_outline)),
-                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                          ),
+                        ),
+                        obscureText: !_passwordVisible,
                       ),
                       const SizedBox(height: 24),
                       if (_errorMessage.isNotEmpty) ...[

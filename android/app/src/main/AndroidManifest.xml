@@ -1,9 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- WHITELABELING: the app name is a Gradle manifest placeholder so a
+         per-client APK needs no source edit. The default in
+         app/build.gradle.kts reproduces the previous hard-coded label exactly,
+         so existing CI builds are unaffected. Override per client by passing
+         the Gradle property vitharn.appLabel at build time (see the header
+         comment in app/build.gradle.kts for the full command). -->
     <application
-        android:label="VENKATESHWARA UPVC Quote"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
@@ -33,18 +38,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
-        <!-- FileProvider so the in-app updater can hand the downloaded APK to the
-             system installer as a content:// URI (ACTION_VIEW with grantUriPermissions). -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

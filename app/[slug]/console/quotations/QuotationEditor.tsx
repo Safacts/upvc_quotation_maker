@@ -2,23 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-// Pure, serializable editor types + helpers live in a plain (non-"use client")
-// module so the server component `new/page.tsx` can call `blankHeader` without
-// tripping Next.js's "Cannot call a Client Function from a Server Component".
-import {
-  blankHeader,
-  emptyMeasured,
-  emptyUnmeasured,
-  type MeasuredRow,
-  type UnmeasuredRow,
-  type QuotationHeader,
-  type EditorInitial,
-  type WindowBom,
-} from "@/lib/quotation-editor";
-export { emptyBom } from "@/lib/quotation-editor";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight, ChevronDown, Copy, Box,
+  ChevronLeft, ChevronRight, Cuboid,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
@@ -37,7 +23,6 @@ import {
 } from "@/lib/console-format";
 import { QUOTATION_STATUSES } from "@/lib/console-schemas";
 import { LivePreview } from "../_components/LivePreview";
-import PhotoAttachments from "./PhotoAttachments";
 
 /**
  * QuotationEditor — THE SPLIT-VIEW. This screen is the product.
@@ -74,14 +59,86 @@ import PhotoAttachments from "./PhotoAttachments";
  * client-supplied amount is a client-supplied price.
  */
 
-// Re-export the editor types so existing importers (e.g. EditQuotationClient.tsx,
-// which does `import type { ... } from "../QuotationEditor"`) keep working.
-export type {
-  MeasuredRow,
-  UnmeasuredRow,
-  QuotationHeader,
-  EditorInitial,
-};
+export interface MeasuredRow {
+  key: string;
+  code: string;
+  description: string;
+  glass: string;
+  width: string;
+  height: string;
+  units: string;
+  rate: string;
+}
+
+export interface UnmeasuredRow {
+  key: string;
+  description: string;
+  units: string;
+  rate: string;
+}
+
+export interface QuotationHeader {
+  quote_no: string;
+  date: string;
+  customer_name: string;
+  contact_no: string;
+  email: string;
+  address: string;
+  reference: string;
+  supplier_company: string;
+  status: string;
+  transport_cost: string;
+  include_gst: boolean;
+  gst_percentage: string;
+  customer_id: string | null;
+}
+
+export interface EditorInitial {
+  header: QuotationHeader;
+  measured: MeasuredRow[];
+  unmeasured: UnmeasuredRow[];
+}
+
+/**
+ * Row keys are generated CLIENT-SIDE and are not database ids.
+ *
+ * React needs a stable key across inserts, deletes and reorders within one
+ * editing session. Using the array index instead makes React reuse the wrong DOM
+ * node when a row is deleted from the middle — the user watches the value they
+ * just typed jump to a different line. A counter is used rather than
+ * `crypto.randomUUID()` so that server and client render identically and
+ * hydration does not mismatch.
+ */
+let keySeq = 0;
+function nextKey(): string {
+  keySeq += 1;
+  return "r" + keySeq;
+}
+
+export function emptyMeasured(): MeasuredRow {
+  return { key: nextKey(), code: "", description: "", glass: "", width: "", height: "", units: "1", rate: "" };
+}
+export function emptyUnmeasured(): UnmeasuredRow {
+  return { key: nextKey(), description: "", units: "1", rate: "" };
+}
+
+export function blankHeader(gstPercentage = 18): QuotationHeader {
+  return {
+    quote_no: "",
+    date: new Date().toISOString().slice(0, 10),
+    customer_name: "",
+    contact_no: "",
+    email: "",
+    address: "",
+    reference: "",
+    supplier_company: "",
+    status: "draft",
+    transport_cost: "0",
+    include_gst: false,
+    gst_percentage: String(gstPercentage),
+    customer_id: null,
+  };
+}
 
 export default function QuotationEditor({
   quotationId,
@@ -111,27 +168,7 @@ export default function QuotationEditor({
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
-  const [bomOpen, setBomOpen] = useState<Record<string, boolean>>({});
   const [savedId, setSavedId] = useState<string | null>(quotationId);
-
-  // ---- Customer picker (Feature A: autofill from masters) -----------------
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const [customerQuery, setCustomerQuery] = useState("");
-  const [customerResults, setCustomerResults] = useState<
-    { id: string; name: string; phone?: string; company?: string }[]
-  >([]);
-  const [customerLoading, setCustomerLoading] = useState(false);
-  const customerBoxRef = useRef<HTMLDivElement>(null);
-
-  // ---- Item templates + measured quick actions (Feature B) ----------------
-  const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([]);
-  const templateBoxRef = useRef<HTMLDivElement>(null);
-  const [applyW, setApplyW] = useState("");
-  const [applyH, setApplyH] = useState("");
-  const [applyRate, setApplyRate] = useState("");
-  const [applyGlass, setApplyGlass] = useState("");
-  const [applyWithRate, setApplyWithRate] = useState(false);
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
 
@@ -237,29 +274,6 @@ export default function QuotationEditor({
     [markDirty],
   );
 
-  const updateBom = useCallback(
-    (index: number, patch: { profile?: Partial<WindowBom["profile"]>; glass?: Partial<WindowBom["glass"]>; hardware?: WindowBom["hardware"] }) => {
-      setMeasured((rows) => rows.map((r, i) => i === index ? {
-        ...r,
-        bom: {
-          ...r.bom,
-          ...patch,
-          profile: { ...r.bom.profile, ...(patch.profile || {}) },
-          glass: { ...r.bom.glass, ...(patch.glass || {}) },
-        },
-      } : r));
-      markDirty();
-    },
-    [markDirty],
-  );
-
-  const updateHardware = useCallback(
-    (index: number, value: string) => {
-      updateBom(index, { hardware: value.trim() ? [{ name: value, quantity: "1" }] : [] });
-    },
-    [updateBom],
-  );
-
   const addUnmeasured = useCallback(() => {
     setUnmeasured((rows) => [...rows, emptyUnmeasured()]);
     markDirty();
@@ -280,164 +294,6 @@ export default function QuotationEditor({
     },
     [markDirty],
   );
-
-  // ---- Feature A: customer picker ----------------------------------------
-  const fetchCustomers = useCallback(async (q: string) => {
-    setCustomerLoading(true);
-    try {
-      const res = await fetch(
-        `/api/console/customers?q=${encodeURIComponent(q)}&page_size=20`,
-        { credentials: "same-origin" },
-      );
-      if (!res.ok) {
-        setCustomerResults([]);
-        return;
-      }
-      const data = await res.json();
-      setCustomerResults(Array.isArray(data.rows) ? data.rows : []);
-    } catch {
-      setCustomerResults([]);
-    } finally {
-      setCustomerLoading(false);
-    }
-  }, []);
-
-  const selectCustomer = useCallback(
-    async (cid: string) => {
-      try {
-        const res = await fetch(`/api/console/customers/${cid}`, { credentials: "same-origin" });
-        if (!res.ok) return;
-        const data = await res.json();
-        // Autofill header. Blank fields only — never overwrite what the user
-        // already typed. `gstin` maps onto `reference` (the header has no gstin
-        // column); the FK `customer_id` links the master for later lookups.
-        setHeader((h) => ({
-          ...h,
-          customer_name: data.name || h.customer_name,
-          contact_no: data.contact_no || h.contact_no,
-          email: data.email || h.email,
-          address: data.address || h.address,
-          reference: h.reference || data.gstin || h.reference,
-          customer_id: data.id || h.customer_id,
-        }));
-        // Bonus: seed a default glass on rows that have none yet.
-        if (data.preferred_glass) {
-          setMeasured((rows) =>
-            rows.map((r) => (r.glass ? r : { ...r, glass: data.preferred_glass })),
-          );
-        }
-        markDirty();
-        setCustomerOpen(false);
-      } catch {
-        // Non-fatal: the user can still type manually.
-      }
-    },
-    [markDirty],
-  );
-
-  useEffect(() => {
-    if (customerOpen) void fetchCustomers(customerQuery);
-  }, [customerOpen, customerQuery, fetchCustomers]);
-  useEffect(() => {
-    if (!customerOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (customerBoxRef.current && !customerBoxRef.current.contains(e.target as Node)) {
-        setCustomerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [customerOpen]);
-
-  // ---- Feature B: item templates + measured quick actions -----------------
-  const loadTemplates = useCallback(async () => {
-    try {
-      const res = await fetch("/api/console/item-templates", { credentials: "same-origin" });
-      if (!res.ok) {
-        setTemplates([]);
-        return;
-      }
-      const data = await res.json();
-      setTemplates(Array.isArray(data.templates) ? data.templates : []);
-    } catch {
-      setTemplates([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (templatesOpen) void loadTemplates();
-  }, [templatesOpen, loadTemplates]);
-  useEffect(() => {
-    if (!templatesOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (templateBoxRef.current && !templateBoxRef.current.contains(e.target as Node)) {
-        setTemplatesOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [templatesOpen]);
-
-  const insertTemplate = useCallback(
-    (t: any) => {
-      // name -> description, window_type -> code, width_mm/height_mm -> width/height,
-      // quantity -> units, rate/glass straight through. Inserts a NEW measured row.
-      const row: MeasuredRow = {
-        ...emptyMeasured(),
-        description: t.name || t.description || "",
-        code: t.window_type || "",
-        width: t.width_mm != null && t.width_mm !== "" ? String(t.width_mm) : "",
-        height: t.height_mm != null && t.height_mm !== "" ? String(t.height_mm) : "",
-        units: t.quantity != null && t.quantity !== "" ? String(t.quantity) : "1",
-        rate: t.rate != null && t.rate !== "" ? String(t.rate) : "",
-        glass: t.glass || "",
-      };
-      setMeasured((rows) => [...rows, row]);
-      setTemplatesOpen(false);
-      markDirty();
-    },
-    [markDirty],
-  );
-
-  const duplicateMeasured = useCallback(
-    (index: number) => {
-      setMeasured((rows) => {
-        const src = rows[index];
-        if (!src) return rows;
-        // Copy description/glass/rate; W/H carried over so the user can tweak.
-        const copy: MeasuredRow = {
-          ...emptyMeasured(),
-          description: src.description,
-          glass: src.glass,
-          width: src.width,
-          height: src.height,
-          units: src.units,
-          rate: src.rate,
-        };
-        const next = [...rows];
-        next.splice(index + 1, 0, copy);
-        return next;
-      });
-      markDirty();
-    },
-    [markDirty],
-  );
-
-  const applyToAllRows = useCallback(() => {
-    if (!applyW.trim() && !applyH.trim()) {
-      toast("Enter at least a width or height to apply", "info");
-      return;
-    }
-    setMeasured((rows) =>
-      rows.map((r) => ({
-        ...r,
-        width: applyW.trim() ? applyW.trim() : r.width,
-        height: applyH.trim() ? applyH.trim() : r.height,
-        ...(applyWithRate ? { rate: applyRate.trim(), glass: applyGlass.trim() } : {}),
-      })),
-    );
-    markDirty();
-  }, [applyW, applyH, applyRate, applyGlass, applyWithRate, markDirty, toast]);
 
   // ---- Save ---------------------------------------------------------------
   const save = useCallback(async () => {
@@ -470,7 +326,6 @@ export default function QuotationEditor({
             height: m.height,
             units: m.units,
             rate: m.rate,
-            bom: m.bom,
           })),
         unmeasured_items: unmeasured
           .filter((u) => u.description || u.rate)
@@ -496,6 +351,8 @@ export default function QuotationEditor({
       }
 
       setDirty(false);
+      toast("Saved", "ok");
+
       if (isNew && data.id) {
         setSavedId(data.id);
         // `replace`, not `push`: the user should not be able to press Back into
@@ -729,7 +586,7 @@ export default function QuotationEditor({
       { keys: "Ctrl+S", label: "Save" },
       { keys: "Alt+I", label: "Add row" },
       { keys: "Alt+X", label: "Delete row" },
-      { keys: "Alt+C", label: "Add customer/product" },
+      { keys: "Alt+C", label: "New master" },
       { keys: "Ctrl+/", label: "Calculator" },
       ...(nav.index >= 0
         ? [{ keys: "PgUp/PgDn", label: "Prev/next quote" }]
@@ -861,24 +718,22 @@ export default function QuotationEditor({
                 type="button"
                 className="vc-btn vc-btn-sm"
                 onClick={() =>
-                  window.open(`/upvc/3d-viewer?fromQuotation=${savedId}`, "_blank", "noopener,noreferrer")
+                  window.open(
+                    `/upvc/3d-viewer?fromQuotation=${savedId}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
                 }
-                title="Open this quotation in the 3D window viewer"
+                title="Open the measured opening as a 3D model"
               >
-                <Box size={12} /> View in 3D
+                <Cuboid size={12} /> 3D
               </button>
             )}
             <button
               type="button"
               className="vc-btn vc-btn-sm"
-              onClick={() => {
-                if (!savedId) {
-                  toast("Save the quotation first to print", "info");
-                  return;
-                }
-                window.open(`/api/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
-              }}
-              title="Open PDF for printing"
+              onClick={() => window.print()}
+              title="Print preview"
             >
               <Printer size={12} /> <span className="vc-kbd">Ctrl P</span>
             </button>
@@ -909,106 +764,32 @@ export default function QuotationEditor({
             </button>
           </div>
 
-          {/* Header: 4-column grid — Row 1: who, Row 2: contact, Row 3: job context.
-               Separator divs create a visual break between groups without headings. */}
+          {/* Header: 3 columns, everything visible. No wizard, no accordion. */}
           <div className="vc-hdr-grid">
-
-            {/* ── Row 1: Core identity ── */}
             <div className="vc-field vc-span-2">
               <label className="vc-label">
                 Customer <span className="vc-req">*</span>
+                {/* Alt+C is the whole point of this affordance: the user is
+                    already typing a name that is not on file, and this saves
+                    them abandoning the quotation to go and create it. */}
                 <button
                   type="button"
                   className="vc-inline-add"
                   onClick={quickCreateFromContext}
-                  title="Add this customer to masters (Alt+C)"
+                  title="Add this customer to the master (Alt+C)"
                 >
                   <UserPlus size={11} /> Add <span className="vc-kbd">Alt C</span>
                 </button>
               </label>
-              {/* Customer picker (Feature A): combobox over existing masters that
-                  autofills the header on select. The free-text input + Alt+C
-                  quick-create below stay fully functional. */}
-              <div style={{ position: "relative" }} ref={customerBoxRef}>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    className={"vc-input" + (fieldErrors.customer_name ? " vc-invalid" : "")}
-                    style={{ flex: 1 }}
-                    value={header.customer_name}
-                    onChange={(e) => setHeaderField("customer_name", e.target.value)}
-                    placeholder="Customer name"
-                    data-calc="off"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    className="vc-btn vc-btn-sm"
-                    onClick={() => setCustomerOpen((o) => !o)}
-                    title="Pick an existing customer to autofill details"
-                  >
-                    Pick <ChevronDown size={12} />
-                  </button>
-                </div>
-                {customerOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      zIndex: 50,
-                      marginTop: 4,
-                      background: "#fff",
-                      border: "1px solid #FFEDD5",
-                      borderRadius: 8,
-                      boxShadow: "0 8px 24px rgba(124,45,18,0.15)",
-                      maxHeight: 280,
-                      overflowY: "auto",
-                      fontSize: 12,
-                    }}
-                  >
-                    <div style={{ padding: 8, borderBottom: "1px solid #FFEDD5" }}>
-                      <input
-                        className="vc-input"
-                        style={{ width: "100%" }}
-                        autoFocus
-                        placeholder="Search customers..."
-                        value={customerQuery}
-                        onChange={(e) => setCustomerQuery(e.target.value)}
-                      />
-                    </div>
-                    {customerLoading ? (
-                      <div style={{ padding: 10, color: "#7C2D12" }}>Loading...</div>
-                    ) : customerResults.length === 0 ? (
-                      <div style={{ padding: 10, color: "#8a94a1" }}>No customers found</div>
-                    ) : (
-                      customerResults.map((c) => (
-                        <div
-                          key={c.id}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            void selectCustomer(c.id);
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#FFEDD5")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                          style={{
-                            padding: "8px 10px",
-                            cursor: "pointer",
-                            borderBottom: "1px solid #FFF7ED",
-                          }}
-                        >
-                          <div style={{ color: "#7C2D12", fontWeight: 600 }}>{c.name}</div>
-                          {c.phone || c.company ? (
-                            <div style={{ color: "#8a94a1", fontSize: 11 }}>
-                              {[c.phone, c.company].filter(Boolean).join(" · ")}
-                            </div>
-                          ) : null}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
+              <input
+                className={"vc-input" + (fieldErrors.customer_name ? " vc-invalid" : "")}
+                value={header.customer_name}
+                onChange={(e) => setHeaderField("customer_name", e.target.value)}
+                placeholder="Customer name"
+                // Not arithmetic — keep Ctrl+/ out of a name field.
+                data-calc="off"
+                autoFocus
+              />
               {fieldErrors.customer_name && (
                 <span className="vc-err">{fieldErrors.customer_name}</span>
               )}
@@ -1020,7 +801,27 @@ export default function QuotationEditor({
                 className="vc-input"
                 value={header.quote_no}
                 onChange={(e) => setHeaderField("quote_no", e.target.value)}
-                placeholder="Auto"
+                placeholder="Auto / manual"
+              />
+            </div>
+
+            <div className="vc-field">
+              <label className="vc-label">Phone</label>
+              <input
+                className="vc-input"
+                value={header.contact_no}
+                onChange={(e) => setHeaderField("contact_no", e.target.value)}
+                inputMode="tel"
+              />
+            </div>
+
+            <div className="vc-field">
+              <label className="vc-label">Email</label>
+              <input
+                className="vc-input"
+                value={header.email}
+                onChange={(e) => setHeaderField("email", e.target.value)}
+                inputMode="email"
               />
             </div>
 
@@ -1034,53 +835,36 @@ export default function QuotationEditor({
               />
             </div>
 
-            {/* ── Separator ── */}
-            <div className="vc-hdr-sep" />
-
-            {/* ── Row 2: Contact details ── */}
-            <div className="vc-field">
-              <label className="vc-label">Phone</label>
-              <input
-                className="vc-input"
-                value={header.contact_no}
-                onChange={(e) => setHeaderField("contact_no", e.target.value)}
-                inputMode="tel"
-                placeholder="Mobile number"
-              />
-            </div>
-
-            <div className="vc-field">
-              <label className="vc-label">Email</label>
-              <input
-                className="vc-input"
-                value={header.email}
-                onChange={(e) => setHeaderField("email", e.target.value)}
-                inputMode="email"
-                placeholder="customer@email.com"
-              />
-            </div>
-
             <div className="vc-field vc-span-2">
-              <label className="vc-label">Address / Site</label>
+              <label className="vc-label">Address</label>
               <input
                 className="vc-input"
                 value={header.address}
                 onChange={(e) => setHeaderField("address", e.target.value)}
-                placeholder="Delivery or site address"
               />
             </div>
 
-            {/* ── Separator ── */}
-            <div className="vc-hdr-sep" />
+            <div className="vc-field">
+              <label className="vc-label">Status</label>
+              <select
+                className="vc-select"
+                value={header.status}
+                onChange={(e) => setHeaderField("status", e.target.value)}
+              >
+                {QUOTATION_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            {/* ── Row 3: Job context (optional) ── */}
             <div className="vc-field">
               <label className="vc-label">Reference</label>
               <input
                 className="vc-input"
                 value={header.reference}
                 onChange={(e) => setHeaderField("reference", e.target.value)}
-                placeholder="Site name / PO no."
               />
             </div>
 
@@ -1090,185 +874,45 @@ export default function QuotationEditor({
                 className="vc-input"
                 value={header.supplier_company}
                 onChange={(e) => setHeaderField("supplier_company", e.target.value)}
-                placeholder="APARNA, FENESTA..."
               />
             </div>
 
-            {/* Status only on saved quotations */}
-            {savedId ? (
-              <div className="vc-field vc-span-2">
-                <label className="vc-label">Status</label>
-                <select
-                  className="vc-select"
-                  value={header.status}
-                  onChange={(e) => setHeaderField("status", e.target.value)}
-                >
-                  {QUOTATION_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
+            <div className="vc-field">
+              <label className="vc-label">Transport (Rs.)</label>
+              <input
+                className="vc-input vc-num"
+                value={header.transport_cost}
+                onChange={(e) => setHeaderField("transport_cost", e.target.value)}
+                inputMode="decimal"
+                // Names the field in the calculator's header so the popover
+                // says what it will write into.
+                data-calc-label="Transport"
+              />
+            </div>
           </div>
         </div>
-
-        <PhotoAttachments quotationId={savedId} />
 
         {/* ---- Measured items ---- */}
         <div className="vc-card">
           <div className="vc-card-head">
             <span className="vc-card-title">Measured Items</span>
             <div style={{ flex: 1 }} />
-
-            {/* Item templates (Feature B): insert a prefilled row. */}
-            <div ref={templateBoxRef} style={{ position: "relative" }}>
-              <button
-                type="button"
-                className="vc-btn vc-btn-sm"
-                onClick={() => setTemplatesOpen((o) => !o)}
-                title="Insert a saved item template"
-              >
-                Templates <ChevronDown size={12} />
-              </button>
-              {templatesOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: 0,
-                    zIndex: 50,
-                    marginTop: 4,
-                    background: "#fff",
-                    border: "1px solid #FFEDD5",
-                    borderRadius: 8,
-                    boxShadow: "0 8px 24px rgba(124,45,18,0.15)",
-                    maxHeight: 260,
-                    overflowY: "auto",
-                    fontSize: 12,
-                    minWidth: 200,
-                  }}
-                >
-                  {templates.length === 0 ? (
-                    <div style={{ padding: 10, color: "#8a94a1" }}>No templates yet</div>
-                  ) : (
-                    templates.map((t) => (
-                      <div
-                        key={t.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          insertTemplate(t);
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#FFEDD5")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        style={{
-                          padding: "8px 10px",
-                          cursor: "pointer",
-                          borderBottom: "1px solid #FFF7ED",
-                        }}
-                      >
-                        <div style={{ color: "#7C2D12", fontWeight: 600 }}>{t.name}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
             <button type="button" className="vc-btn vc-btn-sm" onClick={addMeasured}>
               <Plus size={12} /> Add row <span className="vc-kbd">Alt I</span>
             </button>
           </div>
-
-          {/* Apply-to-all toolbar (Feature B): push one W/H (+ optional rate/glass)
-              across every measured row — common when a frame repeats. */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
-              padding: "8px 12px",
-              background: "#FFEDD5",
-              borderBottom: "1px solid #FED7AA",
-              fontSize: 12,
-              color: "#7C2D12",
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>Apply to all rows:</span>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              W
-              <input
-                className="vc-input vc-num"
-                style={{ width: 70, height: 22 }}
-                inputMode="decimal"
-                value={applyW}
-                onChange={(e) => setApplyW(e.target.value)}
-                placeholder="mm"
-              />
-            </label>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              H
-              <input
-                className="vc-input vc-num"
-                style={{ width: 70, height: 22 }}
-                inputMode="decimal"
-                value={applyH}
-                onChange={(e) => setApplyH(e.target.value)}
-                placeholder="mm"
-              />
-            </label>
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={applyWithRate}
-                onChange={(e) => setApplyWithRate(e.target.checked)}
-              />
-              + rate/glass
-            </label>
-            {applyWithRate && (
-              <>
-                <input
-                  className="vc-input vc-num"
-                  style={{ width: 80, height: 22 }}
-                  inputMode="decimal"
-                  value={applyRate}
-                  onChange={(e) => setApplyRate(e.target.value)}
-                  placeholder="rate"
-                />
-                <input
-                  className="vc-input"
-                  style={{ width: 120, height: 22 }}
-                  value={applyGlass}
-                  onChange={(e) => setApplyGlass(e.target.value)}
-                  placeholder="glass"
-                />
-              </>
-            )}
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm vc-btn-primary"
-              onClick={applyToAllRows}
-              style={{ background: "#EA580C", borderColor: "#EA580C", color: "#fff" }}
-            >
-              Apply
-            </button>
-          </div>
-
           <div style={{ overflowX: "auto" }}>
             <table className="vc-item-grid">
               <thead>
                 <tr>
                   <th className="vc-row-num">#</th>
-                  <th style={{ minWidth: 160 }}>Description</th>
+                  <th style={{ width: 70 }}>Code</th>
+                  <th style={{ minWidth: 130 }}>Description</th>
                   <th style={{ width: 76 }}>W (mm)</th>
                   <th style={{ width: 76 }}>H (mm)</th>
                   <th style={{ width: 52 }}>Qty</th>
                   <th style={{ width: 66 }}>Sqft</th>
                   <th style={{ width: 78 }}>Rate</th>
-                  <th style={{ width: 74 }}>BOM</th>
                   <th style={{ width: 92 }}>Amount</th>
                   <th className="vc-row-del" />
                 </tr>
@@ -1294,6 +938,16 @@ export default function QuotationEditor({
                       className={i === focusedMeasured ? "vc-row-focus" : ""}
                     >
                       <td className="vc-row-num">{i + 1}</td>
+                      <td>
+                        <input
+                          className="vc-cell-input"
+                          data-c="code"
+                          value={row.code}
+                          onFocus={() => setFocusedMeasured(i)}
+                          onChange={(e) => updateMeasured(i, "code", e.target.value)}
+                          onKeyDown={(e) => onGridKeyDown(e, i, "code")}
+                        />
+                      </td>
                       <td>
                         <textarea
                           className="vc-cell-input"
@@ -1354,52 +1008,16 @@ export default function QuotationEditor({
                         />
                       </td>
                       <td className="vc-cell-calc vc-amt">{formatAmount(lineTotal)}</td>
-                      <td>
+                      <td className="vc-row-del">
                         <button
                           type="button"
-                          className="vc-btn vc-btn-sm"
-                          onClick={() => setBomOpen((v) => ({ ...v, [row.key]: !v[row.key] }))}
-                          title="Configure profile, glass and hardware for this window"
+                          className="vc-icon-btn"
+                          onClick={() => removeMeasured(i)}
+                          title="Delete row (Alt+X)"
                         >
-                          {bomOpen[row.key] ? "Close" : "Configure"}
+                          <Trash2 size={12} />
                         </button>
-                        {bomOpen[row.key] && (
-                          <div style={{ minWidth: 250, padding: 8, background: "#FFF7ED", borderRadius: 6, marginTop: 4 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", marginBottom: 4 }}>PROFILE</div>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <input className="vc-cell-input" placeholder="System / series" value={row.bom.profile.system} onChange={(e) => updateBom(i, { profile: { system: e.target.value } })} />
-                              <select className="vc-select" value={row.bom.profile.color} onChange={(e) => updateBom(i, { profile: { color: e.target.value } })}>
-                                {['white', 'brown', 'grey', 'black', 'woodgrain'].map((c) => <option key={c}>{c}</option>)}
-                              </select>
-                            </div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", margin: "6px 0 4px" }}>GLASS</div>
-                            <div style={{ display: "flex", gap: 4 }}>
-                              <input className="vc-cell-input" placeholder="Type" value={row.bom.glass.type} onChange={(e) => updateBom(i, { glass: { type: e.target.value } })} />
-                              <input className="vc-cell-input vc-num" placeholder="mm" inputMode="decimal" value={row.bom.glass.thickness} onChange={(e) => updateBom(i, { glass: { thickness: e.target.value } })} />
-                            </div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C2D12", margin: "6px 0 4px" }}>HARDWARE</div>
-                            <input className="vc-cell-input" placeholder="Handle / lock / roller" value={row.bom.hardware[0]?.name || ""} onChange={(e) => updateHardware(i, e.target.value)} />
-                          </div>
-                        )}
                       </td>
-                       <td className="vc-row-del">
-                         <button
-                           type="button"
-                           className="vc-icon-btn"
-                           onClick={() => duplicateMeasured(i)}
-                           title="Duplicate this row"
-                         >
-                           <Copy size={12} />
-                         </button>
-                         <button
-                           type="button"
-                           className="vc-icon-btn"
-                           onClick={() => removeMeasured(i)}
-                           title="Delete row (Alt+X)"
-                         >
-                           <Trash2 size={12} />
-                         </button>
-                       </td>
                     </tr>
                   );
                 })}
@@ -1408,10 +1026,10 @@ export default function QuotationEditor({
           </div>
         </div>
 
-        {/* ---- Unmeasured items (hardware, labour, fitting charges, etc.) ---- */}
+        {/* ---- Unmeasured items ---- */}
         <div className="vc-card">
           <div className="vc-card-head">
-            <span className="vc-card-title">Additional Charges</span>
+            <span className="vc-card-title">Other Items (per unit)</span>
             <div style={{ flex: 1 }} />
             <button type="button" className="vc-btn vc-btn-sm" onClick={addUnmeasured}>
               <Plus size={12} /> Add
@@ -1478,27 +1096,15 @@ export default function QuotationEditor({
             </table>
           )}
 
-          {/* Running totals — always visible, never "at the end".
-               Transport is inline-editable here so the user can adjust the
-               delivery cost without hunting for a header field. */}
+          {/* Running totals — always visible, never "at the end". */}
           <div className="vc-totals">
             <div className="vc-total-item">
               <span className="vc-total-label">Subtotal</span>
               <span className="vc-total-value">{formatAmount(totals.subtotal)}</span>
             </div>
             <div className="vc-total-item">
-              <label className="vc-total-label" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                Transport (Rs.)
-              </label>
-              <input
-                className="vc-input vc-num"
-                style={{ width: 90, height: 22, fontSize: 12, textAlign: "right" }}
-                value={header.transport_cost}
-                onChange={(e) => setHeaderField("transport_cost", e.target.value)}
-                inputMode="decimal"
-                placeholder="0"
-                data-calc-label="Transport"
-              />
+              <span className="vc-total-label">Transport</span>
+              <span className="vc-total-value">{formatAmount(totals.transport)}</span>
             </div>
             <div className="vc-total-item">
               <span className="vc-total-label">

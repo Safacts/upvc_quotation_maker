@@ -13,7 +13,10 @@
 library;
 
 import 'dart:convert';
-import 'package:path/path.dart' as p;
+
+/// Path separators, hand-rolled so this model stays free of `package:path`
+/// (it is also read from pure-Dart tests with no Flutter binding).
+final RegExp _pathSeparator = RegExp(r'[\\/]');
 
 /// The wizard is complete only when these are all satisfied. Company name is
 /// the single hard requirement — everything else can be filled in later from
@@ -98,13 +101,32 @@ class BrandConfig {
     'Taxes as applicable at the time of billing.',
   ];
 
+  /// ⚠️ "The user CHOSE a logo", NOT "a logo file exists right now".
+  ///
+  /// [logoPath] is an ABSOLUTE path into the app documents directory. That
+  /// directory is NOT stable forever: iOS rewrites the app container UUID on
+  /// every reinstall/update, and an Android backup-restore can land the app in
+  /// a different data dir. So a config saved yesterday can point at a file that
+  /// no longer exists, while `hasLogo` still returns true.
+  ///
+  /// Every consumer must therefore treat this as a HINT and handle a null byte
+  /// read: `BrandService.loadLogoBytes()` returns null for a missing file, and
+  /// `OfflinePdfGenerator._resolveLogo` prints the company name instead of
+  /// crashing. Use [logoFileName] + `BrandService.resolveLogoPath()` to recover
+  /// a moved file rather than assuming the absolute path is still good.
   bool get hasLogo => logoPath.trim().isNotEmpty;
 
-  /// Just the filename portion of [logoPath], e.g. `logo_1691234567890.png`.
-  /// Used by BrandService.resolveLogoPath() to re-join onto the current documents
-  /// directory when the stored absolute path is dead (iOS UUID change, etc.).
-  String get logoFileName =>
-      logoPath.trim().isEmpty ? '' : p.basename(logoPath);
+  /// Last path segment of [logoPath] (e.g. `logo_1754812345678.png`), or ''.
+  ///
+  /// This is the DURABLE half of the logo reference: the container directory
+  /// moves, the filename does not. `BrandService` re-joins it onto the CURRENT
+  /// documents directory when the stored absolute path has gone stale.
+  String get logoFileName {
+    final path = logoPath.trim();
+    if (path.isEmpty) return '';
+    final parts = path.split(_pathSeparator).where((s) => s.isNotEmpty);
+    return parts.isEmpty ? '' : parts.last;
+  }
 
   bool get hasBankDetails =>
       bankName.trim().isNotEmpty && bankAccountNo.trim().isNotEmpty;

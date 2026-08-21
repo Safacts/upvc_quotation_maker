@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Plus, Search, Download, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Download, RefreshCw, SlidersHorizontal, Cuboid } from "lucide-react";
 import { DataGrid, StatusPill } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
@@ -42,6 +42,7 @@ const COLUMN_SPECS: ColumnSpec[] = [
   // it, and an always-zero column is noise on the screen people live in.
   { id: "gst_amount", label: "GST", defaultHidden: true },
   { id: "grand_total", label: "Grand Total" },
+  { id: "actions", label: "3D", required: true },
 ];
 
 const SCREEN_ID = "quotations";
@@ -355,6 +356,29 @@ export default function QuotationsClient() {
         enableSorting: false,
         meta: { align: "right" },
         cell: (c) => <b>{formatAmount(c.getValue())}</b>,
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        meta: { align: "center" },
+        cell: (c) => (
+          <button
+            type="button"
+            className="vc-btn vc-btn-sm"
+            title="Open the first measured opening as a 3D model"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(
+                `/upvc/3d-viewer?fromQuotation=${c.row.original.id}`,
+                "_blank",
+                "noopener,noreferrer",
+              );
+            }}
+          >
+            <Cuboid size={12} /> 3D
+          </button>
+        ),
       },
     ],
     [],
