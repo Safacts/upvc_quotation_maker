@@ -57,6 +57,10 @@ class AppState extends ChangeNotifier {
   ElementDensity _elementDensity = ElementDensity.comfortable;
   bool _loaded = false;
 
+  // Feature toggles (persisted locally)
+  bool _enableSitePhotos = true;
+  bool _enablePdfLink = true; // true = PDF, false = Link for quotation sharing
+
   // Trial expiry warning state
   String _trialWarning = ''; // '', 'TRIAL_EXPIRING_SOON', 'TRIAL_EXPIRED'
   int _trialDaysRemaining = -1; // -1 = unknown / not applicable
@@ -123,6 +127,28 @@ class AppState extends ChangeNotifier {
 
   /// Get the current tier.
   String get tier => FeatureFlagService.instance.tier;
+
+  /// Whether site photos are enabled in Quotation Maker (local toggle, persisted in SharedPreferences).
+  bool get enableSitePhotos => _enableSitePhotos;
+
+  /// Whether to use PDF (true) or Link (false) for quotation sharing (local toggle, persisted in SharedPreferences).
+  bool get enablePdfLink => _enablePdfLink;
+
+  /// Toggle site photos visibility in Quotation Maker.
+  Future<void> setEnableSitePhotos(bool value) async {
+    _enableSitePhotos = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enable_site_photos', value);
+    notifyListeners();
+  }
+
+  /// Toggle PDF vs Link for quotation sharing.
+  Future<void> setEnablePdfLink(bool value) async {
+    _enablePdfLink = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('enable_pdf_link', value);
+    notifyListeners();
+  }
 
   // ---------------------------------------------------------------------------
   // White-label config
@@ -232,6 +258,9 @@ class AppState extends ChangeNotifier {
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
     _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
+    // Feature toggles (persisted locally)
+    _enableSitePhotos = prefs.getBool('enable_site_photos') ?? true;
+    _enablePdfLink = prefs.getBool('enable_pdf_link') ?? true;
     // BUGFIX: Only apply loaded values if no explicit update has been made
     // since the constructor fired _loadSettings. Without this guard, a late-
     // completing _loadSettings could overwrite user changes made via
