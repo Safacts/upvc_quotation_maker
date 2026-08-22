@@ -26,6 +26,20 @@ export const ORANGE = {
   lineHex: "#E5E7EB", // hairline rules
 } as const;
 
+// Rust/orange monochrome ramp (login-page palette: #C44A10 family).
+// Used by web-side PDF generators (quotation, invoice, GST invoice) so
+// documents feel like the same premium company as emails and login page.
+export const RUST = {
+  darkHex: "#9B3A0C", // deep rust — headings on light backgrounds
+  mainHex: "#C44A10", // primary brand rust — header band, totals rule
+  midHex: "#E06A1E", // mid tone — secondary accents
+  lightHex: "#FFF3E6", // table header / soft fill
+  paperHex: "#FFFBF6", // page tint blocks
+  inkHex: "#1A0A00", // near-black body text
+  mutedHex: "#7A5030", // muted labels
+  lineHex: "#EADFD3", // hairline rules
+} as const;
+
 /** Convert "#RRGGBB" to a 0-1 [r,g,b] triple for pdf-lib's rgb(). */
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");

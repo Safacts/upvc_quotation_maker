@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
-import 'client_logo.dart';
 import 'quote_share.dart';
 import 'umami_tracker.dart';
 
@@ -73,42 +72,46 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
     }
 
     final appState = Provider.of<AppState>(context, listen: false);
-    final companyName = appState.companyName.isNotEmpty ? appState.companyName : appState.clientConfig.appName;
     setState(() => _isSending = true);
 
     try {
-      final logoBytes = await loadLogoBytes(appState.clientConfig);
       final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
 
-      final hasLogo = logoBytes.isNotEmpty;
-      final logoHeader = hasLogo
-          ? '<img src="cid:logo" alt="${htmlEscape(companyName)}" style="max-height: 80px; margin-bottom: 12px;" />'
-          : '';
-
       final htmlBody = '''
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 24px; border-radius: 12px; border: 1px solid #e2e8f0;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            $logoHeader
-            <h1 style="color: #1e293b; margin: 0; font-size: 24px; font-weight: 700;">${htmlEscape(companyName)}</h1>
-            <p style="color: #64748b; margin-top: 4px; font-size: 14px;">Premium Windows &amp; Doors</p>
-          </div>
-          <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); color: #334155; font-size: 15px; line-height: 1.6; border: 1px solid #edf2f7;">
+      <div style="font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; max-width: 600px; margin: auto; background-color: #FFFBF6; padding: 0; border: 1px solid #EADFD3; border-radius: 16px; overflow: hidden;">
+        <!-- Header Band -->
+        <div style="background-color: #1A0A00; padding: 26px 36px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: middle; width: 42px;">
+                <img src="https://app.vitharn.com/logo.png" alt="Vitharn" width="42" height="42" style="display: block; border-radius: 10px; width: 42px; height: 42px;" />
+              </td>
+              <td style="vertical-align: middle; padding-left: 14px;">
+                <div style="color: #FFFFFF; font-size: 17px; font-weight: 800; line-height: 1.2; letter-spacing: -0.2px;">Vitharn <span style="color: #E06A1E;">ERP</span> Services</div>
+                <div style="color: #9A8B7E; font-size: 11.5px; line-height: 1.4; margin-top: 2px;">Quotation & ERP software for UPVC fabricators</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <!-- Body -->
+        <div style="padding: 34px 36px; color: #3D1F08;">
+          <div style="background-color: #FFF3E6; border: 1px solid #E2D3C4; border-radius: 12px; padding: 24px; margin: 0 0 28px 0; color: #3D1F08; font-size: 15px; line-height: 1.7;">
             ${htmlEscape(body).replaceAll('\n', '<br>')}
           </div>
-          <div style="margin-top: 24px; text-align: center; color: #94a3b8; font-size: 12px;">
-            <p>© ${DateTime.now().year} ${htmlEscape(companyName)}. All rights reserved.</p>
-          </div>
         </div>
-      ''';
+        <!-- Footer -->
+        <div style="background-color: #FFF3E6; border-top: 1px solid #EADFD3; padding: 20px 36px; text-align: center;">
+          <p style="margin: 0 0 6px 0; color: #3D1F08; font-size: 13px; line-height: 1.5;">
+            Vitharn ERP Services |
+            <a href="mailto:vitarn.dev@gmail.com" style="color: #C44A10; text-decoration: none;">vitarn.dev@gmail.com</a> |
+            <a href="https://app.vitharn.com" style="color: #C44A10; text-decoration: none;">app.vitharn.com</a>
+          </p>
+          <p style="margin: 0; color: #9A8B7E; font-size: 11px; line-height: 1.4;">Sent by your Vitharn UPVC Quotation Maker</p>
+        </div>
+      </div>
+''';
 
       final attachments = <Map<String, dynamic>>[];
-      if (hasLogo) {
-        attachments.add({
-          'filename': 'logo.png',
-          'cid': 'logo',
-          'content': base64Encode(logoBytes),
-        });
-      }
 
       final url = '${QuoteShare.origin()}/api/send_email';
       final res = await http.post(

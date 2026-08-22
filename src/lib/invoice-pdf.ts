@@ -1,8 +1,8 @@
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from "pdf-lib";
-import { BRAND, ORANGE, GST_NOTE, hexToRgb } from "./brand";
+import { BRAND, RUST, GST_NOTE, hexToRgb } from "./brand";
 import * as QRCode from "qrcode";
 
-// Server-side Vitharn INVOICE PDF (orange monochrome).
+// Server-side Vitharn INVOICE PDF (rust/orange monochrome).
 //
 // Mirrors the look of the Flutter quotation PDF (lib/pdf_generator.dart) but is
 // generated entirely in Node so the Flutter app needs NO changes.
@@ -12,14 +12,14 @@ import * as QRCode from "qrcode";
 // exactly like the Flutter PDFs already do (NumberFormat symbol: 'Rs. ').
 
 const C = {
-  main: rgb(...hexToRgb(ORANGE.mainHex)),
-  dark: rgb(...hexToRgb(ORANGE.darkHex)),
-  mid: rgb(...hexToRgb(ORANGE.midHex)),
-  light: rgb(...hexToRgb(ORANGE.lightHex)),
-  paper: rgb(...hexToRgb(ORANGE.paperHex)),
-  ink: rgb(...hexToRgb(ORANGE.inkHex)),
-  muted: rgb(...hexToRgb(ORANGE.mutedHex)),
-  line: rgb(...hexToRgb(ORANGE.lineHex)),
+  main: rgb(...hexToRgb(RUST.mainHex)),
+  dark: rgb(...hexToRgb(RUST.darkHex)),
+  mid: rgb(...hexToRgb(RUST.midHex)),
+  light: rgb(...hexToRgb(RUST.lightHex)),
+  paper: rgb(...hexToRgb(RUST.paperHex)),
+  ink: rgb(...hexToRgb(RUST.inkHex)),
+  muted: rgb(...hexToRgb(RUST.mutedHex)),
+  line: rgb(...hexToRgb(RUST.lineHex)),
   white: rgb(1, 1, 1),
 };
 

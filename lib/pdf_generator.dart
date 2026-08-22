@@ -122,7 +122,7 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
       pw.Container(
         width: double.infinity,
         padding: pw.EdgeInsets.all(8),
-        color: PdfColor.fromHex('#1e3a5f'),
+        color: PdfColor.fromHex('#C44A10'),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
@@ -155,7 +155,7 @@ pw.Widget _buildSectionTitle(String title) {
     width: double.infinity,
     padding: pw.EdgeInsets.all(4),
     margin: pw.EdgeInsets.only(top: 10, bottom: 4),
-    color: PdfColor.fromHex('#1e3a5f'),
+    color: PdfColor.fromHex('#C44A10'),
     child: pw.Text(title, style: pw.TextStyle(color: PdfColors.white, fontSize: 11, fontWeight: pw.FontWeight.bold)),
   );
 }
@@ -192,7 +192,7 @@ pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool k
     return pw.TableHelper.fromTextArray(
       headers: ['S.No', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'Rate', 'Total'],
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-      headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#dce6f1')),
+      headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
       cellStyle: pw.TextStyle(fontSize: 9),
       cellAlignment: pw.Alignment.center,
       border: pw.TableBorder.all(color: PdfColors.grey800),
@@ -220,7 +220,7 @@ pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool k
   return pw.TableHelper.fromTextArray(
     headers: ['S.No', 'Code', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'T.SFT', 'Rate', 'Total'],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#dce6f1')),
+    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
     cellStyle: pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
@@ -252,7 +252,7 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
   return pw.TableHelper.fromTextArray(
     headers: ['S.No', 'Description', 'Units', 'Rate Per Unit', 'Total'],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#dce6f1')),
+    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
     cellStyle: pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
@@ -272,7 +272,7 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
 
 pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
   return pw.Container(
-    color: PdfColor.fromHex('#f1f5fa'),
+    color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
       border: pw.TableBorder.all(color: PdfColor(0,0,0,0)),
       children: [
@@ -295,7 +295,7 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.grandTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
         ]),
         pw.TableRow(
-          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#1e3a5f'), width: 2))),
+          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#C44A10'), width: 2))),
           children: [
             pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Amount in Words', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
             pw.Padding(

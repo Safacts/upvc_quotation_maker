@@ -1,4 +1,14 @@
 import nodemailer from "nodemailer";
+import {
+  EMAIL_TOKENS,
+  emailShell,
+  ep,
+  epHtml,
+  ebutton,
+  efactBox,
+  ecallout,
+  echecklist,
+} from "./email-template";
 
 // Brevo SMTP relay (300 emails/day free tier). Migrated from Hostinger on
 // 07-08-2026 so that ALL outbound mail carries the standalone Vitharn ERP
@@ -120,27 +130,24 @@ export async function sendWelcomeEmail(opts: {
   const marketUrl = "https://app.vitharn.com/upvc/" + slugify(company);
   const appUrl = "https://app.vitharn.com/upvc/" + slugify(appName);
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1E3A5F; margin-top: 0;">Welcome, ${company}!</h2>
-      <p style="color: #475569; font-size: 16px;">Your account for <strong>${appName}</strong> has been created on the Vitharn UPVC Quotation Maker Portal.</p>
-      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 6px 0;"><strong>Login Email:</strong> ${email}</p>
-        <p style="margin: 6px 0;"><strong>Temporary Password:</strong> ${tempPassword}</p>
-      </div>
-      <p style="color: #475569; font-size: 15px;">You can sign in with this email using Google Sign-In, or with the temporary password above. We recommend changing your password after your first login.</p>
-      <p style="margin: 24px 0; text-align: center;">
-        <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Open Portal</a>
-        <a href="${resetUrl}" style="background: #f1f5f9; color: #1E3A5F; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-left: 8px;">Reset Password</a>
-      </p>
-      <p style="color: #64748b; font-size: 14px;">Quick links for easy access:</p>
-      <p style="margin: 8px 0;">
-        <a href="${marketUrl}" style="color: #6366f1;">View your Market Page</a> &nbsp;|&nbsp;
-        <a href="${appUrl}" style="color: #6366f1;">Open Web App</a>
-      </p>
-      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">If you didn't expect this email, you can safely ignore it.</p>
-    </div>
+  const body = `
+    ${ep(`Welcome to <strong>${escapeHtml(appName)}</strong>! Your account has been created on the Vitharn UPVC Quotation Maker Portal.`)}
+    ${ep(`You can sign in with this email using Google Sign-In, or with the temporary password below. We recommend changing your password after your first login.`)}
+    ${efactBox([
+      ["Login Email", email],
+      ["Temporary Password", tempPassword],
+    ])}
+    ${ebutton("Open Your Portal", loginUrl)}
+    ${epHtml(`<div style="text-align:center;margin-top:8px;color:${EMAIL_TOKENS.textMuted};font-size:13px;">or <a href="${resetUrl}" style="color:${EMAIL_TOKENS.rust};text-decoration:underline;">Reset Password</a></div>`)}
+    ${epHtml(`Quick links: <a href="${marketUrl}" style="color:${EMAIL_TOKENS.rust};text-decoration:underline;">View your Market Page</a> &nbsp;|&nbsp; <a href="${appUrl}" style="color:${EMAIL_TOKENS.rust};text-decoration:underline;">Open Web App</a>`)}
   `;
+
+  const html = emailShell({
+    preheader: `Welcome to ${appName} — your login details inside`,
+    eyebrow: "WELCOME ABOARD",
+    heading: `Welcome, ${escapeHtml(company)}!`,
+    body,
+  });
 
   await sendMail({
     to: email,
@@ -150,16 +157,22 @@ export async function sendWelcomeEmail(opts: {
 }
 
 export async function sendOtpEmail(recipient: string, otp: string): Promise<void> {
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1E3A5F;">Password Reset Request</h2>
-      <p style="color: #475569; font-size: 16px;">We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.</p>
-      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1E3A5F;">
-        ${otp}
+  const body = `
+    ${ep(`We received a request to reset your password for the Vitharn UPVC Quotation Maker Portal.`)}
+    <div style="text-align:center;margin:28px 0;">
+      <div style="display:inline-block;background:${EMAIL_TOKENS.paper};border:1px solid ${EMAIL_TOKENS.lineMid};border-radius:12px;padding:18px 36px;font-family:${EMAIL_TOKENS.font};">
+        <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:${EMAIL_TOKENS.ink};font-family:${EMAIL_TOKENS.font};">${escapeHtml(otp)}</div>
       </div>
-      <p style="color: #64748b; font-size: 14px;">Enter this code in the portal to reset your password. It expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
     </div>
+    ${ep(`Enter this code in the portal to reset your password. It expires in 15 minutes. If you didn't request this, you can safely ignore this email.`)}
   `;
+
+  const html = emailShell({
+    preheader: `Your password reset code: ${otp}`,
+    eyebrow: "SECURITY CODE",
+    heading: "Your password reset code",
+    body,
+  });
 
   await sendMail({
     from: MAIL_FROM,
@@ -214,39 +227,46 @@ export async function sendSignupNotification(
     ...configFields,
   ] as Array<[string, string]>).filter(([, value]) => value !== "");
 
-  const detailTable = detailRows
-    .map(
-      ([key, value]) => `
-      <tr>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 14px; white-space: nowrap; vertical-align: top;">${key}</td>
-        <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #1E3A5F; font-size: 14px; font-weight: bold; vertical-align: top;">${value}</td>
-      </tr>`,
-    )
-    .join("");
-
   const note =
     kind === "new"
       ? "Their full profile auto-saves as they type. Please check the admin panel and follow up with this user."
       : "Please review this profile in the admin panel and create the client account when ready.";
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1E3A5F; margin-top: 0;">${heading}</h2>
-      <p style="color: #475569; font-size: 16px;">${intro}</p>
-      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <table style="width: 100%; border-collapse: collapse;">${detailTable}</table>
-      </div>
-      <p style="color: #475569; font-size: 15px;">${note}</p>
-      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">This is an automated notification sent by the Vitharn UPVC Quotation Maker Portal.</p>
-    </div>
+  // Build a styled detail table using efactBox-style rows but as a full table for admin
+  const t = EMAIL_TOKENS;
+  const detailTable = detailRows
+    .map(
+      ([key, value]) => `
+      <tr>
+        <td style="padding:10px 0;color:${t.textMuted};font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;padding-right:18px;">${escapeHtml(key)}</td>
+        <td style="padding:10px 0;color:${t.ink};font-size:13.5px;font-weight:700;text-align:right;">${escapeHtml(value)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const body = `
+    ${ep(intro)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${t.paper};border:1px solid ${t.lineMid};border-radius:12px;padding:14px 20px;margin:20px 0;font-family:${t.font};">
+      <tr><td>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:${t.font};">${detailTable}</table>
+      </td></tr>
+    </table>
+    ${ep(note)}
   `;
+
+  const html = emailShell({
+    preheader: `${heading} — ${label}`,
+    eyebrow: "ADMIN ALERT",
+    heading,
+    body,
+  });
 
   await Promise.all(ADMIN_EMAILS.map((admin) => sendMail({ to: admin, subject, html })));
 }
 
 export function escapeHtml(s: string): string {
-  return String(s ?? "").replace(/[&<>"']/g, (ch) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string),
+  return String(s ?? "").replace(new RegExp("[&<>\"']", "g"), (ch) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch] as string),
   );
 }
 
@@ -263,22 +283,23 @@ export async function sendSignupConfirmation(opts: {
     ? new Date(submittedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
     : "";
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1E3A5F; margin-top: 0;">Thank you, ${escapeHtml(label)}!</h2>
-      <p style="color: #475569; font-size: 16px;">We received your UPVC business profile on the <strong>Vitharn UPVC Quotation Maker Portal</strong> on ${submittedText}.</p>
-      <p style="color: #475569; font-size: 16px;">Our team is now reviewing your details. Once approved, you will receive your login details by email and can start creating quotations right away.</p>
-      <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 6px 0;"><strong>Registered Email:</strong> ${escapeHtml(email)}</p>
-        ${companyName ? `<p style="margin: 6px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>` : ""}
-      </div>
-      <p style="margin: 24px 0; text-align: center;">
-        <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Check Request Status</a>
-      </p>
-      <p style="color: #64748b; font-size: 14px;">If you have questions, just reply to this email and our team will help you.</p>
-      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">This is an automated message from the Vitharn UPVC Quotation Maker Portal.</p>
-    </div>
+  const body = `
+    ${ep(`We received your UPVC business profile on the <strong>Vitharn UPVC Quotation Maker Portal</strong> on ${submittedText}.`)}
+    ${ep(`Our team is now reviewing your details. Once approved, you will receive your login details by email and can start creating quotations right away.`)}
+    ${efactBox([
+      ["Registered Email", email],
+      ...(companyName ? [["Company", companyName] as [string, string]] : []),
+    ] as [string, string][])}
+    ${ebutton("Check Request Status", loginUrl)}
+    ${ep(`If you have questions, just reply to this email and our team will help you.`)}
   `;
+
+  const html = emailShell({
+    preheader: `We received your request — Vitharn UPVC`,
+    eyebrow: "REQUEST RECEIVED",
+    heading: `Thank you, ${escapeHtml(label)}!`,
+    body,
+  });
 
   await sendMail({
     to: email,
@@ -297,42 +318,22 @@ export async function sendAdminCompose(opts: {
     .split(/\n{2,}/)
     .map(
       (p) =>
-        `<p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0;">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`,
+        epHtml(escapeHtml(p).replace(/\n/g, "<br/>")),
     )
     .join("");
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      ${paragraphs}
-      <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Sent by the Vitharn UPVC Quotation Maker Portal team.</p>
-    </div>
+  const body = `
+    ${paragraphs}
   `;
+
+  const html = emailShell({
+    preheader: `Message from Vitharn ERP Services`,
+    eyebrow: "MESSAGE FROM VITHARN",
+    heading: "Hello",
+    body,
+  });
 
   await sendMail({ to, subject, html });
-}
-
-// ---------------------------------------------------------------------------
-// UNSUBSCRIBE FOOTER — appended to every transactional email below.
-// Replace VITHARN_UNSUBSCRIBE_URL with a real one-pointing-unsub endpoint
-// (e.g. a Vercel route) before going to production.
-// ---------------------------------------------------------------------------
-
-const UNSUBSCRIBE_URL =
-  process.env.VITHARN_UNSUBSCRIBE_URL || "https://app.vitharn.com/unsubscribe";
-
-/** Shared footer block closing every client-facing email. */
-function emailFooter(): string {
-  return `
-    <div style="max-width: 600px; margin: auto; padding: 18px 30px 10px 30px; border-top: 1px solid #E5E7EB; margin-top: 28px;">
-      <p style="color: #6B7280; font-size: 12px; line-height: 1.6; margin: 0 0 6px 0; font-family: Arial, sans-serif;">
-        Vitharn ERP Services &nbsp;|&nbsp; ${MAIL_FROM_EMAIL} &nbsp;|&nbsp; <a href="https://app.vitharn.com" style="color: #EA580C;">app.vitharn.com</a>
-      </p>
-      <p style="color: #9CA3AF; font-size: 11px; line-height: 1.5; margin: 0; font-family: Arial, sans-serif;">
-        You are receiving this email because you are a registered client of Vitharn ERP Services.
-        <a href="${UNSUBSCRIBE_URL}" style="color: #EA580C;">Unsubscribe</a> from non-transactional emails at any time.
-      </p>
-    </div>
-  `;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,88 +359,57 @@ export async function sendKickoffEmail(opts: {
     durationMinutes = 45,
   } = opts;
 
-  const meetingDetailsRows: string[] = [];
-  if (meetingDate) {
-    meetingDetailsRows.push(`<p style="margin: 4px 0;"><strong>Date:</strong> ${escapeHtml(meetingDate)}</p>`);
-  }
-  if (meetingTime) {
-    meetingDetailsRows.push(`<p style="margin: 4px 0;"><strong>Time:</strong> ${escapeHtml(meetingTime)} (IST)</p>`);
-  }
-  meetingDetailsRows.push(`<p style="margin: 4px 0;"><strong>Duration:</strong> Approximately ${durationMinutes} minutes</p>`);
-  if (meetingLink) {
-    meetingDetailsRows.push(`<p style="margin: 4px 0;"><strong>Meeting Link:</strong> <a href="${escapeHtml(meetingLink)}" style="color: #EA580C;">${escapeHtml(meetingLink)}</a></p>`);
-  } else {
-    meetingDetailsRows.push(`<p style="margin: 4px 0;"><strong>Meeting Link:</strong> Will be shared via WhatsApp or email prior to the call</p>`);
-  }
+  const meetingDetails: [string, string][] = [];
+  if (meetingDate) meetingDetails.push(["Date", meetingDate]);
+  if (meetingTime) meetingDetails.push(["Time", `${meetingTime} (IST)`]);
+  meetingDetails.push(["Duration", `Approximately ${durationMinutes} minutes`]);
+  if (meetingLink) meetingDetails.push(["Meeting Link", meetingLink]);
+  else meetingDetails.push(["Meeting Link", "Will be shared via WhatsApp or email prior to the call"]);
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #FFF7ED; border-radius: 12px; overflow: hidden;">
-      <!-- Header band -->
-      <div style="background: #EA580C; padding: 28px 30px;">
-        <h1 style="color: #ffffff; font-size: 22px; margin: 0; font-family: Arial, sans-serif;">Vitharn ERP Services</h1>
-        <p style="color: #FFEDD5; font-size: 14px; margin: 6px 0 0 0; font-family: Arial, sans-serif;">Project Kickoff Call</p>
-      </div>
+  const agendaItems = [
+    "Introductions and team overview",
+    "Understanding your UPVC operations and business goals",
+    "Scope review: pricing structure, GST logic, and customisation",
+    "Deployment timeline and immediate next steps",
+  ];
 
-      <!-- Body -->
-      <div style="padding: 28px 30px 10px 30px;">
-        <p style="color: #1F2937; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},
-        </p>
-        <p style="color: #4B5563; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0; font-family: Arial, sans-serif;">
-          Thank you for choosing Vitharn ERP Services as your technology partner. We are thrilled to get your UPVC quotation and ERP system up and running. Let us connect for a brief kickoff call to align on your requirements and plan the deployment.
-        </p>
+  const prepareItems = [
+    "Any existing quotation formats, pricing spreadsheets, or mockups you currently use",
+    "A list of your required UPVC profiles, hardware items, and supplier margins",
+    "Your official GST Number, bank details, and company logo for system configuration",
+  ];
 
-        <!-- Meeting details card -->
-        <div style="background-color: #ffffff; border: 1px solid #E5E7EB; border-left: 4px solid #EA580C; border-radius: 8px; padding: 20px; margin: 18px 0;">
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #EA580C; font-weight: bold; font-family: Arial, sans-serif;">MEETING DETAILS</p>
-          ${meetingDetailsRows.join("")}
-        </div>
-
-        <!-- Agenda -->
-        <p style="color: #1F2937; font-size: 15px; font-weight: bold; margin: 22px 0 10px 0; font-family: Arial, sans-serif;">AGENDA</p>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
-          <tr>
-            <td style="padding: 6px 8px; background: #FFF7ED; color: #7C2D12; font-weight: bold; font-size: 13px; width: 32px; font-family: Arial, sans-serif;">01</td>
-            <td style="padding: 6px 8px; color: #4B5563; font-size: 14px; font-family: Arial, sans-serif;">Introductions and team overview</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 8px; background: #FFF7ED; color: #7C2D12; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif;">02</td>
-            <td style="padding: 6px 8px; color: #4B5563; font-size: 14px; font-family: Arial, sans-serif;">Understanding your UPVC operations and business goals</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 8px; background: #FFF7ED; color: #7C2D12; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif;">03</td>
-            <td style="padding: 6px 8px; color: #4B5563; font-size: 14px; font-family: Arial, sans-serif;">Scope review: pricing structure, GST logic, and customisation</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 8px; background: #FFF7ED; color: #7C2D12; font-weight: bold; font-size: 13px; font-family: Arial, sans-serif;">04</td>
-            <td style="padding: 6px 8px; color: #4B5563; font-size: 14px; font-family: Arial, sans-serif;">Deployment timeline and immediate next steps</td>
-          </tr>
+  const body = `
+    ${ep(`Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},`)}
+    ${ep(`Thank you for choosing Vitharn ERP Services as your technology partner. We are thrilled to get your UPVC quotation and ERP system up and running. Let us connect for a brief kickoff call to align on your requirements and plan the deployment.`)}
+    ${efactBox(meetingDetails)}
+    ${ep(`<strong>AGENDA</strong>`)}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${EMAIL_TOKENS.paper};border:1px solid ${EMAIL_TOKENS.lineMid};border-radius:12px;padding:14px 20px;margin:20px 0;font-family:${EMAIL_TOKENS.font};">
+      <tr><td>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:${EMAIL_TOKENS.font};">
+          ${agendaItems
+            .map(
+              (item, i) => `
+              <tr>
+                <td style="padding:8px 0;color:${EMAIL_TOKENS.textMuted};font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;padding-right:18px;">${String(i + 1).padStart(2, "0")}</td>
+                <td style="padding:8px 0;color:${EMAIL_TOKENS.textBody};font-size:13.5px;font-weight:600;">${escapeHtml(item)}</td>
+              </tr>`,
+            )
+            .join("")}
         </table>
-
-        <!-- What to prepare -->
-        <p style="color: #1F2937; font-size: 15px; font-weight: bold; margin: 22px 0 10px 0; font-family: Arial, sans-serif;">WHAT TO PREPARE</p>
-        <p style="color: #4B5563; font-size: 14px; line-height: 1.7; margin: 0 0 8px 0; font-family: Arial, sans-serif;">
-          To make the most of our time together, please have the following ready:
-        </p>
-        <ul style="color: #4B5563; font-size: 14px; line-height: 1.8; margin: 0 0 18px 0; padding-left: 20px; font-family: Arial, sans-serif;">
-          <li>Any existing quotation formats, pricing spreadsheets, or mockups you currently use</li>
-          <li>A list of your required UPVC profiles, hardware items, and supplier margins</li>
-          <li>Your official GST Number, bank details, and company logo for system configuration</li>
-        </ul>
-
-        <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          If you have any questions before the call, simply reply to this email. We look forward to a productive conversation.
-        </p>
-
-        <p style="color: #4B5563; font-size: 14px; line-height: 1.6; margin: 18px 0 0 0; font-family: Arial, sans-serif;">
-          Warm regards,<br/>
-          <strong>Your Vitharn Architecture Team</strong>
-        </p>
-      </div>
-
-      ${emailFooter()}
-    </div>
+      </td></tr>
+    </table>
+    ${echecklist(prepareItems)}
+    ${ep(`If you have any questions before the call, simply reply to this email. We look forward to a productive conversation.`)}
+    ${ep(`Warm regards,<br/><strong>Your Vitharn Architecture Team</strong>`)}
   `;
+
+  const html = emailShell({
+    preheader: `Your Vitharn Kickoff Call — Let Us Get Started`,
+    eyebrow: "PROJECT KICKOFF",
+    heading: "Let's Get Started",
+    body,
+  });
 
   await sendMail({
     to,
@@ -473,64 +443,37 @@ export async function sendThankYouEmail(opts: {
     appName = "UPVC Quotation Maker",
   } = opts;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #FFF7ED; border-radius: 12px; overflow: hidden;">
-      <!-- Header band -->
-      <div style="background: #EA580C; padding: 28px 30px;">
-        <h1 style="color: #ffffff; font-size: 22px; margin: 0; font-family: Arial, sans-serif;">Vitharn ERP Services</h1>
-        <p style="color: #FFEDD5; font-size: 14px; margin: 6px 0 0 0; font-family: Arial, sans-serif;">Your Instance Is Ready</p>
-      </div>
+  const creds: [string, string][] = [];
+  creds.push(["Portal", loginUrl]);
+  if (loginEmail) creds.push(["Email", loginEmail]);
+  if (tempPassword) creds.push(["Temporary Password", tempPassword]);
+  if (marketPageUrl) creds.push(["Your Market Page", marketPageUrl]);
 
-      <!-- Body -->
-      <div style="padding: 28px 30px 10px 30px;">
-        <p style="color: #1F2937; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},
-        </p>
-        <p style="color: #4B5563; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0; font-family: Arial, sans-serif;">
-          Thank you so much for choosing <strong>Vitharn ERP Services</strong> as your technology partner. Your trust means a great deal to us. We are incredibly excited to automate your workflow, eliminate quotation errors, and help your UPVC manufacturing business scale without friction.
-        </p>
+  const promiseItems = [
+    "Zero-Error Quotes: High-quality mathematical accuracy with clear GST logic",
+    "Speed: Instant PDF generation and WhatsApp integration for your customers",
+    "Data Security: Absolute transparency and strict Row-Level Security for your pricing data",
+    "Continuous Optimisation: As Vitharn grows, your ERP instance gets faster and smarter",
+  ];
 
-        <!-- Login credentials card -->
-        <div style="background-color: #ffffff; border: 1px solid #E5E7EB; border-left: 4px solid #EA580C; border-radius: 8px; padding: 20px; margin: 18px 0;">
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #EA580C; font-weight: bold; font-family: Arial, sans-serif;">YOUR LOGIN DETAILS</p>
-          <p style="margin: 4px 0;"><strong>Portal:</strong> <a href="${escapeHtml(loginUrl)}" style="color: #EA580C;">${escapeHtml(loginUrl)}</a></p>
-          ${loginEmail ? `<p style="margin: 4px 0;"><strong>Email:</strong> ${escapeHtml(loginEmail)}</p>` : ""}
-          ${tempPassword ? `<p style="margin: 4px 0;"><strong>Temporary Password:</strong> ${escapeHtml(tempPassword)}</p>` : ""}
-          ${marketPageUrl ? `<p style="margin: 4px 0;"><strong>Your Market Page:</strong> <a href="${escapeHtml(marketPageUrl)}" style="color: #EA580C;">${escapeHtml(marketPageUrl)}</a></p>` : ""}
-        </div>
-
-        <p style="color: #4B5563; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0; font-family: Arial, sans-serif;">
-          You can sign in with your email using Google Sign-In, or with the credentials above. We strongly recommend changing your password after your first login.
-        </p>
-
-        <!-- CTA buttons -->
-        <p style="margin: 22px 0; text-align: center;">
-          <a href="${escapeHtml(loginUrl)}" style="background: #EA580C; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif; font-size: 14px;">Open Your Portal</a>
-          ${marketPageUrl ? `<a href="${escapeHtml(marketPageUrl)}" style="background: #FFF7ED; color: #7C2D12; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif; font-size: 14px; margin-left: 8px; border: 1px solid #FB923C;">View Market Page</a>` : ""}
-        </p>
-
-        <!-- Our promise -->
-        <p style="color: #1F2937; font-size: 15px; font-weight: bold; margin: 22px 0 10px 0; font-family: Arial, sans-serif;">OUR PROMISE TO YOU</p>
-        <ul style="color: #4B5563; font-size: 14px; line-height: 1.8; margin: 0 0 18px 0; padding-left: 20px; font-family: Arial, sans-serif;">
-          <li><strong>Zero-Error Quotes:</strong> High-quality mathematical accuracy with clear GST logic</li>
-          <li><strong>Speed:</strong> Instant PDF generation and WhatsApp integration for your customers</li>
-          <li><strong>Data Security:</strong> Absolute transparency and strict Row-Level Security for your pricing data</li>
-          <li><strong>Continuous Optimisation:</strong> As Vitharn grows, your ERP instance gets faster and smarter</li>
-        </ul>
-
-        <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          If you have any questions, we are just a WhatsApp message or email away. We will check in regularly to ensure everything is on track.
-        </p>
-
-        <p style="color: #4B5563; font-size: 14px; line-height: 1.6; margin: 18px 0 0 0; font-family: Arial, sans-serif;">
-          Warm regards,<br/>
-          <strong>Your Vitharn Architecture Team</strong>
-        </p>
-      </div>
-
-      ${emailFooter()}
-    </div>
+  const body = `
+    ${ep(`Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},`)}
+    ${ep(`Thank you so much for choosing <strong>Vitharn ERP Services</strong> as your technology partner. Your trust means a great deal to us. We are incredibly excited to automate your workflow, eliminate quotation errors, and help your UPVC manufacturing business scale without friction.`)}
+    ${efactBox(creds)}
+    ${ep(`You can sign in with your email using Google Sign-In, or with the credentials above. We strongly recommend changing your password after your first login.`)}
+    ${ebutton("Open Your Portal", loginUrl)}
+    ${marketPageUrl ? epHtml(`<div style="text-align:center;margin-top:8px;color:${EMAIL_TOKENS.textMuted};font-size:13px;"><a href="${marketPageUrl}" style="color:${EMAIL_TOKENS.rust};text-decoration:underline;">View Market Page</a></div>`) : ""}
+    ${echecklist(promiseItems)}
+    ${ep(`If you have any questions, we are just a WhatsApp message or email away. We will check in regularly to ensure everything is on track.`)}
+    ${ep(`Warm regards,<br/><strong>Your Vitharn Architecture Team</strong>`)}
   `;
+
+  const html = emailShell({
+    preheader: `Your ${appName} Instance Is Ready — Login Inside`,
+    eyebrow: "YOUR INSTANCE IS READY",
+    heading: "Your Instance Is Ready",
+    body,
+  });
 
   await sendMail({
     to,
@@ -566,67 +509,31 @@ export async function sendTrialExpiryEmail(opts: {
 
   const dayWord = daysRemaining === 1 ? "1 day" : `${daysRemaining} days`;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #FFF7ED; border-radius: 12px; overflow: hidden;">
-      <!-- Header band -->
-      <div style="background: #EA580C; padding: 28px 30px;">
-        <h1 style="color: #ffffff; font-size: 22px; margin: 0; font-family: Arial, sans-serif;">Vitharn ERP Services</h1>
-        <p style="color: #FFEDD5; font-size: 14px; margin: 6px 0 0 0; font-family: Arial, sans-serif;">Your Trial Expires in ${dayWord}</p>
-      </div>
+  const upgradeBenefits = [
+    "Unlimited quotation generation with instant PDF export",
+    "Full access to your UPVC pricing engine and GST logic",
+    "WhatsApp integration for sharing quotes with customers",
+    "Dedicated support from the Vitharn team",
+  ];
 
-      <!-- Body -->
-      <div style="padding: 28px 30px 10px 30px;">
-        <p style="color: #1F2937; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},
-        </p>
-        <p style="color: #4B5563; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0; font-family: Arial, sans-serif;">
-          We hope you have been enjoying your experience with the <strong>Vitharn UPVC Quotation Maker Portal</strong>. This is a friendly reminder that your free trial period will expire in <strong style="color: #EA580C;">${dayWord}</strong>${expiryDate ? ` on <strong>${escapeHtml(expiryDate)}</strong>` : ""}.
-        </p>
-
-        <!-- Urgency card -->
-        <div style="background-color: #ffffff; border: 1px solid #E5E7EB; border-left: 4px solid #EA580C; border-radius: 8px; padding: 20px; margin: 18px 0;">
-          <p style="margin: 0 0 8px 0; font-size: 14px; color: #EA580C; font-weight: bold; font-family: Arial, sans-serif;">KEEP YOUR ACCESS ACTIVE</p>
-          <p style="color: #4B5563; font-size: 14px; line-height: 1.7; margin: 0 0 10px 0; font-family: Arial, sans-serif;">
-            To ensure uninterrupted service, please upgrade before your trial expires. Once upgraded, you will continue to enjoy:
-          </p>
-          <ul style="color: #4B5563; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px; font-family: Arial, sans-serif;">
-            <li>Unlimited quotation generation with instant PDF export</li>
-            <li>Full access to your UPVC pricing engine and GST logic</li>
-            <li>WhatsApp integration for sharing quotes with customers</li>
-            <li>Dedicated support from the Vitharn team</li>
-          </ul>
-        </div>
-
-        <!-- Invoice details (if provided) -->
-        ${invoiceNumber ? `
-        <div style="background-color: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 16px 20px; margin: 18px 0;">
-          <p style="margin: 0; color: #92400E; font-size: 14px; font-family: Arial, sans-serif;">
-            <strong>Invoice:</strong> ${escapeHtml(invoiceNumber)}${amountDue ? ` &nbsp;|&nbsp; <strong>Amount Due:</strong> ${escapeHtml(amountDue)}` : ""}
-          </p>
-        </div>` : ""}
-
-        <!-- CTA -->
-        <p style="margin: 22px 0; text-align: center;">
-          <a href="${escapeHtml(upgradeUrl)}" style="background: #EA580C; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-family: Arial, sans-serif; font-size: 14px;">Upgrade Now</a>
-        </p>
-
-        <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          <strong>How to upgrade:</strong> Click the button above to proceed to billing, or simply reply to this email and our team will assist you with the payment. We accept UPI, bank transfer, and all major payment methods.
-        </p>
-
-        <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          If you have any questions or need more time, just reply to this email. We are happy to help.
-        </p>
-
-        <p style="color: #4B5563; font-size: 14px; line-height: 1.6; margin: 18px 0 0 0; font-family: Arial, sans-serif;">
-          Warm regards,<br/>
-          <strong>Your Vitharn Architecture Team</strong>
-        </p>
-      </div>
-
-      ${emailFooter()}
-    </div>
+  const body = `
+    ${ep(`Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},`)}
+    ${ep(`We hope you have been enjoying your experience with the <strong>Vitharn UPVC Quotation Maker Portal</strong>. This is a friendly reminder that your free trial period will expire in <strong style="color:${EMAIL_TOKENS.rust};">${dayWord}</strong>${expiryDate ? ` on <strong>${escapeHtml(expiryDate)}</strong>` : ""}.`)}
+    ${ecallout("KEEP YOUR ACCESS ACTIVE", `To ensure uninterrupted service, please upgrade before your trial expires. Once upgraded, you will continue to enjoy:`)}
+    ${echecklist(upgradeBenefits)}
+    ${invoiceNumber ? ecallout("INVOICE READY", `Invoice: ${escapeHtml(invoiceNumber)}${amountDue ? ` &nbsp;|&nbsp; <strong>Amount Due:</strong> ${escapeHtml(amountDue)}` : ""}`) : ""}
+    ${ebutton("Upgrade Now", upgradeUrl)}
+    ${ep(`<strong>How to upgrade:</strong> Click the button above to proceed to billing, or simply reply to this email and our team will assist you with the payment. We accept UPI, bank transfer, and all major payment methods.`)}
+    ${ep(`If you have any questions or need more time, just reply to this email. We are happy to help.`)}
+    ${ep(`Warm regards,<br/><strong>Your Vitharn Architecture Team</strong>`)}
   `;
+
+  const html = emailShell({
+    preheader: `Your Vitharn Trial Expires in ${dayWord} — Upgrade to Keep Access`,
+    eyebrow: "TRIAL UPDATE",
+    heading: `Your Trial Expires in ${dayWord}`,
+    body,
+  });
 
   await sendMail({
     to,
@@ -695,8 +602,8 @@ export async function sendInvoiceEmail(opts: {
     .map(
       (item) => `
       <tr>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #E5E7EB; color: #4B5563; font-size: 14px; font-family: Arial, sans-serif;">${escapeHtml(item.description)}</td>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #E5E7EB; color: #1F2937; font-size: 14px; font-weight: bold; text-align: right; font-family: Arial, sans-serif;">${inr(item.amount)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${EMAIL_TOKENS.lineSoft};color:${EMAIL_TOKENS.textBody};font-size:14px;font-family:${EMAIL_TOKENS.font};">${escapeHtml(item.description)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid ${EMAIL_TOKENS.lineSoft};color:${EMAIL_TOKENS.ink};font-size:14px;font-weight:700;text-align:right;font-family:${EMAIL_TOKENS.font};">${inr(item.amount)}</td>
       </tr>`,
     )
     .join("");
@@ -715,100 +622,61 @@ export async function sendInvoiceEmail(opts: {
     });
   }
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background-color: #FFF7ED; border-radius: 12px; overflow: hidden;">
-      <!-- Header band -->
-      <div style="background: #EA580C; padding: 28px 30px;">
-        <h1 style="color: #ffffff; font-size: 22px; margin: 0; font-family: Arial, sans-serif;">Vitharn ERP Services</h1>
-        <p style="color: #FFEDD5; font-size: 14px; margin: 6px 0 0 0; font-family: Arial, sans-serif;">Official Invoice &mdash; ${escapeHtml(invoiceNumber)}</p>
-      </div>
+  const metaRows: [string, string][] = [
+    ["Invoice No", invoiceNumber],
+    ["Invoice Date", invoiceDate],
+    ...(dueDate ? [["Due Date", dueDate] as [string, string]] : []),
+    ["Payment Terms", paymentTerms],
+  ];
 
-      <!-- Body -->
-      <div style="padding: 28px 30px 10px 30px;">
-        <p style="color: #1F2937; font-size: 16px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},
-        </p>
-        <p style="color: #4B5563; font-size: 15px; line-height: 1.7; margin: 0 0 18px 0; font-family: Arial, sans-serif;">
-          Thank you for trusting Vitharn ERP Services with your digital transformation. Please find your official invoice attached to this email. A summary is provided below for your reference.
-        </p>
-
-        <!-- Invoice meta -->
-        <div style="background-color: #ffffff; border: 1px solid #E5E7EB; border-left: 4px solid #EA580C; border-radius: 8px; padding: 20px; margin: 18px 0;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 6px 0; color: #6B7280; font-size: 13px; width: 45%; font-family: Arial, sans-serif;">Invoice No</td>
-              <td style="padding: 6px 0; color: #1F2937; font-size: 13px; font-weight: bold; font-family: Arial, sans-serif;">${escapeHtml(invoiceNumber)}</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #6B7280; font-size: 13px; font-family: Arial, sans-serif;">Invoice Date</td>
-              <td style="padding: 6px 0; color: #1F2937; font-size: 13px; font-weight: bold; font-family: Arial, sans-serif;">${escapeHtml(invoiceDate)}</td>
-            </tr>
-            ${dueDate ? `<tr>
-              <td style="padding: 6px 0; color: #6B7280; font-size: 13px; font-family: Arial, sans-serif;">Due Date</td>
-              <td style="padding: 6px 0; color: #1F2937; font-size: 13px; font-weight: bold; font-family: Arial, sans-serif;">${escapeHtml(dueDate)}</td>
-            </tr>` : ""}
-            <tr>
-              <td style="padding: 6px 0; color: #6B7280; font-size: 13px; font-family: Arial, sans-serif;">Payment Terms</td>
-              <td style="padding: 6px 0; color: #1F2937; font-size: 13px; font-weight: bold; font-family: Arial, sans-serif;">${escapeHtml(paymentTerms)}</td>
-            </tr>
-          </table>
-        </div>
-
-        <!-- Line items summary -->
-        ${itemsRows ? `
-        <p style="color: #1F2937; font-size: 15px; font-weight: bold; margin: 22px 0 10px 0; font-family: Arial, sans-serif;">SERVICES RENDERED</p>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px;">
-          <tr style="background: #FFF7ED;">
-            <th style="padding: 8px 12px; text-align: left; color: #7C2D12; font-size: 13px; font-family: Arial, sans-serif;">Description</th>
-            <th style="padding: 8px 12px; text-align: right; color: #7C2D12; font-size: 13px; font-family: Arial, sans-serif;">Amount</th>
-          </tr>
-          ${itemsRows}
-          <tr>
-            <td colspan="2" style="border-top: 2px solid #EA580C;"></td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 14px; font-family: Arial, sans-serif;">Subtotal</td>
-            <td style="padding: 8px 12px; text-align: right; color: #1F2937; font-size: 14px; font-weight: bold; font-family: Arial, sans-serif;">${inr(subtotal)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 12px; text-align: right; color: #6B7280; font-size: 14px; font-family: Arial, sans-serif;">GST</td>
-            <td style="padding: 8px 12px; text-align: right; color: #1F2937; font-size: 14px; font-family: Arial, sans-serif;">NIL</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 12px; text-align: right; color: #7C2D12; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif;">TOTAL DUE</td>
-            <td style="padding: 10px 12px; text-align: right; color: #EA580C; font-size: 16px; font-weight: bold; font-family: Arial, sans-serif;">${inr(totalDue)}</td>
-          </tr>
-        </table>` : `
-        <div style="background-color: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 16px 20px; margin: 18px 0; text-align: center;">
-          <p style="margin: 0; color: #92400E; font-size: 18px; font-weight: bold; font-family: Arial, sans-serif;">TOTAL DUE: ${inr(totalDue)}</p>
-        </div>`}
-
-        <!-- UPI payment block -->
-        <div style="background-color: #ffffff; border: 1px solid #E5E7EB; border-left: 4px solid #EA580C; border-radius: 8px; padding: 20px; margin: 18px 0;">
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #EA580C; font-weight: bold; font-family: Arial, sans-serif;">PAY VIA UPI (INSTANT)</p>
-          ${upiId ? `<p style="margin: 4px 0;"><strong>UPI ID:</strong> <span style="color: #7C2D12; font-weight: bold;">${escapeHtml(upiId)}</span></p>` : ""}
-          ${upiName ? `<p style="margin: 4px 0;"><strong>Payee Name:</strong> ${escapeHtml(upiName)}</p>` : ""}
-          <p style="margin: 4px 0;"><strong>Reference:</strong> <span style="font-weight: bold;">${escapeHtml(invoiceNumber)}</span></p>
-          <p style="margin: 8px 0 0 0; color: #6B7280; font-size: 13px; line-height: 1.5; font-family: Arial, sans-serif;">
-            Please quote the invoice number in the UPI remarks so we can match your payment.
-          </p>
-        </div>
-
-        ${notes ? `<p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">${escapeHtml(notes)}</p>` : ""}
-
-        <p style="color: #6B7280; font-size: 13px; line-height: 1.6; margin: 0 0 14px 0; font-family: Arial, sans-serif;">
-          A detailed PDF invoice is attached to this email for your records. To ensure uninterrupted service, please make your payment by the due date.
-        </p>
-
-        <p style="color: #4B5563; font-size: 14px; line-height: 1.6; margin: 18px 0 0 0; font-family: Arial, sans-serif;">
-          Warm regards,<br/>
-          <strong>Your Vitharn Architecture Team</strong>
-        </p>
-      </div>
-
-      ${emailFooter()}
-    </div>
+  const body = `
+    ${ep(`Dear <strong>${escapeHtml(clientName)}</strong>${clientCompany ? `, <strong>${escapeHtml(clientCompany)}</strong>` : ""},`)}
+    ${ep(`Thank you for trusting Vitharn ERP Services with your digital transformation. Please find your official invoice attached to this email. A summary is provided below for your reference.`)}
+    ${efactBox(metaRows)}
+    ${items && items.length > 0 ? `
+      ${ep(`<strong>SERVICES RENDERED</strong>`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${EMAIL_TOKENS.paperWarm};border:1px solid ${EMAIL_TOKENS.lineSoft};border-radius:12px;overflow:hidden;margin:20px 0;font-family:${EMAIL_TOKENS.font};">
+        <tr style="background:${EMAIL_TOKENS.paperWarm};">
+          <th style="padding:10px 12px;text-align:left;color:${EMAIL_TOKENS.textMuted};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;font-family:${EMAIL_TOKENS.font};border-bottom:1px solid ${EMAIL_TOKENS.lineSoft};">Description</th>
+          <th style="padding:10px 12px;text-align:right;color:${EMAIL_TOKENS.textMuted};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;font-family:${EMAIL_TOKENS.font};border-bottom:1px solid ${EMAIL_TOKENS.lineSoft};">Amount</th>
+        </tr>
+        ${itemsRows}
+        <tr>
+          <td colspan="2" style="border-top:2px solid ${EMAIL_TOKENS.rust};"></td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;text-align:right;color:${EMAIL_TOKENS.textMuted};font-size:14px;font-family:${EMAIL_TOKENS.font};border-top:1px solid ${EMAIL_TOKENS.lineSoft};">Subtotal</td>
+          <td style="padding:10px 12px;text-align:right;color:${EMAIL_TOKENS.ink};font-size:14px;font-weight:700;font-family:${EMAIL_TOKENS.font};border-top:1px solid ${EMAIL_TOKENS.lineSoft};">${inr(subtotal)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;text-align:right;color:${EMAIL_TOKENS.textMuted};font-size:14px;font-family:${EMAIL_TOKENS.font};border-top:1px solid ${EMAIL_TOKENS.lineSoft};">GST</td>
+          <td style="padding:10px 12px;text-align:right;color:${EMAIL_TOKENS.ink};font-size:14px;font-family:${EMAIL_TOKENS.font};border-top:1px solid ${EMAIL_TOKENS.lineSoft};">NIL</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 12px;text-align:right;color:${EMAIL_TOKENS.textMuted};font-size:16px;font-weight:700;font-family:${EMAIL_TOKENS.font};border-top:2px solid ${EMAIL_TOKENS.rust};">TOTAL DUE</td>
+          <td style="padding:12px 12px;text-align:right;color:${EMAIL_TOKENS.rust};font-size:16px;font-weight:700;font-family:${EMAIL_TOKENS.font};border-top:2px solid ${EMAIL_TOKENS.rust};">${inr(totalDue)}</td>
+        </tr>
+      </table>
+    ` : `
+      ${ecallout("TOTAL DUE", inr(totalDue))}
+    `}
+    ${efactBox([
+      ...(upiId ? [["UPI ID", upiId] as [string, string]] : []),
+      ...(upiName ? [["Payee Name", upiName] as [string, string]] : []),
+      ["Reference", invoiceNumber],
+    ] as [string, string][])}
+    ${ep(`Please quote the invoice number in the UPI remarks so we can match your payment.`)}
+    ${notes ? ep(notes) : ""}
+    ${ep(`A detailed PDF invoice is attached to this email for your records. To ensure uninterrupted service, please make your payment by the due date.`)}
+    ${ep(`Warm regards,<br/><strong>Your Vitharn Architecture Team</strong>`)}
   `;
+
+  const html = emailShell({
+    preheader: `Invoice ${invoiceNumber} from Vitharn ERP Services — ${inr(totalDue)} Due`,
+    eyebrow: "INVOICE",
+    heading: `Official Invoice — ${escapeHtml(invoiceNumber)}`,
+    body,
+  });
 
   await sendMail({
     to,

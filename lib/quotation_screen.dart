@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +15,6 @@ import 'vaishnavi_pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
-import 'client_logo.dart';
 import 'package:toastification/toastification.dart';
 import 'pdf_confirmation_screen.dart';
 import 'quote_share.dart';
@@ -461,42 +459,68 @@ class _QuotationScreenState extends State<QuotationScreen> {
       await pdfGen.loadLibrary();
       final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
       final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
-      final logoBytes = await loadLogoBytes(appState.clientConfig);
       final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
       final quoteLink = await _quoteLink(data);
       if (quoteLink == null) debugPrint('QuotationScreen: _sendEmail no quote link for ${data.quotationNo} — email will have only review CTA');
-
-      final hasLogo = logoBytes.isNotEmpty;
-      final logoHeader = hasLogo
-          ? '<img src="cid:logo" alt="${appState.companyName}" style="max-height: 80px; margin-bottom: 10px;" />'
-          : '';
 
       // Only render the "Review & Confirm" CTA when we hold a working token.
       final reviewCta = quoteLink == null
           ? ''
           : '''
-        <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">Please review and confirm your quotation:</p>
-        <p style="margin: 6px 0 0 0;"><a href="$quoteLink" style="display: inline-block; background-color: #16a34a; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Review &amp; Confirm Quotation</a></p>''';
+        <p style="margin: 24px 0 8px 0; color: #3D1F08; font-size: 14px;">Please review and confirm your quotation:</p>
+        <p style="margin: 0;"><a href="$quoteLink" style="display: inline-block; background-color: #C44A10; color: #ffffff; padding: 14px 34px; border-radius: 999px; text-decoration: none; font-size: 15px; font-weight: 700;">Review & Confirm Quotation</a></p>''';
 
       final htmlBody = '''
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          $logoHeader
+      <div style="font-family: 'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; max-width: 600px; margin: auto; background-color: #FFFBF6; padding: 0; border: 1px solid #EADFD3; border-radius: 16px; overflow: hidden;">
+        <!-- Header Band -->
+        <div style="background-color: #1A0A00; padding: 26px 36px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td style="vertical-align: middle; width: 42px;">
+                <img src="https://app.vitharn.com/logo.png" alt="Vitharn" width="42" height="42" style="display: block; border-radius: 10px; width: 42px; height: 42px;" />
+              </td>
+              <td style="vertical-align: middle; padding-left: 14px;">
+                <div style="color: #FFFFFF; font-size: 17px; font-weight: 800; line-height: 1.2; letter-spacing: -0.2px;">Vitharn <span style="color: #E06A1E;">ERP</span> Services</div>
+                <div style="color: #9A8B7E; font-size: 11.5px; line-height: 1.4; margin-top: 2px;">Quotation & ERP software for UPVC fabricators</div>
+              </td>
+            </tr>
+          </table>
         </div>
-        <h2 style="color: #1E3A5F; text-align: center; margin-top: 0;">Quotation from ${appState.companyName}</h2>
-        <p style="color: #334155; font-size: 16px;">Dear <b>${data.customerName}</b>,</p>
-        <p style="color: #475569; font-size: 15px; line-height: 1.6;">Please find attached the quotation <b>${data.quotationNo}</b> for your requested UPVC windows and doors.</p>
-        <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
-          <p style="margin: 5px 0; color: #1E3A5F;"><strong>Quote No:</strong> ${data.quotationNo}</p>
-          <p style="margin: 5px 0; color: #1E3A5F;"><strong>Date:</strong> ${DateFormat('dd-MMM-yyyy').format(data.date)}</p>
-          <p style="margin: 5px 0; color: #1E3A5F;"><strong>Total Amount:</strong> Rs. ${data.grandTotal.toStringAsFixed(2)}</p>
-        </div>
+        <!-- Body -->
+        <div style="padding: 34px 36px; color: #3D1F08;">
+          <p style="margin: 0 0 16px 0; font-size: 15.5px; line-height: 1.6;">Dear <b>${data.customerName}</b>,</p>
+          <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #3D1F08;">Please find attached the quotation <b>${data.quotationNo}</b> for your requested UPVC windows and doors.</p>
+          <!-- Details Card -->
+          <div style="background-color: #FFFBF6; border: 1px solid #E2D3C4; border-radius: 12px; padding: 20px 24px; margin: 0 0 28px 0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Quote No</td>
+                <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">${data.quotationNo}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Date</td>
+                <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">${DateFormat('dd-MMM-yyyy').format(data.date)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Amount</td>
+                <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.grandTotal.toStringAsFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
 $reviewCta
-        <p style="color: #475569; font-size: 14px; margin: 16px 0 0 0;">We'd love your feedback! Please rate your experience with us here:</p>
-        <p style="margin: 6px 0 0 0;"><a href="$reviewUrl" style="display: inline-block; background-color: #1E3A5F; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px;">Rate Your Experience</a></p>
-        <p style="color: #475569; font-size: 14px;">If you have any questions, please feel free to reach out.</p>
-        <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 20px 0;">
-        <p style="color: #64748b; font-size: 12px; text-align: center;">Prop: ${appState.companyProprietor} | ${appState.companyContact}</p>
+          <p style="margin: 24px 0 8px 0; color: #3D1F08; font-size: 14px;">We'd love your feedback! Please rate your experience with us here:</p>
+          <p style="margin: 0 0 28px 0;"><a href="$reviewUrl" style="display: inline-block; background-color: #C44A10; color: #ffffff; padding: 14px 34px; border-radius: 999px; text-decoration: none; font-size: 15px; font-weight: 700;">Rate Your Experience</a></p>
+          <p style="margin: 0; color: #7A5030; font-size: 14px; line-height: 1.6;">If you have any questions, please feel free to reach out.</p>
+        </div>
+        <!-- Footer -->
+        <div style="background-color: #FFF3E6; border-top: 1px solid #EADFD3; padding: 20px 36px; text-align: center;">
+          <p style="margin: 0 0 6px 0; color: #3D1F08; font-size: 13px; line-height: 1.5;">
+            Vitharn ERP Services |
+            <a href="mailto:vitarn.dev@gmail.com" style="color: #C44A10; text-decoration: none;">vitarn.dev@gmail.com</a> |
+            <a href="https://app.vitharn.com" style="color: #C44A10; text-decoration: none;">app.vitharn.com</a>
+          </p>
+          <p style="margin: 0; color: #9A8B7E; font-size: 11px; line-height: 1.4;">Sent by your Vitharn UPVC Quotation Maker</p>
+        </div>
       </div>
       ''';
 
@@ -505,13 +529,6 @@ $reviewCta
         attachments.add({
           'filename': '${data.quotationNo}.pdf',
           'content': base64Encode(pdfBytes),
-        });
-      }
-      if (hasLogo) {
-        attachments.add({
-          'filename': 'logo.png',
-          'cid': 'logo',
-          'content': base64Encode(logoBytes),
         });
       }
 

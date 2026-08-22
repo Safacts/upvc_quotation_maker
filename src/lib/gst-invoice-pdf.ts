@@ -18,12 +18,12 @@ import { hexToRgb } from "./brand";
 // the Flutter PDFs already do.
 
 const C = {
-  headerBand: rgb(...hexToRgb("#1e3a5f")),
-  tableHead: rgb(...hexToRgb("#dce6f1")),
-  totalsBg: rgb(...hexToRgb("#f1f5fa")),
-  ink: rgb(...hexToRgb("#1F2937")),
-  muted: rgb(...hexToRgb("#6B7280")),
-  line: rgb(...hexToRgb("#9CA3AF")),
+  headerBand: rgb(...hexToRgb("#C44A10")),
+  tableHead: rgb(...hexToRgb("#FFF3E6")),
+  totalsBg: rgb(...hexToRgb("#FFFBF6")),
+  ink: rgb(...hexToRgb("#1A0A00")),
+  muted: rgb(...hexToRgb("#7A5030")),
+  line: rgb(...hexToRgb("#E2D3C4")),
   white: rgb(1, 1, 1),
 };
 

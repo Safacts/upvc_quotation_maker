@@ -72,14 +72,14 @@ pw.Widget _buildHeader(AppState appState) {
       pw.Center(
         child: pw.Text(
           'TAX INVOICE',
-          style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#1e3a5f')),
+          style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#C44A10')),
         ),
       ),
       pw.SizedBox(height: 10),
       pw.Container(
         width: double.infinity,
         padding: const pw.EdgeInsets.all(8),
-        color: PdfColor.fromHex('#1e3a5f'),
+        color: PdfColor.fromHex('#C44A10'),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
@@ -110,7 +110,7 @@ pw.Widget _buildSectionTitle(String title) {
     width: double.infinity,
     padding: const pw.EdgeInsets.all(4),
     margin: const pw.EdgeInsets.only(top: 10, bottom: 4),
-    color: PdfColor.fromHex('#1e3a5f'),
+    color: PdfColor.fromHex('#C44A10'),
     child: pw.Text(title, style: pw.TextStyle(color: PdfColors.white, fontSize: 11, fontWeight: pw.FontWeight.bold)),
   );
 }
@@ -161,7 +161,7 @@ pw.Widget _buildItemsTable(GstInvoiceData data, NumberFormat currency) {
   return pw.TableHelper.fromTextArray(
     headers: ['S.No', 'HSN', 'Description', 'Qty', 'Unit', 'Rate', 'Taxable Value'],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
-    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#dce6f1')),
+    headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
     cellStyle: pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
@@ -191,7 +191,7 @@ pw.Widget _buildItemsTable(GstInvoiceData data, NumberFormat currency) {
 
 pw.Widget _buildTaxSummary(GstInvoiceData data, NumberFormat currency) {
   return pw.Container(
-    color: PdfColor.fromHex('#f1f5fa'),
+    color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
       border: pw.TableBorder.all(color: PdfColor(0, 0, 0, 0)),
       children: [
@@ -223,7 +223,7 @@ pw.Widget _buildTaxSummary(GstInvoiceData data, NumberFormat currency) {
           ]),
         ],
         pw.TableRow(
-          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#1e3a5f'), width: 2))),
+          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#C44A10'), width: 2))),
           children: [
             pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Grand Total', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
             pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text(currency.format(data.grandTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12))),
