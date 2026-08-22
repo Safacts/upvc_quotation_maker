@@ -218,12 +218,12 @@
   color: var(--vn-copper);
 }
 .vn-btn-whatsapp {
-  background: #25d366;
-  box-shadow: 0 4px 18px rgba(37,211,102,0.2);
+  background: var(--vn-copper);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.12);
 }
 .vn-btn-whatsapp:hover {
-  background: #1fb855;
-  box-shadow: 0 8px 26px rgba(37,211,102,0.35);
+  background: var(--vn-copper-light);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.18);
 }
 
 .vn-hero-metrics {
@@ -713,31 +713,8 @@
   font-size: 13px;
 }
 
-/* ─── Floating Mobile CTA ─── */
-.vn-mobile-bar {
-  position: fixed;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  gap: 10px;
-  z-index: 100;
-  width: calc(100% - 32px);
-  max-width: 400px;
-}
-.vn-mobile-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px;
-  border-radius: 14px;
-  font-weight: 700;
-  font-size: 14px;
-  text-decoration: none;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-}
+/* (Floating Mobile CTA removed 22-08-2026 — sticky Call/WhatsApp bar read as spam-pattern on mobile;
+   contact paths remain in header, contact section and footer.) */
 
 /* ─── Responsive ─── */
 @media (max-width: 1024px) {
@@ -750,9 +727,9 @@
 @media (max-width: 768px) {
   .vn-hero h2 { font-size: 36px; }
   .vn-nav { display: none; }
+  .vn-strip { display: none; } /* promo ribbon = scam-signal on mobile */
   .vn-products-grid, .vn-why-grid, .vn-process-row, .vn-footer-grid { grid-template-columns: 1fr; }
   .vn-calc-types, .vn-slider-row, .vn-select-row { grid-template-columns: 1fr; }
-  .vn-mobile-bar { display: flex; }
   .vn-section { padding: 64px 0; }
   .vn-section-title { font-size: 32px; }
 }

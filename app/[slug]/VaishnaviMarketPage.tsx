@@ -600,20 +600,6 @@ export default function VaishnaviMarketPage({ client, slug }: Props) {
           </div>
         </div>
       </footer>
-
-      {/* Floating Mobile CTA */}
-      <div className="vn-mobile-bar">
-        <a href={`tel:${phone}`} className="vn-mobile-btn" style={{ background: "#fff", color: "var(--vn-charcoal)", border: "1px solid var(--vn-border)" }}>
-          <Phone size={16} /> Call
-        </a>
-        <a
-          href={`https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${proprietor}, I visited the Vaishnavi UPVC website.`)}`}
-          target="_blank" rel="noreferrer"
-          className="vn-mobile-btn" style={{ background: "#25d366", color: "#fff" }}
-        >
-          <MessageCircle size={16} /> WhatsApp
-        </a>
-      </div>
     </div>
   );
 }
