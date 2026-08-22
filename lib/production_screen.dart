@@ -170,24 +170,6 @@ class _ProductionScreenState extends State<ProductionScreen> {
     }
   }
 
-  Future<void> _updateStatus(ProductionOrder order, String newStatus) async {
-    try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      await SupabaseConfig.client
-          .from('production_orders')
-          .update({'status': newStatus})
-          .eq('id', order.id!)
-          .eq('client_id', clientId);
-      _loadProductionOrders();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update status: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
   void _showUpdateDialog(ProductionOrder order) {
     String selectedStage = order.stage;
     String selectedStatus = order.status;
@@ -203,7 +185,7 @@ class _ProductionScreenState extends State<ProductionScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: selectedStage,
+                initialValue: selectedStage,
                 decoration: const InputDecoration(labelText: 'Stage', border: OutlineInputBorder()),
                 items: _stages.map((s) => DropdownMenuItem(
                   value: s,
@@ -219,7 +201,7 @@ class _ProductionScreenState extends State<ProductionScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedStatus,
+                initialValue: selectedStatus,
                 decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'pending', child: Text('Pending')),
@@ -230,7 +212,7 @@ class _ProductionScreenState extends State<ProductionScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedPriority,
+                initialValue: selectedPriority,
                 decoration: const InputDecoration(labelText: 'Priority', border: OutlineInputBorder()),
                 items: _priorityColors.keys.map((p) => DropdownMenuItem(
                   value: p,
@@ -350,7 +332,6 @@ class _ProductionScreenState extends State<ProductionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final byStage = _ordersByStage;
 
     return Scaffold(

@@ -141,7 +141,6 @@ class _CuttingScreenState extends State<CuttingScreen> {
 
   int get _totalCount => _orders.length;
   int get _pendingCount => _orders.where((o) => o.status == 'pending').length;
-  int get _cuttingCount => _orders.where((o) => o.status == 'cutting').length;
   double get _avgWastage {
     if (_orders.isEmpty) return 0;
     return _orders.fold(0.0, (sum, o) => sum + o.wastagePercent) / _orders.length;
@@ -264,7 +263,7 @@ class _CuttingScreenState extends State<CuttingScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedStatus,
+                  initialValue: selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -325,7 +324,6 @@ class _CuttingScreenState extends State<CuttingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cutting'),

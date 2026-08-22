@@ -62,7 +62,7 @@ class _AboutScreenState extends State<AboutScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Version 1.0.6',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ).animate().fade(delay: 450.ms),
 
               const SizedBox(height: 40),

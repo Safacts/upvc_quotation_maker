@@ -161,7 +161,6 @@ class _Design3DScreenState extends State<Design3DScreen> {
 
   Widget _buildBody(Color primaryColor) {
     final dimensions = design!['dimensions'] as Map<String, dynamic>;
-    final designData = design!['design'] as Map<String, dynamic>;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

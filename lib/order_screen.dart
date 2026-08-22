@@ -149,7 +149,6 @@ class _OrderScreenState extends State<OrderScreen> {
 
   int get _totalCount => _orders.length;
   int get _productionCount => _orders.where((o) => o.status == 'production').length;
-  double get _totalValue => _orders.fold(0.0, (sum, o) => sum + o.totalAmount);
   double get _totalBalance => _orders.fold(0.0, (sum, o) => sum + o.balanceDue);
 
   Color _statusColor(String status) => _statusColors[status] ?? Colors.grey;
@@ -246,7 +245,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedStatus,
+                  initialValue: selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -308,7 +307,6 @@ class _OrderScreenState extends State<OrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),

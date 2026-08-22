@@ -158,7 +158,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
     String selectedOrderNo = '';
     String selectedCustomer = '';
     String selectedContact = '';
-    List<Map<String, dynamic>> _availableOrders = [];
+    List<Map<String, dynamic>> availableOrders = [];
 
     showModalBottomSheet(
       context: context,
@@ -168,7 +168,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          if (_availableOrders.isEmpty) {
+          if (availableOrders.isEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
                 final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
@@ -179,7 +179,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
                     .eq('status', 'dispatched');
                 if (ctx.mounted) {
                   setModalState(() {
-                    _availableOrders = (response as List).cast<Map<String, dynamic>>();
+                    availableOrders = (response as List).cast<Map<String, dynamic>>();
                   });
                 }
               } catch (_) {}
@@ -205,17 +205,17 @@ class _InstallationScreenState extends State<InstallationScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selectedOrderId.isNotEmpty ? selectedOrderId : null,
+                    initialValue: selectedOrderId.isNotEmpty ? selectedOrderId : null,
                     decoration: const InputDecoration(
                       labelText: 'Select Order *',
                       border: OutlineInputBorder(),
                     ),
-                    items: _availableOrders.map((o) => DropdownMenuItem(
+                    items: availableOrders.map((o) => DropdownMenuItem(
                       value: o['id'] as String,
                       child: Text('${o['order_no']} - ${o['customer_name']}', overflow: TextOverflow.ellipsis),
                     )).toList(),
                     onChanged: (val) {
-                      final order = _availableOrders.firstWhere((o) => o['id'] == val, orElse: () => {});
+                      final order = availableOrders.firstWhere((o) => o['id'] == val, orElse: () => {});
                       setModalState(() {
                         selectedOrderId = val ?? '';
                         selectedOrderNo = (order['order_no'] ?? '') as String;
@@ -332,7 +332,6 @@ class _InstallationScreenState extends State<InstallationScreen> {
   }
 
   void _showInstallationDetail(InstallationData installation) {
-    bool isExpanded = false;
 
     showModalBottomSheet(
       context: context,
@@ -688,8 +687,6 @@ class _InstallationScreenState extends State<InstallationScreen> {
     final icon = _statusIcons[installation.status] ?? Icons.circle;
     final isToday = DateUtils.isSameDay(installation.scheduledDate, DateTime.now());
     final isPast = installation.scheduledDate.isBefore(DateTime.now()) && !isToday;
-    final checkedCount = installation.qcChecklist.length;
-    final totalQc = installation.qcChecklist.length;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

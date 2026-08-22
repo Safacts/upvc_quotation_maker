@@ -84,44 +84,6 @@ class NotificationService {
   Future<void> showNotificationFromAppNotification(AppNotification notification) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
 
-    // Map notification kind to appropriate channel/details
-    String channelId;
-    String channelName;
-    String channelDescription;
-    Importance importance = Importance.max;
-    Priority priority = Priority.high;
-
-    switch (notification.kind) {
-      case AppNotification.kindQuoteOpened:
-        channelId = 'quote_opened';
-        channelName = 'Quote Opened';
-        channelDescription = 'Customer opened a quotation';
-        break;
-      case AppNotification.kindPaymentReceived:
-        channelId = 'payment_received';
-        channelName = 'Payment Received';
-        channelDescription = 'Payment received for a quotation';
-        break;
-      case AppNotification.kindQuoteSent:
-        channelId = 'quote_sent';
-        channelName = 'Quote Sent';
-        channelDescription = 'Quotation was sent to customer';
-        break;
-      case AppNotification.kindQuoteWon:
-        channelId = 'quote_won';
-        channelName = 'Quote Won';
-        channelDescription = 'Quotation status changed to Won';
-        break;
-      case AppNotification.kindPhotoAdded:
-        channelId = 'photo_added';
-        channelName = 'Site Photo Added';
-        channelDescription = 'A site photo was attached to a quotation';
-        break;
-      default:
-        channelId = 'general_notifications';
-        channelName = 'General Notifications';
-        channelDescription = 'General app notifications';
-    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'important_notifications',

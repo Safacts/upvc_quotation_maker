@@ -93,8 +93,9 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
       String message = 'Request failed (HTTP ${response.statusCode})';
       try {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map && decoded['error'] is String)
+        if (decoded is Map && decoded['error'] is String) {
           message = decoded['error'] as String;
+        }
       } catch (_) {}
       throw Exception(message);
     }
@@ -153,15 +154,17 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
           'address': _address.text.trim(),
         },
       );
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Business profile saved')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -193,7 +196,7 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: role,
+                        initialValue: role,
                         decoration: const InputDecoration(labelText: 'Role'),
                         items: const [
                           DropdownMenuItem(
@@ -231,7 +234,7 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
                           );
                           if (context.mounted) Navigator.pop(context, true);
                         } catch (e) {
-                          if (context.mounted)
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -239,6 +242,7 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
                                 ),
                               ),
                             );
+                          }
                         }
                       },
                       child: const Text('Add'),
@@ -280,10 +284,11 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
       await _request('/api/console/users/$id', method: 'DELETE');
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
+      }
     }
   }
 
@@ -464,7 +469,7 @@ class _BusinessUsersScreenState extends State<BusinessUsersScreen>
               child: ListTile(
                 leading: CircleAvatar(
                   child: Text(
-                    '${(user['name'] ?? user['email'] ?? '?').toString().substring(0, 1).toUpperCase()}',
+                    (user['name'] ?? user['email'] ?? '?').toString().substring(0, 1).toUpperCase(),
                   ),
                 ),
                 title: Text('${user['name'] ?? 'Unnamed user'}'),

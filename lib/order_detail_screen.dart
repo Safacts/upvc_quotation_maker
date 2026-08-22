@@ -18,7 +18,6 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late OrderData _order;
   List<Map<String, dynamic>> _items = [];
-  List<Map<String, dynamic>> _timeline = [];
   bool _isLoading = true;
 
   static const Map<String, Color> _statusColors = {
@@ -56,18 +55,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           .eq('order_id', _order.id ?? '')
           .eq('client_id', clientId);
 
-      // Load timeline
-      final timelineRes = await SupabaseConfig.client
-          .from('order_timeline')
-          .select()
-          .eq('order_id', _order.id ?? '')
-          .eq('client_id', clientId)
-          .order('created_at', ascending: false);
-
+      // Timeline query removed: result was never consumed (dead fetch).
       if (mounted) {
         setState(() {
           _items = (itemsRes as List).cast<Map<String, dynamic>>();
-          _timeline = (timelineRes as List).cast<Map<String, dynamic>>();
           _isLoading = false;
         });
       }

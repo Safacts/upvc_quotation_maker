@@ -6,8 +6,6 @@ import 'config/client_config.dart';
 class AppTheme {
   static const Color _defaultPrimary = Color(0xFF6366F1);
   static const Color _defaultGradientEnd = Color(0xFFA855F7);
-  static const Color _defaultAccentLight = Color(0xFFEC4899);
-  static const Color _defaultAccentDark = Color(0xFFF472B6);
 
   static LinearGradient get primaryGradient => const LinearGradient(
         colors: [_defaultPrimary, _defaultGradientEnd],

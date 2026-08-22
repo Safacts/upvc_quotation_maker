@@ -60,7 +60,7 @@ void main() async {
   if (initialConfig != null) {
     SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
     appState.applyClientConfig(initialConfig);
-    FaviconService.setFromUrl(initialConfig.logoUrl ?? '');
+    FaviconService.setFromUrl(initialConfig.logoUrl);
   }
 
   // Initialize offline-first services (non-blocking — must not delay first paint)

@@ -322,7 +322,7 @@ class _UpvcWindowCalculatorState extends State<UpvcWindowCalculator> {
 
                       // Window type dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedWindowType,
+                        initialValue: _selectedWindowType,
                         decoration: InputDecoration(
                           labelText: 'Window Type',
                           prefixIcon: Icon(Icons.view_agenda, color: primaryColor),
@@ -347,7 +347,7 @@ class _UpvcWindowCalculatorState extends State<UpvcWindowCalculator> {
 
                       // Frame color dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedFrameColor,
+                        initialValue: _selectedFrameColor,
                         decoration: InputDecoration(
                           labelText: 'Frame Color',
                           prefixIcon: Icon(Icons.palette, color: primaryColor),
@@ -381,7 +381,7 @@ class _UpvcWindowCalculatorState extends State<UpvcWindowCalculator> {
 
                       // Glass type dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedGlassType,
+                        initialValue: _selectedGlassType,
                         decoration: InputDecoration(
                           labelText: 'Glass Type',
                           prefixIcon: Icon(Icons.auto_awesome, color: primaryColor),

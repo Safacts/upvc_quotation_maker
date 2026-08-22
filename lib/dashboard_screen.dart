@@ -418,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const SizedBox.shrink();
     }
 
-    final theme = Theme.of(context);
+    final _theme = Theme.of(context);
 
     if (appState.isTrialExpired) {
       return Container(
@@ -552,23 +552,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ).animate(onPlay: (controller) => controller.repeat(reverse: true))
         .fadeIn(duration: 800.ms);
-  }
-
-  Widget _buildSummaryRow(List<QuotationData> quotations) {
-    final thisMonth = DateTime.now();
-    final monthQuotes = quotations.where((q) => q.createdAt.year == thisMonth.year && q.createdAt.month == thisMonth.month).toList();
-    final wonQuotes = quotations.where((q) => q.status == QuotationStatus.won).toList();
-    final currFmt = NumberFormat.compactCurrency(locale: 'en_IN', symbol: '₹');
-
-    return Row(
-      children: [
-        _buildMiniStat('This Month', monthQuotes.length.toString(), Icons.calendar_today_outlined, Colors.indigo),
-        const SizedBox(width: 8),
-        _buildMiniStat('Won', wonQuotes.length.toString(), Icons.check_circle_outline, Colors.green),
-        const SizedBox(width: 8),
-        _buildMiniStat('Total Value', currFmt.format(quotations.fold(0.0, (s, q) => s + q.grandTotal)), Icons.currency_rupee, Colors.orange),
-      ],
-    ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
   }
 
   Widget _buildMiniStat(String label, String value, IconData icon, Color color) {

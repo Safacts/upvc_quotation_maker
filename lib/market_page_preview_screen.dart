@@ -99,15 +99,17 @@ class _MarketPagePreviewScreenState extends State<MarketPagePreviewScreen>
       _textCtrl.clear();
       _rating = 5;
       await _fetchReviews();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Review added')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       setState(() => _isSaving = false);
     }
@@ -122,10 +124,11 @@ class _MarketPagePreviewScreenState extends State<MarketPagePreviewScreen>
           .eq('id', review['id']);
       await _fetchReviews();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -136,15 +139,17 @@ class _MarketPagePreviewScreenState extends State<MarketPagePreviewScreen>
           .delete()
           .eq('id', review['id']);
       await _fetchReviews();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Review deleted')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -228,15 +233,17 @@ class _MarketPagePreviewScreenState extends State<MarketPagePreviewScreen>
                               .eq('id', review['id']);
                           Navigator.pop(ctx);
                           await _fetchReviews();
-                          if (mounted)
+                          if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Review updated')),
                             );
+                          }
                         } catch (e) {
-                          if (mounted)
+                          if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Error: $e')),
                             );
+                          }
                         }
                       },
                       child: const Text('Save'),

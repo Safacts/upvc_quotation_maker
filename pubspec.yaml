@@ -64,6 +64,7 @@ dependencies:
   barcode: ^2.2.9
   uuid: ^4.5.1
   package_info_plus: ^9.0.1
+  qr: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

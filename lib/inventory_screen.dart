@@ -341,7 +341,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildProductCard(Product product) {
-    final theme = Theme.of(context);
     final isLow = product.isLowStock;
 
     return Card(

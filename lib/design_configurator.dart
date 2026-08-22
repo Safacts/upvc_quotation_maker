@@ -161,7 +161,7 @@ class _DesignConfiguratorState extends State<DesignConfigurator> {
                           label: Text(type['label']),
                           selected: selected,
                           onSelected: (_) => setState(() => windowType = type['value']),
-                          selectedColor: primaryColor.withOpacity(0.2),
+                          selectedColor: primaryColor.withValues(alpha: 0.2),
                           backgroundColor: Colors.grey[200],
                           labelStyle: TextStyle(
                             color: selected ? primaryColor : Colors.black87,
@@ -187,7 +187,7 @@ class _DesignConfiguratorState extends State<DesignConfigurator> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: profileType,
+                      initialValue: profileType,
                       decoration: InputDecoration(
                         border: const OutlineInputBorder(),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

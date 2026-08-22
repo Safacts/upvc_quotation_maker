@@ -264,10 +264,9 @@ class ClientConfig {
 // Private subclass for SSO-pending state (tenant switch required)
 class SsoPendingClientConfig extends ClientConfig {
   const SsoPendingClientConfig({
-    required String clientId,
+    required super.clientId,
     required String currentClientId,
   }) : super(
-          clientId: clientId,
           isSsoPending: true,
           ssoCurrentClientId: currentClientId,
         );
@@ -275,7 +274,5 @@ class SsoPendingClientConfig extends ClientConfig {
   @override
   bool get isSsoPending => true;
 
-  @override
-  String? get ssoCurrentClientId => super.ssoCurrentClientId;
 }
 

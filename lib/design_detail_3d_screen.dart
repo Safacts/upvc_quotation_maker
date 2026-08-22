@@ -133,11 +133,11 @@ class _DesignDetail3DScreenState extends State<DesignDetail3DScreen> {
                   Icon(
                     Icons.view_in_ar,
                     size: 80,
-                    color: primaryColor.withOpacity(0.3),
+                    color: primaryColor.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '3D View (${viewMode})',
+                    '3D View ($viewMode)',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 16,
@@ -196,7 +196,7 @@ class _DesignDetail3DScreenState extends State<DesignDetail3DScreen> {
               return Card(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: primaryColor.withOpacity(0.2),
+                    backgroundColor: primaryColor.withValues(alpha: 0.2),
                     child: Text('${i + 1}', style: TextStyle(color: primaryColor)),
                   ),
                   title: Text(frame['profile'] ?? 'Frame ${i + 1}'),

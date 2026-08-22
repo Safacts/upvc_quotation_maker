@@ -61,8 +61,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final appState = Provider.of<AppState>(context);
 
     return Scaffold(
       appBar: AppBar(

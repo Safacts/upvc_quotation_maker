@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upvc_quotation_maker/app_state.dart';
@@ -140,7 +139,6 @@ void main() {
     });
 
     test('TC-CI-014: SentEmail.toMap includes clientId when provided', () {
-      final email = QuotationData; // placeholder
       final sentMap = <String, dynamic>{
         'recipient': 'test@test.com',
         'subject': 'Test',

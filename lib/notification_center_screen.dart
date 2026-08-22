@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 import 'models.dart';
@@ -9,7 +8,6 @@ import 'quotation_screen.dart';
 import 'app_state.dart';
 import 'supabase_config.dart';
 import 'services/notification_center_service.dart';
-import 'theme.dart';
 
 class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key});

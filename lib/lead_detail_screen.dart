@@ -169,7 +169,6 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                   runSpacing: 8,
                   children: _activityIcons.entries.map((entry) {
                     final isSelected = selectedType == entry.key;
-                    final color = isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300;
                     return ChoiceChip(
                       avatar: Icon(entry.value, size: 16, color: isSelected ? Colors.white : Colors.grey.shade600),
                       label: Text(entry.key[0].toUpperCase() + entry.key.substring(1).replaceAll('_', ' ')),

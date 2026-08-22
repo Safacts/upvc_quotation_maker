@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:upvc_quotation_maker/app_state.dart';
-import 'package:upvc_quotation_maker/dashboard_screen.dart';
-import 'package:upvc_quotation_maker/config/client_config.dart';
 import 'package:upvc_quotation_maker/supabase_config.dart';
 import 'test_helpers.dart';
 

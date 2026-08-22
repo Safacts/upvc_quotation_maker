@@ -22,7 +22,6 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _isLoading = true;
   List<QuotationData> _quotations = [];
-  Map<String, List<MeasuredItem>> _measuredItemsMap = {};
 
   @override
   void initState() {
@@ -74,7 +73,6 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       }
 
       setState(() {
-        _measuredItemsMap = map;
         _isLoading = false;
       });
     } catch (e) {

@@ -38,10 +38,8 @@ void main() async {
   }
 
   final appState = AppState();
-  if (initialConfig != null) {
-    SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
-    appState.applyClientConfig(initialConfig);
-  }
+  SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
+  appState.applyClientConfig(initialConfig);
 
   runApp(
     ChangeNotifierProvider.value(

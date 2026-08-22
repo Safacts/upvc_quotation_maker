@@ -100,24 +100,27 @@ class _PartiesScreenState extends State<PartiesScreen> {
         Uri.parse('$_base/api/console/parties').replace(queryParameters: q),
         headers: await _headers(),
       );
-      if (r.statusCode < 200 || r.statusCode >= 300)
+      if (r.statusCode < 200 || r.statusCode >= 300) {
         throw Exception(r.statusCode);
+      }
       final body = jsonDecode(r.body) as Map<String, dynamic>;
       final rows = (body['rows'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(Party.fromJson)
           .toList();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _rows = rows;
           _loading = false;
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loading = false;
           _error = 'Could not load parties. Check your connection.';
         });
+      }
     }
   }
 
@@ -291,10 +294,11 @@ class _PartiesScreenState extends State<PartiesScreen> {
         _load();
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Could not save party')));
+      }
     }
   }
 

@@ -142,7 +142,7 @@ class _DispatchScreenState extends State<DispatchScreen> {
     String selectedOrderId = '';
     String selectedOrderNo = '';
     String selectedCustomer = '';
-    List<Map<String, dynamic>> _availableOrders = [];
+    List<Map<String, dynamic>> availableOrders = [];
 
     showModalBottomSheet(
       context: context,
@@ -153,7 +153,7 @@ class _DispatchScreenState extends State<DispatchScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           // Load available orders
-          if (_availableOrders.isEmpty) {
+          if (availableOrders.isEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
                 final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
@@ -164,7 +164,7 @@ class _DispatchScreenState extends State<DispatchScreen> {
                     .eq('status', 'production');
                 if (ctx.mounted) {
                   setModalState(() {
-                    _availableOrders = (response as List).cast<Map<String, dynamic>>();
+                    availableOrders = (response as List).cast<Map<String, dynamic>>();
                   });
                 }
               } catch (_) {}
@@ -190,17 +190,17 @@ class _DispatchScreenState extends State<DispatchScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: selectedOrderId.isNotEmpty ? selectedOrderId : null,
+                    initialValue: selectedOrderId.isNotEmpty ? selectedOrderId : null,
                     decoration: const InputDecoration(
                       labelText: 'Select Order *',
                       border: OutlineInputBorder(),
                     ),
-                    items: _availableOrders.map((o) => DropdownMenuItem(
+                    items: availableOrders.map((o) => DropdownMenuItem(
                       value: o['id'] as String,
                       child: Text('${o['order_no']} - ${o['customer_name']}', overflow: TextOverflow.ellipsis),
                     )).toList(),
                     onChanged: (val) {
-                      final order = _availableOrders.firstWhere((o) => o['id'] == val, orElse: () => {});
+                      final order = availableOrders.firstWhere((o) => o['id'] == val, orElse: () => {});
                       setModalState(() {
                         selectedOrderId = val ?? '';
                         selectedOrderNo = (order['order_no'] ?? '') as String;

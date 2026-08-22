@@ -1,4 +1,5 @@
 /// Web implementation of the browser-fragment helpers used by client_loader.
+library;
 import 'dart:html' as html;
 
 String? readSsoFragmentToken() {

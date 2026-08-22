@@ -160,7 +160,6 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     final text = await _shareMessage();
     await Clipboard.setData(ClipboardData(text: text));
 
-    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     final contactNo = widget.data.contactNo;
 
     // Unified: share PDF via OS share sheet.

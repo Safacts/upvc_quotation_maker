@@ -221,7 +221,7 @@ class _GlassWeightCalculatorState extends State<GlassWeightCalculator> {
 
                       // Thickness dropdown
                       DropdownButtonFormField<double>(
-                        value: _selectedThickness,
+                        initialValue: _selectedThickness,
                         decoration: InputDecoration(
                           labelText: 'Thickness (mm)',
                           prefixIcon: Icon(Icons.layers, color: primaryColor),
@@ -241,7 +241,7 @@ class _GlassWeightCalculatorState extends State<GlassWeightCalculator> {
 
                       // Glass type dropdown
                       DropdownButtonFormField<String>(
-                        value: _selectedGlassType,
+                        initialValue: _selectedGlassType,
                         decoration: InputDecoration(
                           labelText: 'Glass Type',
                           prefixIcon:

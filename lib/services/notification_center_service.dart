@@ -64,7 +64,7 @@ class NotificationCenterService {
     // Dispose existing channel if any
     await dispose();
 
-    final channelName = 'notifications:${_currentClientId}';
+    final channelName = 'notifications:$_currentClientId';
     _channel = SupabaseConfig.client.channel(channelName);
 
     _channel!
@@ -97,7 +97,6 @@ class NotificationCenterService {
   void _handleRealtimeInsert(PostgresChangePayload payload) {
     try {
       final newRecord = payload.newRecord;
-      if (newRecord == null) return;
 
       final notification = AppNotification.fromMap(newRecord);
       
