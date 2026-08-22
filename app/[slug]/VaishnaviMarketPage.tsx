@@ -241,7 +241,7 @@ export default function VaishnaviMarketPage({ client, slug }: Props) {
             </div>
 
             <div className="vn-product-card">
-              <div className="vn-product-img"><img src="/vaishnavi/images/prod-casement.jpg" alt="Villa windows" /></div>
+              <div className="vn-product-img"><img src="/vaishnavi/images/prod-villa.jpg" alt="Villa security windows with grill and mesh" /></div>
               <div className="vn-product-body">
                 <span className="vn-product-tag">Complete Security</span>
                 <h3>Villa Windows — Grill + Mesh</h3>
