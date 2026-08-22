@@ -59,7 +59,8 @@ jobs:
 
       - name: Patch Android App Label
         run: |
-          sed -i 's/android:label="[^"]*"/android:label="${{ steps.vars.outputs.app_name }}"/g' android/app/src/main/AndroidManifest.xml
+          ESCAPED_NAME=$(printf '%s' "${{ steps.vars.outputs.app_name }}" | sed -e 's/[&/\]/\\&/g')
+          sed -i "s|android:label=\"[^\"]*\"|android:label=\"${ESCAPED_NAME}\"|g" android/app/src/main/AndroidManifest.xml
 
       - name: Create dummy .env
         run: touch .env
