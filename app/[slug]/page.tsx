@@ -13,6 +13,29 @@ const VENKATESHWARA_SLUG = "venkateshwara";
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
 const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLUG, "index.html");
 
+// Only these config keys may reach the browser on PUBLIC market pages.
+// The full row (bank details, admin emails, trial state, updater fields,
+// Supabase keys) must never be serialized into the RSC payload.
+const MARKET_PUBLIC_CONFIG_KEYS = [
+  "appName", "companyName", "companyAddress", "companyEmail", "companyContact",
+  "companyProprietor", "logoUrl", "invoiceTopLogoUrl", "primaryColor", "accentColor",
+  "landingHeroTitle", "landingHeroSubtitle", "landingAboutTitle", "landingAboutText",
+  "landingServices", "landingGallery", "landingTestimonials", "landingMapUrl",
+  "landingCTA", "landingFooter", "seoTitle", "seoDescription", "seoKeywords",
+  "appDownloadUrl", "defaultGstPercentage", "termsAndConditions",
+];
+
+type ClientRow = NonNullable<ReturnType<typeof findClientBySlug>>;
+
+function toPublicClient(row: ClientRow): ClientRow {
+  const cfg = (row.config || {}) as Record<string, unknown>;
+  const safe: Record<string, unknown> = {};
+  for (const k of MARKET_PUBLIC_CONFIG_KEYS) {
+    if (cfg[k] !== undefined && cfg[k] !== null) safe[k] = cfg[k];
+  }
+  return { ...row, config: safe } as ClientRow;
+}
+
 function readStaticHtml(path: string): string | null {
   try {
     return readFileSync(path, "utf8");
@@ -71,8 +94,9 @@ export default async function MarketPageRoute({
 }) {
   const { slug } = await params;
   const rows = await getCachedClients();
-  const client = findClientBySlug(rows, slug);
-  if (!client) notFound();
+  const found = findClientBySlug(rows, slug);
+  if (!found) notFound();
+  const client = toPublicClient(found);
 
   if (client.id === KPR_SLUG) {
     if (slug !== KPR_SLUG) redirect(`/${KPR_SLUG}/`);
