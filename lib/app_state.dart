@@ -7,6 +7,7 @@ import 'services/feature_flag_service.dart';
 import 'services/white_label_service.dart';
 import 'favicon_service.dart';
 import 'utils/http_client.dart';
+import 'utils/session_hash.dart';
 
 /// Element density options for UI customization.
 enum ElementDensity { compact, comfortable, spacious }
@@ -361,11 +362,11 @@ class AppState extends ChangeNotifier {
         ? '/api/save_client'
         : 'https://app.vitharn.com/api/save_client';
     try {
-      // CRITICAL FIX: Include admin_password_hash for save_client authentication.
-      // For web: hash comes from login/session response stored in secure storage.
-      // For native (APK): hash comes from client config (local password verification).
-      final prefs = await SharedPreferences.getInstance();
-      final storedHash = prefs.getString('session_password_hash') ?? '';
+      // admin_password_hash authenticates save_client. Login stores the hash
+      // in FlutterSecureStorage on native (SharedPreferences on web), so read
+      // through the shared helper — a prefs-only read returns null after
+      // every successful native login and the server 403s.
+      final storedHash = await readSessionPasswordHash();
       final passwordHash = storedHash.isNotEmpty ? storedHash : cfg.portalPasswordHash;
       
       final Map<String, dynamic> body = {

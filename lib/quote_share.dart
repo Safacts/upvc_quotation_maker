@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/session_hash.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'config/client_config.dart';
@@ -91,13 +92,8 @@ class QuoteShare {
   /// `/api/portal_auth` at login, fall back to the one baked into the client
   /// config (the native/APK login path verifies against exactly that value).
   static Future<String> passwordHash(ClientConfig cfg) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString('session_password_hash') ?? '';
-      if (stored.isNotEmpty) return stored;
-    } catch (_) {
-      // SharedPreferences unavailable — fall through to the config hash.
-    }
+    final stored = await readSessionPasswordHash();
+    if (stored.isNotEmpty) return stored;
     return cfg.portalPasswordHash;
   }
 
