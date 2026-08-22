@@ -358,9 +358,12 @@ class _QuotationScreenState extends State<QuotationScreen> {
       if (data.id == null && !_hasLineItems()) {
         final existingIds = ((await SupabaseConfig.client
                     .from('quotations')
-                    .select('id')
+                    .select('id, customer_name')
                     .eq('client_id', clientId)) as List)
-            .map((row) => row['id'].toString())
+            .map((row) => {
+                  'id': row['id'].toString(),
+                  'name': (row['customer_name'] ?? '') as String,
+                })
             .toSet();
         if (existingIds.isNotEmpty) {
           final measuredIds = ((await SupabaseConfig.client
@@ -375,11 +378,18 @@ class _QuotationScreenState extends State<QuotationScreen> {
                       .eq('client_id', clientId)) as List)
               .map((row) => row['quotation_id'].toString())
               .toSet();
-          final blankId = existingIds.firstWhere(
-            (id) => !measuredIds.contains(id) && !unmeasuredIds.contains(id),
-            orElse: () => '',
-          );
-          if (blankId.isNotEmpty) {
+          // Only adopt rows that are TRULY blank: no items AND no customer
+          // name. Adoption used to grab ANY itemless row — after a blank-draft
+          // cleanup it started overwriting real customer records.
+          final blankId = existingIds
+              .firstWhere(
+                (row) =>
+                    !measuredIds.contains(row['id']) &&
+                    !unmeasuredIds.contains(row['id']) &&
+                    row['name']!.trim().isEmpty,
+                orElse: () => {'id': '', 'name': ''},
+              )['id'];
+          if (blankId!.isNotEmpty) {
             // Adopt the blank draft so customer fields are persisted there.
             data.id = blankId;
           }
