@@ -728,6 +728,7 @@
   .vn-hero h2 { font-size: 36px; }
   .vn-nav { display: none; }
   .vn-strip { display: none; } /* promo ribbon = scam-signal on mobile */
+  .vn-header-cta { display: none; } /* header CTA crowds the brand lockup on small screens */
   .vn-products-grid, .vn-why-grid, .vn-process-row, .vn-footer-grid { grid-template-columns: 1fr; }
   .vn-calc-types, .vn-slider-row, .vn-select-row { grid-template-columns: 1fr; }
   .vn-section { padding: 64px 0; }

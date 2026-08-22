@@ -2,7 +2,6 @@
 
 import "./vaishnavi.css";
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import {
   Shield,
   VolumeX,
@@ -137,7 +136,7 @@ export default function VaishnaviMarketPage({ client, slug }: Props) {
       <section id="hero" className="vn-hero">
         <div className="vn-wrap">
           <div className="vn-hero-grid">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <div>
               <div className="vn-hero-eyebrow">Hyderabad UPVC Manufacturer</div>
               <h2>For better view,<br /><em>better life.</em></h2>
               <p className="vn-hero-lead">
@@ -156,14 +155,9 @@ export default function VaishnaviMarketPage({ client, slug }: Props) {
                 <div className="vn-metric"><b>12yr</b><span>In Hyderabad</span></div>
                 <div className="vn-metric"><b>10yr</b><span>Warranty</span></div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              className="vn-hero-photo"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.15 }}
-            >
+            <div className="vn-hero-photo">
               <img src="/vaishnavi/images/hero.jpg" alt="Vaishnavi UPVC sliding doors in a Hyderabad villa" />
               <div className="vn-hero-photo-badge">
                 <div className="vn-hero-photo-badge-icon"><Shield size={20} /></div>
@@ -172,7 +166,7 @@ export default function VaishnaviMarketPage({ client, slug }: Props) {
                   <p>No middlemen, no markups</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </section>
