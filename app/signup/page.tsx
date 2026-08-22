@@ -49,6 +49,7 @@ export default function SignupPage() {
 
   const dataRef = useRef({ name: "", phone: "", config: { ...EMPTY_CONFIG } });
   const saveTimerRef = useRef<any>(null);
+  const dirtySinceRef = useRef<number | null>(null);
 
   async function fetchSignup() {
     try {
@@ -89,6 +90,44 @@ export default function SignupPage() {
     };
   }, []);
 
+  // Zero-loss persistence: if the tab is closed, hidden, or navigated away
+  // while edits are pending, push them with sendBeacon (survives unload).
+  useEffect(() => {
+    function flushNow() {
+      if (dirtySinceRef.current === null) return;
+      dirtySinceRef.current = null;
+      try {
+        const payload = JSON.stringify({
+          mode: "save",
+          name: dataRef.current.name,
+          phone: dataRef.current.phone,
+          config: dataRef.current.config,
+        });
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon("/api/signup", blob);
+      } catch {
+        // best-effort only — page is going away
+      }
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") {
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current);
+          saveTimerRef.current = null;
+        }
+        if (dirtySinceRef.current !== null) {
+          doSave();
+        }
+      }
+    }
+    window.addEventListener("beforeunload", flushNow);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", flushNow);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
   function updateField(key: string, value: string) {
     setConfig((prev) => {
       const next = { ...prev, [key]: value } as typeof EMPTY_CONFIG;
@@ -102,6 +141,13 @@ export default function SignupPage() {
 
   function scheduleSave() {
     setSaveState("saving");
+    const now = Date.now();
+    if (!dirtySinceRef.current) dirtySinceRef.current = now;
+    // Max-wait: a user typing continuously never waits more than ~2.5s.
+    if (now - dirtySinceRef.current >= 2500) {
+      doSave();
+      return;
+    }
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       doSave();
@@ -109,7 +155,11 @@ export default function SignupPage() {
   }
 
   async function doSave() {
-    saveTimerRef.current = null;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    dirtySinceRef.current = null;
     try {
       const { name, phone, config: cfg } = dataRef.current;
       const res = await fetch("/api/signup", {
@@ -166,6 +216,16 @@ export default function SignupPage() {
 
   async function handleLogout() {
     setLogoutLoading(true);
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    try {
+      await doSave();
+    } catch {
+      // never block sign-out on a save failure
+    }
+    dirtySinceRef.current = null;
     try {
       await fetch("/api/signup", {
         method: "POST",
