@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Download,
   Factory,
+  LogIn,
   MessageCircle,
   ShieldCheck,
   Sparkles,
@@ -32,8 +33,13 @@ const quarters = [
     items: [
       {
         icon: ShieldCheck,
-        title: "GST compliance guarantee",
-        desc: "Every tax invoice now guarantees CGST + SGST = IGST to the last paisa. Auto-detects same-state vs inter-state, applies the correct IGST/CGST/SGST split, and prints your bank and UPI details right on the invoice.",
+        title: "A brand you can trust — everywhere",
+        desc: "Every email, quotation, and invoice now carries the Vitharn identity: your logo header, premium rust-and-ink design matching our portal, professional copy. From the first welcome mail to the GST invoice, everything looks like one genuine company.",
+      },
+      {
+        icon: LogIn,
+        title: "One login for your business",
+        desc: "All UPVC logins now live at /upvc/login — one clean, fast sign-in for your team, your customers, and your portal. No confusion about where to go; bookmark it once and you're in.",
       },
       {
         icon: Factory,
