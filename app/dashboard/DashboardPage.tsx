@@ -118,7 +118,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (localStorage.getItem("portal_session") !== "active") {
-      window.location.href = "/login";
+      window.location.href = "/upvc/login";
       return;
     }
     loadQuotations();
@@ -231,7 +231,7 @@ export default function DashboardPage() {
     localStorage.removeItem("portal_auth");
     localStorage.removeItem("portal_auth_hash");
     localStorage.removeItem("portal_app_slug");
-    window.location.href = "/login";
+    window.location.href = "/upvc/login";
   }
 
   function exportTableToCSV() {

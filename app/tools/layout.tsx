@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import "./tools.css";
 
 export const metadata: Metadata = {
-  title: "Free Tools Hub — uPVC, Glass, GST & More | Vitharn ERP",
+  title: "Free Tools Hub â€” uPVC, Glass, GST & More | Vitharn ERP",
   description:
     "Free online tools for UPVC fabricators, glass dealers, and Indian businesses: uPVC window price calculator, glass weight calculator, GST calculator, RF-SF converter, and UPI QR generator. No signup needed.",
   keywords: [
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     "UPVC fabricator tools",
   ].join(", "),
   openGraph: {
-    title: "Free Tools Hub — uPVC, Glass, GST & More | Vitharn ERP",
+    title: "Free Tools Hub â€” uPVC, Glass, GST & More | Vitharn ERP",
     description:
       "Free online calculators for UPVC fabricators and Indian businesses. No signup needed.",
     type: "website",
@@ -63,7 +63,7 @@ export default async function ToolsLayout({
             <Link href="/tools/upvc-calculator">uPVC</Link>
             <Link href="/tools/gst-calculator">GST</Link>
             <Link href="/tools/upi-qr">UPI QR</Link>
-          <Link href="/upvc/pricing" className="btn-primary">Get ERP →</Link>
+          <Link href="/upvc/pricing" className="btn-primary">Get ERP â†’</Link>
           </nav>
 
           <button
@@ -83,7 +83,7 @@ export default async function ToolsLayout({
           <Link href="/tools/gst-calculator">GST Calculator</Link>
           <Link href="/tools/rf-sf-converter">RF-SF Converter</Link>
           <Link href="/tools/upi-qr">UPI QR Generator</Link>
-          <Link href="/upvc/pricing">Get Vitharn ERP →</Link>
+          <Link href="/upvc/pricing">Get Vitharn ERP â†’</Link>
         </div>
 
         <main id="tools-main" className="tools-main">
@@ -97,11 +97,11 @@ export default async function ToolsLayout({
             <Link href="/upvc/pricing">Pricing</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
-            <Link href="/login">Portal Login</Link>
+            <Link href="/upvc/login">Portal Login</Link>
           </div>
-          <p>© 2026 Vitharn ERP Services. Free tools for Indian businesses.</p>
+          <p>Â© 2026 Vitharn ERP Services. Free tools for Indian businesses.</p>
           <p className="branding">
-            Built with ❤️ by <Link href="/">Vitharn ERP</Link> — ₹10,000 one-time. No monthly fees.
+            Built with â¤ï¸ by <Link href="/">Vitharn ERP</Link> â€” â‚¹10,000 one-time. No monthly fees.
           </p>
         </footer>
 

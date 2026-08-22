@@ -4,7 +4,7 @@ config({ path: ".env" });
 import { emailShell, ep, epHtml, efactBox, ebutton, echecklist, ecallout } from "../src/lib/email-template";
 import { sendMail } from "../src/lib/mail";
 
-const TO = "kongaaadisheshu@gmail.com";
+const TO = process.argv[2] || "kongaaadisheshu@gmail.com";
 
 const samples: Array<{ file: string; subject: string; html: string }> = [
   {

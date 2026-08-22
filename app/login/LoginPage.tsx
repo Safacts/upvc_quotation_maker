@@ -291,63 +291,95 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-container">
-      <img
-        className="logo"
-        src="/logo.png"
-        onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
-        alt="Vitharn UPVC Quotation Maker"
-      />
-      <h2>Welcome Back</h2>
-      <p className="subtitle">Sign in to the Vitharn UPVC Quotation Maker Portal</p>
+    <div className="login-wrap">
+      {/* ── LEFT: Brand panel ── */}
+      <div className="login-brand">
+        <div className="login-brand-inner">
+          <div className="login-brand-logo">
+            <img
+              src="/logo.png"
+              onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/100"; }}
+              alt="Vitharn ERP"
+            />
+            <span>Vitharn <em>ERP</em></span>
+          </div>
+          <h2>The platform<br /><span>control room.</span></h2>
+          <p>
+            Manage client accounts, billing, deployments and support —
+            the internal Vitharn ERP Services console.
+          </p>
+          <ul className="login-brand-features">
+            <li>Client &amp; account management</li>
+            <li>Billing, invoices &amp; payments</li>
+            <li>Platform-wide analytics</li>
+            <li>White-label &amp; tier controls</li>
+            <li>SSO into any client workspace</li>
+          </ul>
+        </div>
+      </div>
 
-      <div className="divider">Continue with</div>
-      <div className="g-signin-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-        <div ref={googleDivRef} id="gSignInDiv" style={{ opacity: loginLoading ? 0.5 : 1, pointerEvents: loginLoading ? 'none' : 'auto' }} />
-        {loginLoading && (
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px', borderColor: 'var(--primary)', borderTopColor: 'transparent' }} />
+      {/* ── RIGHT: Login form ── */}
+      <div className="login-container">
+        <div className="login-form-header">
+          <h2>Welcome back</h2>
+          <p>Sign in to the Vitharn ERP Console</p>
+        </div>
+
+        <div className="g-signin-wrap" style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+          <div ref={googleDivRef} id="gSignInDiv" style={{ opacity: loginLoading ? 0.5 : 1, pointerEvents: loginLoading ? 'none' : 'auto' }} />
+          {loginLoading && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="spinner" style={{ width: '24px', height: '24px', borderWidth: '3px', borderColor: 'var(--rust)', borderTopColor: 'transparent' }} />
+            </div>
+          )}
+        </div>
+
+        <div className="divider">or sign in with email</div>
+
+        <div className="input-group">
+          <label htmlFor="email">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="vitarn.dev@gmail.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="input-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
+          />
+        </div>
+
+        {error && (
+          <div id="errorBox" className="error-msg" style={{ color: errorColor, display: "block" }}>
+            {error}
           </div>
         )}
-      </div>
-      <div className="divider">or</div>
 
-      <div className="input-group">
-        <label htmlFor="email">Email Address</label>
-        <input
-          type="email"
-          id="email"
-          placeholder="your@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
+        <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
+          {loginLoading && <span className="spinner" id="loginSpinner" />}
+          <span id="loginText">{loginLoading ? "Signing in..." : "Login"}</span>
+        </button>
+        <button className="forgot-link" onClick={() => triggerForgotPassword()}>
+          Forgot Password?
+        </button>
 
-      <div className="input-group">
-        <label htmlFor="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
-        />
-      </div>
-
-      {error && (
-        <div id="errorBox" className="error-msg" style={{ color: errorColor, display: "block" }}>
-          {error}
+        <div className="login-privacy-note">
+          By signing in, you agree to our{" "}
+          <a href="/terms">Terms of Service</a> and{" "}
+          <a href="/privacy">Privacy Policy</a>.
+          We use Google Sign-In only for authentication — we never access your Google account data.
         </div>
-      )}
-
-      <button onClick={handleLogin} id="loginBtn" disabled={loginLoading}>
-        {loginLoading && <span className="spinner" id="loginSpinner" />}
-        <span id="loginText">{loginLoading ? "Signing in..." : "Login"}</span>
-      </button>
-      <button className="forgot-link" onClick={() => triggerForgotPassword()}>
-        Forgot Password?
-      </button>
+      </div>
 
       {otpModalOpen && (
         <div className="modal" id="otpModal" style={{ display: "flex" }}>

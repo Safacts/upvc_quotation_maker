@@ -57,12 +57,12 @@ export default function SignupPage() {
         body: JSON.stringify({ mode: "get" }),
       });
       if (res.status === 401 || res.status === 403 || res.status === 404) {
-        window.location.href = "/login";
+        window.location.href = "/upvc/login";
         return;
       }
       const data = await res.json();
       if (!res.ok) {
-        window.location.href = "/login";
+        window.location.href = "/upvc/login";
         return;
       }
       setEmail(String(data.email || ""));
@@ -75,7 +75,7 @@ export default function SignupPage() {
         config: cfg,
       };
     } catch {
-      window.location.href = "/login";
+      window.location.href = "/upvc/login";
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function SignupPage() {
     localStorage.removeItem("portal_role");
     localStorage.removeItem("portal_client_id");
     localStorage.removeItem("portal_auth");
-    window.location.href = "/login";
+    window.location.href = "/upvc/login";
   }
 
   if (loading) {

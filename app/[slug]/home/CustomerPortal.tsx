@@ -27,7 +27,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   const [infoFields, setInfoFields] = useState<InfoField[]>([]);
   const [marketUrl, setMarketUrl] = useState("");
 
-  // The Flutter quotation app is NEVER iframed — it is opened in a new tab so it
+  // The Flutter quotation app is NEVER iframed â€” it is opened in a new tab so it
   // gets its own full-screen browsing context (fixes PDF download / share / file
   // picker breakage that sandboxed iframes cause). Same-origin, so the HttpOnly
   // portal_auth cookie rides along and `auto_login=true` signs the user straight in.
@@ -99,7 +99,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
     const clientId = localStorage.getItem("portal_client_id");
 
     if (session !== "active" || role !== "customer" || !clientId) {
-      router.replace("/login");
+      router.replace("/upvc/login");
       return;
     }
 
@@ -116,7 +116,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
         if (cancelled) return;
         if (!authRes.ok || authData.role !== "customer" || authData.client_id !== clientId) {
           localStorage.clear();
-          router.replace("/login");
+          router.replace("/upvc/login");
           return;
         }
 
@@ -198,7 +198,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode: "logout" }),
     });
-    router.replace("/login");
+    router.replace("/upvc/login");
   }, [router]);
   
   const handleSettingsSave = async (e: React.FormEvent) => {
@@ -222,7 +222,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   };
 
   const handleLiteMode = async () => {
-    // Already running as an installed app → jump straight to the app (same window,
+    // Already running as an installed app â†’ jump straight to the app (same window,
     // a standalone PWA has no tab strip to open into).
     if (isStandalone) {
       window.location.href = appUrl;
@@ -241,7 +241,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
       }
       return;
     }
-    // iOS Safari: no install prompt API → show "Add to Home Screen" steps.
+    // iOS Safari: no install prompt API â†’ show "Add to Home Screen" steps.
     if (isIOS) {
       setShowA2hsModal(true);
       return;
@@ -397,7 +397,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             Settings
           </button>
         </nav>
-        {/* Desktop Console — prominent shortcut to the Tally-style desktop workspace */}
+        {/* Desktop Console â€” prominent shortcut to the Tally-style desktop workspace */}
         <div style={{ padding: '0 12px', marginTop: '8px' }}>
           <Link
             href={`/${slug}/console`}
@@ -652,7 +652,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }}>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
-                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! 👋
+                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! ðŸ‘‹
                 </h2>
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
                   Here is your real-time business summary. Keep closing orders!
@@ -699,7 +699,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
                 <div className="stat-card">
                   <div className="label">Total Work Quoted</div>
-                  <div className="value" style={{ fontSize: '24px' }}>₹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div className="value" style={{ fontSize: '24px' }}>â‚¹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                   {stats.monthChangePercent !== 0 && (
                     <div style={{ 
                       fontSize: '13px', 
@@ -710,14 +710,14 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      {stats.monthChangePercent >= 0 ? '↑' : '↓'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
+                      {stats.monthChangePercent >= 0 ? 'â†‘' : 'â†“'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
                     </div>
                   )}
                 </div>
 
                 <div className="stat-card">
                   <div className="label">Confirmed Orders (Revenue)</div>
-                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>₹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>â‚¹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '6px' }}>
                     From {stats.wonCount} closed deal{stats.wonCount !== 1 ? 's' : ''}
                   </div>
@@ -766,8 +766,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       {[
                         { label: 'Draft', name: 'Being Prepared', color: '#94a3b8' },
                         { label: 'Sent', name: 'Delivered to Client', color: '#60a5fa' },
-                        { label: 'Won', name: 'Order Confirmed ✅', color: '#22c55e' },
-                        { label: 'Lost', name: 'Did Not Close ❌', color: '#f87171' }
+                        { label: 'Won', name: 'Order Confirmed âœ…', color: '#22c55e' },
+                        { label: 'Lost', name: 'Did Not Close âŒ', color: '#f87171' }
                       ].map(s => (
                         <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -821,7 +821,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
               <div className="info-card" style={{ marginBottom: '24px', borderLeft: '4px solid #f59e0b' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '20px' }}>🔔</span>
+                    <span style={{ fontSize: '20px' }}>ðŸ””</span>
                     <h3 style={{ margin: 0, padding: 0, border: 'none' }}>Quotes Needing Follow-up ({stats.pendingFollowUps.length})</h3>
                   </div>
                   <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
@@ -843,7 +843,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       <div>
                         <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.customer_name} ({item.quote_no})</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
-                          Value: ₹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Date: {new Date(item.created_at).toLocaleDateString()}
+                          Value: â‚¹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} â€¢ Date: {new Date(item.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -860,7 +860,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                               fontWeight: '600' 
                             }}
                           >
-                            📞 Call Client
+                            ðŸ“ž Call Client
                           </a>
                         )}
                         <a
@@ -902,7 +902,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
               {/* Account Status Footer Note */}
               <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', display: 'flex', gap: '24px', fontSize: '13px', color: 'var(--text-light)' }}>
-                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active ✅' : 'Inactive'}</strong></div>
+                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active âœ…' : 'Inactive'}</strong></div>
                 <div>Plan Expiration: <strong>{client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'Lifetime Unlimited'}</strong></div>
               </div>
             </div>
@@ -1034,7 +1034,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                            const updated = [...formData.supplierCompanies];
                            updated.splice(idx, 1);
                            setFormData({...formData, supplierCompanies: updated});
-                         }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>✕</button>
+                         }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>âœ•</button>
                        </div>
                      ))}
                    </div>
@@ -1134,7 +1134,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, measuredPresets: newPresets});
                               }}
                               style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                            >✕ Remove</button>
+                            >âœ• Remove</button>
                           </div>
                           
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -1184,7 +1184,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, measuredPresets: newPresets});
                               }}
                               style={{ width: '90px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
-                            <input type="number" placeholder="Rate (₹/sqft)" value={preset.rate || ''}
+                            <input type="number" placeholder="Rate (â‚¹/sqft)" value={preset.rate || ''}
                               onChange={(e) => {
                                 const newPresets = [...formData.measuredPresets];
                                 newPresets[idx].rate = parseFloat(e.target.value) || 0;
@@ -1223,7 +1223,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, unmeasuredPresets: newPresets});
                               }}
                               style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                            >✕ Remove</button>
+                            >âœ• Remove</button>
                           </div>
                           
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -1252,7 +1252,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                             style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
                             
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <input type="number" placeholder="Rate (₹/unit)" value={preset.rate || ''}
+                            <input type="number" placeholder="Rate (â‚¹/unit)" value={preset.rate || ''}
                               onChange={(e) => {
                                 const newPresets = [...formData.unmeasuredPresets];
                                 newPresets[idx].rate = parseFloat(e.target.value) || 0;
@@ -1287,7 +1287,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           </div>
 
           {/* Market Page preview iframe. The Quotation App is deliberately NOT
-              iframed — it opens in a new tab (see `openApp` / `appUrl`). */}
+              iframed â€” it opens in a new tab (see `openApp` / `appUrl`). */}
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
           </div>
@@ -1314,7 +1314,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   <button
                     onClick={() => setShowA2hsModal(false)}
                     style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700', color: '#475569' }}
-                  >✕</button>
+                  >âœ•</button>
                 </div>
                 <ol style={{ margin: '0 0 12px', paddingLeft: '20px', color: '#334155', fontSize: '14px', lineHeight: 1.8 }}>
                   <li>Tap the <b>Share</b> icon in the Safari toolbar.</li>

@@ -123,8 +123,8 @@ export async function sendWelcomeEmail(opts: {
   tempPassword: string;
 }): Promise<void> {
   const { cfg, clientId, email, tempPassword } = opts;
-  const loginUrl = "https://app.vitharn.com/login";
-  const resetUrl = `https://app.vitharn.com/login?action=reset&email=${encodeURIComponent(email)}`;
+  const loginUrl = "https://app.vitharn.com/upvc/login";
+  const resetUrl = `https://app.vitharn.com/upvc/login?action=reset&email=${encodeURIComponent(email)}`;
   const company = cfg.companyName || clientId;
   const appName = cfg.appName || "UPVC Quotation Maker";
   const marketUrl = "https://app.vitharn.com/upvc/" + slugify(company);
@@ -278,7 +278,7 @@ export async function sendSignupConfirmation(opts: {
 }): Promise<void> {
   const { email, name, companyName, submittedAt } = opts;
   const label = companyName || name || email;
-  const loginUrl = "https://app.vitharn.com/login";
+  const loginUrl = "https://app.vitharn.com/upvc/login";
   const submittedText = submittedAt
     ? new Date(submittedAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
     : "";
@@ -437,7 +437,7 @@ export async function sendThankYouEmail(opts: {
     clientName,
     clientCompany,
     loginEmail,
-    loginUrl = "https://app.vitharn.com/login",
+    loginUrl = "https://app.vitharn.com/upvc/login",
     tempPassword,
     marketPageUrl,
     appName = "UPVC Quotation Maker",

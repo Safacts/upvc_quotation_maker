@@ -124,7 +124,7 @@ export async function sendOnboardingEmail(opts: {
   loginUrl?: string;
 }): Promise<MailResult> {
   const { to, companyName, contactName, tempPassword, trialEndsAt } = opts;
-  const loginUrl = opts.loginUrl || `${BRAND.site}/login`;
+  const loginUrl = opts.loginUrl || `${BRAND.site}/upvc/login`;
   const greeting = contactName || companyName;
 
   const body = `
