@@ -136,6 +136,34 @@ export async function POST(request: NextRequest) {
       if (body.name !== undefined) patchBody.name = body.name;
       if (body.phone !== undefined) patchBody.phone = body.phone;
       await supaPatch("signup_requests", { email: "eq." + sessionEmail }, patchBody);
+
+      // Lead-intel: the moment a pending lead enters a contact number, alert the
+      // team immediately — even if they never click "Submit for Review". Fires
+      // at most once per signup row (guarded via config flag).
+      const newPhone = String(body.phone || "").trim();
+      const hadPhone = String((row as any).phone || "").trim() !== "";
+      const alreadyAlerted = Boolean(merged.contactCapturedAlertSent);
+      const rowStatus = String(row.status || "pending");
+      if (newPhone && !hadPhone && !alreadyAlerted && rowStatus === "pending") {
+        try {
+          await supaPatch("signup_requests", { email: "eq." + sessionEmail }, {
+            config: { ...merged, contactCapturedAlertSent: true },
+            updated_at: new Date().toISOString(),
+          });
+        } catch {
+          // flag write is best-effort; still try to send the alert below
+        }
+        try {
+          await sendSignupNotification("contact", {
+            email: row.email,
+            name: body.name !== undefined ? String(body.name) : row.name,
+            phone: newPhone,
+            config: merged,
+          });
+        } catch {
+          // mail failure must not fail the save
+        }
+      }
       return json({ saved: true });
     }
 
@@ -145,6 +173,19 @@ export async function POST(request: NextRequest) {
       if (status === "submitted" || status === "approved") {
         return json({ submitted: false, status });
       }
+      const effectiveName = String(row.name || "").trim();
+      const effectivePhone = String(
+        row.phone || (row.config || {}).companyContact || "",
+      ).trim();
+      if (!effectiveName || !effectivePhone) {
+        return json(
+          {
+            error:
+              "Please fill Owner Name and Contact Number before submitting for review.",
+          },
+          400,
+        );
+      }
       const submittedAt = new Date().toISOString();
       await supaPatch("signup_requests", { email: "eq." + sessionEmail }, {
         status: "submitted",
@@ -153,8 +194,8 @@ export async function POST(request: NextRequest) {
       try {
         await sendSignupNotification("submitted", {
           email: row.email,
-          name: row.name,
-          phone: row.phone,
+          name: effectiveName,
+          phone: effectivePhone,
           config: row.config || {},
           submittedAt,
         });
@@ -164,7 +205,7 @@ export async function POST(request: NextRequest) {
       try {
         await sendSignupConfirmation({
           email: row.email,
-          name: row.name,
+          name: effectiveName,
           companyName: (row.config || {}).companyName,
           submittedAt,
         });

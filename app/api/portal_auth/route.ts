@@ -4,6 +4,7 @@ import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supa
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { sha256 } from "@/lib/auth";
 import { sendSignupNotification } from "@/lib/mail";
+import { notifyNewClientSignup, isTelegramConfigured } from "@/lib/telegram";
 
 const GOOGLE_CLIENT_ID =
   "726482519803-od8lidratsv0du7jtaeopj29khmn6meb.apps.googleusercontent.com";
@@ -11,6 +12,27 @@ const GOOGLE_CLIENT_ID =
 const GOOGLE_JWKS = createRemoteJWKSet(
   new URL("https://www.googleapis.com/oauth2/v3/certs")
 );
+
+// Instant Telegram lead ping on first-time signup. Fire-and-forget — a slow
+// or failed Telegram call must never delay the auth response. Chat IDs come
+// from TELEGRAM_LEAD_CHAT_IDS (comma-separated); default = founder's chat.
+async function pingLeadChannels(opts: { email: string; method: string }): Promise<void> {
+  try {
+    if (!isTelegramConfigured()) return;
+    const raw = (process.env.TELEGRAM_LEAD_CHAT_IDS || "1295597987").trim();
+    const chatIds = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    await Promise.all(
+      chatIds.map((chatId) =>
+        notifyNewClientSignup({
+          chatId,
+          clientName: opts.email,
+          email: `${opts.email} (via ${opts.method} login)`,
+        }).catch(() => {}),
+      ),
+    );
+  } catch {
+  }
+}
 
 // Verifies a Google ID token (issued by the browser GSI or native plugin) and
 // returns the email it was issued to, or null when the signature/aud/iss/exp
@@ -280,6 +302,7 @@ export async function POST(request: NextRequest) {
         await sendSignupNotification("new", { email: googleEmail });
       } catch {
       }
+      void pingLeadChannels({ email: googleEmail, method: "Google" });
       await createSession({ role: "signup", email: googleEmail, signup_request_id: newSignupId });
       return json({ role: "signup", email: googleEmail, status: "pending", signup_request_id: newSignupId }, 200);
     }
@@ -370,6 +393,7 @@ export async function POST(request: NextRequest) {
         await sendSignupNotification("new", { email });
       } catch {
       }
+      void pingLeadChannels({ email, method: "email" });
       await createSession({ role: "signup", email, signup_request_id: newSignupId });
       return json({ role: "signup", email, status: "pending", signup_request_id: newSignupId }, 200);
     }

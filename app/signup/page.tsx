@@ -44,6 +44,7 @@ export default function SignupPage() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [logoutLoading, setLogoutLoading] = useState(false);
 
   const dataRef = useRef({ name: "", phone: "", config: { ...EMPTY_CONFIG } });
@@ -124,12 +125,24 @@ export default function SignupPage() {
   }
 
   async function handleSubmit() {
+    setSubmitError("");
+    const errors: Record<string, string> = {};
+    if (!config.companyName.trim()) errors.companyName = "Company name is required.";
+    if (!dataRef.current.name.trim()) errors.companyProprietor = "Owner name is required.";
+    const digits = dataRef.current.phone.replace(/\D/g, "");
+    if (!digits) {
+      errors.companyContact = "Contact number is required.";
+    } else if (digits.length < 10 || !/^[6-9]/.test(digits)) {
+      errors.companyContact = "Enter a valid 10-digit Indian mobile number.";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
       await doSave();
     }
-    setSubmitError("");
     setSubmitting(true);
     try {
       const res = await fetch("/api/signup", {
@@ -288,6 +301,11 @@ export default function SignupPage() {
                   value={config.companyName}
                   onChange={(e) => updateField("companyName", e.target.value)}
                 />
+                {fieldErrors.companyName && (
+                  <p style={{ color: "#C44A10", fontSize: "12.5px", margin: "6px 0 0 0", fontWeight: 600 }}>
+                    {fieldErrors.companyName}
+                  </p>
+                )}
               </div>
 
               <div className="signup-field">
@@ -301,19 +319,29 @@ export default function SignupPage() {
                   value={config.companyProprietor}
                   onChange={(e) => updateField("companyProprietor", e.target.value)}
                 />
+                {fieldErrors.companyProprietor && (
+                  <p style={{ color: "#C44A10", fontSize: "12.5px", margin: "6px 0 0 0", fontWeight: 600 }}>
+                    {fieldErrors.companyProprietor}
+                  </p>
+                )}
               </div>
 
               <div className="signup-field">
                 <label htmlFor="signupContact">
-                  Contact Number <span className="signup-req">*</span>
+                  Contact Number (WhatsApp) <span className="signup-req">*</span>
                 </label>
                 <input
                   id="signupContact"
                   type="tel"
-                  placeholder="e.g. 98765 43210"
+                  placeholder="e.g. 9876543210"
                   value={config.companyContact}
                   onChange={(e) => updateField("companyContact", e.target.value)}
                 />
+                {fieldErrors.companyContact && (
+                  <p style={{ color: "#C44A10", fontSize: "12.5px", margin: "6px 0 0 0", fontWeight: 600 }}>
+                    {fieldErrors.companyContact}
+                  </p>
+                )}
               </div>
 
               <div className="signup-field">

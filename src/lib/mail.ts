@@ -183,7 +183,7 @@ export async function sendOtpEmail(recipient: string, otp: string): Promise<void
 }
 
 export async function sendSignupNotification(
-  kind: "new" | "submitted",
+  kind: "new" | "submitted" | "contact",
   opts: {
     email: string;
     name?: string;
@@ -198,17 +198,23 @@ export async function sendSignupNotification(
   const subject =
     kind === "new"
       ? `New signup request: ${label}`
-      : `Signup profile submitted: ${label}`;
+      : kind === "contact"
+        ? `Lead contact captured: ${label}${phone ? ` — ${phone}` : ""}`
+        : `Signup profile submitted: ${label}`;
 
   const heading =
     kind === "new"
       ? "New Signup Request"
-      : "Signup Profile Submitted";
+      : kind === "contact"
+        ? "Contact Number Captured"
+        : "Signup Profile Submitted";
 
   const intro =
     kind === "new"
       ? "A new UPVC business has registered via login on the Vitharn UPVC Quotation Maker Portal. Their full profile auto-saves as they type, so check the admin panel and follow up."
-      : "A user has completed and submitted their company profile on the Vitharn UPVC Quotation Maker Portal and is awaiting review.";
+      : kind === "contact"
+        ? "This lead just entered their contact number in the signup form — you can call them right now, even before they finish submitting their profile."
+        : "A user has completed and submitted their company profile on the Vitharn UPVC Quotation Maker Portal and is awaiting review.";
 
   const configFields = ([
     ["Company Name", String(config.companyName ?? "")],
@@ -218,6 +224,13 @@ export async function sendSignupNotification(
     ["City", String(config.city ?? "")],
     ["Business Type", String(config.businessType ?? "")],
   ] as Array<[string, string]>).filter(([, value]) => value !== "");
+
+  const digits = String(phone || "").replace(/\D/g, "");
+  const waLink =
+    digits.length >= 10
+      ? `https://wa.me/${digits.length === 10 ? "91" : ""}${digits}`
+      : "";
+  const telLink = digits.length >= 10 ? `tel:+${digits.length === 10 ? "91" : ""}${digits}` : "";
 
   const detailRows = ([
     ["Name", name || ""],
@@ -230,19 +243,33 @@ export async function sendSignupNotification(
   const note =
     kind === "new"
       ? "Their full profile auto-saves as they type. Please check the admin panel and follow up with this user."
-      : "Please review this profile in the admin panel and create the client account when ready.";
+      : kind === "contact"
+        ? "Tap to call or WhatsApp them now — early follow-up wins these deals."
+        : "Please review this profile in the admin panel and create the client account when ready.";
 
   // Build a styled detail table using efactBox-style rows but as a full table for admin
   const t = EMAIL_TOKENS;
   const detailTable = detailRows
-    .map(
-      ([key, value]) => `
+    .map(([key, value]) => {
+      let cell = escapeHtml(value);
+      if (key === "Phone" && telLink) {
+        cell = `<a href="${telLink}" style="color:${t.rust};text-decoration:none;">${escapeHtml(value)}</a>`;
+      }
+      return `
       <tr>
         <td style="padding:10px 0;color:${t.textMuted};font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;padding-right:18px;">${escapeHtml(key)}</td>
-        <td style="padding:10px 0;color:${t.ink};font-size:13.5px;font-weight:700;text-align:right;">${escapeHtml(value)}</td>
-      </tr>`,
-    )
+        <td style="padding:10px 0;color:${t.ink};font-size:13.5px;font-weight:700;text-align:right;">${cell}</td>
+      </tr>`;
+    })
     .join("");
+
+  const quickActions =
+    telLink || waLink
+      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:22px auto;"><tr>
+          ${telLink ? `<td bgcolor="${t.rust}" style="border-radius:999px;"><a href="${telLink}" style="display:inline-block;padding:12px 28px;background:${t.rust};border-radius:999px;color:#ffffff;font-family:${t.font};font-size:14px;font-weight:700;text-decoration:none;">Call ${escapeHtml(phone || "")}</a></td>` : ""}
+          ${waLink ? `<td style="padding-left:12px;" bgcolor="#1FA855"><a href="${waLink}" style="display:inline-block;padding:12px 28px;background:#1FA855;border-radius:999px;color:#ffffff;font-family:${t.font};font-size:14px;font-weight:700;text-decoration:none;">WhatsApp Now</a></td>` : ""}
+        </tr></table>`
+      : "";
 
   const body = `
     ${ep(intro)}
@@ -251,6 +278,7 @@ export async function sendSignupNotification(
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:${t.font};">${detailTable}</table>
       </td></tr>
     </table>
+    ${quickActions}
     ${ep(note)}
   `;
 
