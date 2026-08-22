@@ -218,6 +218,12 @@ class UpdateCheckerService {
   Future<UpdateCheckResult>? _inFlightCheck;
   Future<bool>? _inFlightApply;
 
+  /// Signature of the stale result we last auto-applied on web. Prevents a
+  /// failed sync from looping check → apply → check forever: the same set of
+  /// pending updates is auto-pulled only once; if it fails the banner takes
+  /// over and the user applies manually.
+  String? _lastAutoAppliedSignature;
+
   /// The most recent result, used by the UI and by [hasPendingUpdates].
   UpdateCheckResult? _lastResult;
   UpdateCheckResult? get lastResult => _lastResult;
@@ -679,7 +685,25 @@ class UpdateCheckerService {
     if (!_resultsController.isClosed) {
       _resultsController.add(result);
     }
+    _maybeAutoApplyOnWeb(result);
     return result;
+  }
+
+  /// Web builds never need to nag: the browser always has full connectivity,
+  /// content applies in place in milliseconds, and a stale-content banner on
+  /// first load reads as "app broken". So the moment a check finds pending
+  /// content, pull it silently. Android keeps the manual banner (metered
+  /// data, offline-first flows).
+  void _maybeAutoApplyOnWeb(UpdateCheckResult result) {
+    if (!kIsWeb) return;
+    if (!result.hasUpdates) return;
+    if (result.signature == _lastAutoAppliedSignature) return;
+    _lastAutoAppliedSignature = result.signature;
+    debugPrint(
+      'UpdateCheckerService: auto-applying web content updates '
+      '(${result.summary})',
+    );
+    unawaited(applyUpdates(clientId: result.clientId));
   }
 
   void _setApplying(bool value) {
