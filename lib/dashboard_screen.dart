@@ -29,9 +29,10 @@ import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
 import 'services/sync_engine.dart';
 import 'widgets/offline_indicator.dart';
+import 'widgets/update_prompt.dart';
 import 'widgets/sync_status_widget.dart';
 import 'widgets/update_banner.dart';
-import 'services/smart_auto_update.dart';
+import 'services/auto_update_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
@@ -59,19 +60,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _checkForAppUpdate();
   }
 
-  /// Check for updates AFTER app loads — non-intrusive, smart.
-  /// No splash screen blocking. User gets a snackbar, not a dialog.
+  /// Check for updates AFTER app loads. AutoUpdateService compares the
+  /// client config's published versionCode against the INSTALLED package
+  /// version and, when newer, UpdatePrompt (mounted below) shows the
+  /// animated download + in-place install dialog.
   Future<void> _checkForAppUpdate() async {
     try {
       // Wait for app to fully load first
       await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-
-      final updateAvailable = await SmartAutoUpdate.instance.checkSilently();
-      if (updateAvailable && mounted) {
-        // Show non-intrusive snackbar (user can ignore)
-        SmartAutoUpdate.instance.showUpdateNotificationIfAvailable(context);
-      }
+      await AutoUpdateService.instance.checkNow();
     } catch (_) {
       // Silently fail — update check is optional
     }
@@ -817,6 +815,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             clientId: context.read<AppState>().clientConfig.clientId,
             onApplied: _fetchQuotations,
           ),
+          // APK in-app update dialog (animated download + install progress).
+          // Renders nothing unless AutoUpdateService emits an update event.
+          const UpdatePrompt(),
           // Trial expiry warning banner
           _buildTrialWarningBanner(context),
           Padding(
