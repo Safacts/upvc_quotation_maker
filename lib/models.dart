@@ -98,7 +98,7 @@ class QuotationData {
     return ("$words Only").toUpperCase();
   }
 
-  Map<String, dynamic> toMap({String? clientId}) {
+  Map<String, dynamic> toMap({String? clientId, bool includeStatus = true}) {
     return {
       if (id != null) 'id': id,
       'quote_no': quotationNo,
@@ -111,7 +111,7 @@ class QuotationData {
       'transport_cost': transport,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
-      'status': status.value,
+      if (includeStatus) 'status': status.value,
       'supplier_company': supplierCompany,
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };

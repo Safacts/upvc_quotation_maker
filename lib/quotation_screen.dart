@@ -395,7 +395,13 @@ class _QuotationScreenState extends State<QuotationScreen> {
           }
         }
       }
-      final quotationMap = data.toMap(clientId: clientId);
+      // Existing rows may have a lifecycle state that this client does not
+      // know about. Content autosave must never replay the default draft
+      // state (for example sent -> draft); only inserts establish draft.
+      final quotationMap = data.toMap(
+        clientId: clientId,
+        includeStatus: data.id == null,
+      );
       if (data.id == null) {
         final res = await SupabaseConfig.client.from('quotations').insert(quotationMap).select().single();
         data.id = res['id'];

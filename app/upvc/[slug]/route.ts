@@ -10,7 +10,7 @@ const VITHARN_ICON = "/app/icons/Icon-192.png";
 // Flutter's generated asset filenames are stable across rebuilds. Version the
 // bootstrap URL so an already-open PWA/service worker cannot keep serving the
 // previous main.dart.js after a critical client fix is deployed.
-const FLUTTER_ASSET_VERSION = "6ffcfa2";
+const FLUTTER_ASSET_VERSION = "sent-draft-fix-20260823";
 
 function esc(v: string): string {
   return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
