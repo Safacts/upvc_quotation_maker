@@ -602,7 +602,7 @@ CRITICAL INSTRUCTIONS:
         content: "FINAL ANSWER EVIDENCE GATE: Answer only from the tool results immediately above. Do not invent, estimate, fill gaps, or repeat a number that is not present in tool output. If the tool returned an error, partial sample, or missing field, say so plainly. Never claim a client is active, paid, healthy, converted, or incomplete unless the tool evidence explicitly supports that exact claim. Do not say a password is missing; credentials are intentionally not exposed. Separate exact facts, sampled/partial analysis, and inference.",
       });
       const secondResponse = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages,
       });
 
