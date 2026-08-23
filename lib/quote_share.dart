@@ -193,12 +193,21 @@ class QuoteShare {
         '?q=${Uri.encodeComponent(data.quotationNo)}';
   }
 
-  /// Builds the message the customer receives.
+  /// Builds the message the customer receives (format approved by Aadi,
+  /// 24-08-2026 — matches what KPR sends over WhatsApp today):
   ///
-  /// Deliberately plain text: WhatsApp renders no markup, and a bare URL on its
-  /// own line is what makes WhatsApp generate a tappable link preview. When
-  /// [quoteLink] is null we omit the link line entirely rather than ship a
-  /// dead one — the PDF still goes out through the share-sheet fallback.
+  ///   Hello <CUSTOMER>,
+  ///
+  ///   Please find attached the quotation <NO> from <COMPANY>.
+  ///
+  ///   Review & confirm online: <link>
+  ///
+  ///   We value your feedback! Please rate your service here: <review>
+  ///
+  /// Deliberately plain text: WhatsApp renders no markup, and inline URLs on
+  /// their own phrases still produce tappable previews. When [quoteLink] is
+  /// null we omit the confirm line entirely rather than ship a dead one —
+  /// the review line always stays, because it needs no token.
   static String buildMessage({
     required QuotationData data,
     required String companyName,
@@ -208,24 +217,17 @@ class QuoteShare {
     final b = StringBuffer()
       ..writeln('Hello ${data.customerName},')
       ..writeln()
-      ..writeln('Your quotation ${data.quotationNo} from $companyName is ready.')
-      ..writeln('Total: Rs. ${data.grandTotal.toStringAsFixed(2)}');
+      ..writeln(
+          'Please find attached the quotation ${data.quotationNo} from $companyName.');
 
     if (quoteLink != null) {
-      b
-        ..writeln()
-        ..writeln('View the full quotation, download the PDF and confirm here:')
-        ..writeln(quoteLink);
-    } else {
-      b
-        ..writeln()
-        ..writeln('Note: secure quotation link could not be created — please share the PDF directly.');
+      b..writeln()..writeln('Review & confirm online: $quoteLink');
     }
 
     b
       ..writeln()
-      ..writeln('We value your feedback — rate your experience here:')
-      ..writeln(reviewUrl);
+      ..writeln(
+          'We value your feedback! Please rate your service here: $reviewUrl');
 
     return b.toString().trimRight();
   }

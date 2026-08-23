@@ -72,10 +72,14 @@ function safeEqual(a: string, b: string): boolean {
 async function resolveCaller(
   body: Record<string, any> | null,
 ): Promise<{ clientId: string } | null> {
-  // (1) Web session cookie.
+  // (1) Web session cookie. Customers always carry their tenant; admin-role
+  // sessions are honoured ONLY when they carry a client_id (some admin flows
+  // do, some do not — those fall through to the credential paths below).
   const session = await getSession();
-  if (session && session.role === "customer" && session.client_id) {
-    return { clientId: String(session.client_id) };
+  const roleOk =
+    !!session && (session.role === "customer" || session.role === "admin");
+  if (roleOk && session!.client_id) {
+    return { clientId: String(session!.client_id) };
   }
 
   // (2) Flutter: client_id + password hash.
@@ -86,6 +90,30 @@ async function resolveCaller(
   const phash = String(body.admin_password_hash ?? body.password_hash ?? "").trim();
   if (!clientId || !phash) return null;
   const supabaseAdmin = getSupabaseAdmin();
+
+  // (2a) Platform-admin credential — SAME trust `/api/save_client` already
+  // extends to `admins` rows. ROOT CAUSE THIS FIXES (verified 24-08-2026):
+  // owners log into tenant apps with their own ADMIN account, so the hash
+  // stored at login (`session_password_hash`) is the ADMIN hash. This route
+  // only ever compared it against `clients.password_hash`, so every owner/
+  // admin share attempt 401'd and QuoteShare returned null — customers saw
+  // "secure quotation link could not be created" instead of the confirm link.
+  const adminEmail = String(body.admin_email ?? body.email ?? "")
+    .trim()
+    .toLowerCase();
+  if (adminEmail) {
+    const { data: admins } = await supabaseAdmin
+      .from("admins")
+      .select("email,password_hash")
+      .eq("email", adminEmail)
+      .limit(1);
+    const admin = Array.isArray(admins) ? admins[0] : null;
+    if (admin?.password_hash && safeEqual(String(admin.password_hash), phash)) {
+      return { clientId };
+    }
+  }
+
+  // (2b) Tenant credential (client_id + clients.password_hash) — unchanged.
 
   const { data: client, error } = await supabaseAdmin
     .from("clients")

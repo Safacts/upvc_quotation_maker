@@ -37,9 +37,17 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   IconData _emailIcon = Icons.hourglass_empty;
   Color _emailColor = Colors.orange;
 
+  /// Share-as-PDF toggle (Aadi, 24-08-2026): ON = WhatsApp sends ONLY the PDF
+  /// file; OFF = link mode, WhatsApp receives the confirmation + review link
+  /// message. Initialised from AppState (Settings > Quotation Maker keeps the
+  /// same value; both write through `setEnablePdfLink` so they never diverge).
+  bool _shareAsPdf = true;
+
   @override
   void initState() {
     super.initState();
+    _shareAsPdf =
+        Provider.of<AppState>(context, listen: false).enablePdfLink;
     _handleEmailTask();
   }
 
@@ -155,31 +163,48 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     _toast('Message copied & shared!');
   }
 
-  /// Opens WhatsApp with the PDF attached and copies the text to clipboard.
+  /// Opens WhatsApp following the Share-as-PDF toggle:
+  ///  ON  -> ONLY the PDF rides out (no caption — WhatsApp drops captions on
+  ///          files anyway, so a "link message" here would be lost text).
+  ///  OFF -> link mode: deep link with the confirm + review URLs (deep link
+  ///          because the share sheet silently drops EXTRA_TEXT). Falls back
+  ///          to PDF + text via the OS sheet when WhatsApp is unavailable.
   Future<void> _shareToWhatsApp() async {
+    final contactNo = widget.data.contactNo;
+
+    if (_shareAsPdf) {
+      final path = await _writeTempPdf();
+      if (path != null) {
+        await Share.shareXFiles([XFile(path)]);
+      } else {
+        await Share.shareXFiles([
+          XFile.fromData(
+            widget.pdfBytes,
+            name: 'Quotation_${widget.data.quotationNo}.pdf',
+            mimeType: 'application/pdf',
+          ),
+        ]);
+      }
+      await _markAsSent();
+      _toast('PDF shared!');
+      return;
+    }
+
     final text = await _shareMessage();
     await Clipboard.setData(ClipboardData(text: text));
 
-    final contactNo = widget.data.contactNo;
-
-    // Unified: share PDF via OS share sheet.
-    final path = await _writeTempPdf();
-    if (path != null) {
-      await Share.shareXFiles([XFile(path)], text: text);
-    } else if (kIsWeb) {
-      await Share.shareXFiles(
-        [XFile.fromData(widget.pdfBytes, name: 'Quotation_${widget.data.quotationNo}.pdf')],
-        text: text,
-      );
-    } else {
-      final launched = await QuoteShare.openWhatsApp(text: text, phone: contactNo);
-      if (!launched) {
+    final launched = await QuoteShare.openWhatsApp(text: text, phone: contactNo);
+    if (!launched) {
+      final path = await _writeTempPdf();
+      if (path != null) {
+        await Share.shareXFiles([XFile(path)], text: text);
+      } else {
         await Share.share(text);
       }
     }
 
     await _markAsSent();
-    _toast('PDF shared & message copied to clipboard!');
+    _toast('Message shared & copied to clipboard!');
   }
 
   Future<void> _shareToTelegram() async {
@@ -203,6 +228,35 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   Future<void> _printPdf() async {
     await printLib.loadLibrary();
     await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
+  }
+
+  Widget _buildShareModeToggle() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: SwitchListTile(
+        value: _shareAsPdf,
+        onChanged: (v) {
+          setState(() => _shareAsPdf = v);
+          // Persist so Settings > Quotation Maker shows the same value.
+          Provider.of<AppState>(context, listen: false).setEnablePdfLink(v);
+        },
+        title: const Text('Share as PDF',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          _shareAsPdf
+              ? 'WhatsApp sends only the PDF file'
+              : 'WhatsApp sends confirmation + review links',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+        ),
+        activeColor: const Color(0xFF25D366),
+      ),
+    ).animate().fade(delay: 250.ms);
   }
 
   Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay, {Widget? brandIcon}) {
@@ -273,9 +327,10 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
                   ],
                 ),
               ).animate().fade(delay: 200.ms).slideY(begin: 0.2),
-              
-              const SizedBox(height: 40),
-              
+
+              const SizedBox(height: 24),
+              _buildShareModeToggle(),
+
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
