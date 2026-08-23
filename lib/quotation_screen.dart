@@ -41,6 +41,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Timer? _debounce;
   List<QuotationData> _pastQuotations = [];
   bool _usePresets = false;
+  List<Map<String, dynamic>> _rateCardItems = [];
   DateTime? _lastSaved;
   String? _lastSaveError;
 
@@ -116,7 +117,87 @@ class _QuotationScreenState extends State<QuotationScreen> {
     _fetchPastQuotations();
     _loadCatalog();
     _loadCustomers();
+    _loadRateCard();
     unawaited(_prefetchGenerationLibs());
+  }
+
+  Future<void> _loadRateCard() async {
+    final enabled = Provider.of<AppState>(context, listen: false).clientConfig.enableRateCard;
+    if (!enabled) return;
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final response = await SupabaseConfig.client
+          .from('rate_card_items')
+          .select()
+          .eq('client_id', clientId)
+          .eq('is_active', true);
+      if (mounted) {
+        setState(() {
+          _rateCardItems = (response as List)
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load rate card: $e');
+    }
+  }
+
+  double? _matchRateCardRate(String code, double width, double height) {
+    if (_rateCardItems.isEmpty || code.trim().isEmpty) return null;
+    final now = DateTime.now();
+    final normalized = code.trim().toLowerCase().replaceAll(RegExp(r'[\s\-]+'), '_');
+    Map<String, dynamic>? best;
+    int bestScore = -1;
+    String? bestStart;
+    for (final row in _rateCardItems) {
+      final rowType = (row['item_type'] ?? '').toString().trim().toLowerCase();
+      if (rowType.isEmpty) continue;
+      final exactType = rowType == normalized;
+      if (!exactType && rowType != 'any') continue;
+      final startRaw = row['validity_start']?.toString();
+      final endRaw = row['validity_end']?.toString();
+      final start = startRaw == null || startRaw.isEmpty ? null : DateTime.tryParse(startRaw);
+      final end = endRaw == null || endRaw.isEmpty ? null : DateTime.tryParse(endRaw);
+      if (start != null && now.isBefore(start)) continue;
+      if (end != null && now.isAfter(end)) continue;
+      bool dimsOk = true;
+      final minW = num.tryParse('${row['min_width_mm']}');
+      final maxW = num.tryParse('${row['max_width_mm']}');
+      final minH = num.tryParse('${row['min_height_mm']}');
+      final maxH = num.tryParse('${row['max_height_mm']}');
+      if ((minW != null && width < minW) ||
+          (maxW != null && width > maxW) ||
+          (minH != null && height < minH) ||
+          (maxH != null && height > maxH)) {
+        if (minW != null || maxW != null || minH != null || maxH != null) dimsOk = false;
+      }
+      final price = double.tryParse('${row['price_per_sqft']}');
+      if (price == null || price <= 0) continue;
+      final score = (exactType ? 2 : 0) + (dimsOk ? 1 : 0);
+      if (score > bestScore ||
+          (score == bestScore &&
+              best != null &&
+              (bestStart == null || (startRaw != null && startRaw.compareTo(bestStart) > 0)))) {
+        best = row;
+        bestScore = score;
+        bestStart = startRaw;
+      }
+    }
+    return best == null ? null : double.tryParse('${best['price_per_sqft']}');
+  }
+
+  void _applyRateCardRate(dynamic item) {
+    if (_rateCardItems.isEmpty) return;
+    if (item.rate != 0) return;
+    final matched = _matchRateCardRate(
+      item.code as String,
+      (item.width as num?)?.toDouble() ?? 0,
+      (item.height as num?)?.toDouble() ?? 0,
+    );
+    if (matched == null) return;
+    setState(() => item.rate = matched);
+    _onDataChanged();
   }
 
   Future<void> _prefetchGenerationLibs() async {
@@ -1143,7 +1224,7 @@ if (_usePresets) ...[
                           const SizedBox(height: 12),
                         ],
                       Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); _applyRateCardRate(item); })),
                         const SizedBox(width: 12),
                         Expanded(flex: 2, child: 
                           TextFormField(
@@ -1158,9 +1239,9 @@ if (_usePresets) ...[
                       ]),
                       const SizedBox(height: 12),
                       Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_2'), initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_2'), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_2'), initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_2'), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); _applyRateCardRate(item); })),
                         const SizedBox(width: 12),
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_3'), initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_3'), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
+                        Expanded(child: TextFormField(focusNode: _node('m_${index}_3'), initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_3'), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); _applyRateCardRate(item); })),
                         const SizedBox(width: 12),
                         Expanded(child: TextFormField(focusNode: _node('m_${index}_4'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_4'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
                       ]),

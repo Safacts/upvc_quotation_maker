@@ -611,6 +611,7 @@ class WhiteLabelService {
       landingFooter: baseConfig.landingFooter,
       costMarginPercent: baseConfig.costMarginPercent,
       enablePricePresets: baseConfig.enablePricePresets,
+      enableRateCard: baseConfig.enableRateCard,
       measuredPresets: baseConfig.measuredPresets,
       unmeasuredPresets: baseConfig.unmeasuredPresets,
       appDownloadUrl: baseConfig.appDownloadUrl,

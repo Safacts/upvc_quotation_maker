@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
+import 'rate_card_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -263,6 +264,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+           if (Provider.of<AppState>(context).clientConfig.enableRateCard) ...[
+             const SizedBox(height: 16),
+             _buildSectionHeader('Rate Card'),
+             const RateCardSection(),
+           ],
            if (Provider.of<AppState>(context).clientConfig.clientId == 'kprupvc') ...[
              const SizedBox(height: 16),
              _buildSectionHeader('Supplier Companies'),

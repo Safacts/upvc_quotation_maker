@@ -15,6 +15,7 @@ export interface ClientConfig {
   defaultGstPercentage: number;
   cost_margin_percent: number;
   enablePricePresets: boolean;
+  enableRateCard: boolean;
   measuredPresets: { name: string; code: string; description: string; glass: string; rate: number }[];
   unmeasuredPresets: { name: string; code: string; description: string; rate: number }[];
   quotePrefix: string;
@@ -77,6 +78,7 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     defaultGstPercentage: Number(cfg.defaultGstPercentage ?? 18.0),
     cost_margin_percent: Number(cfg.cost_margin_percent ?? 0),
     enablePricePresets: cfg.enablePricePresets === true,
+    enableRateCard: cfg.enableRateCard === true,
     measuredPresets: Array.isArray(cfg.measuredPresets)
       ? cfg.measuredPresets.map((p: any) => ({
           name: String((p && p.name) || ""),
