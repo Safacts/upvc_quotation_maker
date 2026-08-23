@@ -7,6 +7,10 @@ import { getCachedClients, findClientBySlug, slugify } from "@/lib/slug";
 
 const VITHARN_NAME = "Vitharn UPVC Quotation Maker";
 const VITHARN_ICON = "/app/icons/Icon-192.png";
+// Flutter's generated asset filenames are stable across rebuilds. Version the
+// bootstrap URL so an already-open PWA/service worker cannot keep serving the
+// previous main.dart.js after a critical client fix is deployed.
+const FLUTTER_ASSET_VERSION = "6ffcfa2";
 
 function esc(v: string): string {
   return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -51,7 +55,7 @@ export async function GET(
   <meta name="description" content="${esc(splashName)}">
   <link rel="preconnect" href="https://effxrwrbsjduvhmorvrq.supabase.co">
   <link rel="dns-prefetch" href="https://effxrwrbsjduvhmorvrq.supabase.co">
-  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="flutter_bootstrap.js?v=${FLUTTER_ASSET_VERSION}" as="script">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -80,7 +84,7 @@ export async function GET(
     <p>Loading...</p>
     <div class="spinner"></div>
   </div>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=${FLUTTER_ASSET_VERSION}" async></script>
 </body>
 </html>`;
 
