@@ -395,14 +395,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
           }
         }
       }
-      // Content autosaves must not replay `status`. The quotation state
-      // machine rejects lifecycle regressions (for example approved -> draft),
-      // while older Flutter builds deserialize newer states as draft. Status
-      // changes remain explicit in _updateStatus below.
-      final quotationMap = data.toMap(
-        clientId: clientId,
-        includeStatus: data.id == null,
-      );
+      final quotationMap = data.toMap(clientId: clientId);
       if (data.id == null) {
         final res = await SupabaseConfig.client.from('quotations').insert(quotationMap).select().single();
         data.id = res['id'];

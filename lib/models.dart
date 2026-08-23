@@ -98,10 +98,7 @@ class QuotationData {
     return ("$words Only").toUpperCase();
   }
 
-  /// Build a row for Supabase. Existing quotations may be protected by the
-  /// server-side quotation lifecycle trigger; content autosaves should omit
-  /// status so an older client cannot replay a newer state as `draft`.
-  Map<String, dynamic> toMap({String? clientId, bool includeStatus = true}) {
+  Map<String, dynamic> toMap({String? clientId}) {
     return {
       if (id != null) 'id': id,
       'quote_no': quotationNo,
@@ -114,7 +111,7 @@ class QuotationData {
       'transport_cost': transport,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
-      if (includeStatus) 'status': status.value,
+      'status': status.value,
       'supplier_company': supplierCompany,
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
