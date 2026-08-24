@@ -135,8 +135,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
         );
 
         setBrand(config.companyName || client.id);
-        
-        const marketSlug = slugify(config.companyName) || slugify(client.id);
+        const marketSlug = slugify(slug) || slugify(client.id);
 
         setMarketUrl("/" + marketSlug);
 
