@@ -109,8 +109,47 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   /// minted. See `quote_share.dart` for why this is nullable — a tokenless
   /// `/quote/<id>` URL renders "Access Denied" for the customer, so we would
   /// rather send no link than a broken one.
-  Future<String?> _quoteLink() =>
-      QuoteShare.quoteLink(widget.data, config: _config);
+  Future<String?> _quoteLink() async {
+    // Ensure the quotation is persisted to cloud before minting a token.
+    // New offline UUID drafts (e.g. JVUPVC-24082026-0166) live only in
+    // SharedPreferences until the 2s debounce fires. If the user hits Share
+    // immediately, the token endpoint would 404 (quotation not found) and
+    // QuoteShare would return null -> the "Review & confirm online" line
+    // disappears (staging bug reported 24-08-2026). Upsert here best-effort.
+    try {
+      final clientId = _config.clientId;
+      final qId = widget.data.id;
+      if (qId != null && qId.isNotEmpty) {
+        final qMap = widget.data.toMap(clientId: clientId, includeStatus: true);
+        await SupabaseConfig.client.from('quotations').upsert(qMap, onConflict: 'id');
+        // Upsert line items best-effort so DB stays consistent; token check
+        // only needs the quotation row, but future PDF routes read items.
+        try {
+          await SupabaseConfig.client
+              .from('measured_items')
+              .delete()
+              .eq('quotation_id', qId)
+              .eq('client_id', clientId);
+          await SupabaseConfig.client
+              .from('unmeasured_items')
+              .delete()
+              .eq('quotation_id', qId)
+              .eq('client_id', clientId);
+          if (widget.data.measuredItems.isNotEmpty) {
+            await SupabaseConfig.client.from('measured_items').insert(
+                widget.data.measuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList());
+          }
+          if (widget.data.unmeasuredItems.isNotEmpty) {
+            await SupabaseConfig.client.from('unmeasured_items').insert(
+                widget.data.unmeasuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList());
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('Ensure save before share failed: $e');
+    }
+    return QuoteShare.quoteLink(widget.data, config: _config);
+  }
 
   /// Message body shared to WhatsApp / Telegram / the OS share sheet.
   Future<String> _shareMessage() async {
