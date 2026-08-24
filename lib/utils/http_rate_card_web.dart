@@ -71,11 +71,11 @@ void downloadBytes(Uint8List bytes, String filename, {String mime = 'text/csv'})
   html.Url.revokeObjectUrl(url);
 }
 
-Future<RateCardHttpResponse> postMultipartCsv(String url, String filename, String content) async {
+Future<RateCardHttpResponse> postMultipartCsv(String url, String filename, String content, {bool dryRun = false}) async {
   final client = BrowserClient()..withCredentials = true;
   try {
     final request = http.MultipartRequest('POST', Uri.parse(url))
-      ..fields['dry_run'] = 'false'
+      ..fields['dry_run'] = dryRun ? 'true' : 'false'
       ..files.add(http.MultipartFile.fromString('file', content, filename: filename));
     final streamed = await client.send(request);
     final body = await streamed.stream.bytesToString();

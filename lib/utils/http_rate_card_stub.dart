@@ -24,6 +24,6 @@ void downloadBytes(Uint8List bytes, String filename, {String mime = 'text/csv'})
   throw UnsupportedError('File download is available in the web app');
 }
 
-Future<RateCardHttpResponse> postMultipartCsv(String url, String filename, String content) async {
+Future<RateCardHttpResponse> postMultipartCsv(String url, String filename, String content, {bool dryRun = false}) async {
   throw UnsupportedError('CSV import is available in the web app');
 }

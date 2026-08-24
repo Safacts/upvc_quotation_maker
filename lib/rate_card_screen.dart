@@ -100,6 +100,7 @@ class _RateCardBodyState extends State<RateCardBody> {
         '$_apiBase/api/rate-card/import',
         picked.name,
         picked.content,
+        dryRun: true,
       );
       if (!mounted) return;
       Map<String, dynamic> report;
