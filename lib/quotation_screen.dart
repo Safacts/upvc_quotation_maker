@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
@@ -384,72 +385,14 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _initQuoteNumber() async {
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
     final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    // Empty quotations are blocked from saving while a blank draft exists
-    // (only ONE empty draft is kept). So "New Quotation" must OPEN the
-    // existing blank draft — adopting BOTH its id and its quote_no — instead
-    // of minting a fresh sequence the save-side can never persist.
-    try {
-      final blankDraft = await _findFirstBlankDraft(clientId);
-      if (blankDraft != null) {
-        final existingNo = (blankDraft['quote_no'] ?? '') as String;
-        if (!mounted) return;
-        setState(() {
-          data.id = blankDraft['id'].toString();
-          data.quotationNo = existingNo;
-        });
-        if (existingNo.isNotEmpty) {
-          return; // Fully adopted: reuse the draft's number, skip minting/autosave.
-        }
-        // Draft has no usable quote_no: keep its id (don't multiply blanks)
-        // but fall through and generate the next number for it.
+    data.id ??= const Uuid().v4();
+    if (data.quotationNo.isEmpty) {
+      String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
+      if (mounted) {
+        setState(() => data.quotationNo = nextNo);
       }
-    } catch (_) {
-      // Never block quote creation because the draft search failed —
-      // fall back to the normal minting behaviour below.
     }
-    String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
-    setState(() => data.quotationNo = nextNo);
     _autoSaveToDatabase();
-  }
-
-  /// Finds the client's oldest quotation that is completely blank: no
-  /// measured/unmeasured items reference it AND its customer_name,
-  /// reference and address are all null or whitespace-empty. Returns the raw
-  /// row (id, quote_no, customer_name, reference, address) or null.
-  Future<Map<String, dynamic>?> _findFirstBlankDraft(String clientId) async {
-    final rows = (((await SupabaseConfig.client
-                .from('quotations')
-                .select('id, quote_no, customer_name, reference, address')
-                .eq('client_id', clientId)
-                .order('created_at', ascending: true)
-                .limit(200))) as List)
-        .cast<Map<String, dynamic>>();
-    if (rows.isEmpty) return null;
-    final measuredIds = ((await SupabaseConfig.client
-                .from('measured_items')
-                .select('quotation_id')
-                .eq('client_id', clientId)) as List)
-        .map((row) => row['quotation_id'].toString())
-        .toSet();
-    final unmeasuredIds = ((await SupabaseConfig.client
-                .from('unmeasured_items')
-                .select('quotation_id')
-                .eq('client_id', clientId)) as List)
-        .map((row) => row['quotation_id'].toString())
-        .toSet();
-
-    bool isBlankText(Object? value) =>
-        value == null || value.toString().trim().isEmpty;
-
-    for (final row in rows) {
-      final id = row['id'].toString();
-      if (measuredIds.contains(id) || unmeasuredIds.contains(id)) continue;
-      if (!isBlankText(row['customer_name'])) continue;
-      if (!isBlankText(row['reference'])) continue;
-      if (!isBlankText(row['address'])) continue;
-      return row;
-    }
-    return null;
   }
 
   Future<void> _autoSaveToDatabase() async {
@@ -458,83 +401,32 @@ class _QuotationScreenState extends State<QuotationScreen> {
       return;
     }
     setState(() => _isSaving = true);
+    data.id ??= const Uuid().v4();
     // Always persist to local cache first so device never loses progress
     await _persistLocalDraft();
 
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      // Keep one blank draft as a workspace, but do not create another blank
-      // quotation every time the user opens a new editor. If a blank draft
-      // exists, REUSE it (update its customer fields) instead of silently
-      // discarding the save — the old bare `return` threw away every
-      // customer-name/reference/address change made before adding a line item.
-      if (data.id == null && !_hasLineItems()) {
-        final existingIds = ((await SupabaseConfig.client
-                    .from('quotations')
-                    .select('id, customer_name')
-                    .eq('client_id', clientId)) as List)
-            .map((row) => {
-                  'id': row['id'].toString(),
-                  'name': (row['customer_name'] ?? '') as String,
-                })
-            .toSet();
-        if (existingIds.isNotEmpty) {
-          final measuredIds = ((await SupabaseConfig.client
-                      .from('measured_items')
-                      .select('quotation_id')
-                      .eq('client_id', clientId)) as List)
-              .map((row) => row['quotation_id'].toString())
-              .toSet();
-          final unmeasuredIds = ((await SupabaseConfig.client
-                      .from('unmeasured_items')
-                      .select('quotation_id')
-                      .eq('client_id', clientId)) as List)
-              .map((row) => row['quotation_id'].toString())
-              .toSet();
-          // Only adopt rows that are TRULY blank: no items AND no customer
-          // name. Adoption used to grab ANY itemless row — after a blank-draft
-          // cleanup it started overwriting real customer records.
-          final blankId = existingIds
-              .firstWhere(
-                (row) =>
-                    !measuredIds.contains(row['id']) &&
-                    !unmeasuredIds.contains(row['id']) &&
-                    row['name']!.trim().isEmpty,
-                orElse: () => {'id': '', 'name': ''},
-              )['id'];
-          if (blankId!.isNotEmpty) {
-            // Adopt the blank draft so customer fields are persisted there.
-            data.id = blankId;
-          }
-        }
-      }
-      // Existing rows may have a lifecycle state that this client does not
-      // know about. Content autosave must never replay the default draft
-      // state (for example sent -> draft); only inserts establish draft.
       final quotationMap = data.toMap(
         clientId: clientId,
-        includeStatus: data.id == null,
+        includeStatus: true,
       );
-      if (data.id == null) {
-        final res = await SupabaseConfig.client.from('quotations').insert(quotationMap).select().single();
-        data.id = res['id'];
-      } else {
-        await SupabaseConfig.client
-            .from('quotations')
-            .update(quotationMap)
-            .eq('id', data.id!)
-            .eq('client_id', clientId);
-        await SupabaseConfig.client
-            .from('measured_items')
-            .delete()
-            .eq('quotation_id', data.id!)
-            .eq('client_id', clientId);
-        await SupabaseConfig.client
-            .from('unmeasured_items')
-            .delete()
-            .eq('quotation_id', data.id!)
-            .eq('client_id', clientId);
-      }
+
+      // Perform upsert by unique quotation UUID. Each device/session has its own UUID.
+      await SupabaseConfig.client
+          .from('quotations')
+          .upsert(quotationMap, onConflict: 'id');
+
+      await SupabaseConfig.client
+          .from('measured_items')
+          .delete()
+          .eq('quotation_id', data.id!)
+          .eq('client_id', clientId);
+      await SupabaseConfig.client
+          .from('unmeasured_items')
+          .delete()
+          .eq('quotation_id', data.id!)
+          .eq('client_id', clientId);
 
       if (data.measuredItems.isNotEmpty) {
         await SupabaseConfig.client.from('measured_items').insert(data.measuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());

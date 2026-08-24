@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'supabase_config.dart';
 
 enum QuotationStatus { draft, sent, won, lost }
@@ -33,7 +35,7 @@ extension QuotationStatusX on QuotationStatus {
 
 
 class QuotationData {
-  String? id; // UUID from Supabase
+  String? id; // Unique UUID
   String quotationNo = '';
   DateTime date = DateTime.now();
   String customerName = '';
@@ -53,17 +55,38 @@ class QuotationData {
   String supplierCompany = '';
 
 
-  // Logic to handle continuous numbering via Supabase RPC
+  // Logic to handle continuous numbering via Supabase RPC + Offline fallback
   static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC', String? clientId}) async {
+    final cid = clientId ?? 'default';
+    final datePart = DateFormat('ddMMyyyy').format(DateTime.now());
     try {
       final result = await SupabaseConfig.client
           .rpc('get_next_quote_number', params: {'cid': clientId});
-      return result.toString();
+      final quoteNo = result.toString();
+      // Cache latest sequence locally so offline mode can continue seamlessly
+      if (quoteNo.contains('-')) {
+        final lastPart = quoteNo.split('-').last;
+        final seq = int.tryParse(lastPart);
+        if (seq != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('last_quote_seq_${cid}_$datePart', seq);
+        }
+      }
+      return quoteNo;
     } catch (e) {
-      // Fallback for offline/error: add milliseconds since epoch modulo 10000 to prevent collisions
-      String datePart = DateFormat('ddMMyyyy').format(DateTime.now());
-      int rand = DateTime.now().millisecondsSinceEpoch % 10000;
-      return '$prefix-$datePart-ERR-$rand';
+      // Offline fallback with monotonic local sequence:
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final key = 'last_quote_seq_${cid}_$datePart';
+        int lastSeq = prefs.getInt(key) ?? 100;
+        lastSeq += 1;
+        await prefs.setInt(key, lastSeq);
+        final seqStr = lastSeq.toString().padLeft(4, '0');
+        return '$prefix-$datePart-$seqStr';
+      } catch (_) {
+        final rand = (DateTime.now().millisecondsSinceEpoch % 9000) + 1000;
+        return '$prefix-$datePart-$rand';
+      }
     }
   }
 
