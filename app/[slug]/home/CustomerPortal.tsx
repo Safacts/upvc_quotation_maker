@@ -1286,10 +1286,42 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             </div>
           </div>
 
-          {/* Market Page preview iframe. The Quotation App is deliberately NOT
-              iframed — it opens in a new tab (see `openApp` / `appUrl`). */}
-          <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
-            {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
+          {/* Market Page preview iframe */}
+          <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`} style={{ display: activeTab === "market" ? "flex" : "none", flexDirection: "column", height: "100%", width: "100%" }}>
+            <div style={{ padding: "12px 24px", background: "white", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "var(--text-light)" }}>
+                <span>Public Web Page:</span>
+                <a href={marketUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary)", fontWeight: "600", textDecoration: "none" }}>
+                  {typeof window !== "undefined" ? window.location.origin + marketUrl : marketUrl}
+                </a>
+              </div>
+              <a
+                href={marketUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  background: "var(--bg-light)",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  color: "#334155",
+                  textDecoration: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>Open in New Tab</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+            </div>
+            {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" style={{ flex: 1, border: "none", width: "100%", height: "calc(100vh - 120px)" }} />}
           </div>
 
           {/* Market Settings Tab (Testimonials Management) */}
