@@ -32,6 +32,11 @@ const quarters = [
     note: "Shipped in the latest release — live on your system today.",
     items: [
       {
+        icon: Sparkles,
+        title: "Your price list, digitized in minutes",
+        desc: "Import your per-sqft rate card from a simple CSV and every new quotation prices itself with your own rates — no more typing rates line by line. Download the template, fill it once, import it, and quoting gets dramatically faster.",
+      },
+      {
         icon: ShieldCheck,
         title: "A brand you can trust — everywhere",
         desc: "Every email, quotation, and invoice now carries the Vitharn identity: your logo header, premium rust-and-ink design matching our portal, professional copy. From the first welcome mail to the GST invoice, everything looks like one genuine company.",

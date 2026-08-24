@@ -222,8 +222,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   };
 
   const handleLiteMode = async () => {
-    // Already running as an installed app â†’ jump straight to the app (same window,
-    // a standalone PWA has no tab strip to open into).
+    // Already running as an installed app -> jump straight to the app
     if (isStandalone) {
       window.location.href = appUrl;
       return;
@@ -241,7 +240,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
       }
       return;
     }
-    // iOS Safari: no install prompt API â†’ show "Add to Home Screen" steps.
+    // iOS Safari: no install prompt API -> show "Add to Home Screen" steps.
     if (isIOS) {
       setShowA2hsModal(true);
       return;
@@ -434,7 +433,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             <span>Desktop Console</span>
           </Link>
         </div>
-        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Lite Mode: Instant Web App / PWA */}
           <button 
             onClick={handleLiteMode}
@@ -501,15 +500,12 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                         body: JSON.stringify({
                           client_id: client.id,
                           app_name: config.appName,
-                          // Pass the CURRENT published version so the API bumps it
-                          // for the new build (versionCode +1, patch +1).
                           version_name: config.appVersionName || undefined,
                           version_code: config.appVersionCode ?? undefined,
                         })
                       });
                       if (res.ok) {
                         showToast("Build successfully triggered! Your Pro Native APK is being generated in the cloud. Check back in 5-10 minutes.", "success");
-                        // Force page reload to show 'Building' status
                         setTimeout(() => window.location.reload(), 2000);
                       } else {
                         const err = await res.json();
@@ -526,8 +522,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 className="btn-download" 
                 style={{ 
                   display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
+                  flexDirection: 'column',
+                  gap: '4px',
                   padding: '10px 14px', 
                   color: 'var(--text)', 
                   textDecoration: 'none', 
@@ -538,42 +534,44 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   fontSize: '13px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    {isBuilding ? (
-                      <>
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </>
-                    ) : (
-                      <>
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </>
-                    )}
-                  </svg>
-                  <span>App Pro Mode</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {isBuilding ? (
+                        <>
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </>
+                      )}
+                    </svg>
+                    <span>App Pro Mode</span>
+                  </div>
+                  <span style={{ 
+                    fontSize: '10px', 
+                    background: isBuilding ? '#fde68a' : config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', 
+                    color: isBuilding ? '#92400e' : config.appDownloadUrl ? '#166534' : '#64748b', 
+                    padding: '2px 6px', 
+                    borderRadius: '10px' 
+                  }}>
+                    {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'Install APK' : 'Request Build'}
+                  </span>
                 </div>
-                <span style={{ 
-                  fontSize: '10px', 
-                  background: isBuilding ? '#fde68a' : config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', 
-                  color: isBuilding ? '#92400e' : config.appDownloadUrl ? '#166534' : '#64748b', 
-                  padding: '2px 6px', 
-                  borderRadius: '10px' 
-                }}>
-                  {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'Install APK' : 'Request Build'}
-                </span>
-              {config.appDownloadUrl && config.lastBuildCompletedAt && (
-                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', paddingLeft: '2px' }}>
-                  {(() => {
-                    const d = new Date(config.lastBuildCompletedAt);
-                    if (isNaN(d.getTime())) return null;
-                    const pad = (n: number) => String(n).padStart(2, '0');
-                    return `Last updated: ${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
-                  })()}
-                </div>
-              )}
+                {config.appDownloadUrl && config.lastBuildCompletedAt && (
+                  <div style={{ fontSize: '10px', color: '#64748b', paddingLeft: '24px' }}>
+                    {(() => {
+                      const d = new Date(config.lastBuildCompletedAt);
+                      if (isNaN(d.getTime())) return null;
+                      const pad = (n: number) => String(n).padStart(2, '0');
+                      return `Last updated: ${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+                    })()}
+                  </div>
+                )}
               </a>
             );
           })()}
@@ -638,8 +636,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           
           {/* Overview Tab */}
           <div className={`tab-pane ${activeTab === "overview" ? "active" : ""}`}>
-            
-            {/* Greeting & Quick Action Banner */}
+                {/* Greeting & Quick Action Banner */}
             <div className="info-card" style={{ 
               background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', 
               color: 'white', 
@@ -652,7 +649,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }}>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
-                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! ðŸ‘‹
+                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! 👋
                 </h2>
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
                   Here is your real-time business summary. Keep closing orders!
@@ -699,7 +696,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
                 <div className="stat-card">
                   <div className="label">Total Work Quoted</div>
-                  <div className="value" style={{ fontSize: '24px' }}>â‚¹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div className="value" style={{ fontSize: '24px' }}>₹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                   {stats.monthChangePercent !== 0 && (
                     <div style={{ 
                       fontSize: '13px', 
@@ -710,14 +707,14 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       alignItems: 'center',
                       gap: '4px'
                     }}>
-                      {stats.monthChangePercent >= 0 ? 'â†‘' : 'â†“'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
+                      {stats.monthChangePercent >= 0 ? '↑' : '↓'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
                     </div>
                   )}
                 </div>
 
                 <div className="stat-card">
                   <div className="label">Confirmed Orders (Revenue)</div>
-                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>â‚¹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>₹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '6px' }}>
                     From {stats.wonCount} closed deal{stats.wonCount !== 1 ? 's' : ''}
                   </div>
@@ -766,8 +763,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       {[
                         { label: 'Draft', name: 'Being Prepared', color: '#94a3b8' },
                         { label: 'Sent', name: 'Delivered to Client', color: '#60a5fa' },
-                        { label: 'Won', name: 'Order Confirmed âœ…', color: '#22c55e' },
-                        { label: 'Lost', name: 'Did Not Close âŒ', color: '#f87171' }
+                        { label: 'Won', name: 'Order Confirmed ✅', color: '#22c55e' },
+                        { label: 'Lost', name: 'Did Not Close ❌', color: '#f87171' }
                       ].map(s => (
                         <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -798,15 +795,15 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                         const isLast = i === stats.weeklyBars.length - 1;
                         return (
                           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                            {b.amount > 0 && <span style={{ fontSize: '9px', color: 'var(--text-light)', marginBottom: '4px' }}>{formatInd(b.amount)}</span>}
+                            {b.amount > 0 && <span style={{ fontSize: '9px', fontWeight: '600', color: 'var(--text-dark)', marginBottom: '4px' }}>{formatInd(b.amount)}</span>}
                             <div style={{ 
                               width: '100%', 
                               height: `${Math.max(height, 5)}%`, 
-                              background: isLast ? 'var(--primary-gradient)' : '#e0e7ff', 
+                              background: isLast ? 'var(--primary-gradient)' : '#cbd5e1', 
                               borderRadius: '4px 4px 0 0',
                               transition: 'height 0.5s ease'
                             }} />
-                            <span style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '4px', whiteSpace: 'nowrap' }}>{b.label.split(' ')[0]}</span>
+                            <span style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '4px', whiteSpace: 'nowrap' }}>{b.label}</span>
                           </div>
                         );
                       });
@@ -821,7 +818,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
               <div className="info-card" style={{ marginBottom: '24px', borderLeft: '4px solid #f59e0b' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '20px' }}>ðŸ””</span>
+                    <span style={{ fontSize: '20px' }}>🔔</span>
                     <h3 style={{ margin: 0, padding: 0, border: 'none' }}>Quotes Needing Follow-up ({stats.pendingFollowUps.length})</h3>
                   </div>
                   <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
@@ -842,8 +839,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                     }}>
                       <div>
                         <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.customer_name} ({item.quote_no})</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
-                          Value: â‚¹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} â€¢ Date: {new Date(item.created_at).toLocaleDateString()}
+                        <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
+                          Value: ₹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Date: {new Date(item.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -853,14 +850,17 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                             style={{ 
                               padding: '8px 14px', 
                               borderRadius: '8px', 
-                              background: '#3b82f6', 
+                              background: '#2563eb', 
                               color: 'white', 
                               textDecoration: 'none', 
                               fontSize: '13px', 
-                              fontWeight: '600' 
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                           >
-                            ðŸ“ž Call Client
+                            📞 Call Client
                           </a>
                         )}
                         <a
@@ -902,7 +902,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
               {/* Account Status Footer Note */}
               <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', display: 'flex', gap: '24px', fontSize: '13px', color: 'var(--text-light)' }}>
-                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active âœ…' : 'Inactive'}</strong></div>
+                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active ✅' : 'Inactive'}</strong></div>
                 <div>Plan Expiration: <strong>{client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'Lifetime Unlimited'}</strong></div>
               </div>
             </div>
@@ -1034,7 +1034,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                            const updated = [...formData.supplierCompanies];
                            updated.splice(idx, 1);
                            setFormData({...formData, supplierCompanies: updated});
-                         }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>âœ•</button>
+                         }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '18px', padding: '4px 8px' }}>✕</button>
                        </div>
                      ))}
                    </div>
@@ -1134,7 +1134,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, measuredPresets: newPresets});
                               }}
                               style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                            >âœ• Remove</button>
+                            >✕ Remove</button>
                           </div>
                           
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -1184,7 +1184,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, measuredPresets: newPresets});
                               }}
                               style={{ width: '90px', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
-                            <input type="number" placeholder="Rate (â‚¹/sqft)" value={preset.rate || ''}
+                            <input type="number" placeholder="Rate (₹/sqft)" value={preset.rate || ''}
                               onChange={(e) => {
                                 const newPresets = [...formData.measuredPresets];
                                 newPresets[idx].rate = parseFloat(e.target.value) || 0;
@@ -1223,7 +1223,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                                 setFormData({...formData, unmeasuredPresets: newPresets});
                               }}
                               style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                            >âœ• Remove</button>
+                            >✕ Remove</button>
                           </div>
                           
                           <div style={{ display: 'flex', gap: '12px' }}>
@@ -1252,7 +1252,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                             style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
                             
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <input type="number" placeholder="Rate (â‚¹/unit)" value={preset.rate || ''}
+                            <input type="number" placeholder="Rate (₹/unit)" value={preset.rate || ''}
                               onChange={(e) => {
                                 const newPresets = [...formData.unmeasuredPresets];
                                 newPresets[idx].rate = parseFloat(e.target.value) || 0;
@@ -1287,7 +1287,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           </div>
 
           {/* Market Page preview iframe. The Quotation App is deliberately NOT
-              iframed â€” it opens in a new tab (see `openApp` / `appUrl`). */}
+              iframed — it opens in a new tab (see `openApp` / `appUrl`). */}
           <div className={`iframe-container ${activeTab === "market" ? "active" : ""}`}>
             {marketUrl && <iframe src={marketUrl} className="tab-iframe" title="Market Page" />}
           </div>
@@ -1314,7 +1314,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                   <button
                     onClick={() => setShowA2hsModal(false)}
                     style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700', color: '#475569' }}
-                  >âœ•</button>
+                  >✕</button>
                 </div>
                 <ol style={{ margin: '0 0 12px', paddingLeft: '20px', color: '#334155', fontSize: '14px', lineHeight: 1.8 }}>
                   <li>Tap the <b>Share</b> icon in the Safari toolbar.</li>

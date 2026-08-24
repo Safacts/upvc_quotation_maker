@@ -139,12 +139,12 @@ export async function GET(request: NextRequest) {
         wonQuoted += qTotal;
       }
 
-      // Collect pending follow-ups (Sent or Draft)
-      if (s === 'Sent' || s === 'Draft') {
+      // Collect pending follow-ups (Sent or meaningful Drafts with actual customer and value)
+      if ((s === 'Sent' || s === 'Draft') && qTotal > 0 && q.customer_name && q.customer_name.trim().length > 0) {
         pendingFollowUps.push({
           id: q.id || '',
           quote_no: q.quote_no || 'Quote',
-          customer_name: q.customer_name || 'Valued Customer',
+          customer_name: q.customer_name.trim(),
           contact_no: q.contact_no || '',
           created_at: q.created_at || new Date().toISOString(),
           total: qTotal
