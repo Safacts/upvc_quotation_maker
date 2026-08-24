@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
@@ -38,7 +39,9 @@ class _QuotationScreenState extends State<QuotationScreen> {
   bool _isSaving = false;
   bool _saveQueued = false;
   bool _isExporting = false;
+  bool _isOffline = false;
   Timer? _debounce;
+  Timer? _retryTimer;
   List<QuotationData> _pastQuotations = [];
   bool _usePresets = false;
   List<Map<String, dynamic>> _rateCardItems = [];
@@ -254,15 +257,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
           _measuredProducts = [];
           _unmeasuredProducts = [];
         });
-        toastification.show(
-          context: context,
-          title: const Text('Catalog load failed'),
-          description: Text(e.toString()),
-          type: ToastificationType.warning,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 4),
-          alignment: Alignment.bottomCenter,
-        );
+        // Silent fallback on network issues so user is not alarmed
       }
     }
   }
@@ -304,6 +299,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _retryTimer?.cancel();
     _nameFocus.dispose();
     _referenceFocus.dispose();
     _addressFocus.dispose();
@@ -317,7 +313,39 @@ class _QuotationScreenState extends State<QuotationScreen> {
     super.dispose();
   }
 
+  bool _isNetworkError(Object error) {
+    final str = error.toString().toLowerCase();
+    return str.contains('failed to fetch') ||
+        str.contains('clientexception') ||
+        str.contains('socketexception') ||
+        str.contains('timeoutexception') ||
+        str.contains('network') ||
+        str.contains('connection') ||
+        str.contains('handshake') ||
+        str.contains('http') ||
+        str.contains('xmlhttprequest');
+  }
+
+  Future<void> _persistLocalDraft() async {
+    try {
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final prefs = await SharedPreferences.getInstance();
+      final draftKey = 'quotation_local_draft_${clientId}_${data.id ?? 'active'}';
+      final draftData = {
+        'quotation': data.toMap(clientId: clientId, includeStatus: true),
+        'measured_items': data.measuredItems.map((e) => e.toMap(data.id ?? '', clientId: clientId)).toList(),
+        'unmeasured_items': data.unmeasuredItems.map((e) => e.toMap(data.id ?? '', clientId: clientId)).toList(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      await prefs.setString(draftKey, jsonEncode(draftData));
+      await prefs.setString('last_active_draft_$clientId', draftKey);
+    } catch (e) {
+      debugPrint('Failed to persist local draft: $e');
+    }
+  }
+
   void _onDataChanged() {
+    _persistLocalDraft();
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(seconds: 2), () {
       _autoSaveToDatabase();
@@ -348,7 +376,9 @@ class _QuotationScreenState extends State<QuotationScreen> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
+      if (!_isNetworkError(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
+      }
     }
   }
 
@@ -429,6 +459,9 @@ class _QuotationScreenState extends State<QuotationScreen> {
       return;
     }
     setState(() => _isSaving = true);
+    // Always persist to local cache first so device never loses progress
+    await _persistLocalDraft();
+
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       // Keep one blank draft as a workspace, but do not create another blank
@@ -511,21 +544,37 @@ class _QuotationScreenState extends State<QuotationScreen> {
         await SupabaseConfig.client.from('unmeasured_items').insert(data.unmeasuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
       }
       if (mounted) {
-        setState(() { _lastSaved = DateTime.now(); _lastSaveError = null; });
+        setState(() {
+          _lastSaved = DateTime.now();
+          _lastSaveError = null;
+          _isOffline = false;
+        });
       }
+      _retryTimer?.cancel();
     } catch (e) {
       debugPrint('Auto-save error: $e');
       if (mounted) {
-        setState(() => _lastSaveError = e.toString());
-        toastification.show(
-          context: context,
-          title: const Text('Save failed'),
-          description: Text(e.toString()),
-          type: ToastificationType.error,
-          style: ToastificationStyle.fillColored,
-          autoCloseDuration: const Duration(seconds: 5),
-          alignment: Alignment.bottomCenter,
-        );
+        if (_isNetworkError(e)) {
+          setState(() {
+            _isOffline = true;
+            _lastSaveError = null;
+          });
+          // Silent auto-retry in 10 seconds without showing scary red toasts
+          _retryTimer?.cancel();
+          _retryTimer = Timer(const Duration(seconds: 10), () {
+            if (mounted) {
+              _autoSaveToDatabase();
+            }
+          });
+        } else {
+          final cleanMsg = e.toString()
+              .split('\n')
+              .first
+              .replaceAll(RegExp(r'uri=https?://[^\s]+'), '')
+              .replaceAll('Exception: ', '')
+              .trim();
+          setState(() => _lastSaveError = cleanMsg);
+        }
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -853,9 +902,38 @@ $reviewCta
               padding: EdgeInsets.symmetric(horizontal: 14.0),
               child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))),
             )
+          else if (_isOffline)
+            Tooltip(
+              message: 'Saved on device (Offline). Tap to retry cloud sync.',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Center(
+                  child: InkWell(
+                    onTap: () => _autoSaveToDatabase(),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade700, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cloud_off, color: Colors.amber.shade800, size: 16),
+                          const SizedBox(width: 4),
+                          Text('Offline', style: TextStyle(color: Colors.amber.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
           else if (_lastSaveError != null)
             Tooltip(
-              message: 'Save error: $_lastSaveError',
+              message: 'Sync issue: $_lastSaveError',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
                 child: Center(child: Icon(Icons.cloud_off, color: Colors.red, size: 22)),
@@ -864,7 +942,7 @@ $reviewCta
           else
             Tooltip(
               message: _lastSaved != null
-                  ? 'Saved to $clientId at ${DateFormat('HH:mm:ss').format(_lastSaved!)}'
+                  ? 'Saved to cloud at ${DateFormat('HH:mm:ss').format(_lastSaved!)}'
                   : 'Connected to $clientId',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
@@ -918,12 +996,22 @@ $reviewCta
                             'Saving to $clientId...',
                             style: TextStyle(fontSize: 11.5, color: Colors.blue.shade700, fontWeight: FontWeight.w500),
                           ),
+                        ] else if (_isOffline) ...[
+                          Icon(Icons.offline_pin, size: 15, color: Colors.amber.shade800),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Saved on device (Offline) • Auto-syncing when connected',
+                              style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ] else if (_lastSaveError != null) ...[
                           const Icon(Icons.error, size: 14, color: Colors.red),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Save error: $_lastSaveError',
+                              'Sync issue: $_lastSaveError',
                               style: const TextStyle(fontSize: 11, color: Colors.red),
                               overflow: TextOverflow.ellipsis,
                             ),
