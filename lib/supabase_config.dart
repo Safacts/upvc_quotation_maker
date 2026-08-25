@@ -1,18 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseConfig {
-  // LIVE production project (Mumbai, effxrwrbsjduvhmorvrq) — cutover completed
-  // 20-08-2026. Aadi approved this change 21-08-2026 (was locked on Tokyo
-  // `gumpmnbjdtzajhysnnaz`, which is now the staging/archive project).
-  // Anon key is public by design — RLS + the `x-client-id` header are the
-  // tenant boundary. Keep in sync with lib/config/client_config.dart defaults.
+  // The deployment pipeline supplies the environment-specific project and key
+  // with --dart-define. Do not commit a JWT fallback: it makes the bundle
+  // ambiguous and trips the release secret scanner.
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://effxrwrbsjduvhmorvrq.supabase.co',
+    defaultValue: '',
   );
   static const String supabaseAnonKey = String.fromEnvironment(
     'SUPABASE_ANON_KEY',
-    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmZnhyd3Jic2pkdXZobW9ydnJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI2ODgsImV4cCI6MjA5NTkwODY4OH0.47s0OUVmo3aeeICiLL_j-cfaiI_Z8i7l7tGIukKgs7I',
+    defaultValue: '',
   );
 
   static Future<void> initialize() async {
