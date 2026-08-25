@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("5m")
-      .setIssuer("https://gumpmnbjdtzajhysnnaz.supabase.co/auth/v1")
+      .setIssuer("https://jqjxhhgfwdzckijnnede.supabase.co/auth/v1")
       .sign(encodedKey);
     
     // Get app slug from config

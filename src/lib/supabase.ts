@@ -1,5 +1,5 @@
 const SUPABASE_URL =
-  process.env.SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
+  process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const AUTH_HEADERS = {
