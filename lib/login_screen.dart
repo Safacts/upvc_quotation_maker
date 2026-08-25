@@ -80,6 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _initGoogleSignIn() async {
+    if (!googleSignInEnabled) return;
     try {
       _googleSub = googleSignInResults.listen(_handleGoogleResult);
       await ensureGoogleSignInReady();
@@ -104,19 +105,30 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loginWithGoogleEmail(String email, {String? credential}) async {
-    setState(() { _isLoading = true; _errorMessage = ''; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
     try {
       final res = await http.post(
         Uri.parse('$_apiBase/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'google', email: email.trim(), credential: credential}),
+        body: jsonEncode({
+          'mode': 'google',
+          email: email.trim(),
+          credential: credential,
+        }),
       );
       final data = _decodeJson(res);
       if (data == null) {
-        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _badResponseMessage(res);
+        });
         return;
       }
-      if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
+      if (res.statusCode == 200 &&
+          (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
@@ -124,15 +136,30 @@ class _LoginScreenState extends State<LoginScreen> {
           await _applyTenant(clientId);
         }
         if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
+        );
       } else if (res.statusCode == 200 && data['role'] == 'signup') {
-        setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.';
+        });
       } else {
         umamiTrack('login_failed');
-        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'This Google account is not registered. Please use your email and password instead.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              (data['error'] as String?) ??
+              'This Google account is not registered. Please use your email and password instead.';
+        });
       }
     } catch (e) {
-      setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Connection error: $e';
+      });
     }
   }
 
@@ -193,7 +220,8 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         if (res.statusCode == 200) {
           final data = _decodeJson(res);
-          if (data != null && (data['role'] == 'admin' || data['role'] == 'customer')) {
+          if (data != null &&
+              (data['role'] == 'admin' || data['role'] == 'customer')) {
             await _writeSession('true');
             // CRITICAL FIX: Store password_hash for save_client authentication
             await _writeSessionPasswordHash(data['password_hash'] as String?);
@@ -202,7 +230,13 @@ class _LoginScreenState extends State<LoginScreen> {
               await _applyTenant(clientId);
             }
             if (!mounted) return;
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => DashboardScreen(initialOpenQuote: openQuote),
+              ),
+            );
             return;
           }
         }
@@ -212,7 +246,12 @@ class _LoginScreenState extends State<LoginScreen> {
     String? session = await _readSession();
     if (session == 'true') {
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen(initialOpenQuote: openQuote)));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DashboardScreen(initialOpenQuote: openQuote),
+        ),
+      );
     }
   }
 
@@ -237,7 +276,10 @@ class _LoginScreenState extends State<LoginScreen> {
           : 'Server returned an invalid response (HTTP ${res.statusCode}).';
 
   void _login() async {
-    setState(() { _isLoading = true; _errorMessage = ''; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -255,12 +297,18 @@ class _LoginScreenState extends State<LoginScreen> {
           umamiTrack('login_success');
           await _writeSession('true');
           if (!mounted) return;
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => DashboardScreen()),
+          );
           return;
         }
         // Hash available but password doesn't match — fail immediately.
         umamiTrack('login_failed');
-        setState(() { _isLoading = false; _errorMessage = 'Invalid email or password.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Invalid email or password.';
+        });
         return;
       }
       // No local hash available — fall through to server-side auth below.
@@ -271,14 +319,22 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await postWithCredentials(
         Uri.parse('$_apiBase/api/portal_auth'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': 'login', 'email': email.trim(), 'password': password}),
+        body: jsonEncode({
+          'mode': 'login',
+          'email': email.trim(),
+          'password': password,
+        }),
       );
       final data = _decodeJson(res);
       if (data == null) {
-        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _badResponseMessage(res);
+        });
         return;
       }
-      if (res.statusCode == 200 && (data['role'] == 'admin' || data['role'] == 'customer')) {
+      if (res.statusCode == 200 &&
+          (data['role'] == 'admin' || data['role'] == 'customer')) {
         umamiTrack('login_success');
         await _writeSession('true');
         // Store password_hash for save_client authentication
@@ -288,26 +344,44 @@ class _LoginScreenState extends State<LoginScreen> {
           await _applyTenant(clientId);
         }
         if (!mounted) return;
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => DashboardScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardScreen()),
+        );
       } else if (res.statusCode == 200 && data['role'] == 'signup') {
-        setState(() { _isLoading = false; _errorMessage = 'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'We received your request. Complete your UPVC business profile at app.vitharn.com/signup.';
+        });
       } else {
         umamiTrack('login_failed');
-        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Invalid email or password.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              (data['error'] as String?) ?? 'Invalid email or password.';
+        });
       }
     } catch (e) {
-      setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Connection error: $e';
+      });
     }
   }
 
   Future<void> _forgotPassword() async {
     final appState = Provider.of<AppState>(context, listen: false);
-    
+
     if (!kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please use the Web Portal to reset your password.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please use the Web Portal to reset your password.'),
+        ),
+      );
       return;
     }
-    
+
     setState(() => _isLoading = true);
 
     try {
@@ -318,17 +392,28 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final data = _decodeJson(res);
       if (data == null) {
-        setState(() { _isLoading = false; _errorMessage = _badResponseMessage(res); });
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _badResponseMessage(res);
+        });
         return;
       }
       if (res.statusCode != 200) {
-        setState(() { _isLoading = false; _errorMessage = (data['error'] as String?) ?? 'Failed to send OTP.'; });
+        setState(() {
+          _isLoading = false;
+          _errorMessage = (data['error'] as String?) ?? 'Failed to send OTP.';
+        });
         return;
       }
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
       _showOtpDialog();
     } catch (e) {
-      setState(() { _isLoading = false; _errorMessage = 'Failed to send OTP: $e'; });
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to send OTP: $e';
+      });
     }
   }
 
@@ -346,11 +431,18 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Text('An OTP has been sent to ${appState.companyEmail}.'),
               const SizedBox(height: 10),
-              TextField(controller: otpController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: '6-digit OTP')),
+              TextField(
+                controller: otpController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '6-digit OTP'),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               onPressed: () {
                 final otp = otpController.text.trim();
@@ -358,14 +450,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Navigator.pop(context);
                   _showNewPasswordDialog(otp);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter the OTP')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Enter the OTP')),
+                  );
                 }
               },
               child: const Text('Verify'),
             ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -378,7 +472,11 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text('Set New Password'),
-          content: TextField(controller: passController, obscureText: true, decoration: const InputDecoration(labelText: 'New Password')),
+          content: TextField(
+            controller: passController,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'New Password'),
+          ),
           actions: [
             ElevatedButton(
               onPressed: () async {
@@ -389,32 +487,53 @@ class _LoginScreenState extends State<LoginScreen> {
                     final res = await http.post(
                       Uri.parse('$_apiBase/api/reset_client_password'),
                       headers: {'Content-Type': 'application/json'},
-                      body: jsonEncode({'email': appState.companyEmail, 'otp': otp, 'new_hash': newHash}),
+                      body: jsonEncode({
+                        'email': appState.companyEmail,
+                        'otp': otp,
+                        'new_hash': newHash,
+                      }),
                     );
                     final data = _decodeJson(res);
                     if (!mounted) return;
                     Navigator.pop(context);
                     if (res.statusCode == 200) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated successfully!')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Password updated successfully!'),
+                        ),
+                      );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text((data?['error'] as String?) ?? (data == null ? _badResponseMessage(res) : 'Failed to reset password.'))));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            (data?['error'] as String?) ??
+                                (data == null
+                                    ? _badResponseMessage(res)
+                                    : 'Failed to reset password.'),
+                          ),
+                        ),
+                      );
                     }
                   } catch (e) {
                     if (!mounted) return;
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update password: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to update password: $e')),
+                    );
                   } finally {
                     setState(() => _isLoading = false);
                   }
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password too short')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Password too short')),
+                  );
                 }
               },
               child: const Text('Save'),
             ),
           ],
         );
-      }
+      },
     );
   }
 
@@ -422,7 +541,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appState = Provider.of<AppState>(context);
-    
+
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -430,15 +549,40 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ClientLogo(config: appState.clientConfig, width: 120, height: 120).animate().scale(delay: 200.ms, duration: 500.ms, curve: Curves.easeOutBack),
+              ClientLogo(
+                config: appState.clientConfig,
+                width: 120,
+                height: 120,
+              ).animate().scale(
+                delay: 200.ms,
+                duration: 500.ms,
+                curve: Curves.easeOutBack,
+              ),
               const SizedBox(height: 20),
-              Text(appState.companyName, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.primaryColor), textAlign: TextAlign.center).animate().fade(delay: 200.ms),
+              Text(
+                appState.companyName,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.primaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fade(delay: 200.ms),
               const SizedBox(height: 8),
-              Text('Welcome Back', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)).animate().fade(delay: 300.ms).slideY(begin: 0.2),
+              Text(
+                'Welcome Back',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ).animate().fade(delay: 300.ms).slideY(begin: 0.2),
               const SizedBox(height: 8),
-              Text('Sign in to manage quotations', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600)).animate().fade(delay: 400.ms),
+              Text(
+                'Sign in to manage quotations',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ).animate().fade(delay: 400.ms),
               const SizedBox(height: 40),
-              
+
               if (_googleReady) ...[
                 if (googleSignInUsesWebButton)
                   IgnorePointer(
@@ -497,7 +641,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       TextField(
                         controller: _emailController,
-                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 16),
@@ -507,15 +654,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                            onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                            icon: Icon(
+                              _passwordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed:
+                                () => setState(
+                                  () => _passwordVisible = !_passwordVisible,
+                                ),
                           ),
                         ),
                         obscureText: !_passwordVisible,
                       ),
                       const SizedBox(height: 24),
                       if (_errorMessage.isNotEmpty) ...[
-                        Text(_errorMessage, style: const TextStyle(color: Colors.red)),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red),
+                        ),
                         const SizedBox(height: 12),
                       ],
                       SizedBox(
@@ -523,7 +680,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 50,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _login,
-                          child: _isLoading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Login'),
+                          child:
+                              _isLoading
+                                  ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Text('Login'),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -535,7 +702,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
-              
+
               const SizedBox(height: 40),
               CraftedWithLoveWidget(),
             ],
@@ -552,50 +719,54 @@ class _LoginScreenState extends State<LoginScreen> {
 class GoogleGLogoPainter extends CustomPainter {
   const GoogleGLogoPainter();
 
-  static final Path _bluePath = Path()
-    ..moveTo(22.56, 12.25)
-    ..cubicTo(22.56, 11.47, 22.49, 10.72, 22.36, 10.0)
-    ..lineTo(12.0, 10.0)
-    ..lineTo(12.0, 14.26)
-    ..lineTo(17.92, 14.26)
-    ..cubicTo(17.66, 15.63, 16.88, 16.79, 15.71, 17.57)
-    ..lineTo(15.71, 20.34)
-    ..lineTo(19.28, 20.34)
-    ..cubicTo(21.36, 18.42, 22.56, 15.6, 22.56, 12.25)
-    ..close();
+  static final Path _bluePath =
+      Path()
+        ..moveTo(22.56, 12.25)
+        ..cubicTo(22.56, 11.47, 22.49, 10.72, 22.36, 10.0)
+        ..lineTo(12.0, 10.0)
+        ..lineTo(12.0, 14.26)
+        ..lineTo(17.92, 14.26)
+        ..cubicTo(17.66, 15.63, 16.88, 16.79, 15.71, 17.57)
+        ..lineTo(15.71, 20.34)
+        ..lineTo(19.28, 20.34)
+        ..cubicTo(21.36, 18.42, 22.56, 15.6, 22.56, 12.25)
+        ..close();
 
-  static final Path _greenPath = Path()
-    ..moveTo(12.0, 23.0)
-    ..cubicTo(14.97, 23.0, 17.46, 22.02, 19.28, 20.34)
-    ..lineTo(15.71, 17.57)
-    ..cubicTo(14.73, 18.23, 13.48, 18.63, 12.0, 18.63)
-    ..cubicTo(9.14, 18.63, 6.71, 16.7, 5.84, 14.1)
-    ..lineTo(2.18, 14.1)
-    ..lineTo(2.18, 16.94)
-    ..cubicTo(3.99, 20.53, 7.7, 23.0, 12.0, 23.0)
-    ..close();
+  static final Path _greenPath =
+      Path()
+        ..moveTo(12.0, 23.0)
+        ..cubicTo(14.97, 23.0, 17.46, 22.02, 19.28, 20.34)
+        ..lineTo(15.71, 17.57)
+        ..cubicTo(14.73, 18.23, 13.48, 18.63, 12.0, 18.63)
+        ..cubicTo(9.14, 18.63, 6.71, 16.7, 5.84, 14.1)
+        ..lineTo(2.18, 14.1)
+        ..lineTo(2.18, 16.94)
+        ..cubicTo(3.99, 20.53, 7.7, 23.0, 12.0, 23.0)
+        ..close();
 
-  static final Path _yellowPath = Path()
-    ..moveTo(5.84, 14.09)
-    ..cubicTo(5.62, 13.43, 5.49, 12.73, 5.49, 12.0)
-    ..cubicTo(5.49, 11.27, 5.62, 10.57, 5.84, 9.91)
-    ..lineTo(5.84, 7.07)
-    ..lineTo(2.18, 7.07)
-    ..cubicTo(1.43, 8.55, 1.0, 10.22, 1.0, 12.0)
-    ..cubicTo(1.0, 13.78, 1.43, 15.45, 2.18, 16.93)
-    ..lineTo(5.03, 14.71)
-    ..lineTo(5.84, 14.09)
-    ..close();
+  static final Path _yellowPath =
+      Path()
+        ..moveTo(5.84, 14.09)
+        ..cubicTo(5.62, 13.43, 5.49, 12.73, 5.49, 12.0)
+        ..cubicTo(5.49, 11.27, 5.62, 10.57, 5.84, 9.91)
+        ..lineTo(5.84, 7.07)
+        ..lineTo(2.18, 7.07)
+        ..cubicTo(1.43, 8.55, 1.0, 10.22, 1.0, 12.0)
+        ..cubicTo(1.0, 13.78, 1.43, 15.45, 2.18, 16.93)
+        ..lineTo(5.03, 14.71)
+        ..lineTo(5.84, 14.09)
+        ..close();
 
-  static final Path _redPath = Path()
-    ..moveTo(12.0, 5.38)
-    ..cubicTo(13.62, 5.38, 15.06, 5.94, 16.21, 7.02)
-    ..lineTo(19.36, 3.87)
-    ..cubicTo(17.45, 2.09, 14.97, 1.0, 12.0, 1.0)
-    ..cubicTo(7.7, 1.0, 3.99, 3.47, 2.18, 7.07)
-    ..lineTo(5.84, 9.91)
-    ..cubicTo(6.71, 7.31, 9.14, 5.38, 12.0, 5.38)
-    ..close();
+  static final Path _redPath =
+      Path()
+        ..moveTo(12.0, 5.38)
+        ..cubicTo(13.62, 5.38, 15.06, 5.94, 16.21, 7.02)
+        ..lineTo(19.36, 3.87)
+        ..cubicTo(17.45, 2.09, 14.97, 1.0, 12.0, 1.0)
+        ..cubicTo(7.7, 1.0, 3.99, 3.47, 2.18, 7.07)
+        ..lineTo(5.84, 9.91)
+        ..cubicTo(6.71, 7.31, 9.14, 5.38, 12.0, 5.38)
+        ..close();
 
   @override
   void paint(Canvas canvas, Size size) {
