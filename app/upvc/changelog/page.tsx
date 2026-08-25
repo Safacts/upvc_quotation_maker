@@ -32,6 +32,11 @@ const quarters = [
     note: "Shipped in the latest release — live on your system today.",
     items: [
       {
+        icon: ShieldCheck,
+        title: "Bank-grade protection for your business data",
+        desc: "A full security audit hardened every door into your system: brute-force login lockouts, spam-proof signup, tamper-proof file storage, and strict tenant isolation — so your quotations, customer details, and invoices stay yours alone.",
+      },
+      {
         icon: Sparkles,
         title: "Your price list, digitized in minutes",
         desc: "Import your per-sqft rate card from a simple CSV and every new quotation prices itself with your own rates — no more typing rates line by line. Download the template, fill it once, import it, and quoting gets dramatically faster.",
