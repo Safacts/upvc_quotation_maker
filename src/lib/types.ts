@@ -116,7 +116,7 @@ export function parseClientConfig(cfg: Record<string, any>, clientId: string): C
     lastBuildVersionName: cfg.lastBuildVersionName ? String(cfg.lastBuildVersionName) : undefined,
     lastBuildVersionCode: typeof cfg.lastBuildVersionCode === "number" ? cfg.lastBuildVersionCode : (cfg.lastBuildVersionCode != null ? Number(cfg.lastBuildVersionCode) : undefined),
     isActive: cfg.isActive !== false,
-    supabaseUrl: String(cfg.supabaseUrl || "https://gumpmnbjdtzajhysnnaz.supabase.co"),
+    supabaseUrl: String(cfg.supabaseUrl || "https://jqjxhhgfwdzckijnnede.supabase.co"),
     supabaseAnonKey: String(cfg.supabaseAnonKey || ""),
     adminEmails: Array.isArray(cfg.adminEmails) ? cfg.adminEmails.map(String) : [],
     landingHeroTitle: String(cfg.landingHeroTitle || ""),

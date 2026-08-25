@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     try {
       const result = await jwtVerify(token, encodedKey, {
         algorithms: ["HS256"],
-        issuer: "https://gumpmnbjdtzajhysnnaz.supabase.co/auth/v1",
+        issuer: "https://jqjxhhgfwdzckijnnede.supabase.co/auth/v1",
       });
       payload = result.payload;
     } catch (e) {

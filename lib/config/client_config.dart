@@ -104,9 +104,9 @@ class ClientConfig {
     this.accentColor = const Color(0xFFEC4899),
     this.trialExpiresAt,
     this.isActive = true,
-    this.supabaseUrl = 'https://gumpmnbjdtzajhysnnaz.supabase.co',
+    this.supabaseUrl = 'https://jqjxhhgfwdzckijnnede.supabase.co',
     this.supabaseAnonKey =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxanhoaGdmd2R6Y2tpam5uZWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NTY3MTYsImV4cCI6MjEwMzIzMjcxNn0.rOx-8Y_aT0pNVdvZMxRUx8feP2ZU1OBlF63oLH6nAnY',
     this.adminEmails = const ['vitarn.dev@gmail.com'],
     this.landingHeroTitle = '',
     this.landingHeroSubtitle = 'Quality UPVC solutions for your home',
