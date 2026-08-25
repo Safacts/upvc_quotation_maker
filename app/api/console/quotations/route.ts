@@ -392,11 +392,16 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       // Best effort: preserve the original insert error, but never knowingly
       // leave a partially-created quotation behind.
-      await Promise.allSettled([
+      const cleanup = await Promise.allSettled([
         supaDelete("measured_items", { quotation_id: "eq." + row.id, client_id: "eq." + clientId }),
         supaDelete("unmeasured_items", { quotation_id: "eq." + row.id, client_id: "eq." + clientId }),
         supaDelete("quotations", { id: "eq." + row.id, client_id: "eq." + clientId }),
       ]);
+      for (const outcome of cleanup) {
+        if (outcome.status === "rejected") {
+          console.error("[console/quotations] orphan cleanup failed:", String(outcome.reason));
+        }
+      }
       throw e;
     }
 

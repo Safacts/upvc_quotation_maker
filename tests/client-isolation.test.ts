@@ -119,6 +119,22 @@ vi.mock("@/lib/supabase-client", () => {
   return { supabase, supabaseAdmin, getSupabase: () => supabase, getSupabaseAdmin: () => supabaseAdmin };
 });
 
+/**
+ * pdf-lib HANGS (~5s+) when imported in the vitest node environment. The
+ * gst_invoices routes import `amountInWords` from `@/lib/gst-invoice-pdf`,
+ * which pulls pdf-lib at module scope — so merely importing the ROUTE timed
+ * the test out before any assertion ran (seen on "blocks a logged-in customer
+ * reading another tenant's invoices"). Mocking this specifier intercepts at
+ * the exact specifier the routes use (`app/api/gst_invoices/route.ts:7`,
+ * `[id]/route.ts:13`), so pdf-lib never loads. Same proven pattern as
+ * tests/pdf-routes.test.ts:79. We stub every named export any route in this
+ * file's graph imports; PDF rendering itself is covered by pdf-routes.test.ts.
+ */
+vi.mock("@/lib/gst-invoice-pdf", () => ({
+  amountInWords: (n: number) => `Rupees ${Number(n).toFixed(2)} Only (stub)`,
+  buildGstInvoicePdf: async () => new Uint8Array([0x25, 0x50, 0x44, 0x46]), // "%PDF"
+}));
+
 // ---------------------------------------------------------------------------
 // Session mock — a real signed JWT would also work, but we control the payload
 // directly so a test can express "an attacker holding a signup-role cookie".

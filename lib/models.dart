@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'supabase_config.dart';
 
@@ -19,15 +18,20 @@ extension QuotationStatusX on QuotationStatus {
     switch (this) {
       case QuotationStatus.draft: return 'draft';
       case QuotationStatus.sent:  return 'sent';
-      case QuotationStatus.won:   return 'won';
-      case QuotationStatus.lost:  return 'lost';
+      case QuotationStatus.won:   return 'approved';
+      case QuotationStatus.lost:  return 'rejected';
     }
   }
   static QuotationStatus fromString(String? s) {
     switch (s) {
       case 'sent': return QuotationStatus.sent;
-      case 'won':  return QuotationStatus.won;
-      case 'lost': return QuotationStatus.lost;
+      case 'approved':
+      case 'won':
+      case 'accepted':
+        return QuotationStatus.won;
+      case 'rejected':
+      case 'lost':
+        return QuotationStatus.lost;
       default:     return QuotationStatus.draft;
     }
   }

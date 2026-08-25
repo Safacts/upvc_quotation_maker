@@ -234,7 +234,7 @@ export async function PATCH(
       { id: "eq." + id, client_id: "eq." + clientId },
       {
         quote_no: data.quote_no,
-        date: data.date,
+        date: data.date || new Date().toISOString().slice(0, 10),
         customer_name: data.customer_name,
         contact_no: data.contact_no,
         email: data.email,

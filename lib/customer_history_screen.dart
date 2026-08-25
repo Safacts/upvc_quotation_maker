@@ -128,8 +128,10 @@ class _CustomerHistoryScreenState extends State<CustomerHistoryScreen>
         return Colors.grey.shade400;
       case 'sent':
         return Colors.blue.shade400;
+      case 'approved':
       case 'won':
         return Colors.green.shade500;
+      case 'rejected':
       case 'lost':
         return Colors.red.shade400;
       default:

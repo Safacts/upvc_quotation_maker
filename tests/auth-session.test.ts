@@ -320,10 +320,56 @@ describe("JWT_SECRET configuration", () => {
     await expect(rotated.decrypt(token)).resolves.toBeNull();
   });
 
-  it("FIXED ISO-10: throws an error at boot if JWT_SECRET is missing instead of falling back to a public key", async () => {
+  it("ISO-10: fail-closed without JWT_SECRET — import succeeds (lazy resolution), but signing throws and verifying returns null", async () => {
+    // HISTORY: this used to assert `import("@/lib/session")` REJECTS when
+    // JWT_SECRET is missing. Commit 40f3323 (21-08-2026) made secret
+    // resolution LAZY on purpose — getEncodedKey() now reads process.env
+    // per-call inside the function body (session.ts:5-9) so builds/dev servers
+    // can start without env vars. The SECURITY CONTRACT is unchanged and is
+    // what we assert here: with no secret, nothing can be signed or verified,
+    // and there is still no fallback to a public/default key.
     vi.resetModules();
+    const previousSecret = process.env.JWT_SECRET;
     delete process.env.JWT_SECRET;
-    await expect(import("@/lib/session")).rejects.toThrow("JWT_SECRET environment variable is missing");
-    process.env.JWT_SECRET = TEST_SECRET;
+
+    try {
+      // 1. Module IMPORT must succeed — resolution is lazy by design.
+      const session = await import("@/lib/session");
+      expect(typeof session.encrypt).toBe("function");
+      expect(typeof session.decrypt).toBe("function");
+
+      // 2. Signing WITHOUT a secret must THROW — fail closed, never fall back.
+      await expect(
+        session.encrypt({
+          role: "customer",
+          email: "kprupvc@gmail.com",
+          client_id: "kprupvc",
+          session_id: crypto.randomUUID(),
+          expiresAt: new Date(Date.now() + 86_400_000),
+        }),
+      ).rejects.toThrow("JWT_SECRET environment variable is missing");
+
+      // 3. Verifying WITHOUT a secret must fail closed: decrypt() swallows the
+      //    accessor error by design and returns null (never accepts, never crashes).
+      await expect(session.decrypt("not-a-jwt")).resolves.toBeNull();
+
+      // 4. The SAME freshly-imported module works the moment the secret is set,
+      //    proving the failures above came from the missing env, not a broken module.
+      process.env.JWT_SECRET = TEST_SECRET;
+      const token = await session.encrypt({
+        role: "customer",
+        email: "kprupvc@gmail.com",
+        client_id: "kprupvc",
+        session_id: crypto.randomUUID(),
+        expiresAt: new Date(Date.now() + 86_400_000),
+      });
+      expect(token.split(".")).toHaveLength(3);
+      const payload = await session.decrypt(token);
+      expect(payload?.role).toBe("customer");
+      expect(payload?.client_id).toBe("kprupvc");
+    } finally {
+      // Restore the baseline so later suites/tests are unaffected.
+      process.env.JWT_SECRET = previousSecret ?? TEST_SECRET;
+    }
   });
 });

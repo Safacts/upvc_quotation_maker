@@ -439,7 +439,7 @@ CRITICAL INSTRUCTIONS:
               }
               const newConfig = { ...currentConfig, ...updates };
               try {
-                await supaPatch("clients", { config: newConfig }, { id: "eq." + clientId });
+                await supaPatch("clients", { id: "eq." + clientId }, { config: newConfig });
                 result = `Success: Updated client ${clientId}.`;
                 actionLogs.push(`Updated config for client: ${clientId}`);
               } catch (e: any) {
@@ -452,19 +452,22 @@ CRITICAL INSTRUCTIONS:
           if (!clientId) {
             result = "Error: clientId is required.";
           } else {
-            const filters: Record<string, string | number> = {
-              client_id: "eq." + clientId,
-            };
-            if (args.status) filters.status = "eq." + String(args.status).trim();
+            const statusFilter = args.status
+              ? { status: "eq." + String(args.status).trim() }
+              : {};
 
             try {
-              const count = await supaCount("quotations", filters);
+              const count = await supaCount("quotations", {
+                client_id: "eq." + clientId,
+                ...statusFilter,
+              });
               if (args.countOnly === true) {
                 result = JSON.stringify({ clientId, count });
               } else {
                 const limit = Math.min(Math.max(Number(args.limit) || 20, 1), 100);
                 const rows = await supaGet("quotations", {
-                  ...filters,
+                  client_id: "eq." + clientId,
+                  ...statusFilter,
                   select: "id,quote_no,date,customer_name,status,grand_total,created_at",
                   order: "created_at.desc",
                   limit,
@@ -486,10 +489,9 @@ CRITICAL INSTRUCTIONS:
               if (!Array.isArray(clients) || clients.length === 0) {
                 result = "Error: Client not found.";
               } else {
-                const quoteFilter = { client_id: "eq." + clientId };
-                const exactCount = await supaCount("quotations", quoteFilter);
+                const exactCount = await supaCount("quotations", { client_id: "eq." + clientId });
                 const sample = await supaGetAllPaged("quotations", {
-                  ...quoteFilter,
+                  client_id: "eq." + clientId,
                   select: "id,quote_no,date,customer_name,status,grand_total,created_at",
                   order: "created_at.desc",
                 }, 500, 5000);
