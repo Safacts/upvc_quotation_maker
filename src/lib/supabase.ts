@@ -192,7 +192,11 @@ export function uploadLogoFile(
   logoFile: { mime?: string; data: string },
   sub = "",
 ): Promise<string> {
-  const mime = logoFile.mime || "image/png";
+  const allowedMimes = new Set(["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"]);
+  const mime = (logoFile.mime || "image/png").toLowerCase();
+  if (!allowedMimes.has(mime)) {
+    throw new Error(`Unsupported image type: ${mime}. Allowed: png, jpeg, gif, webp`);
+  }
   const extMap: Record<string, string> = {
     "image/png": "png",
     "image/jpeg": "jpg",
@@ -202,7 +206,27 @@ export function uploadLogoFile(
   };
   const ext = extMap[mime] || "png";
   const safe = clientId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const binary = Uint8Array.from(atob(logoFile.data), (c) => c.charCodeAt(0));
+  let binary: Uint8Array;
+  try {
+    const b64 = logoFile.data.includes(",") ? logoFile.data.split(",").pop()! : logoFile.data;
+    binary = Uint8Array.from(atob(b64.trim()), (c) => c.charCodeAt(0));
+  } catch {
+    throw new Error("Invalid base64 image data");
+  }
+  if (binary.length === 0) throw new Error("Empty image file");
+  if (binary.length > 2 * 1024 * 1024) throw new Error("Image too large: max 2MB");
+  const isPng = binary[0] === 0x89 && binary[1] === 0x50 && binary[2] === 0x4e && binary[3] === 0x47;
+  const isJpeg = binary[0] === 0xff && binary[1] === 0xd8 && binary[2] === 0xff;
+  const isGif = binary[0] === 0x47 && binary[1] === 0x49 && binary[2] === 0x46 && binary[3] === 0x38;
+  const isWebp = binary[0] === 0x52 && binary[1] === 0x49 && binary[2] === 0x46 && binary[3] === 0x46 && binary[8] === 0x57 && binary[9] === 0x45 && binary[10] === 0x42 && binary[11] === 0x50;
+  const magicOk =
+    (mime === "image/png" && isPng) ||
+    ((mime === "image/jpeg" || mime === "image/jpg") && isJpeg) ||
+    (mime === "image/gif" && isGif) ||
+    (mime === "image/webp" && isWebp);
+  if (!magicOk) {
+    throw new Error(`Image content does not match declared type ${mime} (magic byte mismatch)`);
+  }
   const filename = sub
     ? `logos/${safe}-${sub}.${ext}`
     : `logos/${safe}.${ext}`;
