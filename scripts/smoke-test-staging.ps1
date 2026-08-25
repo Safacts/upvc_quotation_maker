@@ -1,5 +1,5 @@
 $ErrorActionPreference = "Stop"
-$baseUrl = "https://upvcquotationmaker-i6ezk4ond-safacts-projects.vercel.app"
+$baseUrl = if ($env:STAGING_URL) { $env:STAGING_URL.TrimEnd('/') } else { "https://vitharn-upvc-staging.vercel.app" }
 $routes = @(
     "/",
     "/upvc",

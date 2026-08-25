@@ -49,6 +49,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Check Flutter source
+        run: |
+          flutter pub get
+          flutter analyze lib/supabase_config.dart lib/quotation_screen.dart lib/pdf_confirmation_screen.dart
+
       - name: Run TypeScript check
         run: npx tsc --noEmit
 
@@ -98,6 +110,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Flutter web build
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Build Flutter web bundle for Tokyo staging
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        run: |
+          flutter pub get
+          flutter build web --release --base-href /app/ \
+            --dart-define=SUPABASE_URL="$STAGING_SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$STAGING_SUPABASE_ANON_KEY"
+          rm -rf public/app
+          mkdir -p public/app
+          cp -R build/web/. public/app/
+
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
@@ -144,7 +176,6 @@ jobs:
           # Deploy and capture JSON output (contains the deployment url)
           DEPLOY_JSON=$(vercel --token=$VERCEL_TOKEN \
             --scope=${{ env.VERCEL_ORG_ID_STAGING }} \
-            --prod=false \
             --yes --json 2>&1)
           DEPLOY_RC=$?
           set -e
@@ -156,16 +187,9 @@ jobs:
             echo "::error::Failed to capture deployment URL from vercel output (rc=$DEPLOY_RC)"
             exit 1
           fi
-          # Alias to fixed staging domain (best-effort; do not fail job if domain not owned by team)
-          set +e
-          vercel alias $DEPLOY_URL vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=${{ env.VERCEL_ORG_ID_STAGING }}
-          ALIAS_RC=$?
-          set -e
-          if [ $ALIAS_RC -eq 0 ]; then
-            echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
-          else
-            echo "⚠️ Staging alias skipped (domain not on team or already set); deployment live at preview URL above."
-          fi
+          # The fixed staging URL is part of the test contract; alias failure must fail CI.
+          vercel alias "$DEPLOY_URL" vitharn-upvc-staging.vercel.app --token=$VERCEL_TOKEN --scope=${{ env.VERCEL_ORG_ID_STAGING }}
+          echo "✅ Aliased to: https://vitharn-upvc-staging.vercel.app"
 
   # ============================================================
   # STAGING SMOKE TEST - Verify external deps & critical paths
@@ -239,6 +263,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Setup Flutter web build
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+
+      - name: Build Flutter web bundle for production
+        run: |
+          flutter pub get
+          flutter build web --release --base-href /app/
+          rm -rf public/app
+          mkdir -p public/app
+          cp -R build/web/. public/app/
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
