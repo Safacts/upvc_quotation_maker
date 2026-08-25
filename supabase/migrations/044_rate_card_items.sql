@@ -36,12 +36,12 @@ CREATE INDEX IF NOT EXISTS idx_rate_card_items_validity_end  ON public.rate_card
 
 ALTER TABLE public.rate_card_items ENABLE ROW LEVEL SECURITY;
 
+-- SECURITY: no permissive "Allow public all" policy here. Postgres ORs
+-- permissive policies, so USING(true) would defeat client_isolation and leak
+-- cross-tenant pricing to anyone holding the anon key (same class of bug fixed
+-- 08-08-2026 on quotations/measured_items). App access goes through
+-- service_role (bypasses RLS); direct client access is tenant-scoped below.
 DROP POLICY IF EXISTS "Allow public all on rate_card_items" ON public.rate_card_items;
-CREATE POLICY "Allow public all on rate_card_items"
-    ON public.rate_card_items
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow service_role full access on rate_card_items" ON public.rate_card_items;
 CREATE POLICY "Allow service_role full access on rate_card_items"
