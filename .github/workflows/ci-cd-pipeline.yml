@@ -230,7 +230,11 @@ jobs:
           echo "✅ Flutter app: $HTTP_CODE"
 
           # Test Umami analytics script loads (external dependency)
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15)
+        if HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15); then
+          :
+        else
+          HTTP_CODE=000
+        fi
           if [ "$HTTP_CODE" != "200" ]; then
             echo "::warning::Umami analytics returned $HTTP_CODE - external dependency may be down"
           else
