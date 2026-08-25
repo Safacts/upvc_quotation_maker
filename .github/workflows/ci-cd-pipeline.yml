@@ -275,9 +275,16 @@ jobs:
           cache: true
 
       - name: Build Flutter web bundle for production
+        env:
+          PRODUCTION_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          PRODUCTION_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           flutter pub get
-          flutter build web --release --base-href /app/
+          test -n "$PRODUCTION_SUPABASE_URL" || (echo "SUPABASE_URL production secret is missing" && exit 1)
+          test -n "$PRODUCTION_SUPABASE_ANON_KEY" || (echo "SUPABASE_ANON_KEY production secret is missing" && exit 1)
+          flutter build web --release --base-href /app/ \
+            --dart-define=SUPABASE_URL="$PRODUCTION_SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$PRODUCTION_SUPABASE_ANON_KEY"
           rm -rf public/app
           mkdir -p public/app
           cp -R build/web/. public/app/
