@@ -3,7 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { timingSafeEqual } from "crypto";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { createSession, deleteSession, getSession } from "@/lib/session";
-import { sha256 } from "@/lib/auth";
+import { hashPassword, sha256, verifyPassword } from "@/lib/auth";
 import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { sendSignupNotification } from "@/lib/mail";
 import { notifyNewClientSignup, isTelegramConfigured } from "@/lib/telegram";
@@ -346,14 +346,14 @@ export async function POST(request: NextRequest) {
     if (!password) return json({ error: "password required" }, 400);
     const inputHash = sha256(password);
 
-    if (admin && safeEqual(String(admin.password_hash || ""), inputHash)) {
+    if (admin && await verifyPassword(password, String(admin.password_hash || ""))) {
       clearAuthFailures(attemptKey);
       await createSession({ role: "admin", email: admin.email });
       return json({ role: "admin", email: admin.email }, 200);
     }
 
     const client = await findClientByEmail(email);
-    if (client && safeEqual(String(client.password_hash || ""), inputHash)) {
+    if (client && await verifyPassword(password, String(client.password_hash || ""))) {
       clearAuthFailures(attemptKey);
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
@@ -400,7 +400,7 @@ export async function POST(request: NextRequest) {
       if (inactive) {
         // Verify the password BEFORE revealing deactivation, otherwise this
         // branch is an oracle that confirms which emails hold accounts.
-        if (!safeEqual(String(inactive.password_hash || ""), inputHash)) {
+        if (!await verifyPassword(password, String(inactive.password_hash || ""))) {
           recordAuthFailure(attemptKey);
           return json({ error: "invalid email or password" }, 401);
         }
@@ -411,7 +411,7 @@ export async function POST(request: NextRequest) {
         if (signup.auth_method === "google" || !signup.password_hash) {
           return json({ error: "This account was created with Google Sign-In. Please use Sign in with Google." }, 401);
         }
-        if (safeEqual(String(signup.password_hash), inputHash)) {
+        if (await verifyPassword(password, String(signup.password_hash))) {
           clearAuthFailures(attemptKey);
           await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
           return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
@@ -426,7 +426,7 @@ export async function POST(request: NextRequest) {
       recordAuthFailure(signupCreateKey);
       let newRow: any;
       try {
-        newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: inputHash });
+        newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: await hashPassword(password) });
       } catch (e: any) {
         return json({ error: String(e?.message ?? e) }, 500);
       }

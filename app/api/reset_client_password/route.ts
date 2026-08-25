@@ -3,6 +3,7 @@ import { randomInt, createHash, timingSafeEqual } from "crypto";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { sendOtpEmail } from "@/lib/mail";
 import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
+import { hashPassword } from "@/lib/auth";
 
 /**
  * OTPs are stored as a SHA-256 hash, never in plaintext.
@@ -181,9 +182,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (admin) {
-      await supaPatch("admins", { email: "eq." + email }, { password_hash: newHash });
+      await supaPatch("admins", { email: "eq." + email }, { password_hash: await hashPassword(newHash) });
     } else {
-      await supaPatch("clients", { id: "eq." + client.id }, { password_hash: newHash });
+      await supaPatch("clients", { id: "eq." + client.id }, { password_hash: await hashPassword(newHash) });
     }
 
     clearAuthFailures(attemptKey);
