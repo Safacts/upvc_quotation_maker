@@ -20,7 +20,9 @@ void main() async {
   // Load Venkateshwara client config
   ClientConfig? initialConfig;
   try {
-    initialConfig = await ClientLoader.loadConfig(clientId: 'venkateshwara');
+    initialConfig = await ClientLoader.loadConfig(
+      clientId: 'venkateshwara',
+    ).timeout(const Duration(seconds: 10));
   } catch (e) {
     debugPrint('Config load error: $e');
     // Fallback: create default config for Venkateshwara
@@ -28,12 +30,14 @@ void main() async {
       clientId: 'venkateshwara',
       appName: 'Venkateshwara UPVC Quote',
       companyName: 'Venkateshwara UPVC Windows & Doors',
-      companyAddress: 'Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074',
+      companyAddress:
+          'Plot No: 95, Road No: 2, Near Omkar Nagar Bus Stop, LB NAGAR, HYDERABAD – 500074',
       companyContact: '9246588692, 9441888131',
       companyEmail: 'jvenkateshupvc@gmail.com',
       companyProprietor: 'J.Venkateshwarlu',
       gstNumber: '36AKDPJ7245B2ZF',
-      logoUrl: 'https://gumpmnbjdtzajhysnn.supabase.co/storage/v1/object/public/assets/logos/venkateshwara.png',
+      logoUrl:
+          'https://gumpmnbjdtzajhysnn.supabase.co/storage/v1/object/public/assets/logos/venkateshwara.png',
     );
   }
 
