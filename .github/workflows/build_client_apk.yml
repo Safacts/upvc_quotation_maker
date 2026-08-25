@@ -108,6 +108,12 @@ jobs:
               -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
               -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
               | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const r=JSON.parse(s);process.stdout.write((r&&r[0]&&r[0].config&&r[0].config.logoUrl)||'')}catch(e){process.stdout.write('')}})")
+            if [ -n "${LOGO_URL}" ]; then
+              if ! printf '%s' "$LOGO_URL" | grep -Eq '^https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/assets/'; then
+                echo "LOGO_URL not allowlisted (must be Supabase assets bucket), skipping icon fetch"
+                LOGO_URL=""
+              fi
+            fi
             if [ -n "${LOGO_URL}" ] && curl -sSL --max-time 30 -o /tmp/icon/src "${LOGO_URL}" && file /tmp/icon/src | grep -qi "image"; then
               SRC="/tmp/icon/src"
             fi
