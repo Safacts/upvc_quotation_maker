@@ -123,18 +123,15 @@ export async function POST(request: NextRequest) {
         if (session && (sessionIsAdmin || (session.role === "customer" && (session.client_id === clientMatch.id || session.client_id === cid)))) {
           authedBySession = true;
         } else {
-          const hasSession = !!session;
-          const sessionRole = session?.role ?? "none";
-          const sessionClient = (session as any)?.client_id ?? "none";
           if (!phash) {
             return json({
               error: "password hash required",
-              hint: `client auth: hash empty and session invalid (hasSession:${hasSession} role:${sessionRole} sessionClient:${sessionClient} expected:${clientMatch.id}) — re-login or ensure cookie is sent (withCredentials)`,
+              hint: "not authorized",
             }, 403);
           }
           return json({
             error: "hash mismatch",
-            hint: `client auth: hash mismatch and session fallback failed (hasSession:${hasSession} role:${sessionRole} sessionClient:${sessionClient} expected:${clientMatch.id})`,
+            hint: "not authorized",
           }, 403);
         }
       }

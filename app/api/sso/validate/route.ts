@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false, error: "Missing required claims" }, { status: 401 });
     }
     
-    // Check if token exists and not used
+    // Check if token exists and not expired
     const supabase = getSupabaseServer();
     const { data: tokenRecord, error } = await supabase
       .from("sso_tokens")
@@ -47,24 +47,28 @@ export async function POST(request: NextRequest) {
       .eq("client_id", payload.client_id)
       .eq("session_id", payload.session_id)
       .maybeSingle();
-    
+
     if (error || !tokenRecord) {
       return NextResponse.json({ valid: false, error: "Token not found or expired" }, { status: 401 });
     }
-    
-    if (tokenRecord.used) {
-      return NextResponse.json({ valid: false, error: "Token already used" }, { status: 401 });
-    }
-    
+
     if (new Date(tokenRecord.expires_at) < new Date()) {
       return NextResponse.json({ valid: false, error: "Token expired" }, { status: 401 });
     }
-    
-    // Mark token as used (one-time use)
-    await supabase
+
+    // Consume atomically: the conditional update only matches a still-unused
+    // token and returns the row when THIS request won the race. Two concurrent
+    // validations can therefore never both succeed (TOCTOU replay fix).
+    const { data: consumed, error: consumeError } = await supabase
       .from("sso_tokens")
       .update({ used: true, used_at: new Date().toISOString() })
-      .eq("jti", payload.jti);
+      .eq("jti", payload.jti)
+      .eq("used", false)
+      .select("jti");
+
+    if (consumeError || !consumed || consumed.length === 0) {
+      return NextResponse.json({ valid: false, error: "Token already used" }, { status: 401 });
+    }
     
     // Verify client exists and is active
     const { data: client } = await supabase
