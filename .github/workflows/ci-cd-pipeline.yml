@@ -128,7 +128,8 @@ jobs:
           flutter pub get
           flutter build web --release --base-href /app/ \
             --dart-define=SUPABASE_URL="$STAGING_SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$STAGING_SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$STAGING_SUPABASE_ANON_KEY" \
+            --dart-define=GOOGLE_SIGNIN_ENABLED=false
           rm -rf public/app
           mkdir -p public/app
           cp -R build/web/. public/app/

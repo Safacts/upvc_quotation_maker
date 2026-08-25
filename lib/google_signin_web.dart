@@ -23,7 +23,7 @@ Stream<GoogleSignInResult> get googleSignInResults => _results.stream;
 
 /// Web renders the embedded Google Identity Services button (an
 /// [HtmlElementView]) instead of the styled native button.
-bool get googleSignInUsesWebButton => true;
+bool get googleSignInUsesWebButton => googleSignInEnabled;
 
 /// The web flow completes through the GSI credential callback pushed onto
 /// [googleSignInResults], so this interactive flow is never invoked — kept for
@@ -47,11 +47,19 @@ Future<void> ensureGoogleSignInReady() async {
 
 Future<void> _loadGsiScript() async {
   final doc = globalContext.getProperty('document'.toJS) as JSObject;
-  final existing =
-      doc.callMethod<JSObject?>('querySelector'.toJS, 'script[data-gsi]'.toJS);
+  final existing = doc.callMethod<JSObject?>(
+    'querySelector'.toJS,
+    'script[data-gsi]'.toJS,
+  );
   if (existing == null) {
-    final script = doc.callMethod<JSObject>('createElement'.toJS, 'script'.toJS);
-    script.setProperty('src'.toJS, 'https://accounts.google.com/gsi/client'.toJS);
+    final script = doc.callMethod<JSObject>(
+      'createElement'.toJS,
+      'script'.toJS,
+    );
+    script.setProperty(
+      'src'.toJS,
+      'https://accounts.google.com/gsi/client'.toJS,
+    );
     script.setProperty('async'.toJS, true.toJS);
     script.setProperty('data-gsi'.toJS, '1'.toJS);
     final head = doc.getProperty('head'.toJS) as JSObject;
@@ -70,7 +78,9 @@ Future<void> _waitForGoogle() async {
     } else if (DateTime.now().isAfter(deadline)) {
       timer.cancel();
       if (!completer.isCompleted) {
-        completer.completeError(StateError('Google Identity Services failed to load.'));
+        completer.completeError(
+          StateError('Google Identity Services failed to load.'),
+        );
       }
     }
   });
@@ -80,7 +90,9 @@ Future<void> _waitForGoogle() async {
 void _registerView() {
   if (_viewRegistered) return;
   _viewRegistered = true;
-  ui_web.platformViewRegistry.registerViewFactory(googleSignInViewType, (int viewId) {
+  ui_web.platformViewRegistry.registerViewFactory(googleSignInViewType, (
+    int viewId,
+  ) {
     final doc = globalContext.getProperty('document'.toJS) as JSObject;
     final div = doc.callMethod<JSObject>('createElement'.toJS, 'div'.toJS);
     final style = div.getProperty('style'.toJS) as JSObject;
@@ -92,19 +104,21 @@ void _registerView() {
     final google = globalContext.getProperty('google'.toJS) as JSObject;
     final accounts = google.getProperty('accounts'.toJS) as JSObject;
     final id = accounts.getProperty('id'.toJS) as JSObject;
-    final config = <String, Object?>{
-      'client_id': _googleClientId,
-      'auto_select': false,
-      'callback': _onCredentialResponse.toJS,
-    }.jsify();
+    final config =
+        <String, Object?>{
+          'client_id': _googleClientId,
+          'auto_select': false,
+          'callback': _onCredentialResponse.toJS,
+        }.jsify();
     id.callMethod<JSAny?>('initialize'.toJS, config);
-    final options = <String, Object?>{
-      'theme': 'outline',
-      'size': 'large',
-      'text': 'continue_with',
-      'shape': 'pill',
-      'width': 320,
-    }.jsify();
+    final options =
+        <String, Object?>{
+          'theme': 'outline',
+          'size': 'large',
+          'text': 'continue_with',
+          'shape': 'pill',
+          'width': 320,
+        }.jsify();
     id.callMethodVarArgs<JSAny?>('renderButton'.toJS, [div, options]);
     return div;
   });
@@ -114,11 +128,17 @@ void _onCredentialResponse(JSAny response) {
   final res = response as JSObject;
   if (res.has('error')) {
     final error = res.getProperty<JSString>('error'.toJS).toDart;
-    _results.add(GoogleSignInResult(error: error.isEmpty ? 'Google sign-in failed.' : error));
+    _results.add(
+      GoogleSignInResult(
+        error: error.isEmpty ? 'Google sign-in failed.' : error,
+      ),
+    );
     return;
   }
   if (!res.has('credential')) {
-    _results.add(const GoogleSignInResult(error: 'Google did not return a credential.'));
+    _results.add(
+      const GoogleSignInResult(error: 'Google did not return a credential.'),
+    );
     return;
   }
   final credential = res.getProperty<JSString>('credential'.toJS).toDart;
@@ -128,21 +148,27 @@ void _onCredentialResponse(JSAny response) {
 GoogleSignInResult _decodeCredential(String credential) {
   final parts = credential.split('.');
   if (parts.length < 2) {
-    return const GoogleSignInResult(error: 'Google returned a malformed credential.');
+    return const GoogleSignInResult(
+      error: 'Google returned a malformed credential.',
+    );
   }
   Map<String, dynamic>? payload;
   try {
     final json = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
     payload = jsonDecode(json) as Map<String, dynamic>;
   } catch (_) {
-    return const GoogleSignInResult(error: 'Could not read the Google credential.');
+    return const GoogleSignInResult(
+      error: 'Could not read the Google credential.',
+    );
   }
   final email = (payload['email'] as String?)?.trim();
   if (email == null || email.isEmpty) {
     return const GoogleSignInResult(error: 'Google account has no email.');
   }
   if (payload['email_verified'] != true) {
-    return const GoogleSignInResult(error: 'Google account email is not verified.');
+    return const GoogleSignInResult(
+      error: 'Google account email is not verified.',
+    );
   }
   return GoogleSignInResult(email: email, credential: credential);
 }
