@@ -49,7 +49,7 @@ void main() async {
     // when the same browser had previously logged into Venkateshwara.
     initialConfig = await ClientLoader.loadConfig(
       clientId: ClientLoader.getUrlClientId() ?? sessionClientId,
-    );
+    ).timeout(const Duration(seconds: 10));
   } catch (e) {
     debugPrint('Config load error: $e');
   }
@@ -75,10 +75,7 @@ void main() async {
   );
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: appState,
-      child: const QuotationApp(),
-    ),
+    ChangeNotifierProvider.value(value: appState, child: const QuotationApp()),
   );
 
   // Initialize Notifications after the UI is rendered
