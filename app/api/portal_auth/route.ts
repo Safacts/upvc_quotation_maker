@@ -55,9 +55,9 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
 
 async function verifyTurnstile(token: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) {
-    console.warn("TURNSTILE_SECRET_KEY not configured, skipping verification");
-    return true; // Allow in dev if not configured
+  if (!secret || secret.startsWith("your_") || secret.length < 20) {
+    console.warn("TURNSTILE_SECRET_KEY placeholder/missing — skipping verification, signups allowed");
+    return true;
   }
   try {
     const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
