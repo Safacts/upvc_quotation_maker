@@ -204,23 +204,11 @@ export async function POST(request: NextRequest) {
           200
         );
       }
-      // CRITICAL FIX: Include password_hash for admin users
       if (session.role === "admin") {
-        const admins = await supaGet("admins", {
-          email: "eq." + session.email,
-          select: "email,password_hash",
-        });
-        const adminHash = Array.isArray(admins) && admins.length > 0 ? admins[0].password_hash : "";
-        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: adminHash }, 200);
+        return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
       }
-      // CRITICAL FIX: Include password_hash for customer sessions too
       if (session.role === "customer") {
-        const clientRows = await supaGet("clients", {
-          id: "eq." + session.client_id,
-          select: "password_hash",
-        });
-        const clientHash = Array.isArray(clientRows) && clientRows.length > 0 ? clientRows[0].password_hash : "";
-        return json({ role: session.role, email: session.email, client_id: session.client_id, password_hash: clientHash }, 200);
+        return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
       }
       return json({ role: session.role, email: session.email, client_id: session.client_id }, 200);
     }
@@ -319,7 +307,7 @@ export async function POST(request: NextRequest) {
 
     if (admin && admin.password_hash === inputHash) {
       await createSession({ role: "admin", email: admin.email });
-      return json({ role: "admin", email: admin.email, password_hash: admin.password_hash }, 200);
+      return json({ role: "admin", email: admin.email }, 200);
     }
 
     const client = await findClientByEmail(email);
@@ -352,7 +340,6 @@ export async function POST(request: NextRequest) {
             role: "customer", 
             email, 
             client_id: client.id,
-            password_hash: client.password_hash,
             warning: "TRIAL_EXPIRING_SOON",
             daysRemaining,
             message: `Your trial expires in ${daysRemaining} day(s). Please contact Vitharn ERP Services to upgrade.`
@@ -362,7 +349,7 @@ export async function POST(request: NextRequest) {
 
       await backfillPortalHash(client);
       await createSession({ role: "customer", email, client_id: client.id });
-      return json({ role: "customer", email, client_id: client.id, password_hash: client.password_hash }, 200);
+      return json({ role: "customer", email, client_id: client.id }, 200);
     }
 
     if (!admin && !client) {

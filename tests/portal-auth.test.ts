@@ -228,7 +228,9 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
     seedAdmin(await sha256("Kpr@1234"));
     const res = await authReq({ mode: "login", email: ADMIN_EMAIL, password: "Kpr@1234" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "admin" });
+    const body = await res.json();
+    expect(body).toMatchObject({ role: "admin" });
+    expect(body.password_hash).toBeUndefined();
   });
 
   it("rejects an admin with a wrong password (401, no session, no signup row)", async () => {
@@ -243,7 +245,9 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
     seedClientA(await sha256("Vh@1234"));
     const res = await authReq({ mode: "login", email: CLIENT_EMAIL_A, password: "Vh@1234" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    const body = await res.json();
+    expect(body).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    expect(body.password_hash).toBeUndefined();
     expect(lastMinted()).toMatchObject({ role: "customer", client_id: CLIENT_A });
   });
 
@@ -290,7 +294,9 @@ describe("/api/portal_auth — session / logout / validation", () => {
     currentSession = { role: "customer", email: CLIENT_EMAIL_A, client_id: CLIENT_A };
     const res = await authReq({ mode: "session" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    const body = await res.json();
+    expect(body).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    expect(body.password_hash).toBeUndefined();
   });
 
   it("mode=session rejects a missing session (401)", async () => {

@@ -42,6 +42,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   /// message. Initialised from AppState (Settings > Quotation Maker keeps the
   /// same value; both write through `setEnablePdfLink` so they never diverge).
   bool _shareAsPdf = true;
+  bool _isActionBusy = false;
 
   @override
   void initState() {
@@ -298,9 +299,25 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     ).animate().fade(delay: 250.ms);
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay, {Widget? brandIcon}) {
+  Future<void> _runAction(Future<void> Function() action) async {
+    if (_isActionBusy) return;
+    setState(() => _isActionBusy = true);
+    try {
+      await action();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('That action could not be completed. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionBusy = false);
+    }
+  }
+
+  Widget _buildActionButton(String label, IconData icon, Color color, Future<void> Function() onTap, int delay, {Widget? brandIcon}) {
     return InkWell(
-      onTap: onTap,
+      onTap: _isActionBusy ? null : () => _runAction(onTap),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 100,

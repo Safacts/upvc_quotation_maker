@@ -33,6 +33,7 @@ const TENANT_TABLES = [
 type Call = { op: "get" | "post" | "patch" | "delete"; table: string; qs: any; body?: any };
 const calls: Call[] = [];
 const fixtures: Record<string, any> = {};
+let failChildInsert = false;
 
 function record(op: Call["op"], table: string, qs: any, body?: any) {
   calls.push({ op, table, qs, body });
@@ -42,6 +43,9 @@ function record(op: Call["op"], table: string, qs: any, body?: any) {
 const supaGetSpy = async (t: string, qs: any = {}) => record("get", t, qs);
 const supaPostSpy = async (t: string, body: any) => {
   record("post", t, {}, body);
+  if (failChildInsert && (t === "measured_items" || t === "unmeasured_items")) {
+    throw new Error("child insert failed");
+  }
   return fixtures[t + ":insert"] ?? [{ id: "new-quote-id", quote_no: "Q-1" }];
 };
 const supaPatchSpy = async (t: string, qs: any, body: any) => record("patch", t, qs, body);
@@ -89,6 +93,7 @@ beforeEach(() => {
   calls.length = 0;
   for (const k of Object.keys(fixtures)) delete fixtures[k];
   currentSession = null;
+  failChildInsert = false;
   process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
   vi.resetModules();
 });
@@ -442,12 +447,13 @@ describe("/api/console/quotations/[id] — ownership on a path-supplied id", () 
     expect(insert!.body[0].client_id).toBe(TENANT_B); // the row's owner, not ?client_id=
   });
 
-  it("deletes line items BEFORE inserting replacements", async () => {
-    // Order is load-bearing. If an insert ran first and the delete then failed,
-    // the quotation would carry DOUBLED line items — and a doubled price on a
-    // customer-facing document.
+  it("inserts replacements before deleting the old line items", async () => {
+    // An insert failure must preserve the last good lines rather than leaving
+    // the quotation header with no children.
     currentSession = customerA;
     fixtures.quotations = [{ id: "q1", client_id: TENANT_A }];
+    fixtures.measured_items = [{ id: "old-measured" }];
+    fixtures.unmeasured_items = [];
     const { PATCH } = await import("@/../app/api/console/quotations/[id]/route");
     await PATCH(
       await nextReq(
@@ -462,10 +468,35 @@ describe("/api/console/quotations/[id] — ownership on a path-supplied id", () 
       ),
       params("q1"),
     );
-    const delIdx = calls.findIndex((c) => c.op === "delete" && c.table === "measured_items");
     const insIdx = calls.findIndex((c) => c.op === "post" && c.table === "measured_items");
-    expect(delIdx).toBeGreaterThanOrEqual(0);
-    expect(insIdx).toBeGreaterThan(delIdx);
+    const delIdx = calls.findIndex((c) => c.op === "delete" && c.table === "measured_items");
+    expect(insIdx).toBeGreaterThanOrEqual(0);
+    expect(delIdx).toBeGreaterThan(insIdx);
+    expect(calls[delIdx].qs).toMatchObject({
+      id: "in.(old-measured)",
+      client_id: "eq." + TENANT_A,
+    });
+  });
+
+  it("cleans up the quotation header when a child insert fails", async () => {
+    currentSession = customerA;
+    failChildInsert = true;
+    const { POST } = await import("@/../app/api/console/quotations/route");
+    const res = await POST(
+      await nextReq(
+        "http://x/api/console/quotations",
+        jsonInit({
+          customer_name: "Ravi",
+          measured_items: [{ width: 1200, height: 1500, units: 1, rate: 450 }],
+        }),
+      ),
+    );
+    expect(res.status).toBe(500);
+    const headerDelete = calls.find((c) => c.op === "delete" && c.table === "quotations");
+    expect(headerDelete?.qs).toMatchObject({
+      id: "eq.new-quote-id",
+      client_id: "eq." + TENANT_A,
+    });
   });
 });
 

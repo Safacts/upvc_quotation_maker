@@ -329,14 +329,9 @@ export default function PlatformAdmin() {
         if (role === "customer") {
           if (cancelled) return;
           setCurrentUser(email);
-          // CRITICAL FIX: Fetch customer session to get password_hash for save_client auth
-          const custAuthRes = await fetch("/api/portal_auth", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode: "session", email }),
-          });
-          const custAuthData = await custAuthRes.json();
-          setCurrentPasswordHash(custAuthData.password_hash || "");
+          // The HttpOnly session is the credential. Never copy a password hash
+          // into browser storage or expose it through the session endpoint.
+          setCurrentPasswordHash("");
           setIsCustomer(true);
           setReady(true);
           loadClients();
@@ -354,7 +349,8 @@ export default function PlatformAdmin() {
         }
         if (cancelled) return;
         setCurrentUser(authData.email);
-        setCurrentPasswordHash(authData.password_hash || "");
+        // Admin mutations are authenticated by the HttpOnly session cookie.
+        setCurrentPasswordHash("");
         setReady(true);
         loadClients();
       } catch (e) {
@@ -716,8 +712,9 @@ export default function PlatformAdmin() {
   async function saveClient(e: React.FormEvent) {
     e.preventDefault();
     
-    // CRITICAL FIX: Ensure admin password hash is available
-    if (!currentPasswordHash) {
+    // The server validates the current HttpOnly session. A password hash must
+    // never be required in browser state.
+    if (!currentUser) {
       showToast("Session expired. Please login again.", "error");
       handleLogout();
       return;

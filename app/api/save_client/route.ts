@@ -46,20 +46,24 @@ export async function POST(request: NextRequest) {
   resolveCors(request);
   try {
     const p = await request.json();
-    const email = p.admin_email || "";
+    const email = String(p.admin_email || "").trim().toLowerCase();
     const phash = p.admin_password_hash || "";
     const cid = p.id || "";
     if (!email || !cid) return json({ error: "missing params", hint: "admin_email and id are required" }, 400);
     if (!isServiceKeyConfigured()) return json({ error: "no service key", hint: "server misconfigured" }, 500);
 
     let isCustomer = false;
+    const session = await getSession();
+    const sessionIsAdmin =
+      session?.role === "admin" &&
+      String(session.email || "").trim().toLowerCase() === String(email).trim().toLowerCase();
     const admins = await supaGet("admins", {
       email: "eq." + email,
       select: "email,password_hash",
     });
     if (Array.isArray(admins) && admins.length > 0) {
-      if (!phash) return json({ error: "password hash required", hint: "admin auth: hash missing (re-login required)" }, 403);
-      if (admins[0].password_hash !== phash) {
+      if (!sessionIsAdmin && !phash) return json({ error: "password hash required", hint: "admin auth: hash missing (re-login required)" }, 403);
+      if (!sessionIsAdmin && admins[0].password_hash !== phash) {
         return json({ error: "hash mismatch", hint: "admin auth: hash does not match stored value" }, 403);
       }
     } else {
@@ -116,8 +120,7 @@ export async function POST(request: NextRequest) {
         // Password hash matches — primary auth succeeded
       } else {
         // Password hash missing or mismatch — try session-based auth
-        const session = await getSession();
-        if (session && (session.role === "admin" || (session.role === "customer" && (session.client_id === clientMatch.id || session.client_id === cid)))) {
+        if (session && (sessionIsAdmin || (session.role === "customer" && (session.client_id === clientMatch.id || session.client_id === cid)))) {
           authedBySession = true;
         } else {
           const hasSession = !!session;

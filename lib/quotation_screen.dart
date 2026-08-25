@@ -40,6 +40,8 @@ class _QuotationScreenState extends State<QuotationScreen> {
   bool _saveQueued = false;
   bool _isExporting = false;
   bool _isOffline = false;
+  bool _isProcessingPdf = false;
+  bool _isSendingEmail = false;
   Timer? _debounce;
   Timer? _retryTimer;
   List<QuotationData> _pastQuotations = [];
@@ -115,7 +117,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
       _loadItems();
     } else {
       data = QuotationData();
-      _initQuoteNumber();
+      unawaited(_restoreLocalDraftOrInit());
     }
     _fetchPastQuotations();
     _loadCatalog();
@@ -322,8 +324,77 @@ class _QuotationScreenState extends State<QuotationScreen> {
         str.contains('network') ||
         str.contains('connection') ||
         str.contains('handshake') ||
-        str.contains('http') ||
         str.contains('xmlhttprequest');
+  }
+
+  String _calmError(Object error, String action) {
+    final message = error.toString().toLowerCase();
+    if (_isNetworkError(error)) {
+      return 'You appear to be offline. Your draft is safe on this device.';
+    }
+    if (message.contains('401') || message.contains('403') || message.contains('unauthorized') || message.contains('forbidden')) {
+      return 'Your session may have expired. Please sign in again, then retry $action.';
+    }
+    if (RegExp(r'\b5\d{2}\b').hasMatch(message) || message.contains('server')) {
+      return 'The service is having trouble right now. Please try $action again in a moment.';
+    }
+    return 'Could not $action. Please try again.';
+  }
+
+  Future<void> _restoreLocalDraftOrInit() async {
+    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = prefs.getString('last_active_draft_$clientId');
+      final raw = key == null ? null : prefs.getString(key);
+      if (raw != null) {
+        final stored = jsonDecode(raw);
+        final quotation = stored is Map ? stored['quotation'] : null;
+        if (quotation is Map && quotation['id'] != null) {
+          final restored = QuotationData.fromMap(Map<String, dynamic>.from(quotation));
+          final measured = stored['measured_items'];
+          final unmeasured = stored['unmeasured_items'];
+          if (measured is List) {
+            restored.measuredItems = measured
+                .map((e) => MeasuredItem.fromMap(Map<String, dynamic>.from(e as Map)))
+                .toList();
+          }
+          if (unmeasured is List) {
+            restored.unmeasuredItems = unmeasured
+                .map((e) => UnmeasuredItem.fromMap(Map<String, dynamic>.from(e as Map)))
+                .toList();
+          }
+          if (!mounted) return;
+          setState(() {
+            data = restored;
+            _lastSaved = restored.createdAt;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            final continueDraft = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Continue your last quotation?'),
+                content: const Text('We found an unfinished quotation saved on this device.'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Start new')),
+                  ElevatedButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Continue')),
+                ],
+              ),
+            );
+            if (continueDraft == false && mounted) {
+              setState(() => data = QuotationData());
+              await _initQuoteNumber();
+            }
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to restore local draft: $e');
+    }
+    await _initQuoteNumber();
   }
 
   Future<void> _persistLocalDraft() async {
@@ -458,13 +529,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
             }
           });
         } else {
-          final cleanMsg = e.toString()
-              .split('\n')
-              .first
-              .replaceAll(RegExp(r'uri=https?://[^\s]+'), '')
-              .replaceAll('Exception: ', '')
-              .trim();
-          setState(() => _lastSaveError = cleanMsg);
+          setState(() => _lastSaveError = _calmError(e, 'sync this draft'));
         }
       }
     } finally {
@@ -648,7 +713,13 @@ $reviewCta
                       if (email.isEmpty) return;
                       setDialogState(() => isSending = true);
                       try {
-                        await _sendEmail(email);
+                        if (_isSendingEmail) return;
+                        if (mounted) setState(() => _isSendingEmail = true);
+                        try {
+                          await _sendEmail(email);
+                        } finally {
+                          if (mounted) setState(() => _isSendingEmail = false);
+                        }
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sent successfully!')));
@@ -656,7 +727,7 @@ $reviewCta
                       } catch (e) {
                         setDialogState(() => isSending = false);
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_calmError(e, 'send the email'))));
                         }
                       }
                     },
@@ -685,6 +756,9 @@ $reviewCta
   }
 
   Future<void> _generateAndProcessPdf() async {
+    if (_isProcessingPdf) return;
+    if (mounted) setState(() => _isProcessingPdf = true);
+    try {
     // 1. Force Save
     umamiTrack('generate_pdf');
     await _autoSaveToDatabase();
@@ -703,7 +777,7 @@ $reviewCta
 
     // 3. Navigate to Confirmation Screen
     if (!mounted) return;
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => PdfConfirmationScreen(
@@ -713,6 +787,13 @@ $reviewCta
         ),
       ),
     );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_calmError(e, 'generate the PDF'))));
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingPdf = false);
+    }
   }
 
   Widget _buildSectionTitle(String title, {Widget? trailing}) {
@@ -840,7 +921,7 @@ $reviewCta
                 child: Center(child: Icon(Icons.cloud_done, color: Colors.green, size: 22)),
               ),
             ),
-          IconButton(icon: const Icon(Icons.email), onPressed: _manualEmailPrompt, tooltip: 'Send to custom email'),
+          IconButton(icon: const Icon(Icons.email), onPressed: _isSendingEmail ? null : _manualEmailPrompt, tooltip: 'Send to custom email'),
         ],
       ),
       body: SingleChildScrollView(
@@ -1460,7 +1541,7 @@ if (_usePresets) ...[
               width: double.infinity,
               height: 60,
               child: ElevatedButton(
-                onPressed: _generateAndProcessPdf,
+                onPressed: _isProcessingPdf ? null : _generateAndProcessPdf,
                 style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: Colors.transparent, elevation: 0, shadowColor: Colors.transparent),
                 child: Ink(
                   decoration: BoxDecoration(

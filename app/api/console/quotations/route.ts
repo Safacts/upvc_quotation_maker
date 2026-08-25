@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
-import { supaGet, supaCount, supaPost, supabaseRpc, supaGetSafe, supaPostSafe } from "@/lib/supabase";
+import { supaGet, supaCount, supaPost, supaDelete, supabaseRpc, supaGetSafe, supaPostSafe } from "@/lib/supabase";
 import { quotationTotals } from "@/lib/pricing";
 import {
   quotationQuerySchema,
@@ -357,34 +357,47 @@ export async function POST(request: NextRequest) {
     // Children carry `client_id` too — `measured_items` and `unmeasured_items`
     // have their own column and their own RLS policy, and a NULL there makes the
     // row invisible to the anon-key path the Flutter app still uses.
-    if (data.measured_items.length) {
-      await supaPost(
-        "measured_items",
-        data.measured_items.map((m) => ({
-          quotation_id: row.id,
-          client_id: clientId,
-          code: m.code,
-          description: m.description,
-          glass: m.glass,
-          width: m.width,
-          height: m.height,
-          units: m.units,
-          rate: m.rate,
-          bom_config: m.bom,
-        })) as any,
-      );
-    }
-    if (data.unmeasured_items.length) {
-      await supaPost(
-        "unmeasured_items",
-        data.unmeasured_items.map((u) => ({
-          quotation_id: row.id,
-          client_id: clientId,
-          description: u.description,
-          units: u.units,
-          rate: u.rate,
-        })) as any,
-      );
+    // If either child insert fails, remove the header we just created. A header
+    // without its lines is an orphan that appears as a valid quotation in grids.
+    try {
+      if (data.measured_items.length) {
+        await supaPost(
+          "measured_items",
+          data.measured_items.map((m) => ({
+            quotation_id: row.id,
+            client_id: clientId,
+            code: m.code,
+            description: m.description,
+            glass: m.glass,
+            width: m.width,
+            height: m.height,
+            units: m.units,
+            rate: m.rate,
+            bom_config: m.bom,
+          })) as any,
+        );
+      }
+      if (data.unmeasured_items.length) {
+        await supaPost(
+          "unmeasured_items",
+          data.unmeasured_items.map((u) => ({
+            quotation_id: row.id,
+            client_id: clientId,
+            description: u.description,
+            units: u.units,
+            rate: u.rate,
+          })) as any,
+        );
+      }
+    } catch (e) {
+      // Best effort: preserve the original insert error, but never knowingly
+      // leave a partially-created quotation behind.
+      await Promise.allSettled([
+        supaDelete("measured_items", { quotation_id: "eq." + row.id, client_id: "eq." + clientId }),
+        supaDelete("unmeasured_items", { quotation_id: "eq." + row.id, client_id: "eq." + clientId }),
+        supaDelete("quotations", { id: "eq." + row.id, client_id: "eq." + clientId }),
+      ]);
+      throw e;
     }
 
     const totals = quotationTotals(row, data.measured_items, data.unmeasured_items);
