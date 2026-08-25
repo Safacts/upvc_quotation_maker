@@ -53,6 +53,25 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
   }
 }
 
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) {
+    console.warn("TURNSTILE_SECRET_KEY not configured, skipping verification");
+    return true; // Allow in dev if not configured
+  }
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY!, response: token }),
+    });
+    const result = await res.json();
+    return result.success === true;
+  } catch {
+    return false;
+  }
+}
+
 const PROD_ORIGIN = "https://app.vitharn.com";
 const DEV_ORIGINS = new Set([
   "http://localhost:3000",
@@ -105,36 +124,26 @@ async function findClientByEmail(email: string): Promise<any | null> {
   const le = email.toLowerCase();
   
   // 1. Direct match on companyEmail
-  const exactMatches = await supaGet("client_public", { 
+  const exactMatches = await supaGet("clients", { 
     "config->>companyEmail": "eq." + le,
-    select: "id,config,is_active",
+    select: "id,config,is_active,password_hash",
     limit: 1
   });
 
   if (Array.isArray(exactMatches) && exactMatches.length > 0) {
-    const clientRows = await supaGet("clients", {
-      id: "eq." + exactMatches[0].id,
-      select: "id,config,is_active,password_hash",
-    });
-    if (Array.isArray(clientRows) && clientRows.length > 0) return clientRows[0];
+    return exactMatches[0];
   }
 
   // 2. Scan fallback for adminEmails
-  const rows = await supaGet("client_public", {
-    select: "id,config,is_active",
+  const rows = await supaGet("clients", {
+    select: "id,config,is_active,password_hash",
   });
   if (!Array.isArray(rows)) return null;
   for (const c of rows) {
     const cfg = c.config || {};
     const ae = (cfg.adminEmails || []).map((e: string) => String(e).trim().toLowerCase());
     if (ae.includes(le)) {
-      const clientRows = await supaGet("clients", {
-        id: "eq." + c.id,
-        select: "id,config,is_active,password_hash",
-      });
-      if (Array.isArray(clientRows) && clientRows.length > 0) {
-        return clientRows[0];
-      }
+      return c;
     }
   }
   return null;
@@ -424,6 +433,13 @@ export async function POST(request: NextRequest) {
         return json({ error: "Too many attempts. Try again later." }, 429);
       }
       recordAuthFailure(signupCreateKey);
+      
+      // Turnstile verification for signup
+      const turnstileToken = p.turnstile_token;
+      if (!turnstileToken || !await verifyTurnstile(turnstileToken)) {
+        return json({ error: "Turnstile verification failed" }, 400);
+      }
+      
       let newRow: any;
       try {
         newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: await hashPassword(password) });
