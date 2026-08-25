@@ -3,6 +3,10 @@ import { getSession } from "@/lib/session";
 import { supaGet, supaPatch } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 
+// In-memory per-instance build lock to close TOCTOU race (single instance atomic)
+const buildLocks = new Map<string, number>();
+const BUILD_COOLDOWN_MS = 10 * 60 * 1000;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -13,6 +17,27 @@ export async function POST(request: NextRequest) {
     const { client_id, app_name, version_name, version_code } = await request.json();
     if (!client_id) {
       return NextResponse.json({ error: "Missing client_id" }, { status: 400 });
+    }
+    // BLACK-HAT FIX: strict input validation to prevent GH Actions script injection via app_name
+    const clientId = String(client_id).trim();
+    if (!/^[a-zA-Z0-9 _-]{2,80}$/.test(clientId)) {
+      return NextResponse.json({ error: "Invalid client_id format" }, { status: 400 });
+    }
+    if (app_name != null && String(app_name).trim() !== "") {
+      const an = String(app_name).trim();
+      if (!/^[a-zA-Z0-9 _-]{2,60}$/.test(an)) {
+        return NextResponse.json({ error: "Invalid app_name: only letters, numbers, space, _ and - allowed (2-60 chars)" }, { status: 400 });
+      }
+    }
+    if (version_name != null && String(version_name).trim() !== "") {
+      if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(String(version_name).trim())) {
+        return NextResponse.json({ error: "Invalid version_name: must be semver like 1.0.0" }, { status: 400 });
+      }
+    }
+    if (version_code != null && String(version_code).trim() !== "") {
+      if (!/^[0-9]{1,6}$/.test(String(version_code).trim())) {
+        return NextResponse.json({ error: "Invalid version_code: must be 1-6 digit integer" }, { status: 400 });
+      }
     }
 
     // Version-aware build dispatch.
@@ -39,11 +64,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Allow admins to build for anyone, but customers can only build for themselves.
-    if (session.role !== "admin" && session.client_id !== client_id) {
+    // Use sanitized clientId for all downstream checks
+    if (session.role !== "admin" && session.client_id !== clientId) {
        return NextResponse.json({ error: "Forbidden: You can only build your own app." }, { status: 403 });
     }
 
-    const clientDataArray = await supaGet("clients", { select: "config", id: `eq.${client_id}` });
+    // Atomic in-memory throttle check (closes TOCTOU for concurrent requests on same instance)
+    const nowLock = Date.now();
+    const lockedUntil = buildLocks.get(clientId);
+    if (lockedUntil && nowLock < lockedUntil) {
+      return NextResponse.json(
+        { error: `A build is already in progress. Please wait ${Math.ceil((lockedUntil - nowLock)/60000)} more minutes before triggering another.` },
+        { status: 429 }
+      );
+    }
+
+    const clientDataArray = await supaGet("clients", { select: "config", id: `eq.${clientId}` });
     const clientData = clientDataArray && clientDataArray.length > 0 ? clientDataArray[0] : null;
     
     if (!clientData) {
@@ -63,6 +99,8 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+    // Set in-memory lock immediately before external dispatch (atomic for this instance)
+    buildLocks.set(clientId, Date.now() + BUILD_COOLDOWN_MS);
 
     const githubToken = process.env.GITHUB_TOKEN;
     const repoOwner = process.env.GITHUB_REPO_OWNER; // e.g. "myorg"
@@ -74,10 +112,11 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Dispatch GitHub Action build event
+    // Dispatch GitHub Action build event - use sanitized values only
+    const sanitizedAppName = app_name != null && String(app_name).trim() !== "" ? String(app_name).trim() : `${clientId} UPVC Quote`;
     const clientPayload: Record<string, unknown> = {
-      client_id,
-      app_name: app_name || `${client_id} UPVC Quote`,
+      client_id: clientId,
+      app_name: sanitizedAppName,
       version_code: newCode,
     };
     if (newName !== undefined) {
@@ -99,14 +138,16 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text();
+      // Release lock on failure so retry is possible
+      buildLocks.delete(clientId);
       return NextResponse.json({ error: `GitHub API error: ${errText}` }, { status: res.status });
     }
 
-    // Save timestamp to prevent spam
+    // Save timestamp to prevent spam (DB persistence)
     const updatedConfig = { ...rawConfig, lastBuildTriggeredAt: new Date().toISOString() };
-    await supaPatch("clients", { id: `eq.${client_id}` }, { config: updatedConfig });
+    await supaPatch("clients", { id: `eq.${clientId}` }, { config: updatedConfig });
 
-    return NextResponse.json({ success: true, message: `APK build triggered for ${client_id}` });
+    return NextResponse.json({ success: true, message: `APK build triggered for ${clientId}` });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
