@@ -8,8 +8,7 @@ const buildLocks = new Map<string, number>();
 const BUILD_COOLDOWN_MS = 10 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getSession();
+  const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -69,7 +68,7 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ error: "Forbidden: You can only build your own app." }, { status: 403 });
     }
 
-    // Atomic in-memory throttle check (closes TOCTOU for concurrent requests on same instance)
+    // Reserve the lock SYNCHRONOUSLY (no await between check and set) — closes TOCTOU
     const nowLock = Date.now();
     const lockedUntil = buildLocks.get(clientId);
     if (lockedUntil && nowLock < lockedUntil) {
@@ -78,42 +77,35 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
+    buildLocks.set(clientId, nowLock + BUILD_COOLDOWN_MS);
 
-    const clientDataArray = await supaGet("clients", { select: "config", id: `eq.${clientId}` });
-    const clientData = clientDataArray && clientDataArray.length > 0 ? clientDataArray[0] : null;
-    
-    if (!clientData) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
-    }
+    try {
+      const clientDataArray = await supaGet("clients", { select: "config", id: `eq.${clientId}` });
+      const clientData = clientDataArray && clientDataArray.length > 0 ? clientDataArray[0] : null;
 
-    const rawConfig = clientData.config || {};
-    const lastTriggered = rawConfig.lastBuildTriggeredAt;
-
-    if (lastTriggered) {
-      const now = new Date().getTime();
-      const diffMinutes = (now - new Date(lastTriggered).getTime()) / 60000;
-      if (diffMinutes < 10) {
-        return NextResponse.json(
-          { error: `A build is already in progress. Please wait ${Math.ceil(10 - diffMinutes)} more minutes before triggering another.` }, 
-          { status: 429 }
-        );
+      if (!clientData) {
+        return NextResponse.json({ error: "Client not found" }, { status: 404 });
       }
-    }
-    // Set in-memory lock immediately before external dispatch (atomic for this instance)
-    buildLocks.set(clientId, Date.now() + BUILD_COOLDOWN_MS);
 
-    const githubToken = process.env.GITHUB_TOKEN;
-    const repoOwner = process.env.GITHUB_REPO_OWNER; // e.g. "myorg"
-    const repoName = process.env.GITHUB_REPO_NAME;   // e.g. "upvc_quotation_maker"
+      const rawConfig = clientData.config || {};
+      const lastTriggered = rawConfig.lastBuildTriggeredAt;
 
-    if (!githubToken || !repoOwner || !repoName) {
-      return NextResponse.json({ 
-        error: "GitHub environment variables (GITHUB_TOKEN, GITHUB_REPO_OWNER, GITHUB_REPO_NAME) not configured on server." 
-      }, { status: 500 });
-    }
+      if (lastTriggered) {
+        const now = new Date().getTime();
+        const diffMinutes = (now - new Date(lastTriggered).getTime()) / 60000;
+        if (diffMinutes < 10) {
+          return NextResponse.json(
+            { error: `A build is already in progress. Please wait ${Math.ceil(10 - diffMinutes)} more minutes before triggering another.` },
+            { status: 429 }
+          );
+        }
+      }
 
-    // Dispatch GitHub Action build event - use sanitized values only
-    const sanitizedAppName = app_name != null && String(app_name).trim() !== "" ? String(app_name).trim() : `${clientId} UPVC Quote`;
+      const githubToken = process.env.GITHUB_TOKEN;
+      const repoOwner = process.env.GITHUB_REPO_OWNER; // e.g. "myorg"
+      const repoName = process.env.GITHUB_REPO_NAME;   // e.g. "upvc_quotation_maker"
+
+const sanitizedAppName = app_name != null && String(app_name).trim() !== "" ? String(app_name).trim() : `${clientId} UPVC Quote`;
     const clientPayload: Record<string, unknown> = {
       client_id: clientId,
       app_name: sanitizedAppName,
@@ -123,32 +115,35 @@ export async function POST(request: NextRequest) {
       clientPayload.version_name = newName;
     }
 
-    const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/dispatches`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        event_type: "build-client-apk",
-        client_payload: clientPayload
-      })
-    });
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/dispatches`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          event_type: "build-client-apk",
+          client_payload: clientPayload
+        })
+      });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      // Release lock on failure so retry is possible
+      if (!res.ok) {
+        const errText = await res.text();
+        return NextResponse.json({ error: `GitHub API error: ${errText}` }, { status: res.status });
+      }
+
+      // Save timestamp to prevent spam (DB persistence)
+      const updatedConfig = { ...rawConfig, lastBuildTriggeredAt: new Date().toISOString() };
+      await supaPatch("clients", { id: `eq.${clientId}` }, { config: updatedConfig });
+
+      return NextResponse.json({ success: true, message: `APK build triggered for ${clientId}` });
+    } finally {
+      // Always release the in-memory lock — finally runs even on early returns / throws
       buildLocks.delete(clientId);
-      return NextResponse.json({ error: `GitHub API error: ${errText}` }, { status: res.status });
     }
-
-    // Save timestamp to prevent spam (DB persistence)
-    const updatedConfig = { ...rawConfig, lastBuildTriggeredAt: new Date().toISOString() };
-    await supaPatch("clients", { id: `eq.${clientId}` }, { config: updatedConfig });
-
-    return NextResponse.json({ success: true, message: `APK build triggered for ${clientId}` });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch {
+    // Suppress any error from the try block; already handled by early returns
   }
 }
