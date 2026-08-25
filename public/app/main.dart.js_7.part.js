@@ -10,10 +10,10 @@ o=C.a9p
 n=A.jE
 m=B
 w=3
-return B.i(A.xZ.nK(),$async$anw)
+return B.i(A.xZ.nL(),$async$anw)
 case 3:l=g
 w=4
-return B.i(A.xY.nK(),$async$anw)
+return B.i(A.xY.nL(),$async$anw)
 case 4:r=q.aFd(null,p,o,null,n,null,m.Sf(l,g))
 d.X7()
 t.LT(E.buZ(new D.bjv(e,d,s),new D.bjw(),r))
@@ -23,8 +23,8 @@ break
 case 1:return B.q(u,v)}})
 return B.r($async$anw,v)},
 bSA(d,e){var w=null,v=B.b6(w,w,w,w,w,w,w,w,w,A.a1,w,w,9,w,A.aG,w,!0,w,w,w,w),u=B.lU(w,w,E.mn("#FFF3E6")),t=B.b6(w,w,w,w,w,w,w,w,w,A.a1,w,w,9,w,w,w,!0,w,w,w,w)
-return B.a9l(B.tZ(F.jB,1),A.dp,t,B.a0([0,A.va,1,C.aew,2,C.aet,3,A.kQ,4,A.kQ,5,C.Dg,6,C.Dg],x.e,x.a),B.oB(d.k4.length,new D.bhe(d,e),!0,x.B),A.dp,u,v,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
-bSz(d){var w,v,u,t,s,r=null,q="UPVC Quotation Maker",p="default",o="Quality UPVC solutions for your home",n=y.a,m="https://gumpmnbjdtzajhysnnaz.supabase.co",l=d.r
+return B.a9l(B.tZ(F.jB,1),A.dp,t,B.a0([0,A.va,1,C.aew,2,C.aet,3,A.kR,4,A.kR,5,C.Dg,6,C.Dg],x.e,x.a),B.oB(d.k4.length,new D.bhe(d,e),!0,x.B),A.dp,u,v,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
+bSz(d){var w,v,u,t,s,r=null,q="UPVC Quotation Maker",p="default",o="Quality UPVC solutions for your home",n=y.a,m="https://jqjxhhgfwdzckijnnede.supabase.co",l=d.r
 if(!(l.length!==0)){w=d.a
 l=(w==null?B.ao(A.Q,A.T,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,!1,"","","",!0,!1,"","","",A.q,"",A.q,"",o,"","",A.S,A.R,"",A.x,"",A.P,"",r,n,m,A.q,A.q,r,A.x,"",""):w).x}v=d.w
 if(!(v.length!==0)){w=d.a
@@ -55,10 +55,10 @@ $1(d){var w,v=null,u=d.d.d
 u===$&&B.a()
 w=d.a
 w.toString
-return B.iE(A.dp,B.aZ("This is a computer-generated GST invoice | Page "+(A.l.cP(u.cx.cx,w)+1)+" of "+u.cx.cx.length,v,v,B.b6(v,F.lQ,v,v,v,v,v,v,v,A.a1,v,v,8,v,v,v,!0,v,v,v,v),v,v),v,v,C.a19,v,C.a91,C.a98,v)},
+return B.iE(A.dp,B.aZ("This is a computer-generated GST invoice | Page "+(A.l.cP(u.cx.cx,w)+1)+" of "+u.cx.cx.length,v,v,B.b6(v,F.lR,v,v,v,v,v,v,v,A.a1,v,v,8,v,v,v,!0,v,v,v,v),v,v),v,v,C.a19,v,C.a91,C.a98,v)},
 $S:328}
 D.bjv.prototype={
-$1(a0){var w,v,u,t,s,r,q,p,o,n=null,m="#C44A10",l="UPVC Quotation Maker",k="default",j="Quality UPVC solutions for your home",i=y.a,h="https://gumpmnbjdtzajhysnnaz.supabase.co",g=this.a,f=B.aqy(B.aZ("TAX INVOICE",n,n,B.b6(n,E.mn(m),n,n,n,n,n,n,n,A.a1,n,n,20,n,A.aG,n,!0,n,n,n,n),n,n)),e=E.mn(m),d=g.c
+$1(a0){var w,v,u,t,s,r,q,p,o,n=null,m="#C44A10",l="UPVC Quotation Maker",k="default",j="Quality UPVC solutions for your home",i=y.a,h="https://jqjxhhgfwdzckijnnede.supabase.co",g=this.a,f=B.aqy(B.aZ("TAX INVOICE",n,n,B.b6(n,E.mn(m),n,n,n,n,n,n,n,A.a1,n,n,20,n,A.aG,n,!0,n,n,n,n),n,n)),e=E.mn(m),d=g.c
 if(!(d.length!==0)){d=g.a
 d=(d==null?B.ao(A.Q,A.T,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,!1,"","","",!0,!1,"","","",A.q,"",A.q,"",j,"","",A.S,A.R,"",A.x,"",A.P,"",n,i,h,A.q,A.q,n,A.x,"",""):d).c}d=B.aZ(d,n,n,B.b6(n,A.ed,n,n,n,n,n,n,n,A.a1,n,n,16,n,A.aG,n,!0,n,n,n,n),n,n)
 w=g.d
@@ -75,7 +75,7 @@ v=(v==null?B.ao(A.Q,A.T,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,!1
 e=B.hj(B.b([f,new B.cq(n,10,n),B.iE(n,B.hj(B.b([d,w,u,B.aZ("GST No: "+v,n,n,B.b6(n,A.ed,n,n,n,n,n,n,n,A.a1,n,n,10,n,n,n,!0,n,n,n,n),n,n)],t),A.dH,A.bN),e,n,n,n,n,F.nA,1/0)],t),A.dH,A.bN)
 v=this.b
 u=B.tK(B.b([B.aZ("Invoice No: "+v.b,n,n,B.b6(n,n,n,n,n,n,n,n,n,A.a1,n,n,10,n,A.aG,n,!0,n,n,n,n),n,n),B.aZ("Date: "+B.f6("dd-MMM-yyyy").bA(v.c),n,n,B.b6(n,n,n,n,n,n,n,n,n,A.a1,n,n,10,n,A.aG,n,!0,n,n,n,n),n,n),B.aZ("Place of Supply: "+v.at,n,n,B.b6(n,n,n,n,n,n,n,n,n,A.a1,n,n,10,n,A.aG,n,!0,n,n,n,n),n,n)],t),A.dH,A.pN)
-w=B.a0([0,A.kQ,1,A.kQ],x.e,x.a)
+w=B.a0([0,A.kR,1,A.kR],x.e,x.a)
 d=B.aZ("Supplier Details",n,n,B.b6(n,n,n,n,n,n,n,n,n,A.a1,n,n,10,n,A.aG,n,!0,n,n,n,n),n,n)
 f=g.c
 if(!(f.length!==0)){f=g.a
@@ -119,12 +119,12 @@ $1(d){var w=this.a.k4[d],v=this.b
 return B.b([""+(d+1),w.c,w.d,A.n.a_(w.e,0),w.f,v.bA(w.r),v.bA(w.e*w.r)],x.x)},
 $S:128};(function inheritance(){var w=a.inheritMany
 w(B.lY,[D.bjw,D.bjv,D.bhe])})()
-var y={a:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs"}
+var y={a:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxanhoaGdmd2R6Y2tpam5uZWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NTY3MTYsImV4cCI6MjEwMzIzMjcxNn0.rOx-8Y_aT0pNVdvZMxRUx8feP2ZU1OBlF63oLH6nAnY"}
 var x={x:B.ac("A<f>"),m:B.ac("A<ff>"),u:B.ac("A<dB>"),B:B.ac("C<f>"),a:B.ac("x8"),o:B.ac("f0"),e:B.ac("v")};(function constants(){C.a0D=new B.lR(F.xR,1,A.fa)
 C.a0T=new B.oc(C.a0D,A.dq,A.dq,A.dq)
 C.a19=new B.L6(null,C.a0T,null)
-C.mJ=new B.lR(F.jB,1,A.fa)
-C.a0S=new B.oc(C.mJ,C.mJ,C.mJ,C.mJ)
+C.mK=new B.lR(F.jB,1,A.fa)
+C.a0S=new B.oc(C.mK,C.mK,C.mK,C.mK)
 C.AR=new B.L6(null,C.a0S,null)
 C.a91=new B.dc(0,10,0,0)
 C.a92=new B.dc(0,10,0,4)
@@ -134,4 +134,4 @@ C.du=new B.dc(6,6,6,6)
 C.Dg=new B.dl(2)
 C.aet=new B.dl(4)
 C.aew=new B.dl(1.2)})()};
-(a=>{a["uNOJSeJXgMgHK25hbfTYNLbXT8w="]=a.current})($__dart_deferred_initializers__);
+(a=>{a["qis6B3I10Ho969Bfb4UQ6WQozpE="]=a.current})($__dart_deferred_initializers__);

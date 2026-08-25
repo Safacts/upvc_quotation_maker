@@ -47,11 +47,36 @@ jobs:
 
       - name: Extract Inputs
         id: vars
+        env:
+          CLIENT_ID_RAW: ${{ github.event.inputs.client_id || github.event.client_payload.client_id }}
+          APP_NAME_RAW: ${{ github.event.inputs.app_name || github.event.client_payload.app_name }}
+          VERSION_NAME_RAW: ${{ github.event.inputs.version_name || github.event.client_payload.version_name }}
+          VERSION_CODE_RAW: ${{ github.event.inputs.version_code || github.event.client_payload.version_code }}
         run: |
-          CLIENT_ID="${{ github.event.inputs.client_id || github.event.client_payload.client_id }}"
-          APP_NAME="${{ github.event.inputs.app_name || github.event.client_payload.app_name }}"
-          VERSION_NAME="${{ github.event.inputs.version_name || github.event.client_payload.version_name }}"
-          VERSION_CODE="${{ github.event.inputs.version_code || github.event.client_payload.version_code }}"
+          CLIENT_ID="$CLIENT_ID_RAW"
+          APP_NAME="$APP_NAME_RAW"
+          VERSION_NAME="$VERSION_NAME_RAW"
+          VERSION_CODE="$VERSION_CODE_RAW"
+          # Sanitize client_id: only alphanum, space, _ and - (2-80 chars)
+          if ! printf '%s' "$CLIENT_ID" | grep -Eq '^[a-zA-Z0-9 _-]{2,80}$'; then
+            echo "::error::Invalid client_id format"
+            exit 1
+          fi
+          # Sanitize: allow only safe chars for app_name, fallback to client_id if suspicious
+          if ! printf '%s' "$APP_NAME" | grep -Eq '^[a-zA-Z0-9 _-]+$'; then
+            echo "::warning::app_name contains unsafe characters, sanitizing"
+            APP_NAME=$(printf '%s' "$APP_NAME" | tr -cd 'a-zA-Z0-9 _-' | cut -c1-60)
+            if [ -z "$APP_NAME" ]; then APP_NAME="${CLIENT_ID} UPVC Quote"; fi
+          fi
+          # Validate version_name semver and version_code numeric
+          if [ -n "$VERSION_NAME" ] && ! printf '%s' "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version_name: must be semver like 1.0.0"
+            exit 1
+          fi
+          if [ -n "$VERSION_CODE" ] && ! printf '%s' "$VERSION_CODE" | grep -Eq '^[0-9]{1,6}$'; then
+            echo "::error::Invalid version_code: must be 1-6 digit integer"
+            exit 1
+          fi
           echo "client_id=${CLIENT_ID}" >> $GITHUB_OUTPUT
           echo "app_name=${APP_NAME}" >> $GITHUB_OUTPUT
           echo "version_name=${VERSION_NAME:-1.0.0}" >> $GITHUB_OUTPUT
