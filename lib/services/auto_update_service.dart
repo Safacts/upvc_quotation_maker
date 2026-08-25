@@ -294,30 +294,45 @@ class AutoUpdateService {
       final file = File(path);
       if (await file.exists()) return path;
 
-      final client = _client ?? http.Client();
-      final response = await client
-          .send(http.Request('GET', Uri.parse(url)))
-          .timeout(const Duration(seconds: 30));
-      if (response.statusCode != 200) {
-        debugPrint('AutoUpdate: download HTTP ${response.statusCode}');
-        return null;
-      }
+      // Download to a ".part" sibling and rename ONLY after the body stream has
+      // been fully consumed. The exists() fast-path above must never hand back a
+      // TRUNCATED apk from an interrupted attempt — the 30s timeout covers the
+      // response HEADERS, not the body, and Android's package parser rejects a
+      // short file with "There was a problem parsing the package".
+      final partFile = File('$path.part');
 
-      final total = response.contentLength ?? 0;
-      var downloaded = 0;
-      final sink = file.openWrite();
+      final client = _client ?? http.Client();
+      final ownsClient = _client == null;
       try {
-        await for (final chunk in response.stream) {
-          downloaded += chunk.length;
-          sink.add(chunk);
-          onProgress?.call(downloaded, total);
-          _events.add(DownloadProgressEvent(downloaded, total));
+        final response = await client
+            .send(http.Request('GET', Uri.parse(url)))
+            .timeout(const Duration(seconds: 30));
+        if (response.statusCode != 200) {
+          debugPrint('AutoUpdate: download HTTP ${response.statusCode}');
+          return null;
         }
-        await sink.flush();
+
+        final total = response.contentLength ?? 0;
+        var downloaded = 0;
+        final sink = partFile.openWrite();
+        try {
+          await for (final chunk in response.stream) {
+            downloaded += chunk.length;
+            sink.add(chunk);
+            onProgress?.call(downloaded, total);
+            _events.add(DownloadProgressEvent(downloaded, total));
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+        await partFile.rename(path);
+        return path;
       } finally {
-        await sink.close();
+        // Close only clients this call created — an injected test client is
+        // owned by the caller.
+        if (ownsClient) client.close();
       }
-      return path;
     } catch (e) {
       debugPrint('AutoUpdate: download failed: $e');
       return null;

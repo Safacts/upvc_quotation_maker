@@ -149,7 +149,16 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     } catch (e) {
       debugPrint('Ensure save before share failed: $e');
     }
-    return QuoteShare.quoteLink(widget.data, config: _config);
+    final link = await QuoteShare.quoteLink(widget.data, config: _config);
+    if (link == null && (widget.data.id?.isNotEmpty ?? false)) {
+      // Token mint failed for a quotation that HAS an id — the shared message
+      // will silently omit the "Review & confirm online" line. Always leave a
+      // breadcrumb so support can tell a mint failure apart from a draft with
+      // no id (which legitimately has no link).
+      debugPrint('PdfConfirmationScreen: quote token mint FAILED for '
+          '${widget.data.quotationNo} (id=${widget.data.id}) — share message omits the confirm link');
+    }
+    return link;
   }
 
   /// Message body shared to WhatsApp / Telegram / the OS share sheet.

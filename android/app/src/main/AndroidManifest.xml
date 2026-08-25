@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- IN-APP UPDATER: without this the system package installer refuses
+         ACTION_VIEW installs from our app on Android 8+ (API 26+), and
+         Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES (MainActivity's fallback)
+         never shows an enable toggle for us. Sideload-only fleet — no Play
+         policy concern. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <!-- WHITELABELING: the app name is a Gradle manifest placeholder so a
          per-client APK needs no source edit. The default in
          app/build.gradle.kts reproduces the previous hard-coded label exactly,
@@ -38,6 +44,24 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- IN-APP UPDATER: registers the androidx FileProvider that
+             MainActivity.handleInstall() resolves as "$packageName.fileprovider"
+             to turn the downloaded APK into an installable content:// URI.
+             WITHOUT this declaration FileProvider.getUriForFile() throws
+             IllegalArgumentException on every update attempt — the updater
+             could download but never install. res/xml/file_paths.xml (already
+             present) covers getExternalStorageDirectory(). The ${applicationId}
+             placeholder keeps per-client white-label ids working. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"/>
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
