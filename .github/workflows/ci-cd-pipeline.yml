@@ -62,7 +62,7 @@ jobs:
           # Existing non-blocking lints are reported, but only analyzer errors
           # should stop the release pipeline. This keeps CI honest without
           # making an unrelated legacy warning block every staging deploy.
-          flutter analyze --no-fatal-warnings lib/supabase_config.dart lib/quotation_screen.dart lib/pdf_confirmation_screen.dart
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/supabase_config.dart lib/quotation_screen.dart lib/pdf_confirmation_screen.dart
 
       - name: Run TypeScript check
         run: npx tsc --noEmit
