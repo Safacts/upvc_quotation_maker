@@ -124,6 +124,25 @@ export async function PATCH(
     // companies by editing it.
     const clientId = owner.client_id;
 
+    // Capture the old child ids before inserting replacements. Deleting by the
+    // parent key after insertion would also delete the new rows.
+    const [oldMeasuredRows, oldUnmeasuredRows] = await Promise.all([
+      supaGet("measured_items", {
+        quotation_id: "eq." + id,
+        client_id: "eq." + clientId,
+        select: "id",
+      }),
+      supaGet("unmeasured_items", {
+        quotation_id: "eq." + id,
+        client_id: "eq." + clientId,
+        select: "id",
+      }),
+    ]);
+    const oldMeasuredIds = (Array.isArray(oldMeasuredRows) ? oldMeasuredRows : [])
+      .map((row: any) => String(row.id)).filter(Boolean);
+    const oldUnmeasuredIds = (Array.isArray(oldUnmeasuredRows) ? oldUnmeasuredRows : [])
+      .map((row: any) => String(row.id)).filter(Boolean);
+
     const parsed = quotationWriteSchema.safeParse(body);
     if (!parsed.success) {
       return consoleJson(
@@ -145,26 +164,6 @@ export async function PATCH(
       }
     }
 
-    await supaPatchSafe(
-      "quotations",
-      { id: "eq." + id, client_id: "eq." + clientId },
-      {
-        quote_no: data.quote_no,
-        date: data.date,
-        customer_name: data.customer_name,
-        contact_no: data.contact_no,
-        email: data.email,
-        address: data.address,
-        reference: data.reference,
-        supplier_company: data.supplier_company,
-        status: data.status,
-        transport_cost: data.transport_cost,
-        include_gst: data.include_gst,
-        gst_percentage: data.gst_percentage,
-        customer_id: data.customer_id,
-      },
-    );
-
     // Line items are REPLACED, not diffed.
     //
     // A diff needs stable client-side ids for rows the user may have inserted,
@@ -172,13 +171,10 @@ export async function PATCH(
     // as a duplicated or vanished line on a customer-facing document. Replace is
     // O(n) on a list capped at 200 and is trivially correct.
     //
-    // The known trade-off, written down rather than discovered later: this is
-    // NOT atomic — PostgREST has no transaction across calls. A failure between
-    // the delete and the insert leaves the quotation with no line items. The
-    // header row survives, so nothing is unrecoverable, and the fix (a single
-    // `save_quotation` plpgsql RPC) belongs with migrations 009/010 which are
-    // not yet applied. Deletes run BEFORE inserts so a partial failure cannot
-    // double the line items and double the customer's price.
+    // PostgREST has no transaction across calls. Insert the replacement lines
+    // BEFORE deleting the old ones so an insert failure preserves the last good
+    // quotation instead of leaving its header empty. A future transactional
+    // `save_quotation` RPC remains the complete solution.
     //
     // `client_id` is on the delete as well as `quotation_id`, even though the
     // parent's ownership was just verified. `measured_items` and
@@ -187,15 +183,6 @@ export async function PATCH(
     // tenant's rows regardless of how `id` was obtained. A DELETE is the one
     // operation where "the check above already covered it" is not a good enough
     // answer.
-    await supaDelete("measured_items", {
-      quotation_id: "eq." + id,
-      client_id: "eq." + clientId,
-    });
-    await supaDelete("unmeasured_items", {
-      quotation_id: "eq." + id,
-      client_id: "eq." + clientId,
-    });
-
     if (data.measured_items.length) {
       await supaPost(
         "measured_items",
@@ -225,6 +212,42 @@ export async function PATCH(
         })) as any,
       );
     }
+
+    // New lines are known to exist before the destructive replacement step.
+    if (oldMeasuredIds.length) {
+      await supaDelete("measured_items", {
+        id: "in.(" + oldMeasuredIds.join(",") + ")",
+        client_id: "eq." + clientId,
+      });
+    }
+    if (oldUnmeasuredIds.length) {
+      await supaDelete("unmeasured_items", {
+        id: "in.(" + oldUnmeasuredIds.join(",") + ")",
+        client_id: "eq." + clientId,
+      });
+    }
+
+    // Commit the header only after replacement lines are present. If a child
+    // insert fails, the old header and old lines remain untouched.
+    await supaPatchSafe(
+      "quotations",
+      { id: "eq." + id, client_id: "eq." + clientId },
+      {
+        quote_no: data.quote_no,
+        date: data.date,
+        customer_name: data.customer_name,
+        contact_no: data.contact_no,
+        email: data.email,
+        address: data.address,
+        reference: data.reference,
+        supplier_company: data.supplier_company,
+        status: data.status,
+        transport_cost: data.transport_cost,
+        include_gst: data.include_gst,
+        gst_percentage: data.gst_percentage,
+        customer_id: data.customer_id,
+      },
+    );
 
     return consoleJson({
       ok: true,

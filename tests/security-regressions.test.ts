@@ -290,6 +290,24 @@ describe("BUG-SEC-001 — a customer cannot grant themselves a paid licence", ()
     expect(writtenConfig().isPaid).toBe(true);
   });
 
+  it("accepts a matching HttpOnly admin session without a password hash", async () => {
+    fixtures["admins"] = [
+      { email: "kongaaadisheshu@gmail.com", password_hash: "admin-hash" },
+    ];
+    fixtures["clients"] = [{ id: TENANT_A, config: { isPaid: false } }];
+    currentSession = adminSession;
+    const { POST } = await import("../app/api/save_client/route");
+    const res = await POST(
+      post("http://localhost/api/save_client", {
+        id: TENANT_A,
+        admin_email: "KONGAAADISHESHU@GMAIL.COM",
+        config: { isPaid: true },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(writtenConfig().isPaid).toBe(true);
+  });
+
   it("BUG-FUNC-001: a correct customer hash is ACCEPTED (was always 403)", async () => {
     // The route used to `select: "id,config"` and then compare
     // `clientMatch.password_hash` — undefined — so this path always 403'd and
