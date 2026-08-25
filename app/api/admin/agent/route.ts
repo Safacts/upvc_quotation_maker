@@ -508,7 +508,7 @@ CRITICAL INSTRUCTIONS:
                 const dates = sample.rows.map((q: any) => String(q.date || q.created_at || "")).filter(Boolean).sort();
                 result = JSON.stringify({
                   clientId,
-                  client: { id: clients[0].id, config: clients[0].config || {}, isActive: clients[0].is_active, createdAt: clients[0].created_at, updatedAt: clients[0].updated_at },
+                  client: { id: clients[0].id, config: safeClientConfig(clients[0].config || {}), isActive: clients[0].is_active, createdAt: clients[0].created_at, updatedAt: clients[0].updated_at },
                   quotations: { exactCount, analyzedRows: sample.rows.length, sampleTruncated: sample.truncated, statusBreakdown, conversion: { convertedInAnalyzedRows: converted, rateInAnalyzedRows: sample.rows.length ? Number((converted / sample.rows.length * 100).toFixed(2)) : 0, definition: "approved or later lifecycle status; this is not a payment-confirmed revenue rate" }, summedGrandTotal: Number(totalValue.toFixed(2)), firstDate: dates[0] || null, lastDate: dates.at(-1) || null, recent: sample.rows.slice(0, 20) },
                   dataQuality: { rowsMissingCustomerName: missingCustomer, note: sample.truncated ? "Totals and status breakdown are limited to the first 5000 rows; exactCount remains exact." : null },
                 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
+import { getSession } from "@/lib/session";
 
 const SERVICE_ACCOUNT_JSON = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
@@ -20,6 +21,11 @@ async function getSearchConsole() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getSession();
+    if (!session || session.role !== "admin") {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { url } = body;
 

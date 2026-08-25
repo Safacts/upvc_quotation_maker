@@ -107,6 +107,9 @@ export async function POST(request: NextRequest) {
           500,
         );
       }
+      // Count every real OTP email against the same bucket so the send path
+      // cannot be used to mail-bomb an address (5 sends / 15 min / email+IP).
+      recordAuthFailure(attemptKey);
       try {
         await supaPost("sent_emails", {
           recipient: email,

@@ -18,8 +18,35 @@ export async function GET() {
   return NextResponse.json({ reviews: [] });
 }
 
+// Best-effort in-memory throttle: this POST is anonymous by design, so the only
+// abuse handle available is the caller's network. Per-instance, resets on
+// redeploy — enough to make unattended spam loops expensive.
+const reviewWindows = new Map<string, { windowStart: number; count: number }>();
+const REVIEW_WINDOW_MS = 60 * 60 * 1000;
+const MAX_REVIEWS_PER_WINDOW = 10;
+
+function consumeReviewSlot(ip: string): boolean {
+  const now = Date.now();
+  const bucket = reviewWindows.get(ip);
+  if (!bucket || now - bucket.windowStart >= REVIEW_WINDOW_MS) {
+    reviewWindows.set(ip, { windowStart: now, count: 1 });
+    return true;
+  }
+  if (bucket.count >= MAX_REVIEWS_PER_WINDOW) return false;
+  bucket.count += 1;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+    if (!consumeReviewSlot(ip)) {
+      return NextResponse.json(
+        { ok: false, error: "Too many reviews from this network. Try later." },
+        { status: 429 },
+      );
+    }
+
     let body: any = {};
     try {
       body = await request.json();

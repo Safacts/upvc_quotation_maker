@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import { timingSafeEqual } from "crypto";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { createSession, deleteSession, getSession } from "@/lib/session";
 import { sha256 } from "@/lib/auth";
+import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { sendSignupNotification } from "@/lib/mail";
 import { notifyNewClientSignup, isTelegramConfigured } from "@/lib/telegram";
 
@@ -60,6 +62,13 @@ const CORS_HEADERS = {
 
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status, headers: CORS_HEADERS });
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(String(a ?? ""), "utf8");
+  const bb = Buffer.from(String(b ?? ""), "utf8");
+  if (ba.length !== bb.length || ba.length === 0) return false;
+  return timingSafeEqual(ba, bb);
 }
 
 async function findAdmin(email: string): Promise<any | null> {
@@ -148,7 +157,7 @@ async function backfillPortalHash(client: any): Promise<void> {
 async function findInactiveClientByEmail(email: string): Promise<any | null> {
   const le = String(email).trim().toLowerCase();
   const rows = await supaGet("clients", {
-    select: "id,config,is_active",
+    select: "id,config,is_active,password_hash",
     limit: 1000,
   });
   if (!Array.isArray(rows)) return null;
@@ -278,6 +287,11 @@ export async function POST(request: NextRequest) {
         await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
         return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
       }
+      const googleSignupKey = authAttemptKey(request, "signup-create", "");
+      if (isAuthLocked(googleSignupKey)) {
+        return json({ error: "Too many attempts. Try again later." }, 429);
+      }
+      recordAuthFailure(googleSignupKey);
       let newRow: any;
       try {
         newRow = await supaPost("signup_requests", { email: googleEmail, auth_method: "google" });
@@ -299,19 +313,26 @@ export async function POST(request: NextRequest) {
     const email = String(p.email || "").trim().toLowerCase();
     if (!email) return json({ error: "email required" }, 400);
 
+    const attemptKey = authAttemptKey(request, "portal-login", email);
+    if (isAuthLocked(attemptKey)) {
+      return json({ error: "Too many attempts. Try again later." }, 429);
+    }
+
     const admin = await findAdmin(email);
 
     const password = p.password || "";
     if (!password) return json({ error: "password required" }, 400);
     const inputHash = sha256(password);
 
-    if (admin && admin.password_hash === inputHash) {
+    if (admin && safeEqual(String(admin.password_hash || ""), inputHash)) {
+      clearAuthFailures(attemptKey);
       await createSession({ role: "admin", email: admin.email });
       return json({ role: "admin", email: admin.email }, 200);
     }
 
     const client = await findClientByEmail(email);
-    if (client && (client.password_hash || "") === inputHash) {
+    if (client && safeEqual(String(client.password_hash || ""), inputHash)) {
+      clearAuthFailures(attemptKey);
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
@@ -355,6 +376,12 @@ export async function POST(request: NextRequest) {
     if (!admin && !client) {
       const inactive = await findInactiveClientByEmail(email);
       if (inactive) {
+        // Verify the password BEFORE revealing deactivation, otherwise this
+        // branch is an oracle that confirms which emails hold accounts.
+        if (!safeEqual(String(inactive.password_hash || ""), inputHash)) {
+          recordAuthFailure(attemptKey);
+          return json({ error: "invalid email or password" }, 401);
+        }
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
       const signup = await findSignupByEmail(email);
@@ -362,12 +389,19 @@ export async function POST(request: NextRequest) {
         if (signup.auth_method === "google" || !signup.password_hash) {
           return json({ error: "This account was created with Google Sign-In. Please use Sign in with Google." }, 401);
         }
-        if (signup.password_hash === inputHash) {
+        if (safeEqual(String(signup.password_hash), inputHash)) {
+          clearAuthFailures(attemptKey);
           await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
           return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
         }
+        recordAuthFailure(attemptKey);
         return json({ error: "invalid email or password" }, 401);
       }
+      const signupCreateKey = authAttemptKey(request, "signup-create", "");
+      if (isAuthLocked(signupCreateKey)) {
+        return json({ error: "Too many attempts. Try again later." }, 429);
+      }
+      recordAuthFailure(signupCreateKey);
       let newRow: any;
       try {
         newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: inputHash });
@@ -385,6 +419,7 @@ export async function POST(request: NextRequest) {
       return json({ role: "signup", email, status: "pending", signup_request_id: newSignupId }, 200);
     }
 
+    recordAuthFailure(attemptKey);
     return json({ error: "invalid email or password" }, 401);
   } catch (e: any) {
     return json({ error: String(e?.message ?? e) }, 500);

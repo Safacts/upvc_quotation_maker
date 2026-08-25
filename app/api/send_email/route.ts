@@ -47,6 +47,25 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ba, bb);
 }
 
+// Best-effort per-sender daily cap so one authenticated tenant/admin cannot
+// drain the Brevo quota. In-memory by design: serverless instances each hold
+// their own map and it resets on redeploy — a ceiling, not an accounting system.
+const dailySends = new Map<string, { date: string; count: number }>();
+const DAILY_SEND_LIMIT = 100;
+
+function consumeDailySendQuota(identity: string): boolean {
+  const date = new Date().toISOString().slice(0, 10);
+  const key = `${identity}:${date}`;
+  const bucket = dailySends.get(key);
+  if (!bucket || bucket.date !== date) {
+    dailySends.set(key, { date, count: 1 });
+    return true;
+  }
+  if (bucket.count >= DAILY_SEND_LIMIT) return false;
+  bucket.count += 1;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   resolveCors(request);
   try {
@@ -144,6 +163,13 @@ export async function POST(request: NextRequest) {
         cid: a.cid ? String(a.cid).slice(0, 255) : undefined,
         content: Buffer.from(b64, "base64"),
       });
+    }
+
+    const senderKey = isAdmin
+      ? String(session?.email || body.admin_email || body.email || "admin").trim().toLowerCase()
+      : String(authenticatedClientId);
+    if (!consumeDailySendQuota(senderKey)) {
+      return json({ error: "Daily email limit reached" }, 429);
     }
 
     await sendMail({ to, subject, html, attachments });
