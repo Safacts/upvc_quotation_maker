@@ -18,7 +18,7 @@
  * run in CI on every push.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { createHmac } from "crypto";
+import { createHmac, createHash } from "crypto";
 
 const TEST_SECRET = "bugsy-test-quote-token-secret";
 const QUOTE_ID = "11111111-2222-3333-4444-555555555555";
@@ -26,6 +26,11 @@ const QUOTE_ID = "11111111-2222-3333-4444-555555555555";
 /** Mirror of the route's own token derivation, so we can forge a VALID token. */
 function validToken(id: string, secret = TEST_SECRET): string {
   return createHmac("sha256", secret).update(id).digest("hex").slice(0, 16);
+}
+
+/** Hash a token the same way the route does (SHA-256). */
+function hashToken(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
 // ---------------------------------------------------------------------------
@@ -40,22 +45,76 @@ const tableResponses: Record<string, { data: any; error: any }> = {};
 const selectCalls: string[] = [];
 const updateCalls: Array<{ table: string; payload: any }> = [];
 
+// Track query parameters for token validation
+let currentQueryParams: Record<string, any> = {};
+
 function makeBuilder(table: string) {
-  const result = tableResponses[table] ?? { data: null, error: { message: "no fixture" } };
+  const result = tableResponses[table] ?? {
+    data: null,
+    error: { message: "no fixture" },
+  };
   const builder: any = {
     select: () => {
       selectCalls.push(table);
+      currentQueryParams = {}; // Reset on new select
       return builder;
     },
     update: (payload: any) => {
       updateCalls.push({ table, payload });
       return builder;
     },
-    eq: () => builder,
+    eq: (column: string, value: any) => {
+      currentQueryParams[column] = value;
+      return builder;
+    },
+    gt: (column: string, value: any) => {
+      currentQueryParams[column + "_gt"] = value;
+      return builder;
+    },
+    is: (column: string, value: any) => {
+      currentQueryParams[column + "_is"] = value;
+      return builder;
+    },
     order: () => Promise.resolve(result),
     single: () => Promise.resolve(result),
+    maybeSingle: () => {
+      // For quotation_share_tokens, validate the token hash
+      if (table === "quotation_share_tokens") {
+        const expectedHash = currentQueryParams.token_hash;
+
+        // The fixture stores the correct token_hash and expires_at for the valid token
+        const storedHash = result.data?.token_hash;
+        const storedExpiresAt = result.data?.expires_at;
+        const storedRevokedAt = result.data?.revoked_at;
+
+        // Check if token is valid (not expired, not revoked)
+        const now = new Date().toISOString();
+        const isExpired = storedExpiresAt && storedExpiresAt <= now;
+        const isRevoked =
+          storedRevokedAt !== null && storedRevokedAt !== undefined;
+
+        if (
+          expectedHash &&
+          storedHash &&
+          expectedHash === storedHash &&
+          !isExpired &&
+          !isRevoked
+        ) {
+          // Valid token - return the fixture data
+          return Promise.resolve({
+            data: { quotation_id: QUOTE_ID },
+            error: null,
+          });
+        } else {
+          // Invalid/expired/revoked token
+          return Promise.resolve({ data: null, error: null });
+        }
+      }
+      return Promise.resolve(result);
+    },
     // `await builder` (no .single()/.order()) must also resolve.
-    then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
+    then: (resolve: any, reject: any) =>
+      Promise.resolve(result).then(resolve, reject),
   };
   return builder;
 }
@@ -63,7 +122,12 @@ function makeBuilder(table: string) {
 vi.mock("@/lib/supabase-client", () => {
   const supabase = { from: (table: string) => makeBuilder(table) };
   const supabaseAdmin = { from: (table: string) => makeBuilder(table) };
-  return { supabase, supabaseAdmin, getSupabase: () => supabase, getSupabaseAdmin: () => supabaseAdmin };
+  return {
+    supabase,
+    supabaseAdmin,
+    getSupabase: () => supabase,
+    getSupabaseAdmin: () => supabaseAdmin,
+  };
 });
 
 /** Import the route AFTER env + mocks are in place (it reads env at module scope). */
@@ -89,6 +153,19 @@ function postReq(body: unknown) {
 const params = { params: Promise.resolve({ id: QUOTE_ID }) };
 
 function seedHappyPath() {
+  const validTok = validToken(QUOTE_ID);
+  const futureExpiry = new Date(
+    Date.now() + 30 * 24 * 60 * 60 * 1000,
+  ).toISOString(); // 30 days
+  tableResponses.quotation_share_tokens = {
+    data: {
+      quotation_id: QUOTE_ID,
+      token_hash: hashToken(validTok),
+      expires_at: futureExpiry,
+      revoked_at: null,
+    },
+    error: null,
+  };
   tableResponses.quotations = {
     data: {
       id: QUOTE_ID,
@@ -108,7 +185,17 @@ function seedHappyPath() {
     error: null,
   };
   tableResponses.measured_items = {
-    data: [{ code: "W1", description: "Sliding Window", width: 1200, height: 1500, units: 2, glass: "5mm", rate: 450 }],
+    data: [
+      {
+        code: "W1",
+        description: "Sliding Window",
+        width: 1200,
+        height: 1500,
+        units: 2,
+        glass: "5mm",
+        rate: 450,
+      },
+    ],
     error: null,
   };
   tableResponses.unmeasured_items = {
@@ -116,7 +203,9 @@ function seedHappyPath() {
     error: null,
   };
   tableResponses.clients = {
-    data: { config: { companyName: "Venkateshwara uPVC", primaryColor: "#1E3A5F" } },
+    data: {
+      config: { companyName: "Venkateshwara uPVC", primaryColor: "#1E3A5F" },
+    },
     error: null,
   };
 }
@@ -138,7 +227,9 @@ describe("GET /api/quotation/[id] — token gate", () => {
     seedHappyPath();
     const res = await GET(getReq(QUOTE_ID), params);
     expect(res.status).toBe(403);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid or missing token" });
+    await expect(res.json()).resolves.toEqual({
+      error: "Invalid or missing token",
+    });
     // The important half of the assertion: it must fail CLOSED, before any read.
     expect(selectCalls).toEqual([]);
   });
@@ -156,7 +247,8 @@ describe("GET /api/quotation/[id] — token gate", () => {
     seedHappyPath();
     const res = await GET(getReq(QUOTE_ID, "deadbeefdeadbeef"), params);
     expect(res.status).toBe(403);
-    expect(selectCalls).toEqual([]);
+    // Route must query token table to validate hash; only quotation table must not be queried
+    expect(selectCalls).not.toContain("quotations");
   });
 
   it("rejects a token generated for a DIFFERENT quotation id (403)", async () => {
@@ -167,7 +259,8 @@ describe("GET /api/quotation/[id] — token gate", () => {
     const otherToken = validToken("99999999-8888-7777-6666-555555555555");
     const res = await GET(getReq(QUOTE_ID, otherToken), params);
     expect(res.status).toBe(403);
-    expect(selectCalls).toEqual([]);
+    // Route must query token table to validate hash; only quotation table must not be queried
+    expect(selectCalls).not.toContain("quotations");
   });
 
   it("rejects a truncated / padded token (403)", async () => {
@@ -178,7 +271,8 @@ describe("GET /api/quotation/[id] — token gate", () => {
       const res = await GET(getReq(QUOTE_ID, bad), params);
       expect(res.status, `token "${bad}" must be rejected`).toBe(403);
     }
-    expect(selectCalls).toEqual([]);
+    // Route must query token table to validate hash; only quotation table must not be queried
+    expect(selectCalls).not.toContain("quotations");
   });
 
   it("accepts the correct token and returns 200", async () => {
@@ -209,8 +303,15 @@ describe("GET /api/quotation/[id] — response contract", () => {
     const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
     const { quotation } = await res.json();
     for (const field of [
-      "id", "quote_no", "date", "customer_name", "contact_no",
-      "transport_cost", "status", "include_gst", "gst_percentage",
+      "id",
+      "quote_no",
+      "date",
+      "customer_name",
+      "contact_no",
+      "transport_cost",
+      "status",
+      "include_gst",
+      "gst_percentage",
     ]) {
       expect(quotation, `missing field ${field}`).toHaveProperty(field);
     }
@@ -251,7 +352,8 @@ describe("GET /api/quotation/[id] — response contract", () => {
           companyName: "KPR Fabricators",
           companyEmail: "kpr@example.com",
           logoUrl: "https://cdn.example.com/logo.png",
-          portalPasswordHash: "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265",
+          portalPasswordHash:
+            "8622f0f69c91819119a8acf60a248d7b36fdb7ccf857ba8f85cf7f2767ff8265",
           supabaseAnonKey: "eyJhbGciOiJIUzI1NiJ9.super-secret-anon-key",
           adminEmails: ["owner@example.com"],
           isPaid: true,
@@ -297,6 +399,7 @@ describe("GET /api/quotation/[id] — response contract", () => {
 
   it("returns 404 (not 500) when the quotation does not exist", async () => {
     const { GET } = await loadRoute();
+    seedHappyPath();
     tableResponses.quotations = { data: null, error: { message: "PGRST116" } };
     const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
     expect(res.status).toBe(404);
@@ -309,7 +412,10 @@ describe("GET /api/quotation/[id] — response contract", () => {
     const { GET } = await loadRoute();
     tableResponses.quotations = {
       data: null,
-      error: { message: 'relation "public.quotations" violates policy "tenant_isolation"' },
+      error: {
+        message:
+          'relation "public.quotations" violates policy "tenant_isolation"',
+      },
     };
     const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
     const text = JSON.stringify(await res.json());
@@ -318,6 +424,10 @@ describe("GET /api/quotation/[id] — response contract", () => {
 });
 
 describe("POST /api/quotation/[id] — approve / reject state machine", () => {
+  beforeEach(() => {
+    seedHappyPath();
+  });
+
   it("rejects malformed JSON with 400, not a 500 crash", async () => {
     const { POST } = await loadRoute();
     const res = await POST(postReq("{not json"), params);
@@ -334,12 +444,15 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
 
   it("rejects a bad token with 403 and performs no write", async () => {
     const { POST } = await loadRoute();
-    const res = await POST(postReq({ action: "approve", token: "0000000000000000" }), params);
+    const res = await POST(
+      postReq({ action: "approve", token: "0000000000000000" }),
+      params,
+    );
     expect(res.status).toBe(403);
     expect(updateCalls).toEqual([]);
   });
 
-  it("maps approve/reject/review to won/lost/sent", async () => {
+  it("maps approve/reject/review to approved/rejected/sent", async () => {
     const { POST } = await loadRoute();
     // The UPDATE now ends in `.select("id")` and requires a row to come back:
     // the route must prove a LIVE row actually matched before reporting
@@ -347,8 +460,8 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
     tableResponses.quotations = { data: [{ id: QUOTE_ID }], error: null };
     const token = validToken(QUOTE_ID);
     const cases: Array<[string, string]> = [
-      ["approve", "won"],
-      ["reject", "lost"],
+      ["approve", "approved"],
+      ["reject", "rejected"],
       ["review", "sent"],
     ];
     for (const [action, expected] of cases) {
@@ -356,7 +469,9 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
       const res = await POST(postReq({ action, token }), params);
       expect(res.status, `action ${action}`).toBe(200);
       await expect(res.json()).resolves.toEqual({ ok: true, status: expected });
-      expect(updateCalls).toEqual([{ table: "quotations", payload: { status: expected } }]);
+      expect(updateCalls).toEqual([
+        { table: "quotations", payload: { status: expected } },
+      ]);
     }
   });
 
@@ -368,7 +483,10 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
     // success for a write that changed nothing.
     const { POST } = await loadRoute();
     tableResponses.quotations = { data: [], error: null };
-    const res = await POST(postReq({ action: "approve", token: validToken(QUOTE_ID) }), params);
+    const res = await POST(
+      postReq({ action: "approve", token: validToken(QUOTE_ID) }),
+      params,
+    );
     expect(res.status).toBe(404);
     await expect(res.json()).resolves.toEqual({ error: "Quotation not found" });
   });
@@ -378,18 +496,36 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
     // arbitrary string here would corrupt every dashboard aggregate.
     const { POST } = await loadRoute();
     const token = validToken(QUOTE_ID);
-    for (const action of ["delete", "APPROVE", "won", "", null, undefined, 42, { a: 1 }]) {
+    for (const action of [
+      "delete",
+      "APPROVE",
+      "won",
+      "",
+      null,
+      undefined,
+      42,
+      { a: 1 },
+    ]) {
       updateCalls.length = 0;
       const res = await POST(postReq({ action, token }), params);
-      expect(res.status, `action ${JSON.stringify(action)} must be rejected`).toBe(400);
+      expect(
+        res.status,
+        `action ${JSON.stringify(action)} must be rejected`,
+      ).toBe(400);
       expect(updateCalls).toEqual([]);
     }
   });
 
   it("returns 500 when the update fails, and does not claim success", async () => {
     const { POST } = await loadRoute();
-    tableResponses.quotations = { data: null, error: { message: "write failed" } };
-    const res = await POST(postReq({ action: "approve", token: validToken(QUOTE_ID) }), params);
+    tableResponses.quotations = {
+      data: null,
+      error: { message: "write failed" },
+    };
+    const res = await POST(
+      postReq({ action: "approve", token: validToken(QUOTE_ID) }),
+      params,
+    );
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Failed to update" });
   });
@@ -405,7 +541,9 @@ describe("token derivation — security properties", () => {
   });
 
   it("differs when the secret rotates (rotation invalidates old links)", async () => {
-    expect(validToken(QUOTE_ID, "secret-a")).not.toBe(validToken(QUOTE_ID, "secret-b"));
+    expect(validToken(QUOTE_ID, "secret-a")).not.toBe(
+      validToken(QUOTE_ID, "secret-b"),
+    );
   });
 
   it("is 16 hex chars — DOCUMENTED AS A WEAKNESS, only 64 bits of entropy", async () => {
@@ -418,22 +556,16 @@ describe("token derivation — security properties", () => {
     expect(t).toMatch(/^[0-9a-f]{16}$/);
   });
 
-  it("fails closed when QUOTE_TOKEN_SECRET is unset", async () => {
-    // If the env var is missing in production, `verifyToken` returns false for
-    // everything. Verified explicitly because the alternative (empty secret =>
-    // predictable token) would be a total auth bypass.
+  it("token validation works without QUOTE_TOKEN_SECRET (route uses DB hash, not secret)", async () => {
+    // The route validates tokens by hashing with SHA-256 and comparing to
+    // the stored hash in quotation_share_tokens. It does NOT use
+    // QUOTE_TOKEN_SECRET for validation (that's only for token generation).
+    // This test verifies the validation path works without the secret.
     vi.resetModules();
     delete process.env.QUOTE_TOKEN_SECRET;
-    const saved = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-    try {
-      const { GET } = await import("../app/api/quotation/[id]/route");
-      seedHappyPath();
-      const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
-      expect(res.status).toBe(403);
-      expect(selectCalls).toEqual([]);
-    } finally {
-      if (saved !== undefined) process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
-    }
+    const { GET } = await import("../app/api/quotation/[id]/route");
+    seedHappyPath();
+    const res = await GET(getReq(QUOTE_ID, validToken(QUOTE_ID)), params);
+    expect(res.status).toBe(200);
   });
 });

@@ -25,7 +25,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ---------------------------------------------------------------------------
 // Supabase recorder spy (same contract as client-isolation.test.ts)
 // ---------------------------------------------------------------------------
-type Call = { op: "get" | "post" | "patch" | "delete"; table: string; qs: any; body?: any };
+type Call = {
+  op: "get" | "post" | "patch" | "delete";
+  table: string;
+  qs: any;
+  body?: any;
+};
 const calls: Call[] = [];
 const fixtures: Record<string, any> = {};
 
@@ -43,7 +48,8 @@ vi.mock("@/lib/supabase", () => ({
     record("post", t, {}, body);
     return fixtures[t] ?? [{ id: "new-row-id" }];
   },
-  supaPatch: async (t: string, qs: any, body: any) => record("patch", t, qs, body),
+  supaPatch: async (t: string, qs: any, body: any) =>
+    record("patch", t, qs, body),
 }));
 
 // ---------------------------------------------------------------------------
@@ -73,14 +79,37 @@ vi.mock("jose", async () => ({
   jwtVerify: async (token: string) => {
     if (token === "invalid-token") throw new Error("bad token");
     return { payload: { email: token, email_verified: true } };
-  }
+  },
+}));
+
+// Skip Turnstile verification in tests
+process.env.TURNSTILE_SECRET_KEY = "your_placeholder";
+
+// Mock hashPassword to return SHA-256 for predictable testing
+vi.mock("@/lib/auth", () => ({
+  hashPassword: async (pw: string) => {
+    const crypto = await import("crypto");
+    return crypto.createHash("sha256").update(pw).digest("hex");
+  },
+  sha256: (s: string) => {
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(s).digest("hex");
+  },
+  verifyPassword: async (pw: string, hash: string) => {
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(pw).digest("hex") === hash;
+  },
 }));
 
 // ---------------------------------------------------------------------------
 // Helpers + fixture builders
 // ---------------------------------------------------------------------------
 const sha256 = async (s: string) =>
-  [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))]
+  [
+    ...new Uint8Array(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)),
+    ),
+  ]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
@@ -91,12 +120,21 @@ const ADMIN_EMAIL = "kongaaadisheshu@gmail.com";
 /** A live, paying client: no trial lockout ever applies. */
 function seedClientA(hash?: string, configExtra: Record<string, any> = {}) {
   fixtures.client_public = [
-    { id: CLIENT_A, config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] }, is_active: true },
+    {
+      id: CLIENT_A,
+      config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] },
+      is_active: true,
+    },
   ];
   fixtures.clients = [
     {
       id: CLIENT_A,
-      config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [], isPaid: true, ...configExtra },
+      config: {
+        companyEmail: CLIENT_EMAIL_A,
+        adminEmails: [],
+        isPaid: true,
+        ...configExtra,
+      },
       is_active: true,
       password_hash: hash,
     },
@@ -109,12 +147,21 @@ function seedAdmin(hash: string) {
 
 function trialClient(trialEndsAt: string, isPaid = false, hash = "nope") {
   fixtures.client_public = [
-    { id: CLIENT_A, config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] }, is_active: true },
+    {
+      id: CLIENT_A,
+      config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] },
+      is_active: true,
+    },
   ];
   fixtures.clients = [
     {
       id: CLIENT_A,
-      config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [], isPaid, trialEndsAt },
+      config: {
+        companyEmail: CLIENT_EMAIL_A,
+        adminEmails: [],
+        isPaid,
+        trialEndsAt,
+      },
       is_active: true,
       password_hash: hash,
     },
@@ -123,7 +170,11 @@ function trialClient(trialEndsAt: string, isPaid = false, hash = "nope") {
 
 function inactiveClient() {
   fixtures.client_public = [
-    { id: CLIENT_A, config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] }, is_active: false },
+    {
+      id: CLIENT_A,
+      config: { companyEmail: CLIENT_EMAIL_A, adminEmails: [] },
+      is_active: false,
+    },
   ];
   fixtures.clients = [
     {
@@ -163,61 +214,120 @@ const lastMinted = () => minted[minted.length - 1];
 describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
   it("lets a registered ADMIN email in via Google (role admin + session)", async () => {
     seedAdmin(await sha256("whatever")); // google mode ignores the hash
-    const res = await authReq({ mode: "google", email: ADMIN_EMAIL, credential: ADMIN_EMAIL });
+    const res = await authReq({
+      mode: "google",
+      email: ADMIN_EMAIL,
+      credential: ADMIN_EMAIL,
+    });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "admin", email: ADMIN_EMAIL });
+    expect(await res.json()).toMatchObject({
+      role: "admin",
+      email: ADMIN_EMAIL,
+    });
     expect(lastMinted()).toMatchObject({ role: "admin", email: ADMIN_EMAIL });
   });
 
   it("lets a registered CLIENT email in via Google (role customer + client_id + session)", async () => {
     seedClientA();
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
+    const res = await authReq({
+      mode: "google",
+      email: CLIENT_EMAIL_A,
+      credential: CLIENT_EMAIL_A,
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ role: "customer", email: CLIENT_EMAIL_A, client_id: CLIENT_A });
-    expect(lastMinted()).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    expect(body).toMatchObject({
+      role: "customer",
+      email: CLIENT_EMAIL_A,
+      client_id: CLIENT_A,
+    });
+    expect(lastMinted()).toMatchObject({
+      role: "customer",
+      client_id: CLIENT_A,
+    });
   });
 
   it("creates a signup row + session for an UNKNOWN email (prebooking flow)", async () => {
-    const res = await authReq({ mode: "google", email: "brand-new-client@gmail.com", credential: "brand-new-client@gmail.com" });
+    const res = await authReq({
+      mode: "google",
+      email: "brand-new-client@gmail.com",
+      credential: "brand-new-client@gmail.com",
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "signup", status: "pending" });
-    const writes = calls.filter((c) => c.op === "post" && c.table === "signup_requests");
+    const writes = calls.filter(
+      (c) => c.op === "post" && c.table === "signup_requests",
+    );
     expect(writes).toHaveLength(1);
-    expect(writes[0].body).toMatchObject({ email: "brand-new-client@gmail.com", auth_method: "google" });
+    expect(writes[0].body).toMatchObject({
+      email: "brand-new-client@gmail.com",
+      auth_method: "google",
+    });
     expect(lastMinted()).toMatchObject({ role: "signup" });
   });
 
   it("returns pending status for an existing signup request", async () => {
     fixtures.signup_requests = [
-      { id: 42, email: "waiting@example.com", auth_method: "google", status: "pending" },
+      {
+        id: 42,
+        email: "waiting@example.com",
+        auth_method: "google",
+        status: "pending",
+      },
     ];
-    const res = await authReq({ mode: "google", email: "waiting@example.com", credential: "waiting@example.com" });
+    const res = await authReq({
+      mode: "google",
+      email: "waiting@example.com",
+      credential: "waiting@example.com",
+    });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "signup", status: "pending", signup_request_id: "42" });
+    expect(await res.json()).toMatchObject({
+      role: "signup",
+      status: "pending",
+      signup_request_id: "42",
+    });
   });
 
   it("LOCKS OUT a client whose trial has expired (403, no session minted)", async () => {
     trialClient(new Date(Date.now() - 24 * 3600 * 1000).toISOString());
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
+    const res = await authReq({
+      mode: "google",
+      email: CLIENT_EMAIL_A,
+      credential: CLIENT_EMAIL_A,
+    });
     expect(res.status).toBe(403);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining("trial") });
+    expect(await res.json()).toMatchObject({
+      error: expect.stringContaining("trial"),
+    });
     expect(minted).toHaveLength(0);
   });
 
   it("admits a client whose trial is still active", async () => {
     trialClient(new Date(Date.now() + 24 * 3600 * 1000).toISOString());
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
+    const res = await authReq({
+      mode: "google",
+      email: CLIENT_EMAIL_A,
+      credential: CLIENT_EMAIL_A,
+    });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    expect(await res.json()).toMatchObject({
+      role: "customer",
+      client_id: CLIENT_A,
+    });
   });
 
   it("blocks a deactivated client (403)", async () => {
     inactiveClient();
-    const res = await authReq({ mode: "google", email: CLIENT_EMAIL_A, credential: CLIENT_EMAIL_A });
+    const res = await authReq({
+      mode: "google",
+      email: CLIENT_EMAIL_A,
+      credential: CLIENT_EMAIL_A,
+    });
     expect(res.status).toBe(403);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining("deactivated") });
+    expect(await res.json()).toMatchObject({
+      error: expect.stringContaining("deactivated"),
+    });
     expect(minted).toHaveLength(0);
   });
 });
@@ -226,7 +336,11 @@ describe("/api/portal_auth — GOOGLE mode (Flutter web + portal GSI)", () => {
 describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
   it("logs an admin in with the correct password", async () => {
     seedAdmin(await sha256("Kpr@1234"));
-    const res = await authReq({ mode: "login", email: ADMIN_EMAIL, password: "Kpr@1234" });
+    const res = await authReq({
+      mode: "login",
+      email: ADMIN_EMAIL,
+      password: "Kpr@1234",
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "admin" });
@@ -235,7 +349,11 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
 
   it("rejects an admin with a wrong password (401, no session, no signup row)", async () => {
     seedAdmin(await sha256("Kpr@1234"));
-    const res = await authReq({ mode: "login", email: ADMIN_EMAIL, password: "wrong" });
+    const res = await authReq({
+      mode: "login",
+      email: ADMIN_EMAIL,
+      password: "wrong",
+    });
     expect(res.status).toBe(401);
     expect(minted).toHaveLength(0);
     expect(calls.filter((c) => c.table === "signup_requests")).toEqual([]);
@@ -243,17 +361,28 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
 
   it("logs a paying client in with the correct portal password", async () => {
     seedClientA(await sha256("Vh@1234"));
-    const res = await authReq({ mode: "login", email: CLIENT_EMAIL_A, password: "Vh@1234" });
+    const res = await authReq({
+      mode: "login",
+      email: CLIENT_EMAIL_A,
+      password: "Vh@1234",
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "customer", client_id: CLIENT_A });
     expect(body.password_hash).toBeUndefined();
-    expect(lastMinted()).toMatchObject({ role: "customer", client_id: CLIENT_A });
+    expect(lastMinted()).toMatchObject({
+      role: "customer",
+      client_id: CLIENT_A,
+    });
   });
 
   it("rejects a client with the wrong password (401)", async () => {
     seedClientA(await sha256("Vh@1234"));
-    const res = await authReq({ mode: "login", email: CLIENT_EMAIL_A, password: "nope" });
+    const res = await authReq({
+      mode: "login",
+      email: CLIENT_EMAIL_A,
+      password: "nope",
+    });
     expect(res.status).toBe(401);
     expect(minted).toHaveLength(0);
   });
@@ -261,28 +390,57 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
   it("enforces the trial lockout on password login too", async () => {
     // Lockout fires only AFTER the correct hash matches — you must know the
     // password before the trial check runs.
-    trialClient(new Date(Date.now() - 24 * 3600 * 1000).toISOString(), false, await sha256("nope"));
-    const res = await authReq({ mode: "login", email: CLIENT_EMAIL_A, password: "nope" });
+    trialClient(
+      new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+      false,
+      await sha256("nope"),
+    );
+    const res = await authReq({
+      mode: "login",
+      email: CLIENT_EMAIL_A,
+      password: "nope",
+    });
     expect(res.status).toBe(403);
     expect(minted).toHaveLength(0);
   });
 
   it("politely refuses a password for a Google-created signup (401 'use Google')", async () => {
     fixtures.signup_requests = [
-      { id: 7, email: "guser@gmail.com", auth_method: "google", status: "pending" },
+      {
+        id: 7,
+        email: "guser@gmail.com",
+        auth_method: "google",
+        status: "pending",
+      },
     ];
-    const res = await authReq({ mode: "login", email: "guser@gmail.com", password: "x" });
+    const res = await authReq({
+      mode: "login",
+      email: "guser@gmail.com",
+      password: "x",
+    });
     expect(res.status).toBe(401);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining("Google") });
+    expect(await res.json()).toMatchObject({
+      error: expect.stringContaining("Google"),
+    });
   });
 
   it("registers a brand-new email with password mode (auth_method=password + hash stored)", async () => {
-    const res = await authReq({ mode: "login", email: "newpass@example.com", password: "TopSecret!1" });
+    const res = await authReq({
+      mode: "login",
+      email: "newpass@example.com",
+      password: "TopSecret!1",
+      turnstile_token: "dummy-token",
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "signup", status: "pending" });
-    const write = calls.find((c) => c.op === "post" && c.table === "signup_requests");
-    expect(write!.body).toMatchObject({ email: "newpass@example.com", auth_method: "password" });
+    const write = calls.find(
+      (c) => c.op === "post" && c.table === "signup_requests",
+    );
+    expect(write!.body).toMatchObject({
+      email: "newpass@example.com",
+      auth_method: "password",
+    });
     expect(write!.body.password_hash).toBe(await sha256("TopSecret!1"));
     expect(lastMinted()).toMatchObject({ role: "signup" });
   });
@@ -291,7 +449,11 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
 // ===========================================================================
 describe("/api/portal_auth — session / logout / validation", () => {
   it("mode=session returns the stored role for a valid session", async () => {
-    currentSession = { role: "customer", email: CLIENT_EMAIL_A, client_id: CLIENT_A };
+    currentSession = {
+      role: "customer",
+      email: CLIENT_EMAIL_A,
+      client_id: CLIENT_A,
+    };
     const res = await authReq({ mode: "session" });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -317,7 +479,9 @@ describe("/api/portal_auth — session / logout / validation", () => {
     // (No credential provided → expect 400 "missing Google credential".)
     const res = await authReq({ mode: "google", email: "  " });
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: "missing Google credential" });
+    expect(await res.json()).toMatchObject({
+      error: "missing Google credential",
+    });
   });
 
   it("password mode rejects empty email (400)", async () => {

@@ -28,9 +28,20 @@ vi.mock("@/lib/mail", () => ({
   sendOtpEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("jose", async () => ({
+  createRemoteJWKSet: () => ({}),
+  jwtVerify: async (token: string) => {
+    if (token === "invalid-token") throw new Error("bad token");
+    // Return the token as the email for testing purposes
+    return { payload: { email: token, email_verified: true } };
+  },
+}));
+
 describe("Auth Flows", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Skip Turnstile verification in tests
+    process.env.TURNSTILE_SECRET_KEY = "your_placeholder";
   });
 
   describe("Google Sign-In", () => {
@@ -41,35 +52,46 @@ describe("Auth Flows", () => {
     });
 
     it("TC-AUTH-007: Creates session for existing admin", async () => {
-      supaGet.mockResolvedValueOnce([{ email: "admin@test.com", password_hash: "hash" }]);
-      
+      supaGet.mockResolvedValueOnce([
+        { email: "admin@test.com", password_hash: "hash" },
+      ]);
+
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
         method: "POST",
         body: JSON.stringify({
           mode: "google",
           email: "admin@test.com",
-          credential: "valid-google-token",
+          credential: "admin@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("admin");
-      expect(createSession).toHaveBeenCalledWith({ role: "admin", email: "admin@test.com" });
+      expect(createSession).toHaveBeenCalledWith({
+        role: "admin",
+        email: "admin@test.com",
+      });
     });
 
     it("TC-AUTH-008: Creates session for existing customer", async () => {
       supaGet
         .mockResolvedValueOnce([]) // findAdmin returns empty
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { companyEmail: "customer@test.com", adminEmails: [], isPaid: true },
-          is_active: true,
-          password_hash: "hash"
-        }]); // findClientByEmail returns client
+        .mockResolvedValueOnce([
+          {
+            id: "client-1",
+            config: {
+              companyEmail: "customer@test.com",
+              adminEmails: [],
+              isPaid: true,
+            },
+            is_active: true,
+            password_hash: "hash",
+          },
+        ]); // findClientByEmail returns client
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -77,26 +99,30 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "customer@test.com",
-          credential: "valid-google-token",
+          credential: "customer@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
       expect(data.client_id).toBe("client-1");
     });
 
     it("TC-AUTH-009: Rejects deactivated account", async () => {
-      supaGet
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { companyEmail: "customer@test.com", adminEmails: [], isPaid: true },
+      supaGet.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: "client-1",
+          config: {
+            companyEmail: "customer@test.com",
+            adminEmails: [],
+            isPaid: true,
+          },
           is_active: false,
-        }]);
+        },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -104,13 +130,13 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "customer@test.com",
-          credential: "valid-google-token",
+          credential: "customer@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(403);
       expect(data.error).toContain("deactivated");
     });
@@ -118,19 +144,19 @@ describe("Auth Flows", () => {
     it("TC-AUTH-010: Enforces 7-day trial lockout", async () => {
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() - 1); // Expired yesterday
-      
-      supaGet
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { 
-            companyEmail: "customer@test.com", 
-            adminEmails: [], 
+
+      supaGet.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: "client-1",
+          config: {
+            companyEmail: "customer@test.com",
+            adminEmails: [],
             isPaid: false,
             trialEndsAt: trialEnd.toISOString(),
           },
           is_active: true,
-        }]);
+        },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -138,13 +164,13 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "customer@test.com",
-          credential: "valid-google-token",
+          credential: "customer@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(403);
       expect(data.error).toContain("trial has expired");
     });
@@ -152,19 +178,19 @@ describe("Auth Flows", () => {
     it("TC-AUTH-011: Allows active trial", async () => {
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + 3); // Expires in 3 days
-      
-      supaGet
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { 
-            companyEmail: "customer@test.com", 
-            adminEmails: [], 
+
+      supaGet.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: "client-1",
+          config: {
+            companyEmail: "customer@test.com",
+            adminEmails: [],
             isPaid: false,
             trialEndsAt: trialEnd.toISOString(),
           },
           is_active: true,
-        }]);
+        },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -172,13 +198,13 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "customer@test.com",
-          credential: "valid-google-token",
+          credential: "customer@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
     });
@@ -186,19 +212,19 @@ describe("Auth Flows", () => {
     it("TC-AUTH-012: Allows paid account regardless of trialEndsAt", async () => {
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() - 10); // Expired long ago
-      
-      supaGet
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { 
-            companyEmail: "customer@test.com", 
-            adminEmails: [], 
+
+      supaGet.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: "client-1",
+          config: {
+            companyEmail: "customer@test.com",
+            adminEmails: [],
             isPaid: true,
             trialEndsAt: trialEnd.toISOString(),
           },
           is_active: true,
-        }]);
+        },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -206,13 +232,13 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "customer@test.com",
-          credential: "valid-google-token",
+          credential: "customer@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
     });
@@ -221,7 +247,7 @@ describe("Auth Flows", () => {
       supaGet
         .mockResolvedValueOnce([]) // findAdmin
         .mockResolvedValueOnce([]); // findClientByEmail
-      
+
       supaPost.mockResolvedValueOnce([{ id: "signup-1" }]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
@@ -230,13 +256,13 @@ describe("Auth Flows", () => {
         body: JSON.stringify({
           mode: "google",
           email: "unknown@test.com",
-          credential: "valid-google-token",
+          credential: "unknown@test.com",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("signup");
       expect(data.signup_request_id).toBe("signup-1");
@@ -247,8 +273,10 @@ describe("Auth Flows", () => {
     it("TC-AUTH-014: Verifies password hash for admin", async () => {
       const password = "testpassword";
       const hash = sha256(password);
-      
-      supaGet.mockResolvedValueOnce([{ email: "admin@test.com", password_hash: hash }]);
+
+      supaGet.mockResolvedValueOnce([
+        { email: "admin@test.com", password_hash: hash },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -259,10 +287,10 @@ describe("Auth Flows", () => {
           password: password,
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("admin");
     });
@@ -270,15 +298,21 @@ describe("Auth Flows", () => {
     it("TC-AUTH-015: Verifies password hash for customer", async () => {
       const password = "testpassword";
       const hash = sha256(password);
-      
+
       supaGet
         .mockResolvedValueOnce([]) // findAdmin
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { companyEmail: "customer@test.com", adminEmails: [], isPaid: true },
-          is_active: true,
-          password_hash: hash,
-        }]);
+        .mockResolvedValueOnce([
+          {
+            id: "client-1",
+            config: {
+              companyEmail: "customer@test.com",
+              adminEmails: [],
+              isPaid: true,
+            },
+            is_active: true,
+            password_hash: hash,
+          },
+        ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -289,24 +323,28 @@ describe("Auth Flows", () => {
           password: password,
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
       expect(data.client_id).toBe("client-1");
     });
 
     it("TC-AUTH-016: Rejects wrong password", async () => {
-      supaGet
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([{ 
-          id: "client-1", 
-          config: { companyEmail: "customer@test.com", adminEmails: [], isPaid: true },
+      supaGet.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: "client-1",
+          config: {
+            companyEmail: "customer@test.com",
+            adminEmails: [],
+            isPaid: true,
+          },
           is_active: true,
           password_hash: sha256("correctpassword"),
-        }]);
+        },
+      ]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -317,10 +355,10 @@ describe("Auth Flows", () => {
           password: "wrongpassword",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(401);
       expect(data.error).toContain("invalid email or password");
     });
@@ -328,17 +366,21 @@ describe("Auth Flows", () => {
 
   describe("Session Management", () => {
     it("TC-AUTH-017: Returns session on valid cookie", async () => {
-      getSession.mockResolvedValueOnce({ role: "customer", email: "test@test.com", client_id: "client-1" });
+      getSession.mockResolvedValueOnce({
+        role: "customer",
+        email: "test@test.com",
+        client_id: "client-1",
+      });
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
         method: "POST",
         body: JSON.stringify({ mode: "session" }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
       expect(data.client_id).toBe("client-1");
@@ -352,9 +394,9 @@ describe("Auth Flows", () => {
         method: "POST",
         body: JSON.stringify({ mode: "session" }),
       });
-      
+
       const response = await POST(request);
-      
+
       expect(response.status).toBe(401);
     });
 
@@ -364,10 +406,10 @@ describe("Auth Flows", () => {
         method: "POST",
         body: JSON.stringify({ mode: "logout" }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
     });
@@ -377,8 +419,11 @@ describe("Auth Flows", () => {
     it("TC-AUTH-020: Creates signup request for new email", async () => {
       supaGet
         .mockResolvedValueOnce([]) // findAdmin
-        .mockResolvedValueOnce([]); // findClientByEmail
-      
+        .mockResolvedValueOnce([]) // findClientByEmail - client_public
+        .mockResolvedValueOnce([]) // findClientByEmail - clients scan
+        .mockResolvedValueOnce([]) // findInactiveClientByEmail
+        .mockResolvedValueOnce([]); // findSignupByEmail
+
       supaPost.mockResolvedValueOnce([{ id: "signup-1" }]);
 
       const { POST } = await import("@/../app/api/portal_auth/route");
@@ -388,12 +433,13 @@ describe("Auth Flows", () => {
           mode: "login",
           email: "new@test.com",
           password: "password123",
+          turnstile_token: "dummy-token",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(200);
       expect(data.role).toBe("signup");
     });
@@ -401,12 +447,16 @@ describe("Auth Flows", () => {
     it("TC-AUTH-021: Detects Google-created signup and forces Google login", async () => {
       supaGet
         .mockResolvedValueOnce([]) // findAdmin
-        .mockResolvedValueOnce([]) // findClientByEmail
-        .mockResolvedValueOnce([{ 
-          id: "signup-1",
-          auth_method: "google",
-          password_hash: null,
-        }]); // findSignupByEmail
+        .mockResolvedValueOnce([]) // findClientByEmail - client_public
+        .mockResolvedValueOnce([]) // findClientByEmail - clients scan
+        .mockResolvedValueOnce([]) // findInactiveClientByEmail
+        .mockResolvedValueOnce([
+          {
+            id: "signup-1",
+            auth_method: "google",
+            password_hash: null,
+          },
+        ]); // findSignupByEmail
 
       const { POST } = await import("@/../app/api/portal_auth/route");
       const request = new NextRequest("http://localhost/api/portal_auth", {
@@ -417,10 +467,10 @@ describe("Auth Flows", () => {
           password: "password123",
         }),
       });
-      
+
       const response = await POST(request);
       const data = await response.json();
-      
+
       expect(response.status).toBe(401);
       expect(data.error).toContain("Google Sign-In");
     });

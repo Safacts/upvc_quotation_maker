@@ -52,7 +52,12 @@ const TENANT_B = "kprupvc";
 // ---------------------------------------------------------------------------
 // Supabase spy
 // ---------------------------------------------------------------------------
-type Call = { op: "get" | "post" | "patch" | "delete"; table: string; qs: any; body?: any };
+type Call = {
+  op: "get" | "post" | "patch" | "delete";
+  table: string;
+  qs: any;
+  body?: any;
+};
 let calls: Call[] = [];
 const fixtures: Record<string, any> = {};
 
@@ -68,7 +73,8 @@ vi.mock("@/lib/supabase", () => ({
     record("post", t, {}, body);
     return fixtures[t] ?? [{ id: "new-row-id" }];
   },
-  supaPatch: async (t: string, qs: any, body: any) => record("patch", t, qs, body),
+  supaPatch: async (t: string, qs: any, body: any) =>
+    record("patch", t, qs, body),
   supaDelete: async (t: string, qs: any = {}) => record("delete", t, qs),
   uploadLogoFile: async () => "https://example.test/logo.png",
 }));
@@ -98,6 +104,13 @@ vi.mock("@/lib/session", () => ({
   deleteSession: async () => {},
 }));
 
+// Mock hashPassword to return input unchanged for predictable testing
+vi.mock("@/lib/auth", () => ({
+  hashPassword: async (pw: string) => pw,
+  sha256: (s: string) => s,
+  verifyPassword: async (pw: string, hash: string) => pw === hash,
+}));
+
 // The cached-clients helper backing the /api/reviews tenant existence check.
 let knownClients: any[] = [];
 vi.mock("@/lib/slug", async (orig) => {
@@ -113,10 +126,18 @@ function post(url: string, body: any) {
   }) as any;
 }
 
-const customerA = { role: "customer", email: "jvenkateshupvc@gmail.com", client_id: TENANT_A };
+const customerA = {
+  role: "customer",
+  email: "jvenkateshupvc@gmail.com",
+  client_id: TENANT_A,
+};
 const adminSession = { role: "admin", email: "kongaaadisheshu@gmail.com" };
 /** portal_auth mints this for ANY unrecognised email, unverified. */
-const signupSession = { role: "signup", email: "attacker@evil.com", signup_request_id: "999" };
+const signupSession = {
+  role: "signup",
+  email: "attacker@evil.com",
+  signup_request_id: "999",
+};
 
 beforeEach(() => {
   calls = [];
@@ -181,7 +202,10 @@ describe("BUG-SEC-005 — /api/send_email must not be an open relay", () => {
     currentSession = customerA;
     const { POST } = await import("../app/api/send_email/route");
     const res = await POST(
-      post("http://localhost/api/send_email", { ...payload, to: "not-an-email" }),
+      post("http://localhost/api/send_email", {
+        ...payload,
+        to: "not-an-email",
+      }),
     );
     expect(res.status).toBe(400);
     expect(mails).toHaveLength(0);
@@ -322,7 +346,9 @@ describe("BUG-SEC-001 — a customer cannot grant themselves a paid licence", ()
         config: { companyName: "Venkateshwara UPVC" },
       }),
     );
-    expect(res.status, "client settings save is broken for every tenant").toBe(200);
+    expect(res.status, "client settings save is broken for every tenant").toBe(
+      200,
+    );
   });
 
   it("the auth query actually fetches password_hash (root cause of FUNC-001)", async () => {
@@ -337,7 +363,10 @@ describe("BUG-SEC-001 — a customer cannot grant themselves a paid licence", ()
       }),
     );
     const lookup = calls.find(
-      (c) => c.table === "clients" && c.op === "get" && String(c.qs?.select || "").includes("config"),
+      (c) =>
+        c.table === "clients" &&
+        c.op === "get" &&
+        String(c.qs?.select || "").includes("config"),
     );
     expect(
       String(lookup!.qs.select),
@@ -371,7 +400,9 @@ describe("BUG-SEC-001 — a customer cannot grant themselves a paid licence", ()
       }),
     );
     expect(res.status).toBe(403);
-    expect(calls.some((c) => c.table === "clients" && c.op !== "get")).toBe(false);
+    expect(calls.some((c) => c.table === "clients" && c.op !== "get")).toBe(
+      false,
+    );
   });
 
   it("a customer cannot delete a client", async () => {
@@ -410,13 +441,17 @@ describe("password reset OTP hardening", () => {
   it("BUG-SEC-002: the stored OTP is a hash, never the plaintext code", async () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    const res = await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    const res = await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     expect(res.status).toBe(200);
 
     const code = otpMails[0].code;
     expect(code).toMatch(/^\d{6}$/);
     const stored = String(loggedOtpRow().body);
-    expect(stored, "plaintext OTP is readable in sent_emails").not.toContain(code);
+    expect(stored, "plaintext OTP is readable in sent_emails").not.toContain(
+      code,
+    );
     expect(stored).toMatch(/^OTPHASH: [a-f0-9]{64}$/);
   });
 
@@ -425,9 +460,13 @@ describe("password reset OTP hardening", () => {
     fixtures["client_public"] = [];
     const { POST } = await import("../app/api/reset_client_password/route");
     const res = await POST(
-      post("http://localhost/api/reset_client_password", { email: "nobody@nowhere.test" }),
+      post("http://localhost/api/reset_client_password", {
+        email: "nobody@nowhere.test",
+      }),
     );
-    expect(res.status, "404 here confirms which emails hold accounts").toBe(200);
+    expect(res.status, "404 here confirms which emails hold accounts").toBe(
+      200,
+    );
     expect(await res.json()).toEqual({ sent: true });
     expect(otpMails, "no mail should be sent to a non-account").toHaveLength(0);
   });
@@ -435,7 +474,9 @@ describe("password reset OTP hardening", () => {
   it("a wrong OTP is rejected and the password is NOT changed", async () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     const storedBody = loggedOtpRow().body;
     calls = [];
 
@@ -450,13 +491,17 @@ describe("password reset OTP hardening", () => {
       }),
     );
     expect(res.status).toBe(403);
-    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(false);
+    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(
+      false,
+    );
   });
 
   it("the correct OTP resets the password", async () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     const code = otpMails[0].code;
     const storedBody = loggedOtpRow().body;
     calls = [];
@@ -479,7 +524,9 @@ describe("password reset OTP hardening", () => {
   it("BUG-SEC-006: a used OTP is burned so it cannot be replayed", async () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     const code = otpMails[0].code;
     const storedBody = loggedOtpRow().body;
     calls = [];
@@ -494,7 +541,9 @@ describe("password reset OTP hardening", () => {
         new_hash: "first-reset",
       }),
     );
-    const burn = calls.find((c) => c.table === "sent_emails" && c.op === "patch");
+    const burn = calls.find(
+      (c) => c.table === "sent_emails" && c.op === "patch",
+    );
     expect(burn, "the OTP was never consumed — it is replayable").toBeDefined();
     expect(String(burn!.body.body)).not.toMatch(/[a-f0-9]{64}/);
   });
@@ -504,12 +553,16 @@ describe("password reset OTP hardening", () => {
     // reset when the date could not be parsed — an OTP that never expired.
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     const code = otpMails[0].code;
     const storedBody = loggedOtpRow().body;
     calls = [];
 
-    fixtures["sent_emails"] = [{ id: 1, body: storedBody, created_at: "not-a-date" }];
+    fixtures["sent_emails"] = [
+      { id: 1, body: storedBody, created_at: "not-a-date" },
+    ];
     const res = await POST(
       post("http://localhost/api/reset_client_password", {
         email: EMAIL,
@@ -518,13 +571,17 @@ describe("password reset OTP hardening", () => {
       }),
     );
     expect(res.status).toBe(403);
-    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(false);
+    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(
+      false,
+    );
   });
 
   it("an OTP older than 15 minutes is rejected", async () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
-    await POST(post("http://localhost/api/reset_client_password", { email: EMAIL }));
+    await POST(
+      post("http://localhost/api/reset_client_password", { email: EMAIL }),
+    );
     const code = otpMails[0].code;
     const storedBody = loggedOtpRow().body;
     calls = [];
@@ -544,7 +601,9 @@ describe("password reset OTP hardening", () => {
       }),
     );
     expect(res.status).toBe(403);
-    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(false);
+    expect(calls.some((c) => c.table === "admins" && c.op === "patch")).toBe(
+      false,
+    );
   });
 
   it("an OTP issued for ANOTHER email cannot be replayed here", async () => {
@@ -552,16 +611,24 @@ describe("password reset OTP hardening", () => {
     seedAccount();
     const { POST } = await import("../app/api/reset_client_password/route");
     await POST(
-      post("http://localhost/api/reset_client_password", { email: "other@example.com" }),
+      post("http://localhost/api/reset_client_password", {
+        email: "other@example.com",
+      }),
     );
     // No account for that address, so nothing was issued; craft the far more
     // interesting case: a valid digest for a DIFFERENT email.
     calls = [];
     fixtures["admins"] = [{ email: EMAIL, password_hash: "old" }];
     const { createHash } = await import("crypto");
-    const foreign = createHash("sha256").update("other@example.com:123456").digest("hex");
+    const foreign = createHash("sha256")
+      .update("other@example.com:123456")
+      .digest("hex");
     fixtures["sent_emails"] = [
-      { id: 1, body: "OTPHASH: " + foreign, created_at: new Date().toISOString() },
+      {
+        id: 1,
+        body: "OTPHASH: " + foreign,
+        created_at: new Date().toISOString(),
+      },
     ];
     const res = await POST(
       post("http://localhost/api/reset_client_password", {
@@ -588,7 +655,10 @@ describe("BUG-SEC-007 — anonymous review writes must name a real tenant", () =
     knownClients = [{ id: TENANT_A }, { id: TENANT_B }];
     const { POST } = await import("../app/api/reviews/route");
     const res = await POST(
-      post("http://localhost/api/reviews", { ...good, clientId: "ghost-tenant" }),
+      post("http://localhost/api/reviews", {
+        ...good,
+        clientId: "ghost-tenant",
+      }),
     );
     expect(res.status).toBe(404);
     expect(
@@ -605,7 +675,9 @@ describe("BUG-SEC-007 — anonymous review writes must name a real tenant", () =
       post("http://localhost/api/reviews", { ...good, clientId: TENANT_A }),
     );
     expect(res.status).toBe(200);
-    const write = calls.find((c) => c.table === "service_reviews" && c.op === "post");
+    const write = calls.find(
+      (c) => c.table === "service_reviews" && c.op === "post",
+    );
     expect(write!.body.client_id).toBe(TENANT_A);
   });
 
@@ -614,7 +686,11 @@ describe("BUG-SEC-007 — anonymous review writes must name a real tenant", () =
     const { POST } = await import("../app/api/reviews/route");
     for (const rating of [0, 6, 2.5, "5" as any]) {
       const res = await POST(
-        post("http://localhost/api/reviews", { ...good, clientId: TENANT_A, rating }),
+        post("http://localhost/api/reviews", {
+          ...good,
+          clientId: TENANT_A,
+          rating,
+        }),
       );
       expect(res.status, `rating ${rating} was accepted`).toBe(400);
     }
@@ -643,14 +719,23 @@ describe("BUG-FUNC-002 — review moderation must not report a phantom success",
       body: JSON.stringify(body),
     }) as any;
   }
-  const params = (clientId: string) => ({ params: Promise.resolve({ clientId }) });
+  const params = (clientId: string) => ({
+    params: Promise.resolve({ clientId }),
+  });
 
   it("REGRESSION: a cross-tenant id yields 404, not {ok:true}", async () => {
     currentSession = customerA;
     fixtures["service_reviews"] = []; // filter matched nothing
-    const { PATCH } = await import("../app/api/reviews/[clientId]/manage/route");
-    const res = await PATCH(patchReq({ id: 4242, isVisible: false }), params(TENANT_A));
-    expect(res.status, "a write that changed nothing was reported as saved").toBe(404);
+    const { PATCH } =
+      await import("../app/api/reviews/[clientId]/manage/route");
+    const res = await PATCH(
+      patchReq({ id: 4242, isVisible: false }),
+      params(TENANT_A),
+    );
+    expect(
+      res.status,
+      "a write that changed nothing was reported as saved",
+    ).toBe(404);
     const body = await res.json();
     expect(body.ok).toBe(false);
   });
@@ -658,32 +743,48 @@ describe("BUG-FUNC-002 — review moderation must not report a phantom success",
   it("a real update still returns the updated row", async () => {
     currentSession = customerA;
     fixtures["service_reviews"] = [{ id: 7, is_visible: false }];
-    const { PATCH } = await import("../app/api/reviews/[clientId]/manage/route");
-    const res = await PATCH(patchReq({ id: 7, isVisible: false }), params(TENANT_A));
+    const { PATCH } =
+      await import("../app/api/reviews/[clientId]/manage/route");
+    const res = await PATCH(
+      patchReq({ id: 7, isVisible: false }),
+      params(TENANT_A),
+    );
     expect(res.status).toBe(200);
     expect((await res.json()).review.id).toBe(7);
   });
 
   it("an anonymous caller cannot moderate (401)", async () => {
     currentSession = null;
-    const { PATCH } = await import("../app/api/reviews/[clientId]/manage/route");
-    const res = await PATCH(patchReq({ id: 7, isVisible: false }), params(TENANT_A));
+    const { PATCH } =
+      await import("../app/api/reviews/[clientId]/manage/route");
+    const res = await PATCH(
+      patchReq({ id: 7, isVisible: false }),
+      params(TENANT_A),
+    );
     expect(res.status).toBe(401);
     expect(calls.some((c) => c.op === "patch")).toBe(false);
   });
 
   it("a customer cannot moderate ANOTHER tenant's reviews (403)", async () => {
     currentSession = customerA;
-    const { PATCH } = await import("../app/api/reviews/[clientId]/manage/route");
-    const res = await PATCH(patchReq({ id: 7, isVisible: false }), params(TENANT_B));
+    const { PATCH } =
+      await import("../app/api/reviews/[clientId]/manage/route");
+    const res = await PATCH(
+      patchReq({ id: 7, isVisible: false }),
+      params(TENANT_B),
+    );
     expect(res.status).toBe(403);
     expect(calls.some((c) => c.op === "patch")).toBe(false);
   });
 
   it("a signup-role session cannot moderate (403)", async () => {
     currentSession = signupSession;
-    const { PATCH } = await import("../app/api/reviews/[clientId]/manage/route");
-    const res = await PATCH(patchReq({ id: 7, isVisible: false }), params(TENANT_A));
+    const { PATCH } =
+      await import("../app/api/reviews/[clientId]/manage/route");
+    const res = await PATCH(
+      patchReq({ id: 7, isVisible: false }),
+      params(TENANT_A),
+    );
     expect(res.status).toBe(403);
     expect(calls.some((c) => c.op === "patch")).toBe(false);
   });
