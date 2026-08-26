@@ -72,7 +72,7 @@ class ClientConfig {
   final String upiId;
 
   /// Name shown inside the customer's UPI app before they confirm payment.
-  /// Falls back to [companyName] via [upiPayeeNameOrCompany] when blank â€”
+  /// Falls back to [companyName] via [upiPayeeNameOrCompany] when blank.
   /// a QR whose payee reads "Unknown" destroys trust at the moment of payment.
   final String upiPayeeName;
 
@@ -167,7 +167,7 @@ class ClientConfig {
   String get upiPayeeNameOrCompany =>
       upiPayeeName.isNotEmpty ? upiPayeeName : companyName;
 
-  /// True when this client can accept UPI â€” drives whether QR sections render.
+  /// True when this client can accept UPI and QR sections should render.
   bool get hasUpi => upiId.trim().isNotEmpty && upiId.contains('@');
 
   Map<String, dynamic> toJson() => {

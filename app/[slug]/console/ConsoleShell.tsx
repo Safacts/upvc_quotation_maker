@@ -772,7 +772,7 @@ export default function ConsoleShell({
         {/* ---- Topbar ---- */}
         <header className="vc-topbar">
           <div className="vc-crumb">
-            <span>{companyName || clientId} � </span>
+            <span>{companyName || clientId} / </span>
             {crumb}
           </div>
           <div className="vc-topbar-spacer" />
@@ -851,7 +851,7 @@ export default function ConsoleShell({
               quickCreate.onCreated?.(row, existing);
               toast(
                 existing
-                  ? `${(row as any).name} was already on file � linked`
+                  ? `${(row as any).name} was already on file - linked`
                   : `${(row as any).name} created`,
                 "ok",
               );
