@@ -3,7 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { timingSafeEqual } from "crypto";
 import { supaGet, supaPatch, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 import { createSession, deleteSession, getSession } from "@/lib/session";
-import { sha256 } from "@/lib/auth";
+import { hashPassword, sha256, verifyPassword } from "@/lib/auth";
 import { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } from "@/lib/auth-rate-limit";
 import { sendSignupNotification } from "@/lib/mail";
 import { notifyNewClientSignup, isTelegramConfigured } from "@/lib/telegram";
@@ -50,6 +50,25 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
     return email;
   } catch {
     return null;
+  }
+}
+
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret || secret.startsWith("your_") || secret.length < 20) {
+    console.warn("TURNSTILE_SECRET_KEY placeholder/missing — skipping verification, signups allowed");
+    return true;
+  }
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY!, response: token }),
+    });
+    const result = await res.json();
+    return result.success === true;
+  } catch {
+    return false;
   }
 }
 
@@ -105,36 +124,26 @@ async function findClientByEmail(email: string): Promise<any | null> {
   const le = email.toLowerCase();
   
   // 1. Direct match on companyEmail
-  const exactMatches = await supaGet("client_public", { 
+  const exactMatches = await supaGet("clients", { 
     "config->>companyEmail": "eq." + le,
-    select: "id,config,is_active",
+    select: "id,config,is_active,password_hash",
     limit: 1
   });
 
   if (Array.isArray(exactMatches) && exactMatches.length > 0) {
-    const clientRows = await supaGet("clients", {
-      id: "eq." + exactMatches[0].id,
-      select: "id,config,is_active,password_hash",
-    });
-    if (Array.isArray(clientRows) && clientRows.length > 0) return clientRows[0];
+    return exactMatches[0];
   }
 
   // 2. Scan fallback for adminEmails
-  const rows = await supaGet("client_public", {
-    select: "id,config,is_active",
+  const rows = await supaGet("clients", {
+    select: "id,config,is_active,password_hash",
   });
   if (!Array.isArray(rows)) return null;
   for (const c of rows) {
     const cfg = c.config || {};
     const ae = (cfg.adminEmails || []).map((e: string) => String(e).trim().toLowerCase());
     if (ae.includes(le)) {
-      const clientRows = await supaGet("clients", {
-        id: "eq." + c.id,
-        select: "id,config,is_active,password_hash",
-      });
-      if (Array.isArray(clientRows) && clientRows.length > 0) {
-        return clientRows[0];
-      }
+      return c;
     }
   }
   return null;
@@ -346,14 +355,14 @@ export async function POST(request: NextRequest) {
     if (!password) return json({ error: "password required" }, 400);
     const inputHash = sha256(password);
 
-    if (admin && safeEqual(String(admin.password_hash || ""), inputHash)) {
+    if (admin && await verifyPassword(password, String(admin.password_hash || ""))) {
       clearAuthFailures(attemptKey);
       await createSession({ role: "admin", email: admin.email });
       return json({ role: "admin", email: admin.email }, 200);
     }
 
     const client = await findClientByEmail(email);
-    if (client && safeEqual(String(client.password_hash || ""), inputHash)) {
+    if (client && await verifyPassword(password, String(client.password_hash || ""))) {
       clearAuthFailures(attemptKey);
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
@@ -400,7 +409,7 @@ export async function POST(request: NextRequest) {
       if (inactive) {
         // Verify the password BEFORE revealing deactivation, otherwise this
         // branch is an oracle that confirms which emails hold accounts.
-        if (!safeEqual(String(inactive.password_hash || ""), inputHash)) {
+        if (!await verifyPassword(password, String(inactive.password_hash || ""))) {
           recordAuthFailure(attemptKey);
           return json({ error: "invalid email or password" }, 401);
         }
@@ -411,7 +420,7 @@ export async function POST(request: NextRequest) {
         if (signup.auth_method === "google" || !signup.password_hash) {
           return json({ error: "This account was created with Google Sign-In. Please use Sign in with Google." }, 401);
         }
-        if (safeEqual(String(signup.password_hash), inputHash)) {
+        if (await verifyPassword(password, String(signup.password_hash))) {
           clearAuthFailures(attemptKey);
           await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
           return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
@@ -424,9 +433,16 @@ export async function POST(request: NextRequest) {
         return json({ error: "Too many attempts. Try again later." }, 429);
       }
       recordAuthFailure(signupCreateKey);
+      
+      // Turnstile verification for signup
+      const turnstileToken = p.turnstile_token;
+      if (!turnstileToken || !await verifyTurnstile(turnstileToken)) {
+        return json({ error: "Turnstile verification failed" }, 400);
+      }
+      
       let newRow: any;
       try {
-        newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: inputHash });
+        newRow = await supaPost("signup_requests", { email, auth_method: "password", password_hash: await hashPassword(password) });
       } catch (e: any) {
         return json({ error: String(e?.message ?? e) }, 500);
       }
