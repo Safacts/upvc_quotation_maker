@@ -5,7 +5,7 @@ import { measuredLineTotal, unmeasuredLineTotal, quotationTotals } from "@/lib/p
 import "./dashboard.css";
 
 // LIVE Supabase project (Mumbai, jqjxhhgfwdzckijnnede) via client-safe config.
-// Anon key is PUBLIC by design â€” safe in client bundles; RLS is the boundary.
+// Anon key is PUBLIC by design — safe in client bundles; RLS is the boundary.
 import { SUPABASE_PUBLIC_URL as SUPABASE_URL, SUPABASE_PUBLIC_ANON_KEY as SUPABASE_KEY } from "@/lib/supabase-public";
 const SUPERUSER_EMAIL = "kongaaadisheshu@gmail.com";
 const APK_STORAGE_URL = `${SUPABASE_URL}/storage/v1/object/public/app-releases/Venkateshwara_UPVC.apk`;
@@ -42,7 +42,7 @@ async function supabaseFetch(path: string): Promise<any[]> {
 }
 
 /**
- * BEHAVIOUR CHANGE 08-08-2026 â€” GST is now per-quote, not a blanket 18%.
+ * BEHAVIOUR CHANGE 08-08-2026 — GST is now per-quote, not a blanket 18%.
  *
  * This function used to inline its own copy of the pricing formula AND apply a
  * flat `* 0.18` IGST to every quotation unconditionally. That disagreed with
@@ -50,7 +50,7 @@ async function supabaseFetch(path: string): Promise<any[]> {
  * quote's own `gst_percentage`) and therefore disagreed with the PDF the customer
  * actually received. This admin log now reports the same grand total as the PDF.
  *
- * Consequence: quotations saved with `include_gst = false` will show â‚¹0.00 in the
+ * Consequence: quotations saved with `include_gst = false` will show ₹0.00 in the
  * IGST column where they previously showed an invented 18%. Those older figures
  * were wrong; these are right.
  */
@@ -357,7 +357,7 @@ export default function DashboardPage() {
           <div className="stat-card">
             <h3>Total Revenue</h3>
             <p>
-              â‚¹
+              ₹
               {stats.totalRevenue.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -367,7 +367,7 @@ export default function DashboardPage() {
           <div className="stat-card">
             <h3>Avg. Quote Value</h3>
             <p>
-              â‚¹
+              ₹
               {stats.avgValue.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -434,11 +434,11 @@ export default function DashboardPage() {
                         </td>
                         <td>{q.customer_name || "-"}</td>
                         <td>{q.dateStr}</td>
-                        <td>â‚¹{q.subtotal.toFixed(2)}</td>
-                        <td>â‚¹{q.transport.toFixed(2)}</td>
-                        <td>â‚¹{q.igst.toFixed(2)}</td>
+                        <td>₹{q.subtotal.toFixed(2)}</td>
+                        <td>₹{q.transport.toFixed(2)}</td>
+                        <td>₹{q.igst.toFixed(2)}</td>
                         <td>
-                          <strong>â‚¹{q.grandTotal.toFixed(2)}</strong>
+                          <strong>₹{q.grandTotal.toFixed(2)}</strong>
                         </td>
                         <td>
                           <button
@@ -464,7 +464,7 @@ export default function DashboardPage() {
             <div className="modal-header">
               <h3>Quotation {selected.quote_no || "-"}</h3>
               <button className="close-btn" onClick={() => setSelected(null)}>
-                Ã—
+                ×
               </button>
             </div>
             <div className="modal-body">
@@ -479,7 +479,7 @@ export default function DashboardPage() {
                   <strong>Date:</strong> {selected.dateStr}
                 </p>
                 <p>
-                  <strong>Grand Total:</strong> â‚¹{selected.grandTotal.toFixed(2)}
+                  <strong>Grand Total:</strong> ₹{selected.grandTotal.toFixed(2)}
                 </p>
               </div>
 
@@ -491,7 +491,7 @@ export default function DashboardPage() {
                     const h = Number(item.height || 0);
                     const u = Number(item.units || 1);
                     const r = Number(item.rate || 0);
-                    // Single source of truth â€” see src/lib/pricing.ts.
+                    // Single source of truth — see src/lib/pricing.ts.
                     const total = measuredLineTotal(item);
                     return (
                       <div className="item-grid" key={item.id || i}>
@@ -505,10 +505,10 @@ export default function DashboardPage() {
                         </div>
                         <div className="item-detail">
                           <strong>Units / Rate</strong>
-                          {u} / â‚¹{r}
+                          {u} / ₹{r}
                         </div>
                         <div className="item-detail">
-                          <strong>Total</strong>â‚¹{total.toFixed(2)}
+                          <strong>Total</strong>₹{total.toFixed(2)}
                         </div>
                       </div>
                     );
@@ -522,7 +522,7 @@ export default function DashboardPage() {
                   {selected.umItems.map((item: any, i: number) => {
                     const u = Number(item.units || 1);
                     const r = Number(item.rate || 0);
-                    // Single source of truth â€” see src/lib/pricing.ts.
+                    // Single source of truth — see src/lib/pricing.ts.
                     const total = unmeasuredLineTotal(item);
                     return (
                       <div className="item-grid" key={item.id || i}>
@@ -535,10 +535,10 @@ export default function DashboardPage() {
                         </div>
                         <div className="item-detail">
                           <strong>Units / Rate</strong>
-                          {u} / â‚¹{r}
+                          {u} / ₹{r}
                         </div>
                         <div className="item-detail">
-                          <strong>Total</strong>â‚¹{total.toFixed(2)}
+                          <strong>Total</strong>₹{total.toFixed(2)}
                         </div>
                       </div>
                     );

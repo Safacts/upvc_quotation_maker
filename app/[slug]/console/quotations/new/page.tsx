@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
+import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 // `blankHeader` must come from the plain (non-"use client") module: calling a
 // function exported by a "use client" module from this Server Component throws

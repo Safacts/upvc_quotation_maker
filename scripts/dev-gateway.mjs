@@ -86,9 +86,14 @@ const server = http.createServer((req, res) => {
 });
 
 server.on("upgrade", (req, socket, head) => {
-  const port = isFlutterWs(req.url) ? FLUTTER_PORT : NEXT_PORT;
+  const isFlutter = isFlutterWs(req.url);
+  const port = isFlutter ? FLUTTER_PORT : NEXT_PORT;
+  let wsPath = req.url || "";
+  if (isFlutter && wsPath.startsWith("/app")) {
+    wsPath = wsPath.replace(/^\/app/, "") || "/";
+  }
   const upstream = net.connect(port, "127.0.0.1", () => {
-    let data = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
+    let data = `${req.method} ${wsPath} HTTP/${req.httpVersion}\r\n`;
     for (let i = 0; i < req.rawHeaders.length; i += 2) {
       const key = req.rawHeaders[i];
       const value = req.rawHeaders[i + 1];

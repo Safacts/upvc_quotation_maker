@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
+import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 import EditQuotationClient from "./EditQuotationClient";
 

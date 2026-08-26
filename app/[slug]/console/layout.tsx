@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
+import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 import { requireConsoleAccess } from "@/lib/console-auth";
 import { UIProvider } from "@/lib/hooks/useUI";

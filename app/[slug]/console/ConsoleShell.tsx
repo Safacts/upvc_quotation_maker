@@ -53,11 +53,11 @@ import {
 import "./console.css";
 
 /**
- * ConsoleShell â€” sidebar + topbar + status bar + global key map + command palette.
+ * ConsoleShell — sidebar + topbar + status bar + global key map + command palette.
  *
  * Composition note: this is a SHELL that renders `children`, not a god component
  * with an `activeTab` string union. `CustomerPortal.tsx` (1284 lines) is the
- * cautionary tale â€” adding a tab there means editing the union type, `tabTitles`,
+ * cautionary tale — adding a tab there means editing the union type, `tabTitles`,
  * the nav button AND the pane, and missing one is a compile error at best and a
  * dead tab at worst. Here a new module is a new file under `console/` plus one
  * entry in `NAV`. Nothing else changes.
@@ -125,9 +125,9 @@ export type ConsoleActionName =
   | "back"
   | "search"
   | "duplicate"
-  /** Ctrl+, â€” the screen opens its own column/density dialog. */
+  /** Ctrl+, — the screen opens its own column/density dialog. */
   | "config"
-  /** Alt+C â€” the screen decides WHICH master to create from the focused field. */
+  /** Alt+C — the screen decides WHICH master to create from the focused field. */
   | "quickCreate"
   /**
    * PgUp / PgDn.
@@ -135,7 +135,7 @@ export type ConsoleActionName =
    * Named "record", not "page", because that is the promise: in the EDITOR they
    * open the previous/next quotation without returning to the list. On a grid
    * there is no open record, so the screen registers them as page navigation
-   * instead â€” the same key, the same intent ("show me the neighbouring data"),
+   * instead — the same key, the same intent ("show me the neighbouring data"),
    * resolved per screen.
    */
   | "prevRecord"
@@ -153,7 +153,7 @@ export function useConsole(): ConsoleCtx {
  * Push status-bar content from a screen.
  *
  * `JSON.stringify` as the dependency is deliberate. Callers naturally build the
- * object inline â€” `useConsoleStatus({ count: "12 rows", hints: [...] })` â€” which
+ * object inline — `useConsoleStatus({ count: "12 rows", hints: [...] })` — which
  * is a new reference every render. A reference dependency would setState on
  * every render and loop forever. Comparing by value costs nothing at this size
  * and makes the hook safe to call the obvious way.
@@ -174,7 +174,7 @@ export function useConsoleAction(name: ConsoleActionName, fn: (() => void) | nul
   ref.current = fn;
   useEffect(() => {
     // A stable wrapper is registered once and reads the latest closure from the
-    // ref â€” otherwise every state change in the screen re-registers the action.
+    // ref — otherwise every state change in the screen re-registers the action.
     registerAction(name, fn ? () => ref.current?.() : null);
     return () => registerAction(name, null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,7 +230,7 @@ export default function ConsoleShell({
    *
    * `onCreated` is carried in state rather than read from a ref at close time
    * because the caller that OPENED the dialog is the one that knows what to do
-   * with the new row â€” the quotation editor fills its customer fields, the
+   * with the new row — the quotation editor fills its customer fields, the
    * item grid fills a rate. A single shell-level callback could not tell them
    * apart.
    */
@@ -242,7 +242,7 @@ export default function ConsoleShell({
 
   /**
    * The reporting period, owned by the shell so it survives navigation between
-   * screens. Defaults to the current Indian financial year â€” see period.ts for
+   * screens. Defaults to the current Indian financial year — see period.ts for
    * why there is no calendar-year option at all.
    */
   const [period, setPeriodState] = useState<PeriodRange>(() => defaultPeriod());
@@ -291,7 +291,7 @@ export default function ConsoleShell({
 
   // ---- Viewport gate -------------------------------------------------------
   // A phone reaching /console must land on the portal instead. This runs in an
-  // effect (not the server) because the server has no viewport â€” a UA sniff
+  // effect (not the server) because the server has no viewport — a UA sniff
   // would misclassify a tablet in landscape and a maximised laptop window alike.
   useEffect(() => {
     function check() {
@@ -457,7 +457,7 @@ export default function ConsoleShell({
         },
       },
       {
-        // Tally's Alt+C. Ctrl+N is a browser new-window at OS level â€” the page
+        // Tally's Alt+C. Ctrl+N is a browser new-window at OS level — the page
         // never receives the keydown, so binding it would be a dead promise.
         key: "n",
         alt: true,
@@ -484,7 +484,7 @@ export default function ConsoleShell({
           if (fn) {
             fn();
           } else {
-            // No search on this screen â€” hand Ctrl+F back to the browser rather
+            // No search on this screen — hand Ctrl+F back to the browser rather
             // than swallowing it and appearing broken. useHotkeys has already
             // called preventDefault, so re-issue the native find via a fresh
             // event is impossible; instead we simply inform the user.
@@ -525,7 +525,7 @@ export default function ConsoleShell({
         // Tally's Alt+2. Bound as Alt+D (the mnemonic) AND registered in
         // CONSOLE_KEYMAP so the ? cheatsheet and the actual binding agree.
         // Screens that can duplicate (the editor) register the action; on
-        // screens that cannot, nothing happens â€” no toast, no false promise.
+        // screens that cannot, nothing happens — no toast, no false promise.
         key: "d",
         alt: true,
         allowInInput: true,
@@ -533,7 +533,7 @@ export default function ConsoleShell({
         handler: () => actions.current.duplicate?.(),
       },
       {
-        // Tally's Alt+C â€” create master on the fly, kept on its ORIGINAL key
+        // Tally's Alt+C — create master on the fly, kept on its ORIGINAL key
         // because it is the one Tally users reach for without thinking.
         //
         // The screen gets first refusal: the quotation editor registers
@@ -548,13 +548,13 @@ export default function ConsoleShell({
         handler: () => {
           const fn = actions.current.quickCreate;
           if (fn) fn();
-          // No screen context (Overview, Reports) â€” let the user pick rather
+          // No screen context (Overview, Reports) — let the user pick rather
           // than guessing and making them back out of the wrong form.
           else openQuickCreate("ask");
         },
       },
       {
-        // Tally's F2, on its real key â€” the browser does not reserve it.
+        // Tally's F2, on its real key — the browser does not reserve it.
         //
         // `allowInInput` is TRUE deliberately: an operator halfway through
         // typing a customer name still expects F2 to change the period, and
@@ -568,7 +568,7 @@ export default function ConsoleShell({
       },
       {
         // Tally's F12 (Configure). F12 is DevTools in Chrome and is never
-        // delivered to the page, so this is the documented substitution â€” the
+        // delivered to the page, so this is the documented substitution — the
         // ? sheet says so in as many words rather than leaving a dead key.
         key: ",",
         ctrl: true,
@@ -584,7 +584,7 @@ export default function ConsoleShell({
         // Inline calculator, anchored to the focused amount field.
         //
         // Ctrl+/ and not Ctrl+? : the latter needs Shift and collides with
-        // browser help. `allowInInput` MUST be true â€” the entire point is to
+        // browser help. `allowInInput` MUST be true — the entire point is to
         // fire while the caret is sitting in a rate box.
         key: "/",
         ctrl: true,
@@ -593,7 +593,7 @@ export default function ConsoleShell({
         handler: () => calc.openForActiveField(),
       },
       {
-        // PgUp / PgDn â€” Tally's next/previous voucher.
+        // PgUp / PgDn — Tally's next/previous voucher.
         //
         // `allowInInput` is FALSE. In the editor these keys sit inside a
         // spreadsheet grid full of inputs, and stealing PgDn from a focused
@@ -621,7 +621,7 @@ export default function ConsoleShell({
           //
           // The calculator, the period dialog and the quick-create dialog all
           // stop keydown propagation themselves, so in practice they never
-          // reach this handler â€” these checks are the belt to that braces, for
+          // reach this handler — these checks are the belt to that braces, for
           // the case where focus has escaped the dialog (e.g. the user clicked
           // the scrim). Order matches visual stacking.
           if (calc.open) return calc.close();
@@ -772,7 +772,7 @@ export default function ConsoleShell({
         {/* ---- Topbar ---- */}
         <header className="vc-topbar">
           <div className="vc-crumb">
-            <span>{companyName || clientId} › </span>
+            <span>{companyName || clientId} � </span>
             {crumb}
           </div>
           <div className="vc-topbar-spacer" />
@@ -851,7 +851,7 @@ export default function ConsoleShell({
               quickCreate.onCreated?.(row, existing);
               toast(
                 existing
-                  ? `${(row as any).name} was already on file — linked`
+                  ? `${(row as any).name} was already on file � linked`
                   : `${(row as any).name} created`,
                 "ok",
               );
@@ -882,7 +882,7 @@ export default function ConsoleShell({
         )}
 
         {/* Global display preferences (font/element size). Distinct from Ctrl+,
-            which configures the CURRENT SCREEN's columns â€” see screen-config.ts
+            which configures the CURRENT SCREEN's columns — see screen-config.ts
             for why those two axes are deliberately separate stores. */}
         <UISettingsPanel />
       </div>
@@ -891,7 +891,7 @@ export default function ConsoleShell({
 }
 
 // ---------------------------------------------------------------------------
-// Command palette (Ctrl+K / Alt+G) â€” Tally's Alt+G "Go To"
+// Command palette (Ctrl+K / Alt+G) — Tally's Alt+G "Go To"
 // ---------------------------------------------------------------------------
 
 function CommandPalette({
@@ -913,7 +913,7 @@ function CommandPalette({
     const q = query.trim().toLowerCase();
     if (!q) return items;
     // Substring, not fuzzy. "sales" should not match "Settings" via scattered
-    // letters â€” a palette that returns confident nonsense is worse than one that
+    // letters — a palette that returns confident nonsense is worse than one that
     // returns nothing.
     return items.filter((i) => i.label.toLowerCase().includes(q));
   }, [items, query]);
@@ -1004,7 +1004,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
       >
         <h3>Keyboard Shortcuts</h3>
         <div style={{ fontSize: 12, color: "#5b6673" }}>
-          Tally equivalents shown where the meaning is the same. Grouped by task â€”
+          Tally equivalents shown where the meaning is the same. Grouped by task —
           every key listed here is implemented.
         </div>
 
@@ -1025,7 +1025,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
                     <span>
                       {k.action}
                       {k.tally && (
-                        <span style={{ color: "#8a94a1", fontSize: 11 }}> Â· Tally {k.tally}</span>
+                        <span style={{ color: "#8a94a1", fontSize: 11 }}> · Tally {k.tally}</span>
                       )}
                     </span>
                   </div>
@@ -1038,7 +1038,7 @@ function ShortcutSheet({ onClose }: { onClose: () => void }) {
             presses Ctrl+A expecting Tally's save and gets select-all will
             conclude the app is broken; told once, they adapt in a day. */}
         <div className="vc-sheet-note">
-          <b>Why not Ctrl+A and F12?</b> The browser reserves them â€” Ctrl+A is
+          <b>Why not Ctrl+A and F12?</b> The browser reserves them — Ctrl+A is
           select-all, Ctrl+N opens a new window, and F12 opens developer tools.
           They never reach the page, so Tally&apos;s <b>Ctrl+A (Accept)</b> is{" "}
           <b>Ctrl+S</b> here, <b>Ctrl+Q (Quit)</b> is <b>Esc</b>, and{" "}

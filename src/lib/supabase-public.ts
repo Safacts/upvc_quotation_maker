@@ -2,8 +2,8 @@
  * Client-safe public Supabase config.
  *
  * Browser code cannot read server-only env (plain process.env is stripped in
- * client bundles), so the LIVE project (Mumbai, jqjxhhgfwdzckijnnede â€” live
- * since the 20-08-2026 Tokyoâ†’Mumbai cutover) is baked in as fallback.
+ * client bundles), so the LIVE project (Mumbai, jqjxhhgfwdzckijnnede — live
+ * since the 20-08-2026 Tokyo→Mumbai cutover) is baked in as fallback.
  * NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY override at build.
  *
  * The anon key is PUBLIC by design (role=anon); RLS is the security boundary.

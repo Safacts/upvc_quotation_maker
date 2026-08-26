@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { findClientBySlug, getCachedClients } from "@/lib/slug";
+import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
 import VaishnaviMarketPage from "./VaishnaviMarketPage";
