@@ -87,6 +87,32 @@ void main() {
       );
     });
 
+    test('fleet reality: installed code 12 vs published code 14 → newer', () {
+      // The exact production scenario from Aadi's bug report (26-08-2026):
+      // users on older builds while CI has published v1.0.14 / code 14.
+      expect(
+        UpdateInfo.isVersionNewer(
+            latestCode: 14, installedCode: 12, latestName: '1.0.14', installedName: '1.0.12'),
+        isTrue,
+      );
+      expect(
+        UpdateInfo.isVersionNewer(
+            latestCode: 14, installedCode: 11, latestName: '1.0.14', installedName: '1.0.11'),
+        isTrue,
+        reason: 'v1.0.11 fleet devices must also be prompted',
+      );
+    });
+
+    test('codes are compared as INTs, never as strings ("9" > "14" trap)', () {
+      // Alphabetically "9" > "14"; numerically 9 < 14. If anyone ever
+      // reintroduces a string comparison this assertion catches it.
+      expect(
+        UpdateInfo.isVersionNewer(
+            latestCode: 14, installedCode: 9, latestName: '1.0.14', installedName: '1.0.9'),
+        isTrue,
+      );
+    });
+
     test('UpdateInfo.fromConfig maps the client config fields', () {
       final info = UpdateInfo.fromConfig(configWith(notes: 'Fixed crash', force: true));
       expect(info.versionName, '1.0.1');
@@ -213,6 +239,103 @@ void main() {
       expect(events.whereType<UpdateAvailableEvent>(), isEmpty,
           reason: 'restored dismissal must suppress the re-offer');
       fresh.dispose();
+    });
+  });
+
+  group('ClientConfig.fromJson updater fields (jsonb tolerance)', () {
+    test('string-typed version code ("14") still parses as an int', () {
+      // Some config writers store jsonb values as strings. Before the
+      // _asInt hardening, "14" parsed to 0 and the updater silently decided
+      // the client was already up to date.
+      final cfg = ClientConfig.fromJson(const {
+        'clientId': 'venkateshwara',
+        'appDownloadUrl': 'https://example.com/upvc-update.apk',
+        'appVersionName': '1.0.14',
+        'appVersionCode': '14',
+        'forceUpdate': 'false',
+      });
+      expect(cfg.appVersionCode, 14);
+      expect(cfg.appVersionName, '1.0.14');
+      expect(cfg.appDownloadUrl, 'https://example.com/upvc-update.apk');
+      expect(cfg.forceUpdate, isFalse);
+    });
+
+    test('snake_case raw DB rows parse identically', () {
+      final cfg = ClientConfig.fromJson(const {
+        'app_download_url': 'https://example.com/a.apk',
+        'app_version_name': '1.0.14',
+        'app_version_code': 14,
+        'force_update': true,
+      });
+      expect(cfg.appVersionCode, 14);
+      expect(cfg.forceUpdate, isTrue);
+    });
+
+    test('missing fields fall back to safe defaults (no throw)', () {
+      final cfg = ClientConfig.fromJson(const {});
+      expect(cfg.appVersionCode, 0);
+      expect(cfg.appVersionName, '');
+      expect(cfg.appDownloadUrl, '');
+      expect(cfg.forceUpdate, isFalse);
+    });
+  });
+
+  group('fleet update scenario end-to-end (installed 11/12 → published 14)', () {
+    late AutoUpdateService service;
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      service = AutoUpdateService();
+      service.debugSetIsNative(true);
+    });
+
+    tearDown(() {
+      service.dispose();
+    });
+
+    Future<List<AutoUpdateEvent>> check(ClientConfig config) async {
+      final events = <AutoUpdateEvent>[];
+      final sub = service.events.listen(events.add);
+      try {
+        await service.checkNow(config: config);
+        await pumpEventQueue();
+      } finally {
+        await sub.cancel();
+      }
+      return events;
+    }
+
+    test('device on v1.0.11 gets an UpdateAvailableEvent for v1.0.14', () async {
+      service.debugSetInstalledVersionProvider(
+          () async => (version: '1.0.11', buildNumber: 11));
+      final cfg = ClientConfig.fromJson(const {
+        'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
+        'appVersionName': '1.0.14',
+        'appVersionCode': 14,
+      });
+
+      final events = await check(cfg);
+      final available = events.whereType<UpdateAvailableEvent>().toList();
+      expect(available, hasLength(1));
+      expect(available.single.info.versionCode, 14);
+      expect(available.single.info.versionName, '1.0.14');
+      expect(service.pendingUpdate?.downloadUrl,
+          'https://example.com/app-releases/v14.apk');
+    });
+
+    test('string-typed published code from a raw DB row still prompts', () async {
+      service.debugSetInstalledVersionProvider(
+          () async => (version: '1.0.11', buildNumber: 11));
+      // Simulates config->>'appVersionCode' arriving as a JSON string.
+      final cfg = ClientConfig.fromJson(const {
+        'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
+        'appVersionName': '1.0.14',
+        'appVersionCode': '14',
+      });
+
+      final events = await check(cfg);
+      expect(events.whereType<UpdateAvailableEvent>(), hasLength(1),
+          reason: 'a string-typed code must never silently suppress the prompt');
     });
   });
 

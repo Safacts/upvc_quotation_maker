@@ -145,6 +145,24 @@ class ClientConfig {
 
   String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
 
+  /// jsonb tolerance helpers. A config writer that stores `"appVersionCode": "14"`
+  /// (string) or a non-string in ANY of these fields must not silently zero the
+  /// updater's comparison input — or throw and kill the whole client config.
+  static int _asInt(Object? v) {
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v.trim()) ?? 0;
+    return 0;
+  }
+
+  static String _asString(Object? v) => v == null ? '' : v.toString();
+
+  static bool _asBool(Object? v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.trim().toLowerCase() == 'true' || v.trim() == '1';
+    return false;
+  }
+
   /// Payee name for UPI, never blank when a company name exists.
   String get upiPayeeNameOrCompany =>
       upiPayeeName.isNotEmpty ? upiPayeeName : companyName;
@@ -250,13 +268,13 @@ class ClientConfig {
     enableRateCard: json['enableRateCard'] as bool? ?? false,
     measuredPresets: (json['measuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
     unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
-    appDownloadUrl: json['appDownloadUrl'] as String? ?? '',
+    appDownloadUrl: _asString(json['appDownloadUrl'] ?? json['app_download_url']),
     // Version fields for the in-app APK updater. Tolerate camelCase config
     // writes and snake_case raw DB rows, like costMarginPercent above.
-    appVersionName: (json['appVersionName'] ?? json['app_version_name']) as String? ?? '',
-    appVersionCode: (json['appVersionCode'] as num?)?.toInt() ?? (json['app_version_code'] as num?)?.toInt() ?? 0,
-    appReleaseNotes: (json['appReleaseNotes'] ?? json['app_release_notes']) as String? ?? '',
-    forceUpdate: json['forceUpdate'] as bool? ?? json['force_update'] as bool? ?? false,
+    appVersionName: _asString(json['appVersionName'] ?? json['app_version_name']),
+    appVersionCode: _asInt(json['appVersionCode'] ?? json['app_version_code']),
+    appReleaseNotes: _asString(json['appReleaseNotes'] ?? json['app_release_notes']),
+    forceUpdate: _asBool(json['forceUpdate'] ?? json['force_update']),
     supplierCompanies: (json['supplierCompanies'] as List?)?.cast<String>() ?? const [],
     // Accept both camelCase (app/console config) and snake_case (raw DB row),
     // matching the tolerance already applied to costMarginPercent above.

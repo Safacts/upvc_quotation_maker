@@ -219,6 +219,9 @@ class AutoUpdateService {
     try {
       final cfg = config ?? _configProvider();
       if (cfg.appDownloadUrl.isEmpty) {
+        // The #1 silent skip — make it visible in adb logs so a client whose
+        // config row lost appDownloadUrl is diagnosable instead of invisible.
+        debugPrint('AutoUpdate: no appDownloadUrl for client "${cfg.clientId}" — skipping update check.');
         _pendingUpdate = null;
         _events.add(UpdateNotAvailableEvent('No APK published for this client.'));
         return null;

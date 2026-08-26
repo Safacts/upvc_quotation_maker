@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'client_logo.dart';
@@ -14,6 +15,17 @@ class AboutScreen extends StatefulWidget {
 }
 
 class _AboutScreenState extends State<AboutScreen> {
+  /// The ACTUAL version baked into this install (via --build-name/--build-number).
+  /// NEVER hardcode this string again — a stale literal made every client see
+  /// "Version 1.0.6" forever, which read as "the updater doesn't work".
+  Future<PackageInfo>? _packageInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _packageInfo = PackageInfo.fromPlatform();
+  }
+
   Future<void> _launchLinkedIn() async {
     final Uri url = Uri.parse('https://www.linkedin.com/in/aadisheshu-konga/');
     if (!await launchUrl(url)) {
@@ -60,9 +72,20 @@ class _AboutScreenState extends State<AboutScreen> {
               ).animate().fade(delay: 400.ms),
 
               const SizedBox(height: 8),
-              const Text(
-                'Version 1.0.6',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+              FutureBuilder<PackageInfo>(
+                future: _packageInfo,
+                builder: (context, snapshot) {
+                  final info = snapshot.data;
+                  final label = (info == null || info.version.isEmpty)
+                      ? 'Version'
+                      // e.g. "Version 1.0.14 (14)" — build number included so a
+                      // rebuilt same-semver APK is still visibly different.
+                      : 'Version ${info.version} (${info.buildNumber})';
+                  return Text(
+                    label,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  );
+                },
               ).animate().fade(delay: 450.ms),
 
               const SizedBox(height: 40),
