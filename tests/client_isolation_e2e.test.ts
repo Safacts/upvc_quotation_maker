@@ -8,6 +8,10 @@ const supaPatch = vi.fn();
 const supaPost = vi.fn();
 const supaGetAllPaged = vi.fn();
 const supabaseRpc = vi.fn();
+const supaCount = vi.fn();
+const supaGetSafe = vi.fn();
+const supaPostSafe = vi.fn();
+const supaDelete = vi.fn();
 
 // Set required env vars
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
@@ -35,8 +39,17 @@ vi.mock("@/lib/supabase", () => ({
   supaPost,
   supaGetAllPaged,
   supabaseRpc,
+  supaCount,
+  supaGetSafe,
+  supaPostSafe,
+  supaDelete,
   isServiceKeyConfigured: vi.fn().mockReturnValue(true),
+  SUPABASE_URL: "https://test.supabase.co",
   supabaseAdmin,
+}));
+
+vi.mock("@/lib/supabase-client", () => ({
+  getSupabaseAdmin: vi.fn(() => supabaseAdmin),
 }));
 
 vi.mock("@/lib/console-auth", () => ({
@@ -57,22 +70,32 @@ vi.mock("@/lib/slug", () => ({
 }));
 
 vi.mock("@/lib/pricing", () => ({
-  quotationTotals: vi
-    .fn()
-    .mockReturnValue({
-      netTotal: 1000,
-      gstAmount: 180,
-      grandTotal: 1180,
-      totalSqft: 50,
-    }),
+  quotationTotals: vi.fn().mockReturnValue({
+    netTotal: 1000,
+    gstAmount: 180,
+    grandTotal: 1180,
+    totalSqft: 50,
+  }),
   measuredLineSqft: vi.fn().mockReturnValue(25),
   measuredLineTotal: vi.fn().mockReturnValue(5000),
   unmeasuredLineTotal: vi.fn().mockReturnValue(3000),
 }));
 
+vi.mock("@/lib/quotation-token", () => ({
+  hashQuotationToken: vi.fn((token: string) => `hash:${token}`),
+}));
+
 describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The route prefers the RPC when available; force the test into the
+    // PostgREST fallback so tenant-filter assertions remain deterministic.
+    supabaseRpc.mockRejectedValue(new Error("RPC unavailable in unit test"));
+    supaGet.mockResolvedValue([]);
+    supaCount.mockResolvedValue(0);
+    supaGetSafe.mockResolvedValue([]);
+    supaPostSafe.mockResolvedValue([]);
+    supaDelete.mockResolvedValue([]);
   });
 
   describe("API Route Tenant Scoping", () => {
@@ -89,8 +112,8 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
 
       await GET(request);
 
-      expect(supaGetAllPaged).toHaveBeenCalled();
-      const call = supaGetAllPaged.mock.calls[0];
+      expect(supaGetSafe).toHaveBeenCalled();
+      const call = supaGetSafe.mock.calls[0];
       expect(call[1].client_id).toBe("eq.testclient");
     });
 
@@ -107,8 +130,8 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
 
       await GET(request);
 
-      expect(supaGetAllPaged).toHaveBeenCalled();
-      const call = supaGetAllPaged.mock.calls[0];
+      expect(supaGet).toHaveBeenCalledWith("customers", expect.anything());
+      const call = supaGet.mock.calls.find((entry) => entry[0] === "customers");
       expect(call[1].client_id).toBe("eq.testclient");
     });
 
@@ -122,8 +145,8 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
 
       await GET(request);
 
-      expect(supaGetAllPaged).toHaveBeenCalled();
-      const call = supaGetAllPaged.mock.calls[0];
+      expect(supaGet).toHaveBeenCalledWith("products", expect.anything());
+      const call = supaGet.mock.calls.find((entry) => entry[0] === "products");
       expect(call[1].client_id).toBe("eq.testclient");
     });
 
@@ -165,18 +188,25 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
         single: vi.fn().mockResolvedValue({ data: mockQuotation, error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
@@ -276,18 +306,25 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
         single: vi.fn().mockResolvedValue({ data: mockQuotation, error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
@@ -301,11 +338,6 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       const request = new NextRequest(
         "http://localhost/api/quotation/quote-1?token=valid-token",
       );
-
-      // Mock the token verification
-      vi.mock("@/lib/quotation-token", () => ({
-        verifyToken: vi.fn().mockReturnValue(true),
-      }));
 
       const response = await GET(request, {
         params: Promise.resolve({ id: "quote-1" }),
@@ -326,10 +358,6 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       const request = new NextRequest(
         "http://localhost/api/quotation/quote-1?token=invalid-token",
       );
-
-      vi.mock("@/lib/quotation-token", () => ({
-        verifyToken: vi.fn().mockReturnValue(false),
-      }));
 
       const response = await GET(request, {
         params: Promise.resolve({ id: "quote-1" }),
@@ -426,7 +454,7 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       await GET(request);
 
       // Should ignore query param and use session client_id
-      const call = supaGetAllPaged.mock.calls[0];
+      const call = supaGetSafe.mock.calls[0];
       expect(call[1].client_id).toBe("eq.testclient");
     });
 
