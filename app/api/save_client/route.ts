@@ -150,9 +150,16 @@ export async function POST(request: NextRequest) {
         return json({ error: "invalid config" }, 400);
       }
     }
+    // SECURITY: Strip portalPasswordHash from incoming config to prevent
+    // silent overwrite via config blob. Only explicit portal_password_hash
+    // parameter (line 171) may update it. This protects both customer and
+    // admin callers — admins must use the dedicated parameter.
+    if (config.portalPasswordHash !== undefined) {
+      delete config.portalPasswordHash;
+    }
     // Merge mode: only the fields sent by the client are updated. Protects
-    // fields the sender doesn't know about (portalPasswordHash, appDownloadUrl,
-    // colors, quotePrefix, adminEmails, ...) from being wiped by a partial save.
+    // fields the sender doesn't know about (appDownloadUrl, colors, quotePrefix,
+    // adminEmails, ...) from being wiped by a partial save.
     if (p.merge) {
       const existing = await supaGet("clients", {
         id: "eq." + cid,

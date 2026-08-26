@@ -418,8 +418,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return const SizedBox.shrink();
     }
 
-    final _theme = Theme.of(context);
-
     if (appState.isTrialExpired) {
       return Container(
         width: double.infinity,
@@ -552,28 +550,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ).animate(onPlay: (controller) => controller.repeat(reverse: true))
         .fadeIn(duration: 800.ms);
-  }
-
-  Widget _buildMiniStat(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 6),
-            Text(value, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: color)),
-            Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-          ],
-        ),
-      ),
-    );
   }
 
   @override

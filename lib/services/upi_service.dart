@@ -12,7 +12,7 @@ import 'package:qr/qr.dart';
 /// UPI app (GPay, PhonePe, Paytm, BHIM, bank apps) understands it, both as a
 /// scanned QR and as a tapped `upi://` link:
 ///
-///   upi://pay?pa=<vpa>&pn=<payee>&am=<amount>&cu=INR&tn=<note>&tr=<ref>
+///   upi://pay?pa=`<vpa>`&pn=`<payee>`&am=`<amount>`&cu=INR&tn=`<note>`&tr=`<ref>`
 ///
 /// PARAMETER NOTES (learned the hard way — get these wrong and the app either
 /// refuses the QR or silently drops the amount):

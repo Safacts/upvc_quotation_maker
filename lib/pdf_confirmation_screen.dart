@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:printing/printing.dart' deferred as printLib;
+import 'package:printing/printing.dart' deferred as print_lib;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -275,8 +275,8 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   }
 
   Future<void> _printPdf() async {
-    await printLib.loadLibrary();
-    await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
+    await print_lib.loadLibrary();
+    await print_lib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
   }
 
   Widget _buildShareModeToggle() {
@@ -303,7 +303,7 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
               : 'WhatsApp sends confirmation + review links',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
-        activeColor: const Color(0xFF25D366),
+        activeThumbColor: const Color(0xFF25D366),
       ),
     ).animate().fade(delay: 250.ms);
   }

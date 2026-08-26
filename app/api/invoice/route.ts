@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
+import { supaGet, supaPost, isServiceKeyConfigured, SUPABASE_URL } from "@/lib/supabase";
 
 // Collection endpoint for Vitharn's OWN invoices.
 //   GET  /api/invoice           -> list (newest first), ?status= & ?client_id= filters
@@ -27,9 +27,6 @@ async function requireAdmin() {
   if (!session || session.role !== "admin") return null;
   return session;
 }
-
-const SUPABASE_URL =
-  process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
 
 /** Calls the FY-counter RPC. Falls back to a timestamp number if the RPC is absent. */
 async function nextInvoiceNumber(): Promise<string> {

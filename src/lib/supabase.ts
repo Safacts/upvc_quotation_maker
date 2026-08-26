@@ -1,5 +1,10 @@
-const SUPABASE_URL =
+/**
+ * Single source of truth for Supabase project URL.
+ * Other files MUST import this instead of duplicating the fallback.
+ */
+export const SUPABASE_URL =
   process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
+
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const AUTH_HEADERS = {
