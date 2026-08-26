@@ -20,8 +20,23 @@ export async function generateMetadata({
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const rows = await getCachedClients();
-  const client = findClientBySlug(rows, slug);
+  let rows: any[] = [];
+  let client: any = null;
+  try {
+    rows = await getCachedClients();
+    client = findClientBySlug(rows, slug);
+  } catch (e: any) {
+    console.error("[home/page] getCachedClients failed:", e?.message ?? e);
+  }
+  if (!client) {
+    try {
+      const { supaGet } = await import("@/lib/supabase");
+      rows = await supaGet("client_public", { select: "id,config,is_active,created_at,updated_at" });
+      client = findClientBySlug(rows, slug);
+    } catch (e2: any) {
+      console.error("[home/page] direct supaGet fallback failed:", e2?.message ?? e2);
+    }
+  }
   if (!client) notFound();
   const session = await getSession();
   const ownsClient = session?.role === "customer" && session.client_id === client.id;
