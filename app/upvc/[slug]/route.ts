@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCachedClients, findClientBySlug, slugify } from "@/lib/slug";
 
 // Serves the Flutter web app at /upvc/<slug> with a per-client branded splash

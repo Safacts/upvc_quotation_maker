@@ -15,7 +15,11 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const rows = await getCachedClients();
+  let rows: any[] = [];
+  try { rows = await getCachedClients(); } catch (e: any) {
+    console.error("[app/[slug]/review/page.tsx] getCachedClients failed:", e?.message ?? e);
+    try { rows = await supaGet("client_public", { select: "id,config,is_active,created_at,updated_at" }); } catch(_){}
+  }
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
   const cfg = parseClientConfig(client.config || {}, client.id);

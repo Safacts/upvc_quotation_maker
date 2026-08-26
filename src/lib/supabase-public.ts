@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Client-safe public Supabase config.
  *
  * Browser code cannot read server-only env (plain process.env is stripped in

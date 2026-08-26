@@ -70,7 +70,17 @@ export async function POST(request: NextRequest) {
     // table, or spray testimonials at any real tenant's public page. Reviews are
     // deliberately anonymous (customers leave them from a quote link), so we cannot
     // require a session — but we CAN require the tenant to actually exist.
-    const known = await getCachedClients();
+    let known: any[] = [];
+    try {
+      known = await getCachedClients();
+    } catch (e: any) {
+      console.error("[reviews] getCachedClients failed, falling back:", e?.message ?? e);
+      try {
+        known = await supaGet("client_public", { select: "id" });
+      } catch (_) {
+        known = [];
+      }
+    }
     if (!Array.isArray(known) || !known.some((c: any) => c.id === clientId)) {
       return NextResponse.json({ ok: false, error: "Unknown client" }, { status: 404 });
     }

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 
