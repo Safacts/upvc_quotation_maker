@@ -9,7 +9,8 @@ $routes = @(
     "/privacy",
     "/terms",
     "/login",
-    "/signup"
+    "/signup",
+    "/api/keepalive"
 )
 $failed = 0
 foreach ($route in $routes) {

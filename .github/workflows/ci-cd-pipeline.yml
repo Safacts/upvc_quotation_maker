@@ -31,7 +31,7 @@ env:
 
 jobs:
   # ============================================================
-  # TEST & BUILD - Runs on all branches
+  # TEST & BUILD - Runs on all branches (branch-aware env)
   # ============================================================
   test-and-build:
     name: Test & Build
@@ -56,13 +56,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check Flutter source
+      - name: Check Flutter source (full lib)
         run: |
           flutter pub get
-          # Existing non-blocking lints are reported, but only analyzer errors
-          # should stop the release pipeline. This keeps CI honest without
-          # making an unrelated legacy warning block every staging deploy.
-          flutter analyze --no-fatal-infos --no-fatal-warnings lib/supabase_config.dart lib/quotation_screen.dart lib/pdf_confirmation_screen.dart
+          # Full analyzer pass on lib/ - only errors block, warnings/infos reported
+          flutter analyze --no-fatal-infos --no-fatal-warnings lib/
 
       - name: Run TypeScript check
         run: npx tsc --noEmit
@@ -81,13 +79,14 @@ jobs:
       - name: Run tests (continue on error for pre-existing failures)
         run: npx vitest run || true
 
-      - name: Build Next.js
+      - name: Build Next.js (branch-aware env)
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          # Use staging secrets for development-v1/deployment-v1, production secrets for main
+          SUPABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_URL || secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_ANON_KEY || secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run build
 
   # ============================================================
@@ -199,6 +198,7 @@ jobs:
 
   # ============================================================
   # STAGING SMOKE TEST - Verify external deps & critical paths
+  # Routes aligned with scripts/smoke-test-staging.ps1
   # ============================================================
   staging-smoke:
     name: Staging smoke test
@@ -222,13 +222,25 @@ jobs:
           fi
           echo "✅ Main page: $HTTP_CODE"
 
-          # Test Flutter app loads (302 = Vercel Auth redirect, 200 = direct access)
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/upvc/venkateshwara" --max-time 30)
-          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
-            echo "::error::Flutter app returned $HTTP_CODE"
-            exit 1
-          fi
-          echo "✅ Flutter app: $HTTP_CODE"
+          # Test generic Flutter app routes (aligned with smoke-test-staging.ps1)
+          for route in "/upvc" "/upvc/pricing" "/upvc/pricing/show" "/upvc/login"; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL$route" --max-time 30)
+            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
+              echo "::error::Flutter route $route returned $HTTP_CODE"
+              exit 1
+            fi
+            echo "✅ Flutter route $route: $HTTP_CODE"
+          done
+
+          # Test public pages
+          for route in "/privacy" "/terms" "/login" "/signup"; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL$route" --max-time 30)
+            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
+              echo "::error::Public route $route returned $HTTP_CODE"
+              exit 1
+            fi
+            echo "✅ Public route $route: $HTTP_CODE"
+          done
 
           # Test Umami analytics script loads (external dependency)
           if HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15); then
@@ -242,12 +254,20 @@ jobs:
             echo "✅ Umami analytics: 200"
           fi
 
-          # Test API health
+          # Test API health (portal_auth returns 405 for POST without proper body)
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/portal_auth" -X POST -H "Content-Type: application/json" -d '{"mode":"session"}' --max-time 15)
           if [ "$HTTP_CODE" != "405" ] && [ "$HTTP_CODE" != "200" ]; then
             echo "::warning::API portal_auth returned $HTTP_CODE"
           else
             echo "✅ API health: $HTTP_CODE (expected 405 for POST without body)"
+          fi
+
+          # Test keepalive endpoint (critical for Supabase pause prevention)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/keepalive" --max-time 15)
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
+            echo "::warning::API keepalive returned $HTTP_CODE"
+          else
+            echo "✅ API keepalive: $HTTP_CODE"
           fi
 
           echo "✅ All smoke tests passed"
@@ -298,6 +318,37 @@ jobs:
 
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
+
+      - name: Link Vercel project (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
+        run: |
+          vercel link --yes --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }}
+
+      - name: Set runtime env on production Vercel project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          echo "Writing runtime env vars into production Vercel project (preview,production targets)..."
+          echo "These are what the serverless functions read at runtime (build-step env is NOT enough)."
+          for pair in \
+            "SUPABASE_URL:$SUPABASE_URL" \
+            "SUPABASE_ANON_KEY:$SUPABASE_ANON_KEY" \
+            "SUPABASE_SERVICE_ROLE_KEY:$SUPABASE_SERVICE_ROLE_KEY" \
+            "SUPABASE_KEY:$SUPABASE_SERVICE_ROLE_KEY" \
+            "JWT_SECRET:$JWT_SECRET"; do
+            name="${pair%%:*}"; val="${pair#*:}"
+            echo "len($name)=${#val}"
+            # Set for both preview and production targets to cover custom domain alias
+            vercel env add "$name" preview,production \
+              --value "$val" --force --yes \
+              --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }} --token=$VERCEL_TOKEN
+          done
+          echo "Env vars configured."
 
       - name: Deploy to Production (REQUIRES YOUR EXPLICIT APPROVAL)
         env:
