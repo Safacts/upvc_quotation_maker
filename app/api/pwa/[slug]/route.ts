@@ -19,7 +19,7 @@ export async function GET(
   let rows: any[] = [];
   try { rows = await getCachedClients(); } catch (e: any) {
     console.error("[app/api/pwa/[slug]/route.ts] getCachedClients failed:", e?.message ?? e);
-    try { rows = await supaGet("client_public", { select: "id,config,is_active,created_at,updated_at" }); } catch(_){}
+    try { rows = await supaGet("client_public", { select: "id,config,is_active,created_at" }); } catch(_){}
   }
   const client = findClientBySlug(rows, slug);
 

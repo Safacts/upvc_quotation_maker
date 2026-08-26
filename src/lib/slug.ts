@@ -11,7 +11,7 @@ import { unstable_cache } from "next/cache";
 
 export const getCachedClients = unstable_cache(
   async () => {
-    return await supaGet("client_public", { select: "id,config,is_active,created_at,updated_at" });
+    return await supaGet("client_public", { select: "id,config,is_active,created_at" });
   },
   ['client-public-list'],
   { revalidate: 300 } // cache for 5 minutes

@@ -31,7 +31,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   if (!client) {
     try {
       const { supaGet } = await import("@/lib/supabase");
-      rows = await supaGet("client_public", { select: "id,config,is_active,created_at,updated_at" });
+      rows = await supaGet("client_public", { select: "id,config,is_active,created_at" });
       client = findClientBySlug(rows, slug);
     } catch (e2: any) {
       console.error("[home/page] direct supaGet fallback failed:", e2?.message ?? e2);
