@@ -26,8 +26,14 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const rows = await getCachedClients();
-  const client = findClientBySlug(rows, slug);
+  let rows: any[] = [];
+  let client: any = null;
+  try {
+    rows = await getCachedClients();
+    client = findClientBySlug(rows, slug);
+  } catch (e: any) {
+    console.error("[upvc/[slug]] getCachedClients failed:", e?.message ?? e);
+  }
   const cfg = client?.config || {};
 
   const isVitharnHost = _request.nextUrl.hostname.includes("vitharn.com");
