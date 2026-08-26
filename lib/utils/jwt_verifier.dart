@@ -6,7 +6,7 @@ import '../supabase_config.dart';
 class JwtVerifier {
   static String get _expectedIssuer => SupabaseConfig.supabaseUrl.trim().isEmpty
       ? 'https://jqjxhhgfwdzckijnnede.supabase.co/auth/v1'
-      : SupabaseConfig.supabaseUrl.replaceFirst(RegExp(r'/+$'), '') + '/auth/v1';
+      : '${SupabaseConfig.supabaseUrl.replaceFirst(RegExp(r'\/+$'), '')}/auth/v1';
   static const String _expectedType = 'sso';
   
   /// Verifies a Supabase-issued SSO JWT using the anon key (public secret).

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
-import { supaDelete, supaGet, supaPost } from "@/lib/supabase";
+import { supaDelete, supaGet, supaPost, SUPABASE_URL } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ async function ownerFor(id: string) {
 }
 
 async function storageRequest(path: string, init: RequestInit) {
-  const base = process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
+  const base = SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
   const res = await fetch(`${base}/storage/v1/object/${BUCKET}/${path}`, {
     ...init,
@@ -43,8 +43,7 @@ async function storageRequest(path: string, init: RequestInit) {
 }
 
 function publicUrl(path: string) {
-  const base = process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
-  return `${base}/storage/v1/object/public/${BUCKET}/${path}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
 async function authorized(request: NextRequest, id: string) {

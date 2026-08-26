@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:printing/printing.dart' deferred as printLib;
+import 'package:printing/printing.dart' deferred as print_lib;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -64,8 +64,8 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
   }
 
   Future<void> _printPdf() async {
-    await printLib.loadLibrary();
-    await printLib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
+    await print_lib.loadLibrary();
+    await print_lib.Printing.layoutPdf(onLayout: (format) async => widget.pdfBytes);
   }
 
   Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap, int delay, {Widget? brandIcon}) {

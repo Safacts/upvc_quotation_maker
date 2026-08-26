@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/session_hash.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -37,11 +36,11 @@ import 'models.dart';
 /// went out anonymous and the route answered `401 {"error":"Unauthorized"}`.
 /// Confirmed against production:
 ///
-///   curl https://app.vitharn.com/api/quotation/<id>/token
+///   curl https://app.vitharn.com/api/quotation/`<id>`/token
 ///   -> 401 {"error":"Unauthorized"}
 ///
 /// The helper swallowed that 401 and returned `''`, so the caller happily built
-/// `https://app.vitharn.com/quote/<id>?token=` — an EMPTY token. The public
+/// `https://app.vitharn.com/quote/`<id>`?token=` — an EMPTY token. The public
 /// route verifies with `if (!token || !verifyToken(id, token))` and answers
 /// `403 {"error":"Invalid or missing token"}`. Net effect: the owner thought a
 /// quote was sent, and the customer got "Access Denied".
@@ -193,21 +192,21 @@ class QuoteShare {
         '?q=${Uri.encodeComponent(data.quotationNo)}';
   }
 
-  /// Builds the message the customer receives (format approved by Aadi,
-  /// 24-08-2026 — matches what KPR sends over WhatsApp today):
-  ///
-  ///   Hello <CUSTOMER>,
-  ///
-  ///   Please find attached the quotation <NO> from <COMPANY>.
-  ///
-  ///   Review & confirm online: <link>
-  ///
-  ///   We value your feedback! Please rate your service here: <review>
-  ///
-  /// Deliberately plain text: WhatsApp renders no markup, and inline URLs on
-  /// their own phrases still produce tappable previews. When [quoteLink] is
-  /// null we omit the confirm line entirely rather than ship a dead one —
-  /// the review line always stays, because it needs no token.
+/// Builds the message the customer receives (format approved by Aadi,
+/// 24-08-2026 — matches what KPR sends over WhatsApp today):
+///
+///   Hello `CUSTOMER`,
+///
+///   Please find attached the quotation `NO` from `COMPANY`.
+///
+///   Review & confirm online: `link`
+///
+///   We value your feedback! Please rate your service here: `review`
+///
+/// Deliberately plain text: WhatsApp renders no markup, and inline URLs on
+/// their own phrases still produce tappable previews. When [quoteLink] is
+/// null we omit the confirm line entirely rather than ship a dead one —
+/// the review line always stays, because it needs no token.
   static String buildMessage({
     required QuotationData data,
     required String companyName,

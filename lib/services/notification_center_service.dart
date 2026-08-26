@@ -10,7 +10,7 @@ import 'package:upvc_quotation_maker/supabase_config.dart';
 /// Filters by `client_id` = current client (using x-client-id header).
 /// On INSERT event, shows local notification via NotificationService.
 /// Maintains in-memory list of unread notifications for badge count.
-/// Provides Stream<List<AppNotification>> for UI to consume.
+/// Provides `Stream<List<AppNotification>>` for UI to consume.
 class NotificationCenterService {
   static final NotificationCenterService _instance = NotificationCenterService._internal();
   factory NotificationCenterService() => _instance;

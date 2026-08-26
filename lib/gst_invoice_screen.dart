@@ -8,7 +8,7 @@ import 'models.dart';
 import 'app_state.dart';
 import 'gst_invoice_model.dart';
 import 'gst_pdf_confirmation_screen.dart';
-import 'gst_pdf_generator.dart' deferred as gstPdfGen;
+import 'gst_pdf_generator.dart' deferred as gst_pdf_gen;
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
 import 'theme.dart';
@@ -188,8 +188,8 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
     if (_pdfBytes != null) return _pdfBytes!;
     await _autoSaveToDatabase();
     final appState = Provider.of<AppState>(context, listen: false);
-    await gstPdfGen.loadLibrary();
-    final bytes = await gstPdfGen.generateGstPdfBytes(data, appState);
+    await gst_pdf_gen.loadLibrary();
+    final bytes = await gst_pdf_gen.generateGstPdfBytes(data, appState);
     _pdfBytes = bytes;
     return bytes;
   }

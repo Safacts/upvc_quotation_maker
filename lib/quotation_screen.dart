@@ -12,7 +12,7 @@ import 'package:uuid/uuid.dart';
 import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
-import 'pdf_generator.dart' deferred as pdfGen;
+import 'pdf_generator.dart' deferred as pdf_gen;
 import 'vaishnavi_pdf_generator.dart';
 import 'supabase_config.dart';
 import 'crafted_widget.dart';
@@ -20,7 +20,7 @@ import 'theme.dart';
 import 'pdf_confirmation_screen.dart';
 import 'quote_share.dart';
 import 'umami_tracker.dart';
-import 'quotation_export.dart' deferred as exportLib;
+import 'quotation_export.dart' deferred as export_lib;
 import 'services/catalog_service.dart';
 import 'widgets/site_photo_picker.dart';
 
@@ -208,7 +208,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _prefetchGenerationLibs() async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     try {
-      await Future.wait([pdfGen.loadLibrary(), exportLib.loadLibrary()]);
+      await Future.wait([pdf_gen.loadLibrary(), export_lib.loadLibrary()]);
     } catch (_) {
       return;
     }
@@ -558,7 +558,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
-      await pdfGen.loadLibrary();
+await pdf_gen.loadLibrary();
       final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
       final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
       final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
@@ -751,8 +751,8 @@ $reviewCta
     if (id.startsWith('vaishnavi')) {
       return generateVaishnaviPdfBytes(data, appState, photos: photos);
     }
-    await pdfGen.loadLibrary();
-    return pdfGen.generatePdfBytes(data, appState, photos: photos);
+    await pdf_gen.loadLibrary();
+    return pdf_gen.generatePdfBytes(data, appState, photos: photos);
   }
 
   Future<void> _generateAndProcessPdf() async {
@@ -765,7 +765,7 @@ $reviewCta
 
     // Generate PDF bytes
     final appState = Provider.of<AppState>(context, listen: false);
-    await pdfGen.loadLibrary();
+    await pdf_gen.loadLibrary();
     final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
     final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
     
@@ -1605,11 +1605,11 @@ if (_usePresets) ...[
     final appState = Provider.of<AppState>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await exportLib.loadLibrary();
+      await export_lib.loadLibrary();
       if (format == 'xlsx') {
-        await exportLib.exportQuotationXlsx(data, appState);
+        await export_lib.exportQuotationXlsx(data, appState);
       } else {
-        await exportLib.exportQuotationCsv(data, appState);
+        await export_lib.exportQuotationCsv(data, appState);
       }
       messenger.showSnackBar(SnackBar(
         content: Text('Exported ${data.quotationNo}.$format'),

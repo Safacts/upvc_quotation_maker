@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+import { supaGet } from "@/lib/supabase";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,54 +14,42 @@ export async function GET(
   const { clientId: rawId } = await params;
   const clientId = decodeURIComponent(rawId).trim();
 
-  if (!SERVICE_ROLE_KEY) {
-    return NextResponse.json(
-      { error: "Service not configured" },
-      { status: 503, headers: CORS_HEADERS },
-    );
-  }
-
   try {
-    const encoded = encodeURIComponent(clientId);
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/clients?id=eq.${encoded}&select=config,is_active`,
-      {
-        headers: {
-          apikey: SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-        },
-        signal: AbortSignal.timeout(10000),
-      }
-    );
+    // Use client_public view (migration 047) which strips sensitive fields:
+    // portalPasswordHash, adminEmails, bankAccountNo, bankIfsc, gstNumber,
+    // supabaseAnonKey, isPaid, trialEndsAt, companyEmail are all redacted.
+    const rows = await supaGet("client_public", {
+      id: "eq." + clientId,
+      select: "id,config,is_active,trial_expires_at,created_at",
+      limit: 1,
+    });
 
-    if (!res.ok) throw new Error(`Supabase ${res.status}`);
-
-    const rows = await res.json();
-    if (!rows || !rows.length) {
-      // Try slug match on all clients
-      const allRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/clients?select=id,config,is_active`,
-        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
-      );
-      const all = await allRes.json();
-      const slug = clientId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-      const match = all.find((c: any) => {
-        const cid = (c.id || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-        const appName = ((c.config?.appName as string) || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        return cid === slug || appName === slug;
-      });
-      if (!match) {
-        return NextResponse.json({ error: "Client not found" }, { status: 404, headers: CORS_HEADERS });
-      }
+    if (Array.isArray(rows) && rows.length > 0) {
+      const row = rows[0];
       return NextResponse.json(
-        { clientId: match.id, ...match.config, isActive: match.is_active },
+        { clientId: row.id, ...row.config, isActive: row.is_active },
         { headers: CORS_HEADERS },
       );
     }
 
-    const row = rows[0];
+    // Fallback: slug match on client_public (also redacted)
+    const all = await supaGet("client_public", {
+      select: "id,config,is_active,trial_expires_at,created_at",
+    });
+    if (!Array.isArray(all)) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404, headers: CORS_HEADERS });
+    }
+    const slug = clientId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const match = all.find((c: any) => {
+      const cid = (c.id || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const appName = ((c.config?.appName as string) || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      return cid === slug || appName === slug;
+    });
+    if (!match) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404, headers: CORS_HEADERS });
+    }
     return NextResponse.json(
-      { clientId: row.id, ...row.config, isActive: row.is_active },
+      { clientId: match.id, ...match.config, isActive: match.is_active },
       { headers: CORS_HEADERS },
     );
   } catch (e: any) {
