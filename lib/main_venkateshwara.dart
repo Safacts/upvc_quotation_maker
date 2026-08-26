@@ -37,7 +37,7 @@ void main() async {
       companyProprietor: 'J.Venkateshwarlu',
       gstNumber: '36AKDPJ7245B2ZF',
       logoUrl:
-          'https://gumpmnbjdtzajhysnn.supabase.co/storage/v1/object/public/assets/logos/venkateshwara.png',
+          'https://jqjxhhgfwdzckijnnede.supabase.co/storage/v1/object/public/assets/logos/venkateshwara.png',
     );
   }
 
