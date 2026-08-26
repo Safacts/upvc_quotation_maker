@@ -53,8 +53,8 @@ export async function GET(
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="${esc(splashName)}">
-  <link rel="preconnect" href="https://effxrwrbsjduvhmorvrq.supabase.co">
-  <link rel="dns-prefetch" href="https://effxrwrbsjduvhmorvrq.supabase.co">
+  <link rel="preconnect" href="https://jqjxhhgfwdzckijnnede.supabase.co">
+  <link rel="dns-prefetch" href="https://jqjxhhgfwdzckijnnede.supabase.co">
   <link rel="preload" href="flutter_bootstrap.js?v=${FLUTTER_ASSET_VERSION}" as="script">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">

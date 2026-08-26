@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class ClientConfig {
   final String clientId;
@@ -72,7 +72,7 @@ class ClientConfig {
   final String upiId;
 
   /// Name shown inside the customer's UPI app before they confirm payment.
-  /// Falls back to [companyName] via [upiPayeeNameOrCompany] when blank —
+  /// Falls back to [companyName] via [upiPayeeNameOrCompany] when blank â€”
   /// a QR whose payee reads "Unknown" destroys trust at the moment of payment.
   final String upiPayeeName;
 
@@ -149,7 +149,7 @@ class ClientConfig {
   String get upiPayeeNameOrCompany =>
       upiPayeeName.isNotEmpty ? upiPayeeName : companyName;
 
-  /// True when this client can accept UPI — drives whether QR sections render.
+  /// True when this client can accept UPI â€” drives whether QR sections render.
   bool get hasUpi => upiId.trim().isNotEmpty && upiId.contains('@');
 
   Map<String, dynamic> toJson() => {
@@ -230,7 +230,7 @@ class ClientConfig {
     accentColor: Color(json['accentColor'] as int? ?? 0xFFEC4899),
     trialExpiresAt: json['trialExpiresAt'] != null ? DateTime.tryParse(json['trialExpiresAt']) : null,
     isActive: json['isActive'] as bool? ?? true,
-    supabaseUrl: json['supabaseUrl'] as String? ?? 'https://gumpmnbjdtzajhysnnaz.supabase.co',
+    supabaseUrl: json['supabaseUrl'] as String? ?? 'https://jqjxhhgfwdzckijnnede.supabase.co',
     supabaseAnonKey: json['supabaseAnonKey'] as String? ?? '',
     adminEmails: (json['adminEmails'] as List?)?.cast<String>() ?? ['vitarn.dev@gmail.com'],
     landingHeroTitle: json['landingHeroTitle'] as String? ?? '',

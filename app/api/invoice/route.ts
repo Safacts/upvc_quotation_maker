@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 
@@ -9,7 +9,7 @@ import { supaGet, supaPost, isServiceKeyConfigured } from "@/lib/supabase";
 // Admin-only, same rationale as /api/invoice/[id].
 //
 // NO TIER GATE HERE, DELIBERATELY. `vitharn_invoices` is Vitharn billing its own
-// SaaS clients — it is not a product feature a tenant consumes, and no tenant
+// SaaS clients â€” it is not a product feature a tenant consumes, and no tenant
 // can reach it: `requireAdmin()` rejects every `customer` and `signup` session
 // outright. Adding `requireTier(..., "invoicing")` would only ever be evaluated
 // for platform admins, who bypass the paywall by design, so it would be dead
@@ -29,7 +29,7 @@ async function requireAdmin() {
 }
 
 const SUPABASE_URL =
-  process.env.SUPABASE_URL || "https://effxrwrbsjduvhmorvrq.supabase.co";
+  process.env.SUPABASE_URL || "https://jqjxhhgfwdzckijnnede.supabase.co";
 
 /** Calls the FY-counter RPC. Falls back to a timestamp number if the RPC is absent. */
 async function nextInvoiceNumber(): Promise<string> {
@@ -47,7 +47,7 @@ async function nextInvoiceNumber(): Promise<string> {
     const val = txt.replace(/^"|"$/g, "");
     if (val && val !== "null") return val;
   }
-  // Migration 005 not applied yet — never block invoicing on it.
+  // Migration 005 not applied yet â€” never block invoicing on it.
   const d = new Date();
   const fy = d.getMonth() + 1 >= 4
     ? `${d.getFullYear()}-${d.getFullYear() + 1}`
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     const today = new Date();
     const invoiceDate = String(p.invoice_date || today.toISOString().slice(0, 10));
-    // Default terms: net 7 — matches the contract's payment window.
+    // Default terms: net 7 â€” matches the contract's payment window.
     const dueDate =
       p.due_date ??
       new Date(new Date(invoiceDate).getTime() + 7 * 86400000).toISOString().slice(0, 10);
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       client_email: String(p.client_email || ""),
       client_phone: String(p.client_phone || ""),
       subtotal,
-      // GST is NIL — turnover below the Rs.20L threshold (Sec 22, CGST Act 2017).
+      // GST is NIL â€” turnover below the Rs.20L threshold (Sec 22, CGST Act 2017).
       gst_rate: 0,
       gst_amount: 0,
       total: subtotal,

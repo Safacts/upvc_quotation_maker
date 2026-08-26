@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -7,8 +7,8 @@ import { slugify } from "@/lib/slug";
 import "./admin.css";
 import LegalDocFiller from "./LegalDocFiller";
 
-// LIVE Supabase project (Mumbai, effxrwrbsjduvhmorvrq) via client-safe config.
-// Anon key is PUBLIC by design — safe in client bundles; RLS is the boundary.
+// LIVE Supabase project (Mumbai, jqjxhhgfwdzckijnnede) via client-safe config.
+// Anon key is PUBLIC by design â€” safe in client bundles; RLS is the boundary.
 import { SUPABASE_PUBLIC_URL as API_BASE, SUPABASE_PUBLIC_ANON_KEY as KEY } from "@/lib/supabase-public";
 const API = `${API_BASE}/rest/v1`;
 const headers = {
@@ -482,7 +482,7 @@ export default function PlatformAdmin() {
     setF("address", cfg.companyAddress || "");
     setF("proprietor", cfg.companyProprietor || req.name || "");
     setF("gst", cfg.gstNumber || "");
-    showToast("Loaded signup request into editor — set a temp password and save to create the account.", "success");
+    showToast("Loaded signup request into editor â€” set a temp password and save to create the account.", "success");
     setSignupRequests(null);
   }
 
@@ -539,7 +539,7 @@ export default function PlatformAdmin() {
       setSignupRequests((prev: any[]) =>
         prev.map((r) => r.id === req.id ? { ...r, status: newStatus } : r)
       );
-      showToast(isRestore ? "Restored to active requests" : "Archived — data is preserved", "success");
+      showToast(isRestore ? "Restored to active requests" : "Archived â€” data is preserved", "success");
     } catch (e: any) {
       showToast("Failed: " + e.message, "error");
     }
@@ -939,13 +939,13 @@ export default function PlatformAdmin() {
     <>
       {toast && (
         <div className={`toast ${toast.type}`}>
-          <span>{toast.type === "success" ? "✓" : "✕"}</span>
+          <span>{toast.type === "success" ? "âœ“" : "âœ•"}</span>
           {toast.msg}
         </div>
       )}
 
       <div className="admin-shell">
-        {/* ─── SIDEBAR ─────────────────────────────────── */}
+        {/* â”€â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <aside className="admin-sidebar">
           <div className="admin-sidebar-header">
             <div className="admin-brand">
@@ -961,7 +961,7 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="admin-search">
-              <span className="admin-search-icon">⌕</span>
+              <span className="admin-search-icon">âŒ•</span>
               <input
                 type="text"
                 placeholder="Search clients..."
@@ -1043,16 +1043,16 @@ export default function PlatformAdmin() {
                     className="sidebar-action-btn"
                     onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
                   >
-                    ✉ Compose
+                    âœ‰ Compose
                   </button>
                   <button
                     className="sidebar-action-btn"
                     onClick={() => router.push("/admin/agent")}
                   >
-                    🤖 AI Agent
+                    ðŸ¤– AI Agent
                   </button>
                   <button className="sidebar-action-btn" onClick={openLegalDocuments}>
-                    📄 Legal Docs
+                    ðŸ“„ Legal Docs
                   </button>
                 </div>
               </>
@@ -1064,19 +1064,19 @@ export default function PlatformAdmin() {
           </div>
         </aside>
 
-        {/* ─── MAIN PANEL ──────────────────────────────── */}
+        {/* â”€â”€â”€ MAIN PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <main className="admin-main">
           {legalOpen ? (
             <div className="admin-editor legal-editor">
               <div className="admin-editor-header">
                 <div className="editor-client-info">
-                  <div className="editor-client-logo">📄</div>
+                  <div className="editor-client-logo">ðŸ“„</div>
                   <div className="editor-client-meta">
                     <h2>Legal Documents</h2>
                     <div className="editor-client-desc">Edit client-ready policies and agreements</div>
                   </div>
                   <div className="editor-client-actions">
-                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}>âœ• Close</button>
                   </div>
                 </div>
               </div>
@@ -1117,7 +1117,7 @@ export default function PlatformAdmin() {
             </div>
           ) : !editorOpen ? (
             <div className="admin-welcome">
-              <div className="admin-welcome-icon">🏢</div>
+              <div className="admin-welcome-icon">ðŸ¢</div>
               <h2>Welcome back!</h2>
               <p>Select a client from the sidebar to edit their configuration, or create a new client.</p>
               <div className="admin-stats">
@@ -1151,7 +1151,7 @@ export default function PlatformAdmin() {
                     <div className="editor-client-desc">
                       {editingClient ? (
                         <>
-                          {editingClient.id} &nbsp;·&nbsp;
+                          {editingClient.id} &nbsp;Â·&nbsp;
                           <ClientLinks id={editingClient.id} config={editingClient.config} />
                         </>
                       ) : "Fill in the details below"}
@@ -1161,7 +1161,7 @@ export default function PlatformAdmin() {
                     <span className={`badge ${form.active ? "active" : "inactive"}`}>
                       {form.active ? "Active" : "Inactive"}
                     </span>
-                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}>âœ• Close</button>
                   </div>
                 </div>
 
@@ -1183,7 +1183,7 @@ export default function PlatformAdmin() {
               {/* Tab Bodies */}
               <div className="admin-editor-body">
 
-                {/* ── TAB 0: Company Info ── */}
+                {/* â”€â”€ TAB 0: Company Info â”€â”€ */}
                 {activeTab === 0 && (
                   <>
                     <div className="form-section">
@@ -1230,7 +1230,7 @@ export default function PlatformAdmin() {
                         <label>Company Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Logo
+                            <span>ðŸ“</span> Upload Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1266,7 +1266,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Top Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Top Logo
+                            <span>ðŸ“</span> Upload Top Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1285,7 +1285,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceTopLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>âœ• Remove</button>
                           )}
                         </div>
                       </div>
@@ -1293,7 +1293,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Background Watermark Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Background Logo
+                            <span>ðŸ“</span> Upload Background Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1312,7 +1312,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceBackgroundLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>âœ• Remove</button>
                           )}
                         </div>
                       </div>
@@ -1320,7 +1320,7 @@ export default function PlatformAdmin() {
                   </>
                 )}
 
-                {/* ── TAB 1: Auth & Security ── */}
+                {/* â”€â”€ TAB 1: Auth & Security â”€â”€ */}
                 {activeTab === 1 && (
                   <>
                     <div className="form-section">
@@ -1357,7 +1357,7 @@ export default function PlatformAdmin() {
                   </>
                 )}
 
-                {/* ── TAB 2: Billing ── */}
+                {/* â”€â”€ TAB 2: Billing â”€â”€ */}
                 {activeTab === 2 && (
                   <>
                     <div className="form-section">
@@ -1412,7 +1412,7 @@ export default function PlatformAdmin() {
                   </>
                 )}
 
-                {/* ── TAB 3: Market Website ── */}
+                {/* â”€â”€ TAB 3: Market Website â”€â”€ */}
                 {activeTab === 3 && (
                   <>
                     <div className="form-section">
@@ -1430,7 +1430,7 @@ export default function PlatformAdmin() {
                         <input type="url" value={form.heroImage} placeholder="https://example.com/hero.jpg" onChange={(e) => onHeroImageUrlChange(e.target.value)} />
                       </div>
                       <label className="upload-btn-label" style={{ display: "inline-flex", marginBottom: 12 }}>
-                        <span>📁</span> Upload Hero Image
+                        <span>ðŸ“</span> Upload Hero Image
                         <input
                           type="file"
                           accept="image/*"
@@ -1488,7 +1488,7 @@ export default function PlatformAdmin() {
                   </>
                 )}
 
-                {/* ── TAB 4: System ── */}
+                {/* â”€â”€ TAB 4: System â”€â”€ */}
                 {activeTab === 4 && (
                   <>
                     <div className="form-section">
@@ -1512,7 +1512,7 @@ export default function PlatformAdmin() {
                           checked={form.active}
                           onChange={(e) => setF("active", e.target.checked)}
                         />
-                        <span><strong>Account is Active</strong> — uncheck to disable this client's access</span>
+                        <span><strong>Account is Active</strong> â€” uncheck to disable this client's access</span>
                       </label>
                     </div>
                   </>
@@ -1527,7 +1527,7 @@ export default function PlatformAdmin() {
                 </button>
                 {editingClient && !isCustomer && (
                   <button type="button" className="btn-danger" onClick={() => deleteClient()}>
-                    🗑 Delete Client
+                    ðŸ—‘ Delete Client
                   </button>
                 )}
                 <div style={{ flex: 1 }} />
@@ -1578,7 +1578,7 @@ export default function PlatformAdmin() {
                     color: signupView === v ? "white" : "var(--text-mid)",
                   }}
                 >
-                  {v === "active" ? "Active" : "🗄 Archive"}
+                  {v === "active" ? "Active" : "ðŸ—„ Archive"}
                 </button>
               ))}
             </div>
@@ -1604,7 +1604,7 @@ export default function PlatformAdmin() {
                       <div>
                         <strong>{req.email}</strong>
                         <div style={{ color: "#475569", fontSize: 13 }}>
-                          {[req.name, req.phone].filter(Boolean).join(" · ")}
+                          {[req.name, req.phone].filter(Boolean).join(" Â· ")}
                         </div>
                       </div>
                       <span style={{ color: statusColor, fontWeight: 600, fontSize: 12, textTransform: "capitalize", flexShrink: 0 }}>
@@ -1616,7 +1616,7 @@ export default function PlatformAdmin() {
                     </div>
                     {(cfg.companyName || cfg.city || cfg.gstNumber) && (
                       <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                        {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
+                        {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" Â· ")}
                       </div>
                     )}
                     <div className="modal-actions" style={{ marginTop: 10, justifyContent: "flex-start", flexWrap: "wrap", gap: 8 }}>
@@ -1631,25 +1631,25 @@ export default function PlatformAdmin() {
                           <button
                             className="btn-secondary"
                             style={{ fontSize: 13, padding: "8px 14px", marginLeft: "auto" }}
-                            title="Move to archive — data is preserved"
+                            title="Move to archive â€” data is preserved"
                             onClick={() => archiveRequest(req)}
                           >
-                            🗄 Archive
+                            ðŸ—„ Archive
                           </button>
                         </>
                       )}
                       {isArchived && (
                         <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}>
-                          ↩ Restore
+                          â†© Restore
                         </button>
                       )}
                       <button
                         className="btn-danger"
                         style={{ fontSize: 13, padding: "8px 14px" }}
-                        title="Permanently delete — cannot be undone"
+                        title="Permanently delete â€” cannot be undone"
                         onClick={() => deleteSignupRequest(req)}
                       >
-                        🗑 Delete
+                        ðŸ—‘ Delete
                       </button>
                     </div>
                   </div>
@@ -1667,10 +1667,10 @@ export default function PlatformAdmin() {
       {composeMail && (
         <div className="modal" style={{ display: "flex" }}>
           <div className="modal-content" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
-            <h3>✉ Compose Email</h3>
+            <h3>âœ‰ Compose Email</h3>
             {composeMail.req && (
               <p className="modal-hint">
-                Replying to <strong>{composeMail.req.email}</strong> — status: {composeMail.req.status}
+                Replying to <strong>{composeMail.req.email}</strong> â€” status: {composeMail.req.status}
               </p>
             )}
             <div className="modal-field">
