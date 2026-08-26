@@ -185,39 +185,9 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
         gst_percentage: 0,
       };
 
-      supabaseAdmin.from.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        single: vi.fn().mockResolvedValue({ data: mockQuotation, error: null }),
-      });
-
-      supabaseAdmin.from.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      });
-
-      supabaseAdmin.from.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      });
-
-      supabaseAdmin.from.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { config: { companyName: "Test" } },
-          error: null,
-        }),
-      });
+      supaGet
+        .mockResolvedValueOnce([mockQuotation])
+        .mockResolvedValueOnce([{ config: { companyName: "Test" } }]);
 
       const { GET } =
         await import("@/../app/api/console/quotations/[id]/pdf/route");
@@ -231,10 +201,23 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       await GET(request, { params: Promise.resolve({ id: "quote-1" }) });
 
       // Verify the quotation query includes client_id check
-      expect(supabaseAdmin.from).toHaveBeenCalledWith("quotations");
+      expect(supaGet).toHaveBeenCalledWith(
+        "quotations",
+        expect.objectContaining({
+          client_id: "eq.testclient",
+        }),
+      );
     });
 
     it("TC-ISO-006: Duplicate API scopes by client_id", async () => {
+      supaGet.mockResolvedValueOnce([
+        {
+          client_id: "testclient",
+          customer_name: "Test",
+          measured_items: [],
+          unmeasured_items: [],
+        },
+      ]);
       supaPost.mockResolvedValue([{ id: "new-quote", quote_no: "Q-002" }]);
 
       const { POST } =
@@ -250,22 +233,45 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       await POST(request, { params: Promise.resolve({ id: "quote-1" }) });
 
       // The duplicate route should scope by client_id
-      expect(supaPost).toHaveBeenCalled();
+      expect(supaGet).toHaveBeenCalledWith(
+        "quotations",
+        expect.objectContaining({
+          client_id: "eq.testclient",
+        }),
+      );
+      expect(supaPost).toHaveBeenCalledWith(
+        "quotations",
+        expect.objectContaining({
+          client_id: "testclient",
+        }),
+      );
     });
 
     it("TC-ISO-007: Bulk operations API scopes by client_id", async () => {
+      const id = "00000000-0000-4000-8000-000000000001";
+      supaGet.mockResolvedValue([{ id }]);
       supaPatch.mockResolvedValue({});
 
       const { POST } = await import("@/../app/api/console/bulk/route");
       const request = new NextRequest("http://localhost/api/console/bulk", {
         method: "POST",
         headers: { cookie: "session=test" },
-        body: JSON.stringify({ ids: ["quote-1"], action: "delete" }),
+        body: JSON.stringify({ ids: [id], action: "status", status: "sent" }),
       });
 
       await POST(request);
 
-      expect(supaPatch).toHaveBeenCalled();
+      expect(supaGet).toHaveBeenCalledWith(
+        "quotations",
+        expect.objectContaining({
+          client_id: "eq.testclient",
+        }),
+      );
+      expect(supaPatch).toHaveBeenCalledWith(
+        "quotations",
+        expect.objectContaining({ client_id: "eq.testclient" }),
+        { status: "sent" },
+      );
     });
   });
 
@@ -308,23 +314,27 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
         eq: vi.fn().mockReturnThis(),
         gt: vi.fn().mockReturnThis(),
         is: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: { quotation_id: "quote-1" },
+          error: null,
+        }),
+      });
+
+      supabaseAdmin.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: mockQuotation, error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
 
@@ -354,6 +364,13 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
     });
 
     it("TC-ISO-009: Public endpoint rejects invalid token", async () => {
+      supabaseAdmin.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      });
       const { GET } = await import("@/../app/api/quotation/[id]/route");
       const request = new NextRequest(
         "http://localhost/api/quotation/quote-1?token=invalid-token",
