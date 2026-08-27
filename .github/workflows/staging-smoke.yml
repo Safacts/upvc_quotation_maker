@@ -1,34 +1,24 @@
 name: Staging smoke gate
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       base_url:
         description: Vercel Preview URL to verify
         required: true
         type: string
-  deployment_status:
 
 jobs:
   smoke:
-    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Resolve probe target
         env:
-          RAW_URL: ${{ inputs.base_url || github.event.deployment_status.target_url }}
+          RAW_URL: ${{ inputs.base_url }}
         run: |
-          # GitHub creates deployments for jobs using `environment:`; their
-          # target_url is an Actions run PAGE on github.com, not our app.
-          # Probing it always 404s. Normalize those to the fixed staging domain.
-          if [[ -z "$RAW_URL" || "$RAW_URL" == https://github.com/* ]]; then
-            echo "target_url empty or a github.com page -> probing fixed staging domain"
-            echo "UPTIME_BASE_URL=https://vitharn-upvc-staging.vercel.app" >> "$GITHUB_ENV"
-            # Staging sits behind Vercel Authentication -> 302 is a healthy answer.
-            echo "UPTIME_ROUTES=/|200;302,/api/keepalive|200;302,/robots.txt|200;302,/sitemap.xml|200;302" >> "$GITHUB_ENV"
-          else
-            echo "Probing live deployment URL: $RAW_URL"
-            echo "UPTIME_BASE_URL=$RAW_URL" >> "$GITHUB_ENV"
-          fi
+          test -n "$RAW_URL"
+          echo "UPTIME_BASE_URL=$RAW_URL" >> "$GITHUB_ENV"
+          # Staging may sit behind Vercel Authentication; 302 is healthy.
+          echo "UPTIME_ROUTES=/|200;302,/api/keepalive|200;302,/robots.txt|200;302,/sitemap.xml|200;302" >> "$GITHUB_ENV"
       - name: Read-only staging probe
         run: node scripts/uptime-check.mjs

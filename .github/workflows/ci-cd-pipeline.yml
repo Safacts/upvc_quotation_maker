@@ -12,21 +12,13 @@ on:
       - deployment-v1
       - main
 
-  # Manual trigger for production (explicit approval required)
-  workflow_dispatch:
-    inputs:
-      target:
-        description: 'Deployment target'
-        required: true
-        type: choice
-        options:
-          - production
-
 env:
   NODE_VERSION: '20'
   VERCEL_ORG_ID_PRODUCTION: safacts-projects
+  VERCEL_TEAM_ID_PRODUCTION: team_mncs1Ldt5EkzBL6mvQTJMAaF
   VERCEL_PROJECT_ID_PRODUCTION: upvc_quotation_maker
   VERCEL_ORG_ID_STAGING: team_6RAErY2LmBVNuVTByAXyXlqt
+  VERCEL_TEAM_ID_STAGING: team_6RAErY2LmBVNuVTByAXyXlqt
   VERCEL_PROJECT_ID_STAGING: upvc_quotation_maker
 
 jobs:
@@ -76,8 +68,21 @@ jobs:
           # Fail if we find obvious violations (adjust threshold as needed)
           # For now just warn - can make this strict later
 
-      - name: Run tests (continue on error for pre-existing failures)
-        run: npx vitest run || true
+      - name: Verify deployment identity inputs
+        if: github.event_name == 'push'
+        env:
+          DEPLOYMENT_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          EXPECTED_SUPABASE_PROJECT_REF: ${{ github.ref == 'refs/heads/main' && 'jqjxhhgfwdzckijnnede' || 'vvkopgfumlideeslgbmk' }}
+          EXPECTED_VERCEL_TEAM: ${{ github.ref == 'refs/heads/main' && env.VERCEL_ORG_ID_PRODUCTION || env.VERCEL_ORG_ID_STAGING }}
+          EXPECTED_VERCEL_TEAM_ID: ${{ github.ref == 'refs/heads/main' && env.VERCEL_TEAM_ID_PRODUCTION || env.VERCEL_TEAM_ID_STAGING }}
+          EXPECTED_VERCEL_PROJECT: ${{ github.ref == 'refs/heads/main' && env.VERCEL_PROJECT_ID_PRODUCTION || env.VERCEL_PROJECT_ID_STAGING }}
+          SUPABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_URL || secrets.STAGING_SUPABASE_URL }}
+          VERCEL_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN_PRODUCTION || secrets.VERCEL_TOKEN_STAGING }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node scripts/verify-deployment-target.mjs
+
+      - name: Run tests
+        run: npx vitest run
 
       - name: Build Next.js (branch-aware env)
         env:
@@ -89,13 +94,19 @@ jobs:
           SUPABASE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run build
 
+  qa-gate:
+    name: Required QA gate
+    needs: test-and-build
+    uses: ./.github/workflows/qa-gate.yml
+
+
   # ============================================================
   # DEPLOY TO STAGING - AUTOMATIC on deployment-v1 push
   # Fixed domain: vitharn-upvc-staging.vercel.app
   # ============================================================
   deploy-staging:
     name: Deploy to Staging (vitharn-upvc-staging.vercel.app)
-    needs: test-and-build
+    needs: [test-and-build, qa-gate]
     if: github.ref == 'refs/heads/deployment-v1'
     runs-on: ubuntu-latest
     environment: staging
@@ -119,7 +130,19 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Build Flutter web bundle for Tokyo staging
+      - name: Verify staging deployment identity
+        env:
+          DEPLOYMENT_ENV: staging
+          EXPECTED_SUPABASE_PROJECT_REF: vvkopgfumlideeslgbmk
+          EXPECTED_VERCEL_TEAM: ${{ env.VERCEL_ORG_ID_STAGING }}
+          EXPECTED_VERCEL_TEAM_ID: ${{ env.VERCEL_TEAM_ID_STAGING }}
+          EXPECTED_VERCEL_PROJECT: ${{ env.VERCEL_PROJECT_ID_STAGING }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_STAGING }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node scripts/verify-deployment-target.mjs
+
+      - name: Build Flutter web bundle for staging
         env:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
@@ -204,163 +227,29 @@ jobs:
     name: Staging smoke test
     needs: deploy-staging
     if: github.ref == 'refs/heads/deployment-v1'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for deployment to be ready
-        run: sleep 10
-
-      - name: Smoke test staging URL
-        env:
-          STAGING_URL: https://vitharn-upvc-staging.vercel.app
-        run: |
-          echo "Testing staging deployment..."
-          # Test main page loads (302 = Vercel Auth redirect, 200 = direct access)
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" --max-time 30)
-          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
-            echo "::error::Staging main page returned $HTTP_CODE"
-            exit 1
-          fi
-          echo "✅ Main page: $HTTP_CODE"
-
-          # Test generic Flutter app routes (aligned with smoke-test-staging.ps1)
-          for route in "/upvc" "/upvc/pricing" "/upvc/pricing/show" "/upvc/login"; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL$route" --max-time 30)
-            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
-              echo "::error::Flutter route $route returned $HTTP_CODE"
-              exit 1
-            fi
-            echo "✅ Flutter route $route: $HTTP_CODE"
-          done
-
-          # Test public pages
-          for route in "/privacy" "/terms" "/login" "/signup"; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL$route" --max-time 30)
-            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
-              echo "::error::Public route $route returned $HTTP_CODE"
-              exit 1
-            fi
-            echo "✅ Public route $route: $HTTP_CODE"
-          done
-
-          # Test Umami analytics script loads (external dependency)
-          if HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://umami.novamymentor.cloud/umami.js" --max-time 15); then
-            :
-          else
-            HTTP_CODE=000
-          fi
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::Umami analytics returned $HTTP_CODE - external dependency may be down"
-          else
-            echo "✅ Umami analytics: 200"
-          fi
-
-          # Test API health (portal_auth returns 405 for POST without proper body)
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/portal_auth" -X POST -H "Content-Type: application/json" -d '{"mode":"session"}' --max-time 15)
-          if [ "$HTTP_CODE" != "405" ] && [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::API portal_auth returned $HTTP_CODE"
-          else
-            echo "✅ API health: $HTTP_CODE (expected 405 for POST without body)"
-          fi
-
-          # Test keepalive endpoint (critical for Supabase pause prevention)
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/api/keepalive" --max-time 15)
-          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ]; then
-            echo "::warning::API keepalive returned $HTTP_CODE"
-          else
-            echo "✅ API keepalive: $HTTP_CODE"
-          fi
-
-          echo "✅ All smoke tests passed"
+    uses: ./.github/workflows/staging-smoke.yml
+    with:
+      base_url: https://vitharn-upvc-staging.vercel.app
 
   # ============================================================
-  # DEPLOY TO PRODUCTION - MANUAL TRIGGER ONLY (your approval)
-  # Target: app.vitharn.com (PRODUCTION)
+  # PRODUCTION VERIFICATION - Vercel Git integration deploys main once
+  # Production promotion remains gated by Aadi's explicit approval.
   # ============================================================
-  deploy-production:
-    name: Deploy to Production (app.vitharn.com)
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'production'
+  verify-production:
+    name: Verify Production (app.vitharn.com)
+    needs: [test-and-build, qa-gate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Flutter web build
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.8'
-          channel: stable
-          cache: true
-
-      - name: Build Flutter web bundle for production
-        env:
-          PRODUCTION_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          PRODUCTION_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      - name: Wait for Vercel Git deployment
+        run: sleep 30
+      - name: Verify production routes
         run: |
-          flutter pub get
-          test -n "$PRODUCTION_SUPABASE_URL" || (echo "SUPABASE_URL production secret is missing" && exit 1)
-          test -n "$PRODUCTION_SUPABASE_ANON_KEY" || (echo "SUPABASE_ANON_KEY production secret is missing" && exit 1)
-          flutter build web --release --base-href /app/ \
-            --dart-define=SUPABASE_URL="$PRODUCTION_SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$PRODUCTION_SUPABASE_ANON_KEY"
-          rm -rf public/app
-          mkdir -p public/app
-          cp -R build/web/. public/app/
-
-      - name: Install Vercel CLI
-        run: npm i -g vercel@latest
-
-      - name: Link Vercel project (production)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
-        run: |
-          vercel link --yes --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }}
-
-      - name: Set runtime env on production Vercel project
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: |
-          echo "Writing runtime env vars into production Vercel project (preview,production targets)..."
-          echo "These are what the serverless functions read at runtime (build-step env is NOT enough)."
-          for pair in \
-            "SUPABASE_URL:$SUPABASE_URL" \
-            "SUPABASE_ANON_KEY:$SUPABASE_ANON_KEY" \
-            "SUPABASE_SERVICE_ROLE_KEY:$SUPABASE_SERVICE_ROLE_KEY" \
-            "SUPABASE_KEY:$SUPABASE_SERVICE_ROLE_KEY" \
-            "JWT_SECRET:$JWT_SECRET"; do
-            name="${pair%%:*}"; val="${pair#*:}"
-            echo "len($name)=${#val}"
-            # Set for both preview and production targets to cover custom domain alias
-            vercel env add "$name" preview,production \
-              --value "$val" --force --yes \
-              --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }} --token=$VERCEL_TOKEN
+          for route in "/" "/upvc" "/login" "/api/keepalive"; do
+            code=$(curl -L -s -o /dev/null -w "%{http_code}" "https://app.vitharn.com$route" --max-time 30)
+            if [ "$code" != "200" ] && [ "$code" != "302" ] && [ "$code" != "307" ]; then
+              echo "::error::Production route $route returned $code"
+              exit 1
+            fi
+            echo "Production route $route: $code"
           done
-          echo "Env vars configured."
-
-      - name: Deploy to Production (REQUIRES YOUR EXPLICIT APPROVAL)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_PRODUCTION }}
-        run: |
-          echo "=== PRODUCTION DEPLOYMENT CONFIRMED ==="
-          echo "Target: app.vitharn.com (PRODUCTION)"
-          echo "Branch: ${{ github.ref }}"
-          echo ""
-          echo "This deployment was explicitly triggered via workflow_dispatch."
-          echo "Deploying to PRODUCTION..."
-          vercel --token=$VERCEL_TOKEN \
-            --scope=${{ env.VERCEL_ORG_ID_PRODUCTION }} \
-            --prod=true \
-            --yes

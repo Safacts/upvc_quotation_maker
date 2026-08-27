@@ -1,9 +1,7 @@
 name: QA adversarial gate
 
 on:
-  pull_request:
-  push:
-    branches: [deployment-v1, main]
+  workflow_call:
 
 permissions:
   contents: read

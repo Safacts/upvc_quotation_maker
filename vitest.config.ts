@@ -56,6 +56,11 @@ export default defineConfig({
     // Route-handler tests mutate module-level env and rely on vi.mock; isolate
     // them so one suite cannot leak a mocked Supabase client into another.
     isolate: true,
+    // Some route-isolation suites import Next modules and exercise mocked
+    // PDF/database paths; on Windows the first import can exceed Vitest's
+    // 5-second default even when the test completes successfully. Keep the
+    // timeout bounded, but do not make these required tests false-green.
+    testTimeout: 15_000,
     reporters: ["default"],
     coverage: {
       provider: "v8",
