@@ -349,7 +349,7 @@ Only after Gate B passes and Aadi explicitly approves:
 
 ## 7. Current implementation status
 
-The safe local implementation batch is in progress on `development-v1`:
+The safe local implementation batch is complete and committed on `development-v1`:
 
 - this full plan file was added;
 - `docs/CI_CD_RELEASE_RUNBOOK.md` was added;
@@ -364,4 +364,6 @@ The safe local implementation batch is in progress on `development-v1`:
 - no Nova file was changed;
 - unrelated pre-existing dirty application/generated files remain unmodified and unstaged.
 
-The remaining work must continue on `development-v1`, preserve unrelated dirty files in the existing worktree, and stop before staging promotion for review.
+Validation completed locally: 599/599 Vitest tests passed after the bounded timeout correction, Next.js TypeScript/build passed, deployment preflight passed against both live Supabase/Vercel targets, YAML parsed successfully, and targeted secret scanning passed. Full Flutter analysis was attempted but did not complete within the local run window; it remains a CI validation item and was not bypassed or converted to warning-only.
+
+The implementation commit is `fee419f` (`chore: harden UPVC CI/CD delivery gates`) and is pushed only to `development-v1`. The remaining work is the approval-gated staging rehearsal, followed only after successful staging evidence by Aadi's explicit production approval.
