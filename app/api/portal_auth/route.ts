@@ -111,6 +111,19 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ba, bb);
 }
 
+function safeClientConfig(client: any) {
+  const config =
+    client?.config && typeof client.config === "object" && !Array.isArray(client.config)
+      ? client.config
+      : {};
+  const { portalPasswordHash: _passwordHash, supabaseAnonKey: _anonKey, ...safeConfig } = config;
+  return {
+    ...safeConfig,
+    clientId: client.id,
+    isActive: client.is_active,
+  };
+}
+
 async function findAdmin(email: string): Promise<any | null> {
   const rows = await supaGet("admins", {
     email: "eq." + email,
@@ -299,6 +312,7 @@ export async function POST(request: NextRequest) {
               role: "customer", 
               email: googleEmail, 
               client_id: client.id,
+              config: safeClientConfig(client),
               warning: "TRIAL_EXPIRING_SOON",
               daysRemaining,
               message: `Your trial expires in ${daysRemaining} day(s). Please contact Vitharn ERP Services to upgrade.`
@@ -307,7 +321,12 @@ export async function POST(request: NextRequest) {
         }
 
         await createSession({ role: "customer", email: googleEmail, client_id: client.id });
-        return json({ role: "customer", email: googleEmail, client_id: client.id }, 200);
+        return json({
+          role: "customer",
+          email: googleEmail,
+          client_id: client.id,
+          config: safeClientConfig(client),
+        }, 200);
       }
       const inactive = await findInactiveClientByEmail(googleEmail);
       if (inactive) {
@@ -392,6 +411,7 @@ export async function POST(request: NextRequest) {
             role: "customer", 
             email, 
             client_id: client.id,
+            config: safeClientConfig(client),
             warning: "TRIAL_EXPIRING_SOON",
             daysRemaining,
             message: `Your trial expires in ${daysRemaining} day(s). Please contact Vitharn ERP Services to upgrade.`
@@ -401,7 +421,12 @@ export async function POST(request: NextRequest) {
 
       await backfillPortalHash(client);
       await createSession({ role: "customer", email, client_id: client.id });
-      return json({ role: "customer", email, client_id: client.id }, 200);
+      return json({
+        role: "customer",
+        email,
+        client_id: client.id,
+        config: safeClientConfig(client),
+      }, 200);
     }
 
     if (!admin && !client) {

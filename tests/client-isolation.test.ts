@@ -525,7 +525,50 @@ describe("/api/reviews/[clientId]/manage — moderation surface", () => {
 });
 
 // ===========================================================================
-describe("/api/portal_settings — config writes", () => {
+describe("/api/portal_settings — private config reads and writes", () => {
+  it("returns only the session tenant config and removes stored secrets", async () => {
+    loginAs(customerA);
+    fixtures.clients = [{
+      id: TENANT_A,
+      config: {
+        companyName: "Venkateshwara Windows",
+        logoUrl: "https://example.com/logo.png",
+        portalPasswordHash: "secret-hash",
+        supabaseAnonKey: "secret-anon-key",
+      },
+      is_active: true,
+      trial_expires_at: "2026-12-31T00:00:00Z",
+    }];
+
+    const { GET } = await import("../app/api/portal_settings/route");
+    const res = await GET();
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      clientId: TENANT_A,
+      companyName: "Venkateshwara Windows",
+      logoUrl: "https://example.com/logo.png",
+      isActive: true,
+    });
+    expect(body).not.toHaveProperty("portalPasswordHash");
+    expect(body).not.toHaveProperty("supabaseAnonKey");
+    expect(calls).toContainEqual(expect.objectContaining({
+      op: "get",
+      table: "clients",
+      qs: expect.objectContaining({ id: "eq." + TENANT_A }),
+    }));
+    expectNoTraceOf(TENANT_B);
+  });
+
+  it("rejects anonymous private config reads", async () => {
+    loginAs(null);
+    const { GET } = await import("../app/api/portal_settings/route");
+    const res = await GET();
+    expect(res.status).toBe(401);
+    expect(calls).toEqual([]);
+  });
+
   it("writes only to the session tenant, ignoring a body-supplied id", async () => {
     loginAs(customerA);
     fixtures.clients = [{ id: TENANT_A, config: {} }];

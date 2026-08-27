@@ -1,6 +1,14 @@
 import 'package:http/browser_client.dart';
 import 'package:http/http.dart' as http;
 
+Future<http.Response> getWithCredentials(
+  Uri url, {
+  Map<String, String>? headers,
+}) {
+  final client = BrowserClient()..withCredentials = true;
+  return client.get(url, headers: headers).whenComplete(client.close);
+}
+
 /// Web: use BrowserClient with withCredentials=true so the HttpOnly
 /// session cookie is sent even for cross-origin dev (localhost:3000)
 /// and reliably for same-origin production. Without this, the

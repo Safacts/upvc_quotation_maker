@@ -87,6 +87,9 @@ describe("Auth Flows", () => {
               companyEmail: "customer@test.com",
               adminEmails: [],
               isPaid: true,
+              logoUrl: "https://example.com/logo.png",
+              portalPasswordHash: "secret-hash",
+              supabaseAnonKey: "secret-anon-key",
             },
             is_active: true,
             password_hash: "hash",
@@ -109,6 +112,13 @@ describe("Auth Flows", () => {
       expect(response.status).toBe(200);
       expect(data.role).toBe("customer");
       expect(data.client_id).toBe("client-1");
+      expect(data.config).toMatchObject({
+        clientId: "client-1",
+        logoUrl: "https://example.com/logo.png",
+        isActive: true,
+      });
+      expect(data.config).not.toHaveProperty("portalPasswordHash");
+      expect(data.config).not.toHaveProperty("supabaseAnonKey");
     });
 
     it("TC-AUTH-009: Rejects deactivated account", async () => {

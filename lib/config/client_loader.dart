@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'client_config.dart';
 import '../supabase_config.dart';
 import '../utils/jwt_verifier.dart';
+import '../utils/http_client.dart';
 
 import 'client_loader_html_stub.dart'
     if (dart.library.html) 'client_loader_html_web.dart' as loader_html;
@@ -94,7 +95,7 @@ class ClientLoader {
           if (validatedClientId != null) {
             // Clear fragment immediately after consumption
             _clearFragment();
-            
+
             // Check for tenant switch
             final currentClientId = await _getCurrentSessionClientId();
             if (currentClientId != null && currentClientId != validatedClientId) {
@@ -104,7 +105,7 @@ class ClientLoader {
                 currentClientId: currentClientId
               );
             }
-            
+
             final config = await _loadConfigForClient(validatedClientId);
             if (config != null) return config;
           }
@@ -154,6 +155,29 @@ class ClientLoader {
     } catch (_) {}
 
     return ClientConfig(clientId: rawId);
+  }
+
+  /// Load private tenant settings only after the server has validated the
+  /// HttpOnly portal session. Anonymous callers receive 401 and fall back to
+  /// the redacted public config.
+  static Future<ClientConfig?> loadAuthenticatedConfig(String clientId) async {
+    if (!kIsWeb || clientId.trim().isEmpty) return null;
+    try {
+      final response = await getWithCredentials(
+        Uri.parse('/api/portal_settings'),
+        headers: const {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return null;
+      final config = Map<String, dynamic>.from(decoded);
+      if ((config['clientId'] as String?)?.trim() != clientId.trim()) {
+        return null;
+      }
+      return ClientConfig.fromJson(config);
+    } catch (_) {
+      return null;
+    }
   }
 
   static String? _getFragmentSsoToken() {

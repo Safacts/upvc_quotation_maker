@@ -14,6 +14,7 @@ import 'crafted_widget.dart';
 import 'client_logo.dart';
 import 'google_signin.dart';
 import 'supabase_config.dart';
+import 'config/client_config.dart';
 import 'config/client_loader.dart';
 import 'umami_tracker.dart';
 import 'utils/http_client.dart';
@@ -133,7 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSession('true');
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
-          await _applyTenant(clientId);
+          await _applyTenant(
+            clientId,
+            authenticatedConfig: data['config'] as Map?,
+          );
         }
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -163,10 +167,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _applyTenant(String clientId) async {
+  Future<void> _applyTenant(
+    String clientId, {
+    Map<dynamic, dynamic>? authenticatedConfig,
+  }) async {
     final appState = Provider.of<AppState>(context, listen: false);
     try {
-      final config = await ClientLoader.loadConfig(clientId: clientId);
+      ClientConfig? config;
+      if (authenticatedConfig != null) {
+        final candidate = ClientConfig.fromJson(
+          Map<String, dynamic>.from(authenticatedConfig),
+        );
+        if (candidate.clientId.trim() == clientId.trim()) config = candidate;
+      }
+      config ??=
+          await ClientLoader.loadAuthenticatedConfig(clientId) ??
+          await ClientLoader.loadConfig(clientId: clientId);
       SupabaseConfig.client.headers['x-client-id'] = config.clientId;
       appState.applyClientConfig(config);
       await _writeSessionClientId(config.clientId);
@@ -341,7 +357,10 @@ class _LoginScreenState extends State<LoginScreen> {
         await _writeSessionPasswordHash(data['password_hash'] as String?);
         final clientId = (data['client_id'] as String?)?.trim();
         if (clientId != null && clientId.isNotEmpty) {
-          await _applyTenant(clientId);
+          await _applyTenant(
+            clientId,
+            authenticatedConfig: data['config'] as Map?,
+          );
         }
         if (!mounted) return;
         Navigator.pushReplacement(
