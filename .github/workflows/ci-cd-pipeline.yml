@@ -190,8 +190,14 @@ jobs:
             # --value and --yes avoid the interactive CLI prompt, which can
             # silently fall back to Production when run without a TTY.
             # Preview is the target used by the staging deployment.
+            # NEXT_PUBLIC_* must be --type config (exposed to browser); others are secret.
+            if [[ "$name" == NEXT_PUBLIC_* ]]; then
+              env_type="config"
+            else
+              env_type="secret"
+            fi
             vercel env add "$name" preview,production \
-              --value "$val" --force --yes \
+              --value "$val" --force --yes --type "$env_type" \
               --scope=${{ env.VERCEL_ORG_ID_STAGING }} --token=$VERCEL_TOKEN
           done
           echo "Env vars configured."
