@@ -92,6 +92,8 @@ jobs:
           SUPABASE_ANON_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_ANON_KEY || secrets.STAGING_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
           SUPABASE_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_SERVICE_ROLE_KEY || secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_URL || secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ github.ref == 'refs/heads/main' && secrets.SUPABASE_ANON_KEY || secrets.STAGING_SUPABASE_ANON_KEY }}
         run: npm run build
 
   qa-gate:
@@ -180,6 +182,8 @@ jobs:
             "SUPABASE_ANON_KEY:$STAGING_SUPABASE_ANON_KEY" \
             "SUPABASE_SERVICE_ROLE_KEY:$STAGING_SUPABASE_SERVICE_ROLE_KEY" \
             "SUPABASE_KEY:$STAGING_SUPABASE_SERVICE_ROLE_KEY" \
+            "NEXT_PUBLIC_SUPABASE_URL:$STAGING_SUPABASE_URL" \
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY:$STAGING_SUPABASE_ANON_KEY" \
             "JWT_SECRET:$JWT_SECRET"; do
             name="${pair%%:*}"; val="${pair#*:}"
             echo "len($name)=${#val}"
