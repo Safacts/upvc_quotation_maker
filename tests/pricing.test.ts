@@ -272,6 +272,34 @@ describe("quotationTotals() — the only sanctioned grand total", () => {
     );
     expect(t.gstAmount).toBeCloseTo(120, 9);
   });
+
+  it("matches the KPR quotation calculation and display rounding", () => {
+    const t = quotationTotals(
+      { transport_cost: 1000, include_gst: true, gst_percentage: 18 },
+      [{ width: 55, height: 55, units: 55, rate: 55 }],
+      [],
+    );
+
+    expect(t.totalSqft).toBeCloseTo(1.79084559558008, 12);
+    expect(t.subtotal).toBeCloseTo(98.49650775690439, 12);
+    expect(t.gstAmount).toBeCloseTo(197.72937139624275, 12);
+    expect(t.grandTotal).toBeCloseTo(1296.2258791531472, 12);
+    expect(t.subtotal.toFixed(2)).toBe("98.50");
+    expect(t.gstAmount.toFixed(2)).toBe("197.73");
+    expect(t.grandTotal.toFixed(2)).toBe("1296.23");
+  });
+
+  it("supports an explicitly entered negative unmeasured adjustment", () => {
+    const t = quotationTotals(
+      { transport_cost: 0, include_gst: true, gst_percentage: 18 },
+      [],
+      [{ units: 1, rate: -10000 }],
+    );
+
+    expect(t.totalUnmeasured).toBe(-10000);
+    expect(t.gstAmount).toBe(-1800);
+    expect(t.grandTotal).toBe(-11800);
+  });
 });
 
 describe("PRICING_PARITY_FIXTURES — Dart <-> TypeScript contract", () => {
