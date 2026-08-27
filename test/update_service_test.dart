@@ -37,18 +37,30 @@ void main() {
     test('versionCode is authoritative when both codes are present', () {
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 2, installedCode: 1, latestName: '1.0.0', installedName: '1.0.0'),
+          latestCode: 2,
+          installedCode: 1,
+          latestName: '1.0.0',
+          installedName: '1.0.0',
+        ),
         isTrue,
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 1, installedCode: 1, latestName: '2.0.0', installedName: '1.0.0'),
+          latestCode: 1,
+          installedCode: 1,
+          latestName: '2.0.0',
+          installedName: '1.0.0',
+        ),
         isFalse,
         reason: 'equal codes = same build, never an update',
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 1, installedCode: 2, latestName: '9.9.9', installedName: '1.0.0'),
+          latestCode: 1,
+          installedCode: 2,
+          latestName: '9.9.9',
+          installedName: '1.0.0',
+        ),
         isFalse,
         reason: 'installed code is HIGHER — published is older',
       );
@@ -57,23 +69,39 @@ void main() {
     test('semver name comparison is the fallback when codes are missing', () {
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 0, installedCode: 0, latestName: '1.2.3', installedName: '1.2.0'),
+          latestCode: 0,
+          installedCode: 0,
+          latestName: '1.2.3',
+          installedName: '1.2.0',
+        ),
         isTrue,
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 0, installedCode: 0, latestName: '1.2.3', installedName: '1.2.3'),
+          latestCode: 0,
+          installedCode: 0,
+          latestName: '1.2.3',
+          installedName: '1.2.3',
+        ),
         isFalse,
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 0, installedCode: 0, latestName: '1.2', installedName: '1.2.0'),
+          latestCode: 0,
+          installedCode: 0,
+          latestName: '1.2',
+          installedName: '1.2.0',
+        ),
         isFalse,
         reason: '1.2 == 1.2.0 (missing parts count as 0)',
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 0, installedCode: 0, latestName: '1.2.3-beta', installedName: '1.2.3'),
+          latestCode: 0,
+          installedCode: 0,
+          latestName: '1.2.3-beta',
+          installedName: '1.2.3',
+        ),
         isFalse,
         reason: 'non-numeric suffix parses to 0, so names compare equal',
       );
@@ -82,7 +110,11 @@ void main() {
     test('unknown installed version with a published APK → update needed', () {
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 2, installedCode: 0, latestName: '1.0.1', installedName: ''),
+          latestCode: 2,
+          installedCode: 0,
+          latestName: '1.0.1',
+          installedName: '',
+        ),
         isTrue,
       );
     });
@@ -92,12 +124,20 @@ void main() {
       // users on older builds while CI has published v1.0.14 / code 14.
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 14, installedCode: 12, latestName: '1.0.14', installedName: '1.0.12'),
+          latestCode: 14,
+          installedCode: 12,
+          latestName: '1.0.14',
+          installedName: '1.0.12',
+        ),
         isTrue,
       );
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 14, installedCode: 11, latestName: '1.0.14', installedName: '1.0.11'),
+          latestCode: 14,
+          installedCode: 11,
+          latestName: '1.0.14',
+          installedName: '1.0.11',
+        ),
         isTrue,
         reason: 'v1.0.11 fleet devices must also be prompted',
       );
@@ -108,13 +148,19 @@ void main() {
       // reintroduces a string comparison this assertion catches it.
       expect(
         UpdateInfo.isVersionNewer(
-            latestCode: 14, installedCode: 9, latestName: '1.0.14', installedName: '1.0.9'),
+          latestCode: 14,
+          installedCode: 9,
+          latestName: '1.0.14',
+          installedName: '1.0.9',
+        ),
         isTrue,
       );
     });
 
     test('UpdateInfo.fromConfig maps the client config fields', () {
-      final info = UpdateInfo.fromConfig(configWith(notes: 'Fixed crash', force: true));
+      final info = UpdateInfo.fromConfig(
+        configWith(notes: 'Fixed crash', force: true),
+      );
       expect(info.versionName, '1.0.1');
       expect(info.versionCode, 2);
       expect(info.releaseNotes, 'Fixed crash');
@@ -136,8 +182,7 @@ void main() {
       service.dispose();
     });
 
-    Future<List<AutoUpdateEvent>> check(
-        {required ClientConfig config}) async {
+    Future<List<AutoUpdateEvent>> check({required ClientConfig config}) async {
       final events = <AutoUpdateEvent>[];
       final sub = service.events.listen(events.add);
       try {
@@ -219,8 +264,9 @@ void main() {
 
     test('dismissed code is restored on initialize (new session)', () async {
       // Simulate the prefs left by a previous session.
-      SharedPreferences.setMockInitialValues(
-          {'auto_update_dismissed_version_code': '2'});
+      SharedPreferences.setMockInitialValues({
+        'auto_update_dismissed_version_code': '2',
+      });
       final fresh = AutoUpdateService();
       fresh.debugSetIsNative(true);
       fresh.debugSetInstalledVersionProvider(() async => installedVersion);
@@ -236,8 +282,11 @@ void main() {
       } finally {
         await sub.cancel();
       }
-      expect(events.whereType<UpdateAvailableEvent>(), isEmpty,
-          reason: 'restored dismissal must suppress the re-offer');
+      expect(
+        events.whereType<UpdateAvailableEvent>(),
+        isEmpty,
+        reason: 'restored dismissal must suppress the re-offer',
+      );
       fresh.dispose();
     });
   });
@@ -278,85 +327,129 @@ void main() {
       expect(cfg.appDownloadUrl, '');
       expect(cfg.forceUpdate, isFalse);
     });
+
+    test('client_public stringified branding payload remains usable', () {
+      final cfg = ClientConfig.fromJson(const {
+        'clientId': 'venkateshwara',
+        'appName': 'Venkateshwara UPVC Quote',
+        'companyName': 'Venkateshwara UPVC',
+        'logoUrl': 'https://example.com/logo.png',
+        'primaryColor': '4284704497',
+        'accentColor': '4293675161',
+        'defaultGstPercentage': '18',
+        'isActive': 'true',
+        'termsAndConditions': '["Advance required", "Valid for 15 days"]',
+        'landingServices': '["UPVC Windows", "UPVC Doors"]',
+        'landingTestimonials': '[]',
+      });
+
+      expect(cfg.companyName, 'Venkateshwara UPVC');
+      expect(cfg.logoUrl, 'https://example.com/logo.png');
+      expect(cfg.primaryColor.toARGB32(), 4284704497);
+      expect(cfg.accentColor.toARGB32(), 4293675161);
+      expect(cfg.defaultGstPercentage, 18);
+      expect(cfg.isActive, isTrue);
+      expect(cfg.termsAndConditions, ['Advance required', 'Valid for 15 days']);
+      expect(cfg.landingServices, ['UPVC Windows', 'UPVC Doors']);
+    });
   });
 
-  group('fleet update scenario end-to-end (installed 11/12 → published 14)', () {
-    late AutoUpdateService service;
+  group(
+    'fleet update scenario end-to-end (installed 11/12 → published 14)',
+    () {
+      late AutoUpdateService service;
 
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-      service = AutoUpdateService();
-      service.debugSetIsNative(true);
-    });
+      setUp(() {
+        SharedPreferences.setMockInitialValues({});
+        service = AutoUpdateService();
+        service.debugSetIsNative(true);
+      });
 
-    tearDown(() {
-      service.dispose();
-    });
+      tearDown(() {
+        service.dispose();
+      });
 
-    Future<List<AutoUpdateEvent>> check(ClientConfig config) async {
-      final events = <AutoUpdateEvent>[];
-      final sub = service.events.listen(events.add);
-      try {
-        await service.checkNow(config: config);
-        await pumpEventQueue();
-      } finally {
-        await sub.cancel();
+      Future<List<AutoUpdateEvent>> check(ClientConfig config) async {
+        final events = <AutoUpdateEvent>[];
+        final sub = service.events.listen(events.add);
+        try {
+          await service.checkNow(config: config);
+          await pumpEventQueue();
+        } finally {
+          await sub.cancel();
+        }
+        return events;
       }
-      return events;
-    }
 
-    test('device on v1.0.11 gets an UpdateAvailableEvent for v1.0.14', () async {
-      service.debugSetInstalledVersionProvider(
-          () async => (version: '1.0.11', buildNumber: 11));
-      final cfg = ClientConfig.fromJson(const {
-        'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
-        'appVersionName': '1.0.14',
-        'appVersionCode': 14,
-      });
+      test(
+        'device on v1.0.11 gets an UpdateAvailableEvent for v1.0.14',
+        () async {
+          service.debugSetInstalledVersionProvider(
+            () async => (version: '1.0.11', buildNumber: 11),
+          );
+          final cfg = ClientConfig.fromJson(const {
+            'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
+            'appVersionName': '1.0.14',
+            'appVersionCode': 14,
+          });
 
-      final events = await check(cfg);
-      final available = events.whereType<UpdateAvailableEvent>().toList();
-      expect(available, hasLength(1));
-      expect(available.single.info.versionCode, 14);
-      expect(available.single.info.versionName, '1.0.14');
-      expect(service.pendingUpdate?.downloadUrl,
-          'https://example.com/app-releases/v14.apk');
-    });
+          final events = await check(cfg);
+          final available = events.whereType<UpdateAvailableEvent>().toList();
+          expect(available, hasLength(1));
+          expect(available.single.info.versionCode, 14);
+          expect(available.single.info.versionName, '1.0.14');
+          expect(
+            service.pendingUpdate?.downloadUrl,
+            'https://example.com/app-releases/v14.apk',
+          );
+        },
+      );
 
-    test('string-typed published code from a raw DB row still prompts', () async {
-      service.debugSetInstalledVersionProvider(
-          () async => (version: '1.0.11', buildNumber: 11));
-      // Simulates config->>'appVersionCode' arriving as a JSON string.
-      final cfg = ClientConfig.fromJson(const {
-        'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
-        'appVersionName': '1.0.14',
-        'appVersionCode': '14',
-      });
+      test(
+        'string-typed published code from a raw DB row still prompts',
+        () async {
+          service.debugSetInstalledVersionProvider(
+            () async => (version: '1.0.11', buildNumber: 11),
+          );
+          // Simulates config->>'appVersionCode' arriving as a JSON string.
+          final cfg = ClientConfig.fromJson(const {
+            'appDownloadUrl': 'https://example.com/app-releases/v14.apk',
+            'appVersionName': '1.0.14',
+            'appVersionCode': '14',
+          });
 
-      final events = await check(cfg);
-      expect(events.whereType<UpdateAvailableEvent>(), hasLength(1),
-          reason: 'a string-typed code must never silently suppress the prompt');
-    });
-  });
+          final events = await check(cfg);
+          expect(
+            events.whereType<UpdateAvailableEvent>(),
+            hasLength(1),
+            reason:
+                'a string-typed code must never silently suppress the prompt',
+          );
+        },
+      );
+    },
+  );
 
   group('AutoUpdateService.downloadAndInstall', () {
-    test('no publish URL → DownloadFailedEvent (deterministic on test host)',
-        () async {
-      final service = AutoUpdateService();
-      service.debugSetIsNative(true);
-      service.debugSetInstalledVersionProvider(() async => installedVersion);
+    test(
+      'no publish URL → DownloadFailedEvent (deterministic on test host)',
+      () async {
+        final service = AutoUpdateService();
+        service.debugSetIsNative(true);
+        service.debugSetInstalledVersionProvider(() async => installedVersion);
 
-      final events = <AutoUpdateEvent>[];
-      final sub = service.events.listen(events.add);
-      try {
-        final ok = await service.downloadAndInstall();
-        await pumpEventQueue();
-        expect(ok, isFalse);
-        expect(events.whereType<DownloadFailedEvent>(), hasLength(1));
-      } finally {
-        await sub.cancel();
-        service.dispose();
-      }
-    });
+        final events = <AutoUpdateEvent>[];
+        final sub = service.events.listen(events.add);
+        try {
+          final ok = await service.downloadAndInstall();
+          await pumpEventQueue();
+          expect(ok, isFalse);
+          expect(events.whereType<DownloadFailedEvent>(), hasLength(1));
+        } finally {
+          await sub.cancel();
+          service.dispose();
+        }
+      },
+    );
   });
 }

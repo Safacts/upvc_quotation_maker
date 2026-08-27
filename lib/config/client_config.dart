@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 class ClientConfig {
@@ -45,7 +47,7 @@ class ClientConfig {
   final bool enableRateCard;
   final List<Map<String, dynamic>> measuredPresets;
   final List<Map<String, dynamic>> unmeasuredPresets;
-  
+
   // Custom Download Links
   final String appDownloadUrl;
 
@@ -112,7 +114,12 @@ class ClientConfig {
     this.landingHeroSubtitle = 'Quality UPVC solutions for your home',
     this.landingHeroImage = '',
     this.landingFeatures = const [],
-    this.landingServices = const ['UPVC Windows', 'UPVC Doors', 'Glass Installation', 'Repairs & Maintenance'],
+    this.landingServices = const [
+      'UPVC Windows',
+      'UPVC Doors',
+      'Glass Installation',
+      'Repairs & Maintenance',
+    ],
     this.landingGallery = const [],
     this.landingMapUrl = '',
     this.landingAboutTitle = '',
@@ -143,7 +150,11 @@ class ClientConfig {
     required String currentClientId,
   }) = SsoPendingClientConfig;
 
-  String get termsAsString => termsAndConditions.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n');
+  String get termsAsString => termsAndConditions
+      .asMap()
+      .entries
+      .map((e) => '${e.key + 1}. ${e.value}')
+      .join('\n');
 
   /// jsonb tolerance helpers. A config writer that stores `"appVersionCode": "14"`
   /// (string) or a non-string in ANY of these fields must not silently zero the
@@ -154,13 +165,85 @@ class ClientConfig {
     return 0;
   }
 
+  static int _asIntOr(Object? v, int fallback) {
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v.trim()) ?? fallback;
+    return fallback;
+  }
+
+  static double _asDoubleOr(Object? v, double fallback) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v.trim()) ?? fallback;
+    return fallback;
+  }
+
   static String _asString(Object? v) => v == null ? '' : v.toString();
+
+  static String _asStringOr(Object? v, String fallback) {
+    if (v == null) return fallback;
+    final value = v.toString();
+    return value.isEmpty ? fallback : value;
+  }
 
   static bool _asBool(Object? v) {
     if (v is bool) return v;
     if (v is num) return v != 0;
     if (v is String) return v.trim().toLowerCase() == 'true' || v.trim() == '1';
     return false;
+  }
+
+  static bool _asBoolOr(Object? v, bool fallback) {
+    if (v == null) return fallback;
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final value = v.trim().toLowerCase();
+      if (value == 'true' || value == '1') return true;
+      if (value == 'false' || value == '0') return false;
+    }
+    return fallback;
+  }
+
+  static List<dynamic>? _asList(Object? value) {
+    if (value is List) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is List) return decoded;
+      } catch (_) {
+        return [value];
+      }
+    }
+    return null;
+  }
+
+  static List<String> _asStringList(
+    Object? value, {
+    List<String> fallback = const [],
+  }) {
+    if (value == null) return fallback;
+    final list = _asList(value);
+    if (list == null) return fallback;
+    return list.map((item) => item.toString()).toList();
+  }
+
+  static List<Map<String, dynamic>> _asDynamicMapList(Object? value) {
+    final list = _asList(value);
+    if (list == null) return const [];
+    return list
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  static List<Map<String, String>> _asStringMapList(Object? value) {
+    final list = _asList(value);
+    if (list == null) return const [];
+    return list.whereType<Map>().map((item) {
+      return item.map(
+        (key, mapValue) => MapEntry(key.toString(), mapValue.toString()),
+      );
+    }).toList();
   }
 
   /// Payee name for UPI, never blank when a company name exists.
@@ -206,7 +289,8 @@ class ClientConfig {
     'landingMapUrl': landingMapUrl,
     'landingAboutTitle': landingAboutTitle,
     'landingAboutText': landingAboutText,
-    'landingTestimonials': landingTestimonials.map((t) => Map<String, String>.from(t)).toList(),
+    'landingTestimonials':
+        landingTestimonials.map((t) => Map<String, String>.from(t)).toList(),
     'landingCTA': landingCTA,
     'landingFooter': landingFooter,
     'costMarginPercent': costMarginPercent,
@@ -225,61 +309,91 @@ class ClientConfig {
   };
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) => ClientConfig(
-    clientId: json['clientId'] as String? ?? 'default',
-    appName: json['appName'] as String? ?? 'UPVC Quotation Maker',
-    companyName: json['companyName'] as String? ?? '',
-    companyAddress: json['companyAddress'] as String? ?? '',
-    companyContact: json['companyContact'] as String? ?? '',
-    companyEmail: json['companyEmail'] as String? ?? '',
-    companyProprietor: json['companyProprietor'] as String? ?? '',
-    gstNumber: json['gstNumber'] as String? ?? '',
-    bankName: json['bankName'] as String? ?? '',
-    bankBranch: json['bankBranch'] as String? ?? '',
-    bankAccountNo: json['bankAccountNo'] as String? ?? '',
-    bankIfsc: json['bankIfsc'] as String? ?? '',
-    termsAndConditions: (json['termsAndConditions'] as List?)?.cast<String>() ?? const [],
-    defaultGstPercentage: (json['defaultGstPercentage'] as num?)?.toDouble() ?? 18.0,
-    quotePrefix: json['quotePrefix'] as String? ?? '',
-    logoUrl: json['logoUrl'] as String? ?? '',
-    invoiceTopLogoUrl: json['invoiceTopLogoUrl'] as String? ?? '',
-    invoiceBackgroundLogoUrl: json['invoiceBackgroundLogoUrl'] as String? ?? '',
-    portalPasswordHash: json['portalPasswordHash'] as String? ?? '',
-    primaryColor: Color(json['primaryColor'] as int? ?? 0xFF6366F1),
-    accentColor: Color(json['accentColor'] as int? ?? 0xFFEC4899),
-    trialExpiresAt: json['trialExpiresAt'] != null ? DateTime.tryParse(json['trialExpiresAt']) : null,
-    isActive: json['isActive'] as bool? ?? true,
-    supabaseUrl: json['supabaseUrl'] as String? ?? 'https://jqjxhhgfwdzckijnnede.supabase.co',
-    supabaseAnonKey: json['supabaseAnonKey'] as String? ?? '',
-    adminEmails: (json['adminEmails'] as List?)?.cast<String>() ?? ['vitarn.dev@gmail.com'],
-    landingHeroTitle: json['landingHeroTitle'] as String? ?? '',
-    landingHeroSubtitle: json['landingHeroSubtitle'] as String? ?? 'Quality UPVC solutions for your home',
-    landingHeroImage: json['landingHeroImage'] as String? ?? '',
-    landingFeatures: (json['landingFeatures'] as List?)?.cast<String>() ?? const [],
-    landingServices: (json['landingServices'] as List?)?.cast<String>() ?? const ['UPVC Windows', 'UPVC Doors', 'Glass Installation', 'Repairs & Maintenance'],
-    landingGallery: (json['landingGallery'] as List?)?.cast<String>() ?? const [],
-    landingMapUrl: json['landingMapUrl'] as String? ?? '',
-    landingAboutTitle: json['landingAboutTitle'] as String? ?? '',
-    landingAboutText: json['landingAboutText'] as String? ?? '',
-    landingTestimonials: (json['landingTestimonials'] as List?)?.map((e) => Map<String, String>.from(e as Map)).toList() ?? const [],
-    landingCTA: json['landingCTA'] as String? ?? '',
-    landingFooter: json['landingFooter'] as String? ?? '',
-    costMarginPercent: (json['costMarginPercent'] ?? json['cost_margin_percent'] as num?)?.toDouble() ?? 65.0,
-    enablePricePresets: json['enablePricePresets'] as bool? ?? false,
-    enableRateCard: json['enableRateCard'] as bool? ?? false,
-    measuredPresets: (json['measuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
-    unmeasuredPresets: (json['unmeasuredPresets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? const [],
-    appDownloadUrl: _asString(json['appDownloadUrl'] ?? json['app_download_url']),
+    clientId: _asStringOr(json['clientId'], 'default'),
+    appName: _asStringOr(json['appName'], 'UPVC Quotation Maker'),
+    companyName: _asString(json['companyName']),
+    companyAddress: _asString(json['companyAddress']),
+    companyContact: _asString(json['companyContact']),
+    companyEmail: _asString(json['companyEmail']),
+    companyProprietor: _asString(json['companyProprietor']),
+    gstNumber: _asString(json['gstNumber']),
+    bankName: _asString(json['bankName']),
+    bankBranch: _asString(json['bankBranch']),
+    bankAccountNo: _asString(json['bankAccountNo']),
+    bankIfsc: _asString(json['bankIfsc']),
+    termsAndConditions: _asStringList(json['termsAndConditions']),
+    defaultGstPercentage: _asDoubleOr(json['defaultGstPercentage'], 18.0),
+    quotePrefix: _asString(json['quotePrefix']),
+    logoUrl: _asString(json['logoUrl']),
+    invoiceTopLogoUrl: _asString(json['invoiceTopLogoUrl']),
+    invoiceBackgroundLogoUrl: _asString(json['invoiceBackgroundLogoUrl']),
+    portalPasswordHash: _asString(json['portalPasswordHash']),
+    primaryColor: Color(_asIntOr(json['primaryColor'], 0xFF6366F1)),
+    accentColor: Color(_asIntOr(json['accentColor'], 0xFFEC4899)),
+    trialExpiresAt:
+        json['trialExpiresAt'] != null
+            ? DateTime.tryParse(json['trialExpiresAt'].toString())
+            : null,
+    isActive: _asBoolOr(json['isActive'], true),
+    supabaseUrl: _asStringOr(
+      json['supabaseUrl'],
+      'https://jqjxhhgfwdzckijnnede.supabase.co',
+    ),
+    supabaseAnonKey: _asString(json['supabaseAnonKey']),
+    adminEmails: _asStringList(
+      json['adminEmails'],
+      fallback: const ['vitarn.dev@gmail.com'],
+    ),
+    landingHeroTitle: _asString(json['landingHeroTitle']),
+    landingHeroSubtitle: _asStringOr(
+      json['landingHeroSubtitle'],
+      'Quality UPVC solutions for your home',
+    ),
+    landingHeroImage: _asString(json['landingHeroImage']),
+    landingFeatures: _asStringList(json['landingFeatures']),
+    landingServices: _asStringList(
+      json['landingServices'],
+      fallback: const [
+        'UPVC Windows',
+        'UPVC Doors',
+        'Glass Installation',
+        'Repairs & Maintenance',
+      ],
+    ),
+    landingGallery: _asStringList(json['landingGallery']),
+    landingMapUrl: _asString(json['landingMapUrl']),
+    landingAboutTitle: _asString(json['landingAboutTitle']),
+    landingAboutText: _asString(json['landingAboutText']),
+    landingTestimonials: _asStringMapList(json['landingTestimonials']),
+    landingCTA: _asString(json['landingCTA']),
+    landingFooter: _asString(json['landingFooter']),
+    costMarginPercent: _asDoubleOr(
+      json['costMarginPercent'] ?? json['cost_margin_percent'],
+      65.0,
+    ),
+    enablePricePresets: _asBool(json['enablePricePresets']),
+    enableRateCard: _asBool(json['enableRateCard']),
+    measuredPresets: _asDynamicMapList(json['measuredPresets']),
+    unmeasuredPresets: _asDynamicMapList(json['unmeasuredPresets']),
+    appDownloadUrl: _asString(
+      json['appDownloadUrl'] ?? json['app_download_url'],
+    ),
     // Version fields for the in-app APK updater. Tolerate camelCase config
     // writes and snake_case raw DB rows, like costMarginPercent above.
-    appVersionName: _asString(json['appVersionName'] ?? json['app_version_name']),
+    appVersionName: _asString(
+      json['appVersionName'] ?? json['app_version_name'],
+    ),
     appVersionCode: _asInt(json['appVersionCode'] ?? json['app_version_code']),
-    appReleaseNotes: _asString(json['appReleaseNotes'] ?? json['app_release_notes']),
+    appReleaseNotes: _asString(
+      json['appReleaseNotes'] ?? json['app_release_notes'],
+    ),
     forceUpdate: _asBool(json['forceUpdate'] ?? json['force_update']),
-    supplierCompanies: (json['supplierCompanies'] as List?)?.cast<String>() ?? const [],
+    supplierCompanies: _asStringList(json['supplierCompanies']),
     // Accept both camelCase (app/console config) and snake_case (raw DB row),
     // matching the tolerance already applied to costMarginPercent above.
     upiId: (json['upiId'] ?? json['upi_id']) as String? ?? '',
-    upiPayeeName: (json['upiPayeeName'] ?? json['upi_payee_name']) as String? ?? '',
+    upiPayeeName:
+        (json['upiPayeeName'] ?? json['upi_payee_name']) as String? ?? '',
   );
 }
 
@@ -288,13 +402,8 @@ class SsoPendingClientConfig extends ClientConfig {
   const SsoPendingClientConfig({
     required super.clientId,
     required String currentClientId,
-  }) : super(
-          isSsoPending: true,
-          ssoCurrentClientId: currentClientId,
-        );
+  }) : super(isSsoPending: true, ssoCurrentClientId: currentClientId);
 
   @override
   bool get isSsoPending => true;
-
 }
-
