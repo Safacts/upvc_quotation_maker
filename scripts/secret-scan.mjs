@@ -23,6 +23,10 @@ const allowlist = {
   "tests/api-quotation.test.ts": ["credential assignment"],
   // PUBLIC anon key baked for client bundles (role=anon, RLS is the boundary).
   "src/lib/supabase-public.ts": ["JWT"],
+  // PUBLIC anon key baked for the Flutter client bundle (role=anon, RLS is the boundary).
+  "lib/config/client_config.dart": ["JWT"],
+  // Test-only fake Google credential strings; no live credential is used.
+  "tests/auth_flows.test.ts": ["credential assignment"],
 };
 const patterns = [
   { name: "private key", re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
