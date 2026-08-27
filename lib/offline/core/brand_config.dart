@@ -147,7 +147,7 @@ class BrandConfig {
   String get termsAsString => termsAndConditions
       .asMap()
       .entries
-      .map((e) => '${e.key + 1}. ${e.value}')
+      .map((e) => '${e.key + 1}. ${e.value.replaceFirst(RegExp(r'^\s*(?:\d+\s*[.)]\s*)+'), '')}')
       .join('\n');
 
   BrandConfig copyWith({

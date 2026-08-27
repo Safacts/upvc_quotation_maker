@@ -153,7 +153,9 @@ class ClientConfig {
   String get termsAsString => termsAndConditions
       .asMap()
       .entries
-      .map((e) => '${e.key + 1}. ${e.value}')
+      // Config rows may already contain a stored list number. Strip it before
+      // applying the renderer's single authoritative numbering pass.
+      .map((e) => '${e.key + 1}. ${e.value.replaceFirst(RegExp(r'^\s*(?:\d+\s*[.)]\s*)+'), '')}')
       .join('\n');
 
   /// jsonb tolerance helpers. A config writer that stores `"appVersionCode": "14"`
