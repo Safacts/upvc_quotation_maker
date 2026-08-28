@@ -16,10 +16,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-# Bumped 25-08-2026 to mirror the highest APK version shipped this release
-# wave (venkateshwara v1.0.9 / code 10). CI overrides via --build-name and
+# Bumped 28-08-2026 to mirror the highest APK version shipped this release
+# wave (kprupvc/venkateshwara v1.0.15 / code 15). CI overrides via --build-name and
 # --build-number per client; this keeps the in-repo default >= every fleet code.
-version: 1.0.9+10
+version: 1.0.15+15
 
 environment:
   sdk: ^3.7.2
