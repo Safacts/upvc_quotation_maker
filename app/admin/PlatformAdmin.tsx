@@ -299,8 +299,22 @@ export default function PlatformAdmin() {
       const clientId = localStorage.getItem("portal_client_id");
       let data;
       if (role === "customer" && clientId) {
+        // Customers use the redacted client_public view
         data = await apiGet("/client_public", { id: "eq." + clientId, select: "*" });
+      } else if (role === "admin") {
+        // Admins use the secure admin API that returns full client data (service_role)
+        const res = await fetch("/api/admin/clients", {
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // Include HttpOnly session cookie
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to load clients");
+        }
+        const result = await res.json();
+        data = result.clients || [];
       } else {
+        // Fallback (should not happen due to auth check)
         data = await apiGet("/client_public", { order: "created_at.desc", select: "*" });
       }
       setClients(data || []);
