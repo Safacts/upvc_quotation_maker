@@ -38,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     clientRoutes = (clients || [])
       .filter((c: any) => c.is_active !== false)
       .map((client: any) => ({
-        url: `${baseUrl}/${slugify(client.id)}`,
+        url: `${baseUrl}/${slugify(client.id)}/`,
         lastModified: (client as any).updated_at || (client as any).created_at || new Date().toISOString(),
         changeFrequency: 'weekly' as const,
         priority: 0.8,
