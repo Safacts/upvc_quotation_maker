@@ -133,7 +133,17 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const rows = await getCachedClients();
+  let rows: any[] = [];
+  try {
+    rows = await getCachedClients();
+  } catch (error) {
+    console.error("[app/[slug]/page.tsx] metadata client lookup failed:", error);
+    try {
+      rows = await supaGet("client_public", { select: "id,config,is_active,created_at" });
+    } catch (fallbackError) {
+      console.error("[app/[slug]/page.tsx] metadata fallback failed:", fallbackError);
+    }
+  }
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
 
