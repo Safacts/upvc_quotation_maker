@@ -96,9 +96,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _fetchQuotations() async {
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     setState(() => _isLoading = true);
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
           // Embed line items via FK relationship — WITHOUT these, every quote
@@ -133,8 +134,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } catch (_) {}
       }
     } catch (e) {
-      final clientId =
-          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final local = await QuotationRecoveryService.instance
           .pendingEnvelopes(clientId);
       final recovered = <QuotationData>[];
