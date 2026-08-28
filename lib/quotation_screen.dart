@@ -67,6 +67,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   final _addressFocus = FocusNode();
   final _contactFocus = FocusNode();
   final _emailFocus = FocusNode();
+  final _advancePaidFocus = FocusNode();
   final _transportFocus = FocusNode();
   final _gstFocus = FocusNode();
 
@@ -88,7 +89,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
       } else if (data.unmeasuredItems.isNotEmpty) {
         _node('u_0_0').requestFocus();
       } else {
-        _transportFocus.requestFocus();
+        if (_isKprupvc) {
+          _advancePaidFocus.requestFocus();
+        } else {
+          _transportFocus.requestFocus();
+        }
       }
       return;
     }
@@ -101,11 +106,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
       } else if (idx < data.unmeasuredItems.length - 1) {
         _node('u_${idx + 1}_0').requestFocus();
       } else {
-        _transportFocus.requestFocus();
+        if (_isKprupvc) {
+          _advancePaidFocus.requestFocus();
+        } else {
+          _transportFocus.requestFocus();
+        }
       }
       return;
     }
   }
+
+  bool get _isKprupvc => Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc';
 
   @override
   void initState() {
@@ -307,6 +318,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     _addressFocus.dispose();
     _contactFocus.dispose();
     _emailFocus.dispose();
+    _advancePaidFocus.dispose();
     _transportFocus.dispose();
     _gstFocus.dispose();
     for (final n in _itemFocusNodes.values) {
@@ -607,6 +619,7 @@ await pdf_gen.loadLibrary();
                 <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Amount</td>
                 <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.grandTotal.toStringAsFixed(2)}</td>
               </tr>
+              ${_isKprupvc ? '<tr><td style="padding: 8px 0; color: #2E7D32; font-size: 11.5px; font-weight: 700;">Advance Paid</td><td style="padding: 8px 0; color: #2E7D32; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.advancePaid.toStringAsFixed(2)}</td></tr><tr><td style="padding: 8px 0; color: #C44A10; font-size: 11.5px; font-weight: 700;">Remaining Amount</td><td style="padding: 8px 0; color: #C44A10; font-size: 13.5px; font-weight: 800; text-align: right;">Rs. ${data.balanceDue.toStringAsFixed(2)}</td></tr>' : ''}
             </table>
           </div>
 $reviewCta
@@ -1462,6 +1475,24 @@ if (_usePresets) ...[
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isKprupvc) ...[
+                      TextFormField(
+                        key: const ValueKey('kpr-advance-paid-field'),
+                        focusNode: _advancePaidFocus,
+                        initialValue: data.advancePaid == 0 ? '' : data.advancePaid.toString(),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _transportFocus.requestFocus(),
+                        decoration: const InputDecoration(labelText: 'Advance Paid (Rs)', helperText: 'Amount already paid by the customer'),
+                        onChanged: (val) {
+                          data.advancePaid = double.tryParse(val) ?? 0;
+                          if (data.advancePaid < 0) data.advancePaid = 0;
+                          setState(() {});
+                          _onDataChanged();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextFormField(
                       focusNode: _transportFocus,
                       initialValue: data.transport == 0 ? '' : data.transport.toString(),
@@ -1522,6 +1553,10 @@ if (_usePresets) ...[
                       _buildComputationRow('IGST (${data.gstPercentage}%)', data.igst),
                     const Divider(thickness: 1.5),
                     _buildComputationRow('Grand Total', data.grandTotal, isBold: true),
+                    if (_isKprupvc) ...[
+                      _buildComputationRow('Advance Paid', data.advancePaid),
+                      _buildComputationRow('Remaining Amount', data.balanceDue, isBold: true),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       data.amountInWords,
