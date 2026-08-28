@@ -648,7 +648,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }}>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
-                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! =K
+                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}!
                 </h2>
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
                   Here is your real-time business summary. Keep closing orders!
