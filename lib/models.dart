@@ -53,6 +53,8 @@ class QuotationData {
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
   double transport = 0.0;
+  /// KPRUPVC-only customer advance. This never changes [grandTotal].
+  double advancePaid = 0.0;
 
   bool includeGst = false;
   double gstPercentage = 0.0;
@@ -100,6 +102,7 @@ class QuotationData {
   double get totalSft => measuredItems.fold(0, (sum, item) => sum + item.totalSft);
   double get igst => includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
   double get grandTotal => actualAmount + transport + igst; // Grand Total includes IGST
+  double get balanceDue => (grandTotal - advancePaid).clamp(0.0, double.infinity).toDouble();
 
   String get amountInWords {
     if (grandTotal == 0) return "RUPEES ZERO ONLY";
@@ -136,6 +139,7 @@ class QuotationData {
       'contact_no': contactNo,
       'email': email,
       'transport_cost': transport,
+      'advance_paid': advancePaid,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
       if (includeStatus) 'status': status.value,
@@ -155,6 +159,7 @@ class QuotationData {
     q.contactNo = map['contact_no'] ?? '';
     q.email = map['email'] ?? '';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
+    q.advancePaid = (map['advance_paid'] ?? 0).toDouble();
     q.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
