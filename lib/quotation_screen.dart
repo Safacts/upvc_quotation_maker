@@ -546,11 +546,12 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
     setState(() => _isSaving = true);
     data.id ??= const Uuid().v4();
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     // Always persist to local cache first so device never loses progress
     await _persistLocalDraft();
 
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final quotationMap = data.toMap(
         clientId: clientId,
         includeStatus: true,
