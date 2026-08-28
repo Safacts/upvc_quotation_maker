@@ -67,6 +67,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   final _addressFocus = FocusNode();
   final _contactFocus = FocusNode();
   final _emailFocus = FocusNode();
+  final _advancePaidFocus = FocusNode();
   final _transportFocus = FocusNode();
   final _gstFocus = FocusNode();
 
@@ -88,7 +89,11 @@ class _QuotationScreenState extends State<QuotationScreen> {
       } else if (data.unmeasuredItems.isNotEmpty) {
         _node('u_0_0').requestFocus();
       } else {
-        _transportFocus.requestFocus();
+        if (_isKprupvc) {
+          _advancePaidFocus.requestFocus();
+        } else {
+          _transportFocus.requestFocus();
+        }
       }
       return;
     }
@@ -101,11 +106,17 @@ class _QuotationScreenState extends State<QuotationScreen> {
       } else if (idx < data.unmeasuredItems.length - 1) {
         _node('u_${idx + 1}_0').requestFocus();
       } else {
-        _transportFocus.requestFocus();
+        if (_isKprupvc) {
+          _advancePaidFocus.requestFocus();
+        } else {
+          _transportFocus.requestFocus();
+        }
       }
       return;
     }
   }
+
+  bool get _isKprupvc => Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc';
 
   @override
   void initState() {
@@ -307,6 +318,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
     _addressFocus.dispose();
     _contactFocus.dispose();
     _emailFocus.dispose();
+    _advancePaidFocus.dispose();
     _transportFocus.dispose();
     _gstFocus.dispose();
     for (final n in _itemFocusNodes.values) {
@@ -456,6 +468,51 @@ class _QuotationScreenState extends State<QuotationScreen> {
   Future<void> _initQuoteNumber() async {
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
     final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    // SAFE REUSE: prevent 32 empty drafts from piling up (prod has 32 empties 28-08).
+    // Before burning a new quote_no via RPC (which increments quotation_counters),
+    // try to reuse the most recent empty draft for this client:
+    // deleted=false, status=draft, no measured/unmeasured items. This keeps at most
+    // one empty draft per client and avoids the "delete empties → creation error"
+    // trap (local draft cache + burned counter).
+    try {
+      final emptyCandidates = await SupabaseConfig.client
+          .from('quotations')
+          .select('id,quote_no,created_at')
+          .eq('client_id', clientId)
+          .eq('deleted', false)
+          .eq('status', 'draft')
+          .order('created_at', ascending: false)
+          .limit(5);
+      for (final row in (emptyCandidates as List)) {
+        final qid = row['id'] as String?;
+        final qno = (row['quote_no'] as String?) ?? '';
+        if (qid == null || qid.isEmpty || qno.isEmpty) continue;
+        // Cheap emptiness check — if either table has a row, this draft is not empty
+        final mCount = await SupabaseConfig.client
+            .from('measured_items')
+            .select('id')
+            .eq('quotation_id', qid)
+            .eq('client_id', clientId)
+            .limit(1);
+        if ((mCount as List).isNotEmpty) continue;
+        final uCount = await SupabaseConfig.client
+            .from('unmeasured_items')
+            .select('id')
+            .eq('quotation_id', qid)
+            .eq('client_id', clientId)
+            .limit(1);
+        if ((uCount as List).isNotEmpty) continue;
+        // Reuse this empty draft — don't burn a new number
+        data.id = qid;
+        if (mounted) setState(() => data.quotationNo = qno);
+        await _loadItems(); // will load empty lists
+        // Ensure local draft points at the reused id
+        await _persistLocalDraft();
+        return;
+      }
+    } catch (_) {
+      // Offline or RLS error — fall through to generating new draft
+    }
     data.id ??= const Uuid().v4();
     if (data.quotationNo.isEmpty) {
       String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
@@ -607,6 +664,7 @@ await pdf_gen.loadLibrary();
                 <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Amount</td>
                 <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.grandTotal.toStringAsFixed(2)}</td>
               </tr>
+              ${_isKprupvc ? '<tr><td style="padding: 8px 0; color: #2E7D32; font-size: 11.5px; font-weight: 700;">Advance Paid</td><td style="padding: 8px 0; color: #2E7D32; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.advancePaid.toStringAsFixed(2)}</td></tr><tr><td style="padding: 8px 0; color: #C44A10; font-size: 11.5px; font-weight: 700;">Remaining Amount</td><td style="padding: 8px 0; color: #C44A10; font-size: 13.5px; font-weight: 800; text-align: right;">Rs. ${data.balanceDue.toStringAsFixed(2)}</td></tr>' : ''}
             </table>
           </div>
 $reviewCta
@@ -1462,6 +1520,24 @@ if (_usePresets) ...[
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isKprupvc) ...[
+                      TextFormField(
+                        key: const ValueKey('kpr-advance-paid-field'),
+                        focusNode: _advancePaidFocus,
+                        initialValue: data.advancePaid == 0 ? '' : data.advancePaid.toString(),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _transportFocus.requestFocus(),
+                        decoration: const InputDecoration(labelText: 'Advance Paid (Rs)', helperText: 'Amount already paid by the customer'),
+                        onChanged: (val) {
+                          data.advancePaid = double.tryParse(val) ?? 0;
+                          if (data.advancePaid < 0) data.advancePaid = 0;
+                          setState(() {});
+                          _onDataChanged();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     TextFormField(
                       focusNode: _transportFocus,
                       initialValue: data.transport == 0 ? '' : data.transport.toString(),
@@ -1522,6 +1598,10 @@ if (_usePresets) ...[
                       _buildComputationRow('IGST (${data.gstPercentage}%)', data.igst),
                     const Divider(thickness: 1.5),
                     _buildComputationRow('Grand Total', data.grandTotal, isBold: true),
+                    if (_isKprupvc) ...[
+                      _buildComputationRow('Advance Paid', data.advancePaid),
+                      _buildComputationRow('Remaining Amount', data.balanceDue, isBold: true),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       data.amountInWords,

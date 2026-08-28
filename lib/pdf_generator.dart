@@ -69,7 +69,7 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<
             _buildUnmeasuredTable(data, currency),
           ],
           pw.SizedBox(height: 10),
-          _buildTotalsTable(data, currency),
+          _buildTotalsTable(data, currency, kprAdvance: clientConfig.clientId.toLowerCase() == 'kprupvc'),
           if (photos.isNotEmpty) ...[
             pw.SizedBox(height: 10),
             _buildSitePhotosSection(photos),
@@ -270,7 +270,7 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
   );
 }
 
-pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
+pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency, {bool kprAdvance = false}) {
   return pw.Container(
     color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
@@ -294,6 +294,20 @@ pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency) {
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Grand Total', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
           pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.grandTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
         ]),
+        if (kprAdvance)
+          pw.TableRow(children: [
+            pw.SizedBox(),
+            pw.SizedBox(),
+            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Advance Paid', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.advancePaid), style: pw.TextStyle(color: PdfColors.green800, fontSize: 10))),
+          ]),
+        if (kprAdvance)
+          pw.TableRow(children: [
+            pw.SizedBox(),
+            pw.SizedBox(),
+            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Remaining Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
+            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.balanceDue), style: pw.TextStyle(color: PdfColor.fromHex('#C44A10'), fontWeight: pw.FontWeight.bold, fontSize: 10))),
+          ]),
         pw.TableRow(
           decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#C44A10'), width: 2))),
           children: [
@@ -359,7 +373,7 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
   final clientConfig = appState.clientConfig;
   final vpa = clientConfig.upiId;
   final payeeName = clientConfig.upiPayeeNameOrCompany;
-  final amount = data.grandTotal;
+  final amount = clientConfig.clientId.toLowerCase() == 'kprupvc' ? data.balanceDue : data.grandTotal;
   final note = 'Quote ${data.quotationNo}';
   final transactionRef = data.quotationNo;
 

@@ -1,8 +1,10 @@
 const fs = require('fs');
 const { Client } = require('pg');
+require('dotenv').config();
 const OUT = 'C:/Projects/myprojects/flutterprojects/upvc_quotation_maker/replicate.log';
 const log = m => { fs.appendFileSync(OUT, m + '\n'); };
-const PW = 'AADISHESHu1.';
+const PW = process.env.SUPABASE_DB_PASSWORD;
+if (!PW) throw new Error('SUPABASE_DB_PASSWORD missing — set in .env');
 const PROD = 'gumpmnbjdtzajhysnnaz';
 const STAG = 'effxrwrbsjduvhmorvrq';
 const connStr = ref => 'postgresql://postgres:' + encodeURIComponent(PW) + '@db.' + ref + '.supabase.co:5432/postgres';
