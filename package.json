@@ -23,7 +23,8 @@
     "seed:demo": "node scripts/seed-demo-workspace.mjs",
     "test:load": "vitest run tests/golden-workflow-load.test.ts",
     "load:golden": "node scripts/load-golden-workflow.mjs",
-    "security:release-gate": "node scripts/security-release-gate.mjs"
+    "security:release-gate": "node scripts/security-release-gate.mjs",
+    "apk:send-telegram": "node scripts/send-client-apks-telegram.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^8.20.2",

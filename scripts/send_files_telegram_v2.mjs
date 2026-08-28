@@ -1,5 +1,9 @@
-const TOKEN = '7790745552:AAGVmXZLXm5MMoWfSG5i2YJBGBY4lU80qzM';
-const CHAT_ID = '1295597987';
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
+
+if (!TOKEN || !CHAT_ID) {
+  throw new Error('TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID are required');
+}
 
 async function sendFile(filePath, caption) {
   const fs = await import('fs');
