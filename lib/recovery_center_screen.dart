@@ -67,15 +67,17 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
   Future<void> _exportBackup() async {
     final raw = await QuotationRecoveryService.instance.exportBundle(_clientId);
     final date = DateTime.now().toIso8601String().split('T').first;
-    await Share.shareXFiles(
-      [
-        XFile.fromData(
-          utf8.encode(raw),
-          mimeType: 'application/json',
-          name: 'vitharn-recovery-$_clientId-$date.json',
-        ),
-      ],
-      text: 'Vitharn quotation recovery backup for $_clientId',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile.fromData(
+            utf8.encode(raw),
+            mimeType: 'application/json',
+            name: 'vitharn-recovery-$_clientId-$date.json',
+          ),
+        ],
+        text: 'Vitharn quotation recovery backup for $_clientId',
+      ),
     );
   }
 
