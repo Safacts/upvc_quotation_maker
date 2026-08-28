@@ -784,10 +784,14 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                     {(() => {
                       const maxAmount = Math.max(...stats.weeklyBars.map((b: any) => b.amount), 1);
                       const formatInd = (v: number) => {
-                        if (v >= 10000000) return (v/10000000).toFixed(1).replace(/\.0$/,'') + 'Cr';
-                        if (v >= 100000) return (v/100000).toFixed(1).replace(/\.0$/,'') + 'L';
-                        if (v >= 1000) return (v/1000).toFixed(1).replace(/\.0$/,'') + 'k';
-                        return v;
+                        // Indian numbering: crore (1,00,00,000) and lakh (1,00,000).
+                        // Under one lakh we print the full rupee amount with Indian digit
+                        // grouping instead of a Western "k" — "₹77,500" reads instantly to
+                        // an Indian reader; "₹77.5k" does not. Every branch carries the ₹
+                        // prefix so the chart labels stay unambiguous.
+                        if (v >= 10000000) return "₹" + (v / 10000000).toFixed(1).replace(/\.0$/, "") + " Cr";
+                        if (v >= 100000) return "₹" + (v / 100000).toFixed(1).replace(/\.0$/, "") + " L";
+                        return "₹" + v.toLocaleString("en-IN", { maximumFractionDigits: 0 });
                       };
                       return stats.weeklyBars.map((b: any, i: number) => {
                         const height = (b.amount / maxAmount) * 100;
