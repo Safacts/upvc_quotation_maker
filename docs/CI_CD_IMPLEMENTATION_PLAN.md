@@ -378,8 +378,8 @@ The current release commit `fb3df2e` was rechecked in the live GitHub Actions hi
 - Staging run `33140170017` passed Test & Build, reusable QA, identity preflight, Flutter web build, staging deployment, and reusable staging smoke.
 - Production run `33144235716` passed Test & Build, reusable QA, identity preflight, and production route verification.
 - The current `fb3df2e` release contains the preflight script, reusable QA/smoke workflows, blocking Vitest command, and 15-second bounded test timeout.
-- The current staging fixed domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the config response identified the staging Supabase project.
-- The current production domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the config response identified the production Supabase project.
+- The current staging fixed domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the CI identity preflight identified the staging Supabase/Vercel targets and the route identified the correct tenant. The public config response contains existing production Supabase storage URLs for shared logo/APK assets, so that response is not used as proof of the app's database connection.
+- The current production domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the CI identity preflight identified the production Supabase/Vercel targets and the route identified the correct tenant.
 - No new deployment or database write was initiated by this re-verification pass.
 
 The implementation and release gates are therefore complete for the current release. Future feature work should use the runbook rather than modify CI/CD. Any new pipeline change requires a separate development-v1 commit and fresh staging verification.
