@@ -15,11 +15,16 @@ const AUTH_HEADERS = {
 type QsValue = string | number | boolean;
 
 function qv(v: QsValue): string {
+  // PostgREST operator syntax: "eq.value", "ilike.%foo%" — only the part after
+  // the first dot is user data and must be fully percent-encoded. Operator
+  // prefix (eq/ilike/gt etc.) is allow-listed by PostgREST and not encoded.
   const s = String(v);
   if (s.includes(".")) {
     const i = s.indexOf(".");
     return s.slice(0, i) + "." + encodeURIComponent(s.slice(i + 1));
   }
+  // No operator (e.g. select=* or order=) — value is a column list, commas
+  // are delimiters and must not be encoded here.
   return s;
 }
 

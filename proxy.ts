@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const secretKey = process.env.JWT_SECRET;
-if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
-const encodedKey = new TextEncoder().encode(secretKey);
+function getEncodedKey(): Uint8Array {
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) throw new Error("JWT_SECRET environment variable is missing");
+  return new TextEncoder().encode(secretKey);
+}
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -21,9 +23,11 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // Only protect dynamic slug routes and admin routes
+  // Only protect dynamic slug routes and admin routes — defense-in-depth
+  // with page-level requireConsoleAccess (src/lib/console-auth.ts:215).
   const isProtectedPath =
     path.includes('/home') ||
+    path.includes('/console') ||
     path.includes('/business-admin') ||
     path.startsWith('/admin') ||
     path.startsWith('/dashboard');
@@ -32,9 +36,18 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const sessionCookie = request.cookies.get('session')?.value;
+  const sessionCookie = request.cookies.get('__Host-session')?.value || request.cookies.get('session')?.value;
 
   if (!sessionCookie) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // Lazy key init — avoids crashing the edge runtime at import time when
+  // JWT_SECRET is momentarily unset (e.g. during `next build` without env).
+  let encodedKey: Uint8Array;
+  try {
+    encodedKey = getEncodedKey();
+  } catch {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 

@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const email = String(p.email || "").trim().toLowerCase();
     if (!email) return json({ error: "email required" }, 400);
     const attemptKey = authAttemptKey(request, "password-reset", email);
-    const lockedFor = isAuthLocked(attemptKey);
+    const lockedFor = await isAuthLocked(attemptKey);
     if (lockedFor) return json({ error: "too many password reset attempts; try again later" }, 429);
     if (!isServiceKeyConfigured()) return json({ error: "no service key" }, 500);
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       }
       // Count every real OTP email against the same bucket so the send path
       // cannot be used to mail-bomb an address (5 sends / 15 min / email+IP).
-      recordAuthFailure(attemptKey);
+      await recordAuthFailure(attemptKey);
       try {
         await supaPost("sent_emails", {
           recipient: email,
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     // Verification path still requires a real account.
     if (!admin && !client) {
-      recordAuthFailure(attemptKey);
+      await recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
 
@@ -141,15 +141,15 @@ export async function POST(request: NextRequest) {
       limit: "1",
     });
     if (!Array.isArray(sent) || sent.length === 0) {
-      recordAuthFailure(attemptKey);
+      await recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
     const latest = sent[0];
     const body = latest.body || "";
     const match = body.match(/OTPHASH:\s*([a-f0-9]{64})/i);
-    if (!match) { recordAuthFailure(attemptKey); return json({ error: "invalid OTP" }, 403); }
+    if (!match) { await recordAuthFailure(attemptKey); return json({ error: "invalid OTP" }, 403); }
     if (!safeEqualHex(match[1].toLowerCase(), hashOtp(email, otp))) {
-      recordAuthFailure(attemptKey);
+      await recordAuthFailure(attemptKey);
       return json({ error: "invalid OTP" }, 403);
     }
     // BUG-SEC-004: expiry was BEST-EFFORT. A malformed/absent `created_at`, or a
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       await supaPatch("clients", { id: "eq." + client.id }, { password_hash: await hashPassword(newHash) });
     }
 
-    clearAuthFailures(attemptKey);
+    await clearAuthFailures(attemptKey);
 
     return json({ success: true, role: admin ? "admin" : "customer" }, 200);
   } catch (e: any) {

@@ -1,8 +1,10 @@
 const fs = require('fs');
 const { Client } = require('pg');
+require('dotenv').config();
 const OUT = 'C:/Projects/myprojects/flutterprojects/upvc_quotation_maker/backup.log';
 const log = m => fs.appendFileSync(OUT, m + '\n');
-const PW = 'AADISHESHu1.';
+const PW = process.env.SUPABASE_DB_PASSWORD;
+if (!PW) throw new Error('SUPABASE_DB_PASSWORD missing — set in .env');
 const ref = process.argv[2] || 'effxrwrbsjduvhmorvrq';
 const connStr = r => 'postgresql://postgres:' + encodeURIComponent(PW) + '@db.' + r + '.supabase.co:5432/postgres';
 function connect(r) { return new Promise((res, rej) => { const c = new Client({ connectionString: connStr(r), connectionTimeoutMillis: 15000 }); c.connect().then(() => res(c)).catch(e => rej(e)); }); }

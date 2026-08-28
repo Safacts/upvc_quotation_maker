@@ -71,3 +71,7 @@ android/.kotlin/
 public/logo_b64.txt
 .vercel
 .env*
+pwtest.*
+backup.js
+replicate.js
+scratch_*.js

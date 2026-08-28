@@ -47,10 +47,15 @@ function readStaticHtml(path: string): string | null {
 }
 
 function buildShell(html: string): string {
+  // Source is a static build artifact in public/<slug>/index.html, not user input.
+  // Still strip event handlers and javascript: URLs to avoid stored XSS if the file
+  // were ever writable, and rely on CSP (next.config.ts) as second layer.
+  const stripEventHandlers = (s: string) => s.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  const stripJsUrl = (s: string) => s.replace(/href\s*=\s*["']\s*javascript:[^"']*["']/gi, 'href="#"');
   const links = [...html.matchAll(/<link[^>]*>/gi)]
-    .map((m) => m[0])
+    .map((m) => stripJsUrl(stripEventHandlers(m[0])))
     .filter((l) => !/rel=["']icon/i.test(l));
-  const scripts = [...html.matchAll(/<script[^>]*>[^<]*<\/script>/gi)].map((m) => m[0]);
+  const scripts = [...html.matchAll(/<script[^>]*>[^<]*<\/script>/gi)].map((m) => stripEventHandlers(m[0]));
   const root = html.match(/<div id="root"[^>]*><\/div>/i)?.[0];
   const shell = [links.join("\n"), scripts.join("\n"), root || ""]
     .filter(Boolean)

@@ -69,14 +69,14 @@ describe("authentication rate-limit contract", () => {
     const { authAttemptKey, clearAuthFailures, isAuthLocked, recordAuthFailure } = await import("../src/lib/auth-rate-limit");
     const request = new Request("https://app.vitharn.com/api/portal_auth", { headers: { "x-forwarded-for": "203.0.113.10" } });
     const key = authAttemptKey(request, "portal", "User@Example.com");
-    clearAuthFailures(key);
+    await clearAuthFailures(key);
     expect(key).toBe("portal:user@example.com:203.0.113.10");
-    expect(isAuthLocked(key)).toBe(0);
-    for (let i = 0; i < 4; i++) expect(recordAuthFailure(key)).toBe(0);
-    expect(recordAuthFailure(key)).toBeGreaterThan(0);
-    expect(isAuthLocked(key)).toBeGreaterThan(0);
-    clearAuthFailures(key);
-    expect(isAuthLocked(key)).toBe(0);
+    expect(await isAuthLocked(key)).toBe(0);
+    for (let i = 0; i < 4; i++) expect(await recordAuthFailure(key)).toBe(0);
+    expect(await recordAuthFailure(key)).toBeGreaterThan(0);
+    expect(await isAuthLocked(key)).toBeGreaterThan(0);
+    await clearAuthFailures(key);
+    expect(await isAuthLocked(key)).toBe(0);
   });
 
   it("binds buckets to the first trusted proxy address, not attacker-controlled identity casing", async () => {
