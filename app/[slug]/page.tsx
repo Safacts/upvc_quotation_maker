@@ -6,6 +6,7 @@ import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
 import VaishnaviMarketPage from "./VaishnaviMarketPage";
+import ClientSeoContent from "./ClientSeoContent";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLU
 const MARKET_PUBLIC_CONFIG_KEYS = [
   "appName", "companyName", "companyAddress", "companyEmail", "companyContact",
   "companyProprietor", "logoUrl", "invoiceTopLogoUrl", "primaryColor", "accentColor",
-  "landingHeroTitle", "landingHeroSubtitle", "landingAboutTitle", "landingAboutText",
+  "landingHeroTitle", "landingHeroSubtitle", "landingAboutTitle", "landingAboutText", "landingHeroImage",
   "landingServices", "landingGallery", "landingTestimonials", "landingMapUrl",
   "landingCTA", "landingFooter", "seoTitle", "seoDescription", "seoKeywords",
   "appDownloadUrl", "defaultGstPercentage", "termsAndConditions",
@@ -107,12 +108,7 @@ export default async function MarketPageRoute({
     if (slug !== KPR_SLUG) redirect(`/${KPR_SLUG}/`);
     const html = readStaticHtml(KPR_INDEX_PATH);
     if (html)
-      return (
-        <div
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: buildShell(html) }}
-        />
-      );
+      return <><ClientSeoContent client={client} slug={KPR_SLUG} /><div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: buildShell(html) }} /></>;
   }
 
   if (client.id === VENKATESHWARA_SLUG) {
@@ -121,19 +117,14 @@ export default async function MarketPageRoute({
     if (slug !== VENKATESHWARA_SLUG) redirect(`/${VENKATESHWARA_SLUG}/`);
     const html = readStaticHtml(VENKATESHWARA_INDEX_PATH);
     if (html)
-      return (
-        <div
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: buildShell(html) }}
-        />
-      );
+      return <><ClientSeoContent client={client} slug={VENKATESHWARA_SLUG} /><div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: buildShell(html) }} /></>;
   }
 
   if (client.id === "VAISHNAVI UPVC WINDOWS AND DOORS" || slug.toLowerCase().includes("vaishnavi")) {
-    return <VaishnaviMarketPage client={client} slug={slug} />;
+    return <><ClientSeoContent client={client} slug={slug} /><VaishnaviMarketPage client={client} slug={slug} /></>;
   }
 
-  return <MarketPage client={client} slug={slug} />;
+  return <><ClientSeoContent client={client} slug={slug} /><MarketPage client={client} slug={slug} /></>;
 }
 
 export async function generateMetadata({

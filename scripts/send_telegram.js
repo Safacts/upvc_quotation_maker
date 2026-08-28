@@ -3,8 +3,9 @@ const https = require('https');
 
 async function run() {
   const mdPath = 'C:/Users/aadi/.gemini/antigravity-ide/brain/6971c514-ccda-45b5-9b33-a3d11e630fa7/vitharn_overview_for_madhan.md';
-  const token = '7790745552:AAGVmXZLXm5MMoWfSG5i2YJBGBY4lU80qzM';
-  const chatId = '8141124947';
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+  if (!token || !chatId) throw new Error('TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID are required');
 
   const boundary = '--------------------------' + Date.now().toString(16);
   const filename = 'vitharn_overview_for_madhan.md';

@@ -137,6 +137,11 @@ jobs:
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=vitharn-release.jks\n' "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/key.properties
           echo "Permanent signing configured (keystore + key.properties written)."
 
+      - name: Clean Flutter build state
+        # Prevent a previous client's manifest, Dart defines, or Gradle outputs
+        # from leaking into this client-specific APK.
+        run: flutter clean
+
       - name: Build Android Release APK
         # --target-platform android-arm64: build arm64-only APK.
         # The full 3-ABI APK is ~91MB which exceeds Supabase's 50MB object limit
@@ -148,6 +153,19 @@ jobs:
         # 'venkateshwara' (ClientLoader.getClientId) -> wrong logo/branding/
         # tenant in-app for every other client. Bakes the client identity in.
         run: flutter build apk --release --target-platform android-arm64 --dart-define=CLIENT_ID="${{ steps.vars.outputs.client_id }}" --build-name="${{ steps.vars.outputs.version_name }}" --build-number="${{ steps.vars.outputs.version_code }}"
+
+      - name: Verify release APK output
+        env:
+          CLIENT_ID: ${{ steps.vars.outputs.client_id }}
+          VERSION_NAME: ${{ steps.vars.outputs.version_name }}
+          VERSION_CODE: ${{ steps.vars.outputs.version_code }}
+        run: |
+          set -e
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK"
+          case "$APK" in *debug*) echo "::error::Debug APK path rejected"; exit 1;; esac
+          echo "Verified release APK: $APK"
+          ls -lh "$APK"
 
       - name: Upload APK to Supabase Storage
         env:

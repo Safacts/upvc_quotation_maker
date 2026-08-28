@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 
-const TOKEN = "7790745552:AAGVmXZLXm5MMoWfSG5i2YJBGBY4lU80qzM";
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (!TOKEN) throw new Error("TELEGRAM_BOT_TOKEN is required");
 const mdPath = "public/upvc/changelog/whatsapp-2026-08.md";
 
 const raw = readFileSync(mdPath, "utf8");
