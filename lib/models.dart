@@ -49,6 +49,9 @@ class QuotationData {
   String email = '';
   DateTime createdAt = DateTime.now();
   QuotationStatus status = QuotationStatus.draft;
+  /// Server revision used to prevent one device silently overwriting another.
+  /// Zero means this quotation has never been acknowledged by the cloud.
+  int syncVersion = 0;
 
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
@@ -144,6 +147,7 @@ class QuotationData {
       'gst_percentage': gstPercentage,
       if (includeStatus) 'status': status.value,
       'supplier_company': supplierCompany,
+      'sync_version': syncVersion,
       if (clientId != null && clientId.isNotEmpty) 'client_id': clientId,
     };
   }
@@ -164,6 +168,7 @@ class QuotationData {
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     q.status = QuotationStatusX.fromString(map['status']);
+    q.syncVersion = (map['sync_version'] as num?)?.toInt() ?? 0;
     q.supplierCompany = map['supplier_company'] ?? '';
     if (map['measured_items'] != null && map['measured_items'] is List) {
       q.measuredItems = (map['measured_items'] as List)

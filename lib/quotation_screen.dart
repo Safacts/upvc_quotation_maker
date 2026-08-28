@@ -22,6 +22,8 @@ import 'quote_share.dart';
 import 'umami_tracker.dart';
 import 'quotation_export.dart' deferred as export_lib;
 import 'services/catalog_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/quotation_recovery_service.dart';
 import 'widgets/site_photo_picker.dart';
 
 class QuotationScreen extends StatefulWidget {
@@ -33,13 +35,15 @@ class QuotationScreen extends StatefulWidget {
   _QuotationScreenState createState() => _QuotationScreenState();
 }
 
-class _QuotationScreenState extends State<QuotationScreen> {
+class _QuotationScreenState extends State<QuotationScreen>
+    with WidgetsBindingObserver {
   late QuotationData data;
   bool _isLoading = false;
   bool _isSaving = false;
   bool _saveQueued = false;
   bool _isExporting = false;
   bool _isOffline = false;
+  bool _isCloudPending = false;
   bool _isProcessingPdf = false;
   bool _isSendingEmail = false;
   Timer? _debounce;
@@ -121,6 +125,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _usePresets = Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets;
     if (widget.existingData != null) {
       data = widget.existingData!;
@@ -311,6 +316,7 @@ class _QuotationScreenState extends State<QuotationScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _retryTimer?.cancel();
     _nameFocus.dispose();
@@ -325,6 +331,16 @@ class _QuotationScreenState extends State<QuotationScreen> {
       n.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // A phone call or app switch must never discard the latest keystroke.
+      unawaited(_persistLocalDraft());
+    }
   }
 
   bool _isNetworkError(Object error) {
@@ -539,43 +555,56 @@ class _QuotationScreenState extends State<QuotationScreen> {
         clientId: clientId,
         includeStatus: true,
       );
-
-      // Perform upsert by unique quotation UUID. Each device/session has its own UUID.
-      await SupabaseConfig.client
-          .from('quotations')
-          .upsert(quotationMap, onConflict: 'id');
-
-      await SupabaseConfig.client
-          .from('measured_items')
-          .delete()
-          .eq('quotation_id', data.id!)
-          .eq('client_id', clientId);
-      await SupabaseConfig.client
-          .from('unmeasured_items')
-          .delete()
-          .eq('quotation_id', data.id!)
-          .eq('client_id', clientId);
-
-      if (data.measuredItems.isNotEmpty) {
-        await SupabaseConfig.client.from('measured_items').insert(data.measuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
+      // Stable child IDs make the atomic server operation idempotent.
+      for (final item in data.measuredItems) {
+        item.id ??= const Uuid().v4();
       }
-      if (data.unmeasuredItems.isNotEmpty) {
-        await SupabaseConfig.client.from('unmeasured_items').insert(data.unmeasuredItems.map((e) => e.toMap(data.id!, clientId: clientId)).toList());
+      for (final item in data.unmeasuredItems) {
+        item.id ??= const Uuid().v4();
+      }
+      final result = await QuotationRecoveryService.instance.saveBundle(
+        clientId: clientId,
+        quotation: quotationMap,
+        measuredItems: data.measuredItems
+            .map((item) => item.toMap(data.id!, clientId: clientId))
+            .toList(),
+        unmeasuredItems: data.unmeasuredItems
+            .map((item) => item.toMap(data.id!, clientId: clientId))
+            .toList(),
+      );
+
+      if (result.state == RecoverySaveState.saved &&
+          result.serverVersion != null) {
+        data.syncVersion = result.serverVersion!;
       }
       if (mounted) {
         setState(() {
-          _lastSaved = DateTime.now();
-          _lastSaveError = null;
-          _isOffline = false;
+          if (result.state == RecoverySaveState.saved) {
+            _lastSaved = DateTime.now();
+            _lastSaveError = null;
+            _isOffline = false;
+            _isCloudPending = false;
+          } else if (result.state == RecoverySaveState.conflict) {
+            _lastSaveError = result.message;
+            _isOffline = false;
+            _isCloudPending = false;
+          } else {
+            _lastSaveError = null;
+            _isOffline = !ConnectivityService.instance.isOnline;
+            _isCloudPending = true;
+          }
         });
       }
-      _retryTimer?.cancel();
+      if (result.state == RecoverySaveState.saved) {
+        _retryTimer?.cancel();
+      }
     } catch (e) {
       debugPrint('Auto-save error: $e');
       if (mounted) {
         if (_isNetworkError(e)) {
           setState(() {
             _isOffline = true;
+            _isCloudPending = true;
             _lastSaveError = null;
           });
           // Silent auto-retry in 10 seconds without showing scary red toasts
@@ -961,6 +990,14 @@ $reviewCta
                 ),
               ),
             )
+          else if (_isCloudPending)
+            Tooltip(
+              message: 'Saved safely on this device. Cloud backup is retrying.',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Center(child: Icon(Icons.cloud_upload, color: Colors.amber.shade800, size: 22)),
+              ),
+            )
           else if (_lastSaveError != null)
             Tooltip(
               message: 'Sync issue: $_lastSaveError',
@@ -1032,6 +1069,16 @@ $reviewCta
                           Flexible(
                             child: Text(
                               'Saved on device (Offline) • Auto-syncing when connected',
+                              style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else if (_isCloudPending) ...[
+                          Icon(Icons.offline_pin, size: 15, color: Colors.amber.shade800),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Saved safely • Cloud backup retrying',
                               style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, fontWeight: FontWeight.w500),
                               overflow: TextOverflow.ellipsis,
                             ),

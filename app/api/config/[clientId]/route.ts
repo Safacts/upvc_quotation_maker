@@ -32,9 +32,10 @@ export async function GET(
       );
     }
 
-    // Fallback: slug match on client_public (also redacted)
+    // Fallback: slug match on client_public (also redacted) — bounded to 100 to avoid DoS
     const all = await supaGet("client_public", {
       select: "id,config,is_active,trial_expires_at,created_at",
+      limit: 100,
     });
     if (!Array.isArray(all)) {
       return NextResponse.json({ error: "Client not found" }, { status: 404, headers: CORS_HEADERS });

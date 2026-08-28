@@ -648,7 +648,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             }}>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
-                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}! <span className="greeting-wave" aria-hidden="true">👋</span>
+                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}!
                 </h2>
                 <p style={{ color: '#94a3b8', fontSize: '14px' }}>
                   Here is your real-time business summary. Keep closing orders!
@@ -778,32 +778,35 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 </div>
 
                 {/* Weekly Bar Chart */}
-                <div className="info-card weekly-trend-card" style={{ flex: 1 }}>
-                  <div className="weekly-trend-heading">
-                    <h3>Weekly Work Trend</h3>
-                    <span>Quoted value · last 8 weeks</span>
-                  </div>
-                  <div className="weekly-chart" aria-label="Quoted value by week">
+                <div className="info-card" style={{ flex: 1 }}>
+                  <h3>Weekly Work Trend</h3>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '8px', marginTop: '16px' }}>
                     {(() => {
                       const maxAmount = Math.max(...stats.weeklyBars.map((b: any) => b.amount), 1);
                       const formatInd = (v: number) => {
-                        if (v >= 10000000) return '₹' + (v / 10000000).toFixed(1).replace(/\.0$/, '') + ' Cr';
-                        if (v >= 100000) return '₹' + (v / 100000).toFixed(1).replace(/\.0$/, '') + ' L';
-                        return '₹' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                        // Indian numbering: crore (1,00,00,000) and lakh (1,00,000).
+                        // Under one lakh we print the full rupee amount with Indian digit
+                        // grouping instead of a Western "k" — "₹77,500" reads instantly to
+                        // an Indian reader; "₹77.5k" does not. Every branch carries the ₹
+                        // prefix so the chart labels stay unambiguous.
+                        if (v >= 10000000) return "₹" + (v / 10000000).toFixed(1).replace(/\.0$/, "") + " Cr";
+                        if (v >= 100000) return "₹" + (v / 100000).toFixed(1).replace(/\.0$/, "") + " L";
+                        return "₹" + v.toLocaleString("en-IN", { maximumFractionDigits: 0 });
                       };
                       return stats.weeklyBars.map((b: any, i: number) => {
                         const height = (b.amount / maxAmount) * 100;
                         const isLast = i === stats.weeklyBars.length - 1;
                         return (
-                          <div className="weekly-bar-column" key={i}>
-                            <div className="weekly-bar-value">{b.amount > 0 ? formatInd(b.amount) : 'No quotes'}</div>
-                            <div
-                              className={`weekly-bar ${isLast ? 'current' : ''} ${b.amount === 0 ? 'empty' : ''}`}
-                              style={{ height: `${b.amount > 0 ? height : 0}%` }}
-                              title={`${b.label}: ${formatInd(b.amount)} · ${b.count} quote${b.count === 1 ? '' : 's'}`}
-                              aria-label={`${b.label}: ${formatInd(b.amount)}, ${b.count} quote${b.count === 1 ? '' : 's'}`}
-                            />
-                            <span className="weekly-bar-label">{b.label}</span>
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+                            {b.amount > 0 && <span style={{ fontSize: '9px', fontWeight: '600', color: 'var(--text-dark)', marginBottom: '4px' }}>{formatInd(b.amount)}</span>}
+                            <div style={{ 
+                              width: '100%', 
+                              height: `${Math.max(height, 5)}%`, 
+                              background: isLast ? 'var(--primary-gradient)' : '#cbd5e1', 
+                              borderRadius: '4px 4px 0 0',
+                              transition: 'height 0.5s ease'
+                            }} />
+                            <span style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '4px', whiteSpace: 'nowrap' }}>{b.label}</span>
                           </div>
                         );
                       });

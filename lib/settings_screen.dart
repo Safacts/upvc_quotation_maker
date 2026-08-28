@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'rate_card_screen.dart';
+import 'notification_service.dart';
+import 'recovery_center_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -167,6 +169,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(textAlign: TextAlign.center, controller: _bankIfscController, textInputAction: TextInputAction.next, decoration: const InputDecoration(labelText: 'IFSC Code (e.g. IFSC CODE: UBIN0)')),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('Data Safety'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.health_and_safety),
+                  title: const Text('Data Safety & Recovery'),
+                  subtitle: const Text('Back up, retry or export anything saved on this device'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RecoveryCenterScreen(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.notifications_none),
+                  title: const Text('Enable Important Notifications'),
+                  subtitle: const Text('Asked only when you choose this option'),
+                  onTap: () async {
+                    await NotificationService().requestPermissions();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Notification preference updated')),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),

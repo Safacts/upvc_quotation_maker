@@ -20,6 +20,7 @@ import 'services/feature_flag_service.dart';
 import 'services/white_label_service.dart';
 import 'services/content_sync_service.dart';
 import 'services/update_checker_service.dart';
+import 'services/quotation_recovery_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,7 +84,6 @@ void main() async {
     try {
       final notificationService = NotificationService();
       await notificationService.init();
-      await notificationService.requestPermissions();
 
       // Initialize Notification Center (realtime) after client config is set
       final notificationCenter = NotificationCenterService();
@@ -108,6 +108,10 @@ Future<void> _initializeOfflineServices(AppState appState) async {
     // Initialize sync engine. Pass the client id explicitly so the active
     // tenant is set BEFORE the tenant-scoped services below read from it.
     await SyncEngine.instance.initialize(clientId: clientId);
+
+    // Independent durable quotation outbox/recovery vault. It retries on
+    // reconnect and every minute without blocking the first frame.
+    await QuotationRecoveryService.instance.initialize(clientId);
 
     // Initialize content sync service
     await ContentSyncService.instance.initialize();

@@ -33,6 +33,7 @@ import 'widgets/update_prompt.dart';
 import 'widgets/sync_status_widget.dart';
 import 'widgets/update_banner.dart';
 import 'services/auto_update_service.dart';
+import 'services/quotation_recovery_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String? initialOpenQuote;
@@ -82,7 +83,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final clientId =
           Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       if (clientId.isEmpty) return;
-      final count = await OfflineDatabase.instance.getPendingSyncCount(clientId);
+      final databaseCount =
+          await OfflineDatabase.instance.getPendingSyncCount(clientId);
+      final recoveryCount =
+          await QuotationRecoveryService.instance.pendingCount(clientId);
+      final count = databaseCount + recoveryCount;
       if (!mounted || count == _pendingSyncCount) return;
       setState(() => _pendingSyncCount = count);
     } catch (_) {
@@ -128,9 +133,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } catch (_) {}
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final local = await QuotationRecoveryService.instance
+          .pendingEnvelopes(clientId);
+      final recovered = <QuotationData>[];
+      for (final envelope in local.reversed) {
+        final snapshot = envelope['snapshot'];
+        if (snapshot is! Map) continue;
+        final quotation = snapshot['quotation'];
+        if (quotation is! Map) continue;
+        final map = Map<String, dynamic>.from(quotation);
+        map['measured_items'] = snapshot['measured_items'] ?? const [];
+        map['unmeasured_items'] = snapshot['unmeasured_items'] ?? const [];
+        recovered.add(QuotationData.fromMap(map));
+      }
+      if (mounted) {
+        setState(() {
+          if (recovered.isNotEmpty) _quotations = recovered;
+          _isLoading = false;
+        });
+      }
       debugPrint('Fetch error: $e');
     }
+  }
+
+  Future<void> _syncEverything() async {
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    await Future.wait([
+      SyncEngine.instance.syncAll(),
+      QuotationRecoveryService.instance.flushPending(clientId),
+    ]);
+    await _refreshPendingSyncCount();
+    await _fetchQuotations();
   }
 
   void _logout() async {
@@ -763,9 +799,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 pendingSyncCount: _pendingSyncCount,
                 onTap: isOffline
                     ? null
-                    : () => SyncEngine.instance
-                        .syncAll()
-                        .whenComplete(_refreshPendingSyncCount),
+                    : _syncEverything,
               );
             },
           ),

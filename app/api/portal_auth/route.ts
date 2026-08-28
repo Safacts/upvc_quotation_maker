@@ -56,7 +56,13 @@ async function verifyGoogleCredential(credential: string): Promise<string | null
 async function verifyTurnstile(token: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret || secret.startsWith("your_") || secret.length < 20) {
-    console.warn("TURNSTILE_SECRET_KEY placeholder/missing — skipping verification, signups allowed");
+    // Fail-closed in production — missing CAPTCHA secret must not silently
+    // disable bot protection. In dev we allow signups to unblock local testing.
+    if (process.env.NODE_ENV === "production") {
+      console.error("TURNSTILE_SECRET_KEY missing — rejecting signup (fail-closed)");
+      return false;
+    }
+    console.warn("TURNSTILE_SECRET_KEY placeholder/missing — skipping verification (dev only)");
     return true;
   }
   try {
@@ -79,19 +85,16 @@ const DEV_ORIGINS = new Set([
   "http://localhost:8080",
   "http://127.0.0.1:8080",
 ]);
-let _allowOrigin = PROD_ORIGIN;
 
-function resolveCors(request: NextRequest) {
+function getAllowedOrigin(request: NextRequest): string {
   const origin = request.headers.get("origin");
-  _allowOrigin =
-    origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)
-      ? origin
-      : PROD_ORIGIN;
+  if (origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)) return origin;
+  return PROD_ORIGIN;
 }
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(request: NextRequest): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": _allowOrigin,
+    "Access-Control-Allow-Origin": getAllowedOrigin(request),
     "Access-Control-Allow-Credentials": "true",
     "Content-Type": "application/json",
     "Access-Control-Allow-Methods": "POST,OPTIONS",
@@ -100,8 +103,9 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
-function json(data: any, status = 200) {
-  return NextResponse.json(data, { status, headers: corsHeaders() });
+function json(data: any, status = 200, request?: NextRequest) {
+  const headers = request ? corsHeaders(request) : { "Content-Type": "application/json" as const, Vary: "Origin" as const };
+  return NextResponse.json(data, { status, headers });
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -218,7 +222,8 @@ async function findInactiveClientByEmail(email: string): Promise<any | null> {
 }
 
 export async function POST(request: NextRequest) {
-  resolveCors(request);
+  // Per-request CORS (no global _allowOrigin race) — shadow global json
+  const json = (data: any, status = 200) => NextResponse.json(data, { status, headers: corsHeaders(request) });
   try {
     let raw = "";
     try {
@@ -338,10 +343,10 @@ export async function POST(request: NextRequest) {
         return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
       }
       const googleSignupKey = authAttemptKey(request, "signup-create", "");
-      if (isAuthLocked(googleSignupKey)) {
+      if (await isAuthLocked(googleSignupKey)) {
         return json({ error: "Too many attempts. Try again later." }, 429);
       }
-      recordAuthFailure(googleSignupKey);
+      await recordAuthFailure(googleSignupKey);
       let newRow: any;
       try {
         newRow = await supaPost("signup_requests", { email: googleEmail, auth_method: "google" });
@@ -364,7 +369,7 @@ export async function POST(request: NextRequest) {
     if (!email) return json({ error: "email required" }, 400);
 
     const attemptKey = authAttemptKey(request, "portal-login", email);
-    if (isAuthLocked(attemptKey)) {
+    if (await isAuthLocked(attemptKey)) {
       return json({ error: "Too many attempts. Try again later." }, 429);
     }
 
@@ -375,14 +380,14 @@ export async function POST(request: NextRequest) {
     const inputHash = sha256(password);
 
     if (admin && await verifyPassword(password, String(admin.password_hash || ""))) {
-      clearAuthFailures(attemptKey);
+      await clearAuthFailures(attemptKey);
       await createSession({ role: "admin", email: admin.email });
       return json({ role: "admin", email: admin.email }, 200);
     }
 
     const client = await findClientByEmail(email);
     if (client && await verifyPassword(password, String(client.password_hash || ""))) {
-      clearAuthFailures(attemptKey);
+      await clearAuthFailures(attemptKey);
       if (client.is_active === false) {
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
       }
@@ -435,7 +440,7 @@ export async function POST(request: NextRequest) {
         // Verify the password BEFORE revealing deactivation, otherwise this
         // branch is an oracle that confirms which emails hold accounts.
         if (!await verifyPassword(password, String(inactive.password_hash || ""))) {
-          recordAuthFailure(attemptKey);
+          await recordAuthFailure(attemptKey);
           return json({ error: "invalid email or password" }, 401);
         }
         return json({ error: "Your account is currently deactivated. Please contact support." }, 403);
@@ -446,18 +451,18 @@ export async function POST(request: NextRequest) {
           return json({ error: "This account was created with Google Sign-In. Please use Sign in with Google." }, 401);
         }
         if (await verifyPassword(password, String(signup.password_hash))) {
-          clearAuthFailures(attemptKey);
+          await clearAuthFailures(attemptKey);
           await createSession({ role: "signup", email: signup.email, signup_request_id: String(signup.id) });
           return json({ role: "signup", email: signup.email, status: signup.status, signup_request_id: String(signup.id) }, 200);
         }
-        recordAuthFailure(attemptKey);
+        await recordAuthFailure(attemptKey);
         return json({ error: "invalid email or password" }, 401);
       }
       const signupCreateKey = authAttemptKey(request, "signup-create", "");
-      if (isAuthLocked(signupCreateKey)) {
+      if (await isAuthLocked(signupCreateKey)) {
         return json({ error: "Too many attempts. Try again later." }, 429);
       }
-      recordAuthFailure(signupCreateKey);
+      await recordAuthFailure(signupCreateKey);
       
       // Turnstile verification for signup
       const turnstileToken = p.turnstile_token;
@@ -482,7 +487,7 @@ export async function POST(request: NextRequest) {
       return json({ role: "signup", email, status: "pending", signup_request_id: newSignupId }, 200);
     }
 
-    recordAuthFailure(attemptKey);
+    await recordAuthFailure(attemptKey);
     return json({ error: "invalid email or password" }, 401);
   } catch (e: any) {
     return json({ error: String(e?.message ?? e) }, 500);
@@ -490,6 +495,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function OPTIONS(request: NextRequest) {
-  resolveCors(request);
-  return new NextResponse(null, { status: 200, headers: corsHeaders() });
+  return new NextResponse(null, { status: 200, headers: corsHeaders(request) });
 }
