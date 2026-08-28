@@ -367,3 +367,19 @@ The safe local implementation batch is complete and committed on `development-v1
 Validation completed locally: 599/599 Vitest tests passed after the bounded timeout correction, Next.js TypeScript/build passed, deployment preflight passed against both live Supabase/Vercel targets, YAML parsed successfully, and targeted secret scanning passed. Full Flutter analysis was attempted but did not complete within the local run window; it remains a CI validation item and was not bypassed or converted to warning-only.
 
 The implementation commit is `fee419f` (`chore: harden UPVC CI/CD delivery gates`) and is pushed only to `development-v1`. The remaining work is the approval-gated staging rehearsal, followed only after successful staging evidence by Aadi's explicit production approval.
+
+### 28-08-2026 re-verification after other-agent changes
+
+Other agents added runtime `NEXT_PUBLIC_SUPABASE_*` wiring and Vercel environment typing after the original hardening batch. Those changes were reviewed and retained because they are required for the browser bundle and do not undo the identity gates.
+
+The current release commit `fb3df2e` was rechecked in the live GitHub Actions history:
+
+- Development CI run `33140161945` passed.
+- Staging run `33140170017` passed Test & Build, reusable QA, identity preflight, Flutter web build, staging deployment, and reusable staging smoke.
+- Production run `33144235716` passed Test & Build, reusable QA, identity preflight, and production route verification.
+- The current `fb3df2e` release contains the preflight script, reusable QA/smoke workflows, blocking Vitest command, and 15-second bounded test timeout.
+- The current staging fixed domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the CI identity preflight identified the staging Supabase/Vercel targets and the route identified the correct tenant. The public config response contains existing production Supabase storage URLs for shared logo/APK assets, so that response is not used as proof of the app's database connection.
+- The current production domain returned HTTP 200 for `/`, `/api/keepalive`, and `/api/config/venkateshwara`; the CI identity preflight identified the production Supabase/Vercel targets and the route identified the correct tenant.
+- No new deployment or database write was initiated by this re-verification pass.
+
+The implementation and release gates are therefore complete for the current release. Future feature work should use the runbook rather than modify CI/CD. Any new pipeline change requires a separate development-v1 commit and fresh staging verification.
