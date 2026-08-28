@@ -31,8 +31,10 @@ if (!fs.existsSync(outputsDir)) {
 const originalManifest = fs.readFileSync(manifestPath, "utf8");
 
 try {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gumpmnbjdtzajhysnnaz.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1bXBtbmJqZHR6YWpoeXNubmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNjI2NzgsImV4cCI6MjEwMTczODY3OH0.RbzuXFNDM0HXQhdL6Ex1q9s_t1SCejtKmBsYskBwUhs";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  if (!supabaseUrl) throw new Error("SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL missing — refusing to use hardcoded fallback");
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY missing — refusing to use hardcoded anon JWT");
 
   let appName = clientId.toUpperCase() + " UPVC Quote";
   

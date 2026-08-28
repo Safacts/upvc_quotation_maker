@@ -1,8 +1,11 @@
-﻿const { Client } = require('pg');
+﻿require('dotenv').config();
+const { Client } = require('pg');
 
 async function run() {
+  const pw = process.env.SUPABASE_DB_PASSWORD;
+  if (!pw) throw new Error('SUPABASE_DB_PASSWORD missing');
   const client = new Client({
-    connectionString: 'postgresql://postgres:AADISHESHu1.@db.gumpmnbjdtzajhysnnaz.supabase.co:5432/postgres'
+    connectionString: `postgresql://postgres:${encodeURIComponent(pw)}@db.gumpmnbjdtzajhysnnaz.supabase.co:5432/postgres`
   });
   await client.connect();
   console.log('Connected to PG!');
