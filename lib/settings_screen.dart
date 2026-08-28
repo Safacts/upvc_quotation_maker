@@ -45,8 +45,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _gstPercentageController = TextEditingController(text: appState.defaultGstPercentage.toString());
     _proprietorController = TextEditingController(text: appState.companyProprietor);
     _gstNoController = TextEditingController(text: appState.gstNumber);
-     _marginPercent = appState.costMarginPercent;
-     _supplierCompanies = List<String>.from(appState.supplierCompanies);
+     _marginPercent = appState.costMarginPercent.clamp(10.0, 95.0);
+      _supplierCompanies = List<String>.from(appState.supplierCompanies);
      _fontScale = appState.fontScale;
      _elementDensity = appState.elementDensity;
    }

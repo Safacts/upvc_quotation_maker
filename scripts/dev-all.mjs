@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import process from "node:process";
+import fs from "node:fs";
 
 const cwd = process.cwd();
 const children = [];
@@ -54,7 +55,20 @@ if (process.env.DEV_ALL_GATEWAY !== "0") {
 }
 
 start("next   ", "npm", ["run", "dev", "--", "-p", "3100"]);
-start("flutter", "flutter", ["run", "-d", "web-server", "--web-port", "8080", "--web-hostname", "127.0.0.1"]);
+// Local Flutter must target the same Supabase as Next (staging for devfix).
+let dartDefines = [];
+try {
+  const envRaw = fs.readFileSync(".env", "utf8");
+  const get = (k) => (envRaw.match(new RegExp(`^${k}=([^\r\n]+)`, "m")) || [])[1]?.trim().replace(/^['"]|['"]$/g, "");
+  const stagingUrl = get("STAGING_SUPABASE_URL");
+  const stagingKey = get("STAGING_SUPABASE_ANON_KEY");
+  const prodUrl = get("SUPABASE_URL");
+  const prodKey = get("SUPABASE_ANON_KEY");
+  const url = stagingUrl || prodUrl;
+  const key = stagingKey || prodKey;
+  if (url && key) dartDefines = [`--dart-define=SUPABASE_URL=${url}`, `--dart-define=SUPABASE_ANON_KEY=${key}`];
+} catch {}
+start("flutter", "flutter", ["run", "-d", "web-server", "--web-port", "8080", "--web-hostname", "127.0.0.1", ...dartDefines]);
 
 console.log("");
 console.log("Gateway:  http://localhost:3000  (forwards to Next :3100 + Flutter :8080)");
