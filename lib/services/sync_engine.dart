@@ -365,7 +365,8 @@ class SyncEngine {
   ) async {
     final data = _sanitize(_payloadFor(record));
     if (data.isEmpty) {
-      throw StateError('empty payload for $table insert');
+      debugPrint('SyncEngine: empty payload for $table insert, skipping.');
+      return;
     }
     await SupabaseConfig.client.from(table).insert({
       ...data,
@@ -381,7 +382,8 @@ class SyncEngine {
   ) async {
     final data = _sanitize(_payloadFor(record));
     if (data.isEmpty) {
-      throw StateError('empty payload for $table update');
+      debugPrint('SyncEngine: empty payload for $table update, skipping.');
+      return;
     }
     // Never let the payload rewrite the identity or the tenant.
     data.remove('id');
