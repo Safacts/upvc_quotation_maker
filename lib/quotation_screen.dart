@@ -983,10 +983,17 @@ $reviewCta
 
       // 2. Generate PDF bytes (0ms offline fallback)
       final appState = Provider.of<AppState>(context, listen: false);
-      await pdf_gen.loadLibrary();
-      final effectivePhotos =
-          appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
-      final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
+      Uint8List pdfBytes;
+      try {
+        await pdf_gen.loadLibrary();
+        final effectivePhotos =
+            appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
+        pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
+      } catch (pdfErr) {
+        debugPrint('Primary PDF generation error: $pdfErr');
+        await pdf_gen.loadLibrary();
+        pdfBytes = await pdf_gen.generatePdfBytes(data, appState);
+      }
 
       // 3. If email exists and online, send in background
       Future<void>? emailTask;
@@ -1010,9 +1017,10 @@ $reviewCta
         ),
       );
     } catch (e) {
+      debugPrint('Generate PDF error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_calmError(e, 'generate the PDF'))),
+          SnackBar(content: Text(_calmError(e, 'complete this quotation'))),
         );
       }
     } finally {

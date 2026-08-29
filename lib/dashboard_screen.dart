@@ -27,6 +27,7 @@ import 'inventory_screen.dart';
 import 'production_screen.dart';
 import 'cutting_screen.dart';
 import 'leads_screen.dart';
+import 'notification_service.dart';
 import 'project_screen.dart';
 import 'services/connectivity_service.dart';
 import 'services/offline_database.dart';
@@ -63,6 +64,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchQuotations();
     _refreshPendingSyncCount();
     _checkForAppUpdate();
+    _requestNotificationPermissions();
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 800));
+      await NotificationService().requestPermissions();
+    } catch (_) {}
   }
 
   /// Check for updates AFTER app loads. AutoUpdateService compares the

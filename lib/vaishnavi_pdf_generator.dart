@@ -10,12 +10,9 @@ import 'package:printing/printing.dart';
 import 'app_state.dart';
 import 'models.dart';
 import 'models_extra.dart';
+import 'services/connectivity_service.dart';
 
 /// Vaishnavi-only estimate renderer.
-///
-/// This intentionally uses fixed pages because the supplied client reference
-/// has a stable two-page composition: estimate/table/totals/description on
-/// page one, and terms/signature/amount-in-words on page two.
 Future<Uint8List> generateVaishnaviPdfBytes(
   QuotationData data,
   AppState appState, {
@@ -24,8 +21,17 @@ Future<Uint8List> generateVaishnaviPdfBytes(
   final svgPdf = await _tryGenerateVaishnaviSvgPdf(data, appState);
   if (svgPdf != null) return svgPdf;
 
-  final regular = await PdfGoogleFonts.robotoRegular();
-  final bold = await PdfGoogleFonts.robotoBold();
+  pw.Font regular = pw.Font.helvetica();
+  pw.Font bold = pw.Font.helveticaBold();
+  if (ConnectivityService.instance.isOnline) {
+    try {
+      regular = await PdfGoogleFonts.robotoRegular().timeout(const Duration(seconds: 1));
+      bold = await PdfGoogleFonts.robotoBold().timeout(const Duration(seconds: 1));
+    } catch (_) {
+      regular = pw.Font.helvetica();
+      bold = pw.Font.helveticaBold();
+    }
+  }
   final pdf = pw.Document();
   final money = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
 
@@ -52,6 +58,7 @@ Future<Uint8List?> _tryGenerateVaishnaviSvgPdf(
   QuotationData data,
   AppState appState,
 ) async {
+  if (!ConnectivityService.instance.isOnline) return null;
   final base = kIsWeb ? Uri.base.origin : 'https://app.vitharn.com';
   final items = <Map<String, dynamic>>[
     ...data.measuredItems.map(
