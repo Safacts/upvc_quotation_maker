@@ -72,10 +72,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _passwordController.addListener(_onInputChanged);
+    _emailController.addListener(_onInputChanged);
     _checkExistingSession();
     _initGoogleSignIn();
     // Client-specific app/web: autofill email so only password is required
     WidgetsBinding.instance.addPostFrameCallback((_) => _autofillEmailForClient());
+  }
+
+  void _onInputChanged() {
+    if (_errorMessage.isNotEmpty && mounted) {
+      setState(() => _errorMessage = '');
+    }
   }
 
   @override
@@ -105,6 +113,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _passwordController.removeListener(_onInputChanged);
+    _emailController.removeListener(_onInputChanged);
+    _passwordController.dispose();
+    _emailController.dispose();
     _googleSub?.cancel();
     super.dispose();
   }
