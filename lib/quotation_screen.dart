@@ -529,6 +529,8 @@ class _QuotationScreenState extends State<QuotationScreen>
     setState(() => _isLoading = true);
     try {
       if (data.id != null) {
+        final clientId =
+            Provider.of<AppState>(context, listen: false).clientConfig.clientId;
         final qRes = await SupabaseConfig.client
             .from('quotations')
             .select('sync_version')
@@ -1849,7 +1851,15 @@ $reviewCta
                               focusNode: _node('m_${index}_2'),
                               initialValue:
                                   item.width == 0 ? '' : item.width.toString(),
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*'),
+                                ),
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('m_${index}_2'),
@@ -1872,7 +1882,15 @@ $reviewCta
                                   item.height == 0
                                       ? ''
                                       : item.height.toString(),
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*'),
+                                ),
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('m_${index}_3'),
@@ -1893,6 +1911,9 @@ $reviewCta
                               focusNode: _node('m_${index}_4'),
                               initialValue: item.units.toString(),
                               keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('m_${index}_4'),
@@ -1933,7 +1954,15 @@ $reviewCta
                               focusNode: _node('m_${index}_6'),
                               initialValue:
                                   item.rate == 0 ? '' : item.rate.toString(),
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*'),
+                                ),
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('m_${index}_6'),
@@ -2136,6 +2165,9 @@ $reviewCta
                               focusNode: _node('u_${index}_1'),
                               initialValue: item.units.toString(),
                               keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('u_${index}_1'),
@@ -2160,6 +2192,11 @@ $reviewCta
                                     decimal: true,
                                     signed: true,
                                   ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*'),
+                                ),
+                              ],
                               textInputAction: TextInputAction.next,
                               onFieldSubmitted:
                                   (_) => _nextField('u_${index}_2'),
@@ -2229,6 +2266,11 @@ $reviewCta
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
+                          ),
+                        ],
                         textInputAction: TextInputAction.next,
                         onFieldSubmitted: (_) => _transportFocus.requestFocus(),
                         decoration: const InputDecoration(
@@ -2248,7 +2290,14 @@ $reviewCta
                       focusNode: _transportFocus,
                       initialValue:
                           data.transport == 0 ? '' : data.transport.toString(),
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d*'),
+                        ),
+                      ],
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) {
                         if (data.includeGst) {
@@ -2303,7 +2352,14 @@ $reviewCta
                               data.gstPercentage == 0.0
                                   ? ''
                                   : data.gstPercentage.toString(),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d*'),
+                            ),
+                          ],
                           textInputAction: TextInputAction.done,
                           decoration: const InputDecoration(
                             labelText: 'GST Percentage (%)',
