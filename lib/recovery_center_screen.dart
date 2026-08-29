@@ -20,12 +20,13 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
   bool _loading = true;
   bool _syncing = false;
   int _pending = 0;
+  int _localDrafts = 0;
   int _conflicts = 0;
   DateTime? _lastBackup;
   List<Map<String, dynamic>> _cloud = const [];
+  List<Map<String, dynamic>> _conflictRows = const [];
 
-  String get _clientId =>
-      context.read<AppState>().clientConfig.clientId;
+  String get _clientId => context.read<AppState>().clientConfig.clientId;
 
   @override
   void initState() {
@@ -36,13 +37,16 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
   Future<void> _refresh() async {
     final service = QuotationRecoveryService.instance;
     final pending = await service.pendingEnvelopes(_clientId);
+    final localDrafts = await service.localDrafts(_clientId);
     final conflicts = await service.conflicts(_clientId);
     final lastBackup = await service.lastCloudBackup(_clientId);
     final cloud = await service.cloudSnapshots(_clientId);
     if (!mounted) return;
     setState(() {
       _pending = pending.length;
+      _localDrafts = localDrafts.length;
       _conflicts = conflicts.length;
+      _conflictRows = conflicts;
       _lastBackup = lastBackup;
       _cloud = cloud;
       _loading = false;
@@ -52,33 +56,47 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
   Future<void> _syncNow() async {
     if (_syncing) return;
     setState(() => _syncing = true);
-    await QuotationRecoveryService.instance.flushPending(_clientId);
-    await _refresh();
-    if (!mounted) return;
-    setState(() => _syncing = false);
-    final message = _pending == 0
-        ? 'Everything on this device is backed up.'
-        : 'Your work is safe here. $_pending item${_pending == 1 ? '' : 's'} will retry automatically.';
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    try {
+      final service = QuotationRecoveryService.instance;
+      await service.queueAllLocalDrafts(_clientId);
+      await service.flushPending(_clientId);
+      await _refresh();
+      if (!mounted) return;
+      final message =
+          _pending == 0
+              ? 'Everything on this device is backed up.'
+              : 'Your work is safe here. $_pending item${_pending == 1 ? '' : 's'} will retry automatically.';
+      _show(message);
+    } catch (_) {
+      _show(
+        'The backup could not finish, but your existing device copies were not removed.',
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
   }
 
   Future<void> _exportBackup() async {
-    final raw = await QuotationRecoveryService.instance.exportBundle(_clientId);
-    final date = DateTime.now().toIso8601String().split('T').first;
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [
-          XFile.fromData(
-            utf8.encode(raw),
-            mimeType: 'application/json',
-            name: 'vitharn-recovery-$_clientId-$date.json',
-          ),
-        ],
-        text: 'Vitharn quotation recovery backup for $_clientId',
-      ),
-    );
+    try {
+      final raw = await QuotationRecoveryService.instance.exportBundle(
+        _clientId,
+      );
+      final date = DateTime.now().toIso8601String().split('T').first;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              utf8.encode(raw),
+              mimeType: 'application/json',
+              name: 'vitharn-recovery-$_clientId-$date.json',
+            ),
+          ],
+          text: 'Vitharn quotation recovery backup for $_clientId',
+        ),
+      );
+    } catch (_) {
+      _show('Could not export right now. No recovery data was removed.');
+    }
   }
 
   Future<void> _importFromClipboard() async {
@@ -89,14 +107,73 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
       return;
     }
     try {
-      final count = await QuotationRecoveryService.instance
-          .importBundle(_clientId, raw);
+      final count = await QuotationRecoveryService.instance.importBundle(
+        _clientId,
+        raw,
+      );
+      if (ConnectivityService.instance.isOnline) {
+        await QuotationRecoveryService.instance.flushPending(_clientId);
+      }
       await _refresh();
       _show('$count recovery item${count == 1 ? '' : 's'} imported safely.');
     } on FormatException catch (error) {
       _show(error.message);
     } catch (_) {
-      _show('Could not read this backup. The existing device data was not changed.');
+      _show(
+        'Could not read this backup. The existing device data was not changed.',
+      );
+    }
+  }
+
+  Future<void> _resolveDeviceCopy(String operationId) async {
+    try {
+      final ok = await QuotationRecoveryService.instance
+          .resolveConflictWithDeviceVersion(_clientId, operationId);
+      await _refresh();
+      _show(
+        ok
+            ? 'This device version is protected and queued for cloud backup.'
+            : 'That protected version is no longer available.',
+      );
+    } catch (_) {
+      _show('Could not apply that version. Both protected copies remain safe.');
+    }
+  }
+
+  Future<void> _keepCloudCopy(String operationId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Keep the cloud version?'),
+            content: const Text(
+              'The conflicting device draft will be removed from this installation. '
+              'Its protected cloud recovery snapshot remains available for support.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Keep Cloud Version'),
+              ),
+            ],
+          ),
+    );
+    if (confirm != true) return;
+    try {
+      final ok = await QuotationRecoveryService.instance
+          .resolveConflictKeepingCloud(_clientId, operationId);
+      await _refresh();
+      _show(
+        ok
+            ? 'Cloud version kept.'
+            : 'That protected version is no longer available.',
+      );
+    } catch (_) {
+      _show('Could not finish that choice. Both protected copies remain safe.');
     }
   }
 
@@ -121,160 +198,253 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
     final online = ConnectivityService.instance.isOnline;
     return Scaffold(
       appBar: AppBar(title: const Text('Data Safety & Recovery')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refresh,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    color: _pending == 0
-                        ? Colors.green.withValues(alpha: .08)
-                        : Colors.amber.withValues(alpha: .10),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _pending == 0
-                                    ? Icons.verified_user
-                                    : Icons.offline_pin,
-                                color: _pending == 0
-                                    ? Colors.green
-                                    : Colors.amber.shade800,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Card(
+                      color:
+                          _pending == 0
+                              ? Colors.green.withValues(alpha: .08)
+                              : Colors.amber.withValues(alpha: .10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
                                   _pending == 0
-                                      ? 'Your work is protected'
-                                      : '$_pending item${_pending == 1 ? '' : 's'} safe on this device',
+                                      ? Icons.verified_user
+                                      : Icons.offline_pin,
+                                  color:
+                                      _pending == 0
+                                          ? Colors.green
+                                          : Colors.amber.shade800,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _pending == 0
+                                        ? 'Your work is protected'
+                                        : '$_pending item${_pending == 1 ? '' : 's'} safe on this device',
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              online
+                                  ? 'Cloud backup: ${_relative(_lastBackup)}'
+                                  : 'No internet right now. Nothing will be lost; backup resumes automatically.',
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Local recovery copies: $_localDrafts',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (_conflicts > 0) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                '$_conflicts protected version${_conflicts == 1 ? '' : 's'} need review.',
+                                style: TextStyle(color: Colors.amber.shade900),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _syncing ? null : _syncNow,
+                      icon:
+                          _syncing
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : const Icon(Icons.cloud_sync),
+                      label: Text(
+                        _syncing ? 'Backing up…' : 'Back Up Everything Now',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _exportBackup,
+                      icon: const Icon(Icons.ios_share),
+                      label: const Text('Export Emergency Backup'),
+                    ),
+                    TextButton.icon(
+                      onPressed: _importFromClipboard,
+                      icon: const Icon(Icons.content_paste),
+                      label: const Text('Import Backup from Clipboard'),
+                    ),
+                    if (_conflictRows.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Versions needing your choice',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Nothing was overwritten. Choose the copy you want to keep.',
+                      ),
+                      const SizedBox(height: 8),
+                      ..._conflictRows.map((row) {
+                        final snapshot = row['snapshot'];
+                        final quotation =
+                            snapshot is Map
+                                ? snapshot['quotation'] as Map?
+                                : null;
+                        final quoteNo =
+                            (quotation?['quote_no'] ??
+                                    row['quotation_id'] ??
+                                    '')
+                                .toString();
+                        final customer =
+                            (quotation?['customer_name'] ?? '').toString();
+                        final operationId =
+                            (row['operation_id'] ?? '').toString();
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  quoteNo,
                                   style: const TextStyle(
-                                    fontSize: 17,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(online
-                              ? 'Cloud backup: ${_relative(_lastBackup)}'
-                              : 'No internet right now. Nothing will be lost; backup resumes automatically.'),
-                          if (_conflicts > 0) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              '$_conflicts protected version${_conflicts == 1 ? '' : 's'} need review.',
-                              style: TextStyle(color: Colors.amber.shade900),
+                                if (customer.isNotEmpty) Text(customer),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    FilledButton.tonal(
+                                      onPressed:
+                                          operationId.isEmpty
+                                              ? null
+                                              : () => _resolveDeviceCopy(
+                                                operationId,
+                                              ),
+                                      child: const Text('Use This Device Copy'),
+                                    ),
+                                    OutlinedButton(
+                                      onPressed:
+                                          operationId.isEmpty
+                                              ? null
+                                              : () =>
+                                                  _keepCloudCopy(operationId),
+                                      child: const Text('Keep Cloud Version'),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
-                        ],
+                          ),
+                        );
+                      }),
+                    ],
+                    const SizedBox(height: 20),
+                    Text(
+                      'Recent protected copies',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _syncing ? null : _syncNow,
-                    icon: _syncing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.cloud_sync),
-                    label: Text(_syncing ? 'Backing up…' : 'Back Up Everything Now'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _exportBackup,
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Export Emergency Backup'),
-                  ),
-                  TextButton.icon(
-                    onPressed: _importFromClipboard,
-                    icon: const Icon(Icons.content_paste),
-                    label: const Text('Import Backup from Clipboard'),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Recent protected copies',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (!online)
-                    const Card(
-                      child: ListTile(
-                        leading: Icon(Icons.cloud_off),
-                        title: Text('Cloud history is available when connected'),
-                      ),
-                    )
-                  else if (_cloud.isEmpty)
-                    const Card(
-                      child: ListTile(
-                        leading: Icon(Icons.history),
-                        title: Text('No cloud recovery copies yet'),
-                        subtitle: Text('They are created automatically while you work.'),
-                      ),
-                    )
-                  else
-                    ..._cloud.take(20).map((row) {
-                      final snapshot = row['snapshot'];
-                      final quotation = snapshot is Map
-                          ? snapshot['quotation'] as Map?
-                          : null;
-                      final quoteNo =
-                          (quotation?['quote_no'] ?? row['quotation_id'] ?? '')
-                              .toString();
-                      final customer =
-                          (quotation?['customer_name'] ?? '').toString();
-                      final state = (row['state'] ?? 'pending').toString();
-                      return Card(
+                    const SizedBox(height: 8),
+                    if (!online)
+                      const Card(
                         child: ListTile(
-                          leading: Icon(
-                            state == 'synced'
-                                ? Icons.cloud_done
-                                : state == 'conflict'
-                                    ? Icons.copy_all
-                                    : Icons.cloud_upload,
-                            color: state == 'conflict'
-                                ? Colors.amber.shade800
-                                : Colors.green,
-                          ),
-                          title: Text(quoteNo),
-                          subtitle: Text(
-                            customer.isEmpty ? 'Protected copy • $state' : '$customer • $state',
-                          ),
-                          trailing: IconButton(
-                            tooltip: 'Copy recovery data',
-                            icon: const Icon(Icons.copy),
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: jsonEncode(row)),
-                              );
-                              _show('Recovery data copied for support.');
-                            },
+                          leading: Icon(Icons.cloud_off),
+                          title: Text(
+                            'Cloud history is available when connected',
                           ),
                         ),
-                      );
-                    }),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Emergency backups contain business quotation data. Keep exported files private.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                      )
+                    else if (_cloud.isEmpty)
+                      const Card(
+                        child: ListTile(
+                          leading: Icon(Icons.history),
+                          title: Text('No cloud recovery copies yet'),
+                          subtitle: Text(
+                            'They are created automatically while you work.',
+                          ),
+                        ),
+                      )
+                    else
+                      ..._cloud.take(20).map((row) {
+                        final snapshot = row['snapshot'];
+                        final quotation =
+                            snapshot is Map
+                                ? snapshot['quotation'] as Map?
+                                : null;
+                        final quoteNo =
+                            (quotation?['quote_no'] ??
+                                    row['quotation_id'] ??
+                                    '')
+                                .toString();
+                        final customer =
+                            (quotation?['customer_name'] ?? '').toString();
+                        final state = (row['state'] ?? 'pending').toString();
+                        return Card(
+                          child: ListTile(
+                            leading: Icon(
+                              state == 'synced'
+                                  ? Icons.cloud_done
+                                  : state == 'conflict'
+                                  ? Icons.copy_all
+                                  : Icons.cloud_upload,
+                              color:
+                                  state == 'conflict'
+                                      ? Colors.amber.shade800
+                                      : Colors.green,
+                            ),
+                            title: Text(quoteNo),
+                            subtitle: Text(
+                              customer.isEmpty
+                                  ? 'Protected copy • $state'
+                                  : '$customer • $state',
+                            ),
+                            trailing: IconButton(
+                              tooltip: 'Copy recovery data',
+                              icon: const Icon(Icons.copy),
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: jsonEncode(row)),
+                                );
+                                _show('Recovery data copied for support.');
+                              },
+                            ),
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Emergency backups contain business quotation data. Keep exported files private.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
     );
   }
 }

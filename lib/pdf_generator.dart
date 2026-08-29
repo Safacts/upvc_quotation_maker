@@ -11,18 +11,35 @@ import 'models_extra.dart';
 import 'app_state.dart';
 import 'services/upi_service.dart';
 
-Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<QuotationPhoto> photos = const []}) async {
+Future<Uint8List> generatePdfBytes(
+  QuotationData data,
+  AppState appState, {
+  List<QuotationPhoto> photos = const [],
+}) async {
   final pdf = pw.Document();
-  final NumberFormat currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
-  
-  final defaultLogoUrl = 'https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg';
+  final NumberFormat currency = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: 'Rs. ',
+  );
+
+  final defaultLogoUrl =
+      'https://t3.ftcdn.net/jpg/08/52/27/60/360_F_852276023_G4klsazIrvQwxpJOsje5gDf8zqlWWEmQ.jpg';
   final clientConfig = appState.clientConfig;
-  final topLogoUrl = clientConfig.invoiceTopLogoUrl.isNotEmpty ? clientConfig.invoiceTopLogoUrl : defaultLogoUrl;
-  final bgLogoUrl = clientConfig.invoiceBackgroundLogoUrl.isNotEmpty
-      ? clientConfig.invoiceBackgroundLogoUrl
-      : (clientConfig.invoiceTopLogoUrl.isNotEmpty ? clientConfig.invoiceTopLogoUrl : defaultLogoUrl);
+  final topLogoUrl =
+      clientConfig.invoiceTopLogoUrl.isNotEmpty
+          ? clientConfig.invoiceTopLogoUrl
+          : defaultLogoUrl;
+  final bgLogoUrl =
+      clientConfig.invoiceBackgroundLogoUrl.isNotEmpty
+          ? clientConfig.invoiceBackgroundLogoUrl
+          : (clientConfig.invoiceTopLogoUrl.isNotEmpty
+              ? clientConfig.invoiceTopLogoUrl
+              : defaultLogoUrl);
   final headerLogo = await _loadLogoImage(topLogoUrl, defaultLogoUrl);
-  final watermarkImage = bgLogoUrl == topLogoUrl ? headerLogo : await _loadLogoImage(bgLogoUrl, defaultLogoUrl);
+  final watermarkImage =
+      bgLogoUrl == topLogoUrl
+          ? headerLogo
+          : await _loadLogoImage(bgLogoUrl, defaultLogoUrl);
   final fontRegular = await PdfGoogleFonts.robotoRegular();
   final fontBold = await PdfGoogleFonts.robotoBold();
 
@@ -48,7 +65,9 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<
         return pw.Container(
           alignment: pw.Alignment.center,
           margin: pw.EdgeInsets.only(top: 10),
-          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColors.grey))),
+          decoration: pw.BoxDecoration(
+            border: pw.Border(top: pw.BorderSide(color: PdfColors.grey)),
+          ),
           padding: pw.EdgeInsets.only(top: 5),
           child: pw.Text(
             'Generated on ${DateFormat('dd-MM-yyyy hh:mm a').format(DateTime.now())} | This is a computer-generated quotation | Page ${context.pageNumber} of ${context.pagesCount}',
@@ -63,13 +82,24 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<
           _buildSectionTitle('Customer Details'),
           _buildCustomerDetails(data),
           _buildSectionTitle('Quotation Details'),
-          if (data.measuredItems.isNotEmpty) _buildMeasuredTable(data, currency, kprSimplified: clientConfig.clientId == 'kprupvc'),
+          if (data.measuredItems.isNotEmpty)
+            _buildMeasuredTable(
+              data,
+              currency,
+              kprSimplified: clientConfig.clientId == 'kprupvc',
+            ),
           if (data.unmeasuredItems.isNotEmpty) ...[
-            _buildSectionTitle('Add Items without Measurements (Only Quantity)'),
+            _buildSectionTitle(
+              'Add Items without Measurements (Only Quantity)',
+            ),
             _buildUnmeasuredTable(data, currency),
           ],
           pw.SizedBox(height: 10),
-          _buildTotalsTable(data, currency, kprAdvance: clientConfig.clientId.toLowerCase() == 'kprupvc'),
+          _buildTotalsTable(
+            data,
+            currency,
+            kprAdvance: clientConfig.clientId.toLowerCase() == 'kprupvc',
+          ),
           if (photos.isNotEmpty) ...[
             pw.SizedBox(height: 10),
             _buildSitePhotosSection(photos),
@@ -90,7 +120,11 @@ Future<Uint8List> generatePdfBytes(QuotationData data, AppState appState, {List<
   return pdf.save();
 }
 
-Future<void> generateAndPreviewPdf(QuotationData data, BuildContext context, AppState appState) async {
+Future<void> generateAndPreviewPdf(
+  QuotationData data,
+  BuildContext context,
+  AppState appState,
+) async {
   final bytes = await generatePdfBytes(data, appState);
   await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => bytes);
 }
@@ -101,6 +135,7 @@ Future<pw.ImageProvider> _loadLogoImage(String url, String fallbackUrl) async {
     if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
     return pw.MemoryImage(resp.bodyBytes);
   }
+
   try {
     return await fetch(url);
   } catch (e) {
@@ -126,14 +161,30 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text(appState.companyName, style: pw.TextStyle(color: PdfColors.white, fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.Text(appState.companyAddress, style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-            pw.Text('Prop: ${appState.companyProprietor}   Contact: ${appState.companyContact}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
-            pw.Text('GST No: ${appState.gstNumber}', style: pw.TextStyle(color: PdfColors.white, fontSize: 10)),
+            pw.Text(
+              appState.companyName,
+              style: pw.TextStyle(
+                color: PdfColors.white,
+                fontSize: 16,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.Text(
+              appState.companyAddress,
+              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+            ),
+            pw.Text(
+              'Prop: ${appState.companyProprietor}   Contact: ${appState.companyContact}',
+              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+            ),
+            pw.Text(
+              'GST No: ${appState.gstNumber}',
+              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+            ),
           ],
         ),
       ),
-    ]
+    ],
   );
 }
 
@@ -143,10 +194,16 @@ pw.Widget _buildTopBar(QuotationData data) {
     child: pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text('Quotation No: ${data.quotationNo}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-        pw.Text('Date: ${DateFormat('dd-MMM-yyyy').format(data.date)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-      ]
-    )
+        pw.Text(
+          'Quotation No: ${data.quotationNo}',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+        ),
+        pw.Text(
+          'Date: ${DateFormat('dd-MMM-yyyy').format(data.date)}',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+        ),
+      ],
+    ),
   );
 }
 
@@ -156,41 +213,127 @@ pw.Widget _buildSectionTitle(String title) {
     padding: pw.EdgeInsets.all(4),
     margin: pw.EdgeInsets.only(top: 10, bottom: 4),
     color: PdfColor.fromHex('#C44A10'),
-    child: pw.Text(title, style: pw.TextStyle(color: PdfColors.white, fontSize: 11, fontWeight: pw.FontWeight.bold)),
+    child: pw.Text(
+      title,
+      style: pw.TextStyle(
+        color: PdfColors.white,
+        fontSize: 11,
+        fontWeight: pw.FontWeight.bold,
+      ),
+    ),
   );
 }
 
 pw.Widget _buildCustomerDetails(QuotationData data) {
   return pw.Table(
-    columnWidths: { 0: pw.FlexColumnWidth(1), 1: pw.FlexColumnWidth(2), 2: pw.FlexColumnWidth(1), 3: pw.FlexColumnWidth(2) },
+    columnWidths: {
+      0: pw.FlexColumnWidth(1),
+      1: pw.FlexColumnWidth(2),
+      2: pw.FlexColumnWidth(1),
+      3: pw.FlexColumnWidth(2),
+    },
     children: [
-      pw.TableRow(children: [
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.customerName, style: pw.TextStyle(fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Reference', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.reference, style: pw.TextStyle(fontSize: 10))),
-      ]),
-      pw.TableRow(children: [
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Address', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.address, style: pw.TextStyle(fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Contact No', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-        pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.contactNo, style: pw.TextStyle(fontSize: 10))),
-      ]),
+      pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(
+              'Name',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(
+              data.customerName,
+              style: pw.TextStyle(fontSize: 10),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(
+              'Reference',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(data.reference, style: pw.TextStyle(fontSize: 10)),
+          ),
+        ],
+      ),
+      pw.TableRow(
+        children: [
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(
+              'Address',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(data.address, style: pw.TextStyle(fontSize: 10)),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(
+              'Contact No',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+            ),
+          ),
+          pw.Padding(
+            padding: pw.EdgeInsets.all(4),
+            child: pw.Text(data.contactNo, style: pw.TextStyle(fontSize: 10)),
+          ),
+        ],
+      ),
       if (data.supplierCompany.isNotEmpty)
-        pw.TableRow(children: [
-          pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text('Supplier Company', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(4), child: pw.Text(data.supplierCompany, style: pw.TextStyle(fontSize: 10))),
-          pw.SizedBox(),
-          pw.SizedBox(),
-        ]),
+        pw.TableRow(
+          children: [
+            pw.Padding(
+              padding: pw.EdgeInsets.all(4),
+              child: pw.Text(
+                'Supplier Company',
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(4),
+              child: pw.Text(
+                data.supplierCompany,
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+            pw.SizedBox(),
+            pw.SizedBox(),
+          ],
+        ),
     ],
   );
 }
 
-pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool kprSimplified = false}) {
+pw.Widget _buildMeasuredTable(
+  QuotationData data,
+  NumberFormat currency, {
+  bool kprSimplified = false,
+}) {
   if (kprSimplified) {
     return pw.TableHelper.fromTextArray(
-      headers: ['S.No', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'Rate', 'Total'],
+      headers: [
+        'S.No',
+        'Description',
+        'W',
+        'H',
+        'Units',
+        'Glass',
+        'SFT',
+        'Rate',
+        'Total',
+      ],
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
       headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
       cellStyle: pw.TextStyle(fontSize: 9),
@@ -210,15 +353,33 @@ pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool k
       data: List<List<String>>.generate(data.measuredItems.length, (index) {
         final item = data.measuredItems[index];
         return [
-          '${index + 1}', item.description, item.width.toStringAsFixed(0), item.height.toStringAsFixed(0),
-          item.units.toString(), item.glass, item.sft.toStringAsFixed(2),
-          currency.format(item.rate), currency.format(item.total),
+          '${index + 1}',
+          item.description,
+          item.width.toStringAsFixed(0),
+          item.height.toStringAsFixed(0),
+          item.units.toString(),
+          item.glass,
+          item.sft.toStringAsFixed(2),
+          currency.format(item.rate),
+          currency.format(item.total),
         ];
       }),
     );
   }
   return pw.TableHelper.fromTextArray(
-    headers: ['S.No', 'Code', 'Description', 'W', 'H', 'Units', 'Glass', 'SFT', 'T.SFT', 'Rate', 'Total'],
+    headers: [
+      'S.No',
+      'Code',
+      'Description',
+      'W',
+      'H',
+      'Units',
+      'Glass',
+      'SFT',
+      'T.SFT',
+      'Rate',
+      'Total',
+    ],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
     headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
     cellStyle: pw.TextStyle(fontSize: 9),
@@ -240,9 +401,17 @@ pw.Widget _buildMeasuredTable(QuotationData data, NumberFormat currency, {bool k
     data: List<List<String>>.generate(data.measuredItems.length, (index) {
       final item = data.measuredItems[index];
       return [
-        '${index + 1}', item.code, item.description, item.width.toStringAsFixed(0), item.height.toStringAsFixed(0),
-        item.units.toString(), item.glass, item.sft.toStringAsFixed(2), item.totalSft.toStringAsFixed(2),
-        currency.format(item.rate), currency.format(item.total),
+        '${index + 1}',
+        item.code,
+        item.description,
+        item.width.toStringAsFixed(0),
+        item.height.toStringAsFixed(0),
+        item.units.toString(),
+        item.glass,
+        item.sft.toStringAsFixed(2),
+        item.totalSft.toStringAsFixed(2),
+        currency.format(item.rate),
+        currency.format(item.total),
       ];
     }),
   );
@@ -265,63 +434,226 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
     },
     data: List<List<String>>.generate(data.unmeasuredItems.length, (index) {
       final item = data.unmeasuredItems[index];
-      return ['${index + 1}', item.description, item.units.toString(), currency.format(item.rate), currency.format(item.total)];
+      return [
+        '${index + 1}',
+        item.description,
+        item.units.toString(),
+        currency.format(item.rate),
+        currency.format(item.total),
+      ];
     }),
   );
 }
 
-pw.Widget _buildTotalsTable(QuotationData data, NumberFormat currency, {bool kprAdvance = false}) {
+pw.Widget _buildTotalsTable(
+  QuotationData data,
+  NumberFormat currency, {
+  bool kprAdvance = false,
+}) {
   return pw.Container(
     color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
-      border: pw.TableBorder.all(color: PdfColor(0,0,0,0)),
+      border: pw.TableBorder.all(color: PdfColor(0, 0, 0, 0)),
       children: [
-        pw.TableRow(children: [
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Total SFT', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(data.totalSft.toStringAsFixed(2), style: pw.TextStyle(fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Subtotal', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.actualAmount), style: pw.TextStyle(fontSize: 10))),
-        ]),
-        pw.TableRow(children: [
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Transport', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.transport), style: pw.TextStyle(fontSize: 10))),
-          data.includeGst ? pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('IGST @ ${data.gstPercentage}%', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))) : pw.SizedBox(),
-          data.includeGst ? pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.igst), style: pw.TextStyle(fontSize: 10))) : pw.SizedBox(),
-        ]),
-        pw.TableRow(children: [
-          pw.SizedBox(),
-          pw.SizedBox(),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Grand Total', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.grandTotal), style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-        ]),
-        if (kprAdvance)
-          pw.TableRow(children: [
-            pw.SizedBox(),
-            pw.SizedBox(),
-            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Advance Paid', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.advancePaid), style: pw.TextStyle(color: PdfColors.green800, fontSize: 10))),
-          ]),
-        if (kprAdvance)
-          pw.TableRow(children: [
-            pw.SizedBox(),
-            pw.SizedBox(),
-            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text('Remaining Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
-            pw.Padding(padding: pw.EdgeInsets.all(6), child: pw.Text(currency.format(data.balanceDue), style: pw.TextStyle(color: PdfColor.fromHex('#C44A10'), fontWeight: pw.FontWeight.bold, fontSize: 10))),
-          ]),
         pw.TableRow(
-          decoration: pw.BoxDecoration(border: pw.Border(top: pw.BorderSide(color: PdfColor.fromHex('#C44A10'), width: 2))),
           children: [
-            pw.Padding(padding: pw.EdgeInsets.all(8), child: pw.Text('Amount in Words', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10))),
             pw.Padding(
-              padding: pw.EdgeInsets.all(8), 
-              child: pw.Text(data.amountInWords, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9))
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                'Total SFT',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
             ),
-            pw.SizedBox(), 
-            pw.SizedBox()
-          ]
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                data.totalSft.toStringAsFixed(2),
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                'Subtotal',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                currency.format(data.actualAmount),
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+          ],
         ),
-      ]
-    )
+        pw.TableRow(
+          children: [
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                'Transport',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                currency.format(data.transport),
+                style: pw.TextStyle(fontSize: 10),
+              ),
+            ),
+            data.includeGst
+                ? pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    'IGST @ ${data.gstPercentage}%',
+                    textAlign: pw.TextAlign.right,
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                )
+                : pw.SizedBox(),
+            data.includeGst
+                ? pw.Padding(
+                  padding: pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    currency.format(data.igst),
+                    style: pw.TextStyle(fontSize: 10),
+                  ),
+                )
+                : pw.SizedBox(),
+          ],
+        ),
+        pw.TableRow(
+          children: [
+            pw.SizedBox(),
+            pw.SizedBox(),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                'Grand Total',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(6),
+              child: pw.Text(
+                currency.format(data.grandTotal),
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (kprAdvance)
+          pw.TableRow(
+            children: [
+              pw.SizedBox(),
+              pw.SizedBox(),
+              pw.Padding(
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  'Advance Paid',
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              pw.Padding(
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  currency.format(data.advancePaid),
+                  style: pw.TextStyle(color: PdfColors.green800, fontSize: 10),
+                ),
+              ),
+            ],
+          ),
+        if (kprAdvance)
+          pw.TableRow(
+            children: [
+              pw.SizedBox(),
+              pw.SizedBox(),
+              pw.Padding(
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  'Remaining Amount',
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              pw.Padding(
+                padding: pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  currency.format(data.balanceDue),
+                  style: pw.TextStyle(
+                    color: PdfColor.fromHex('#C44A10'),
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: PdfColor.fromHex('#C44A10'), width: 2),
+            ),
+          ),
+          children: [
+            pw.Padding(
+              padding: pw.EdgeInsets.all(8),
+              child: pw.Text(
+                kprAdvance ? 'Remaining Amount in Words' : 'Amount in Words',
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            pw.Padding(
+              padding: pw.EdgeInsets.all(8),
+              child: pw.Text(
+                kprAdvance ? data.balanceDueInWords : data.amountInWords,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 9,
+                ),
+              ),
+            ),
+            pw.SizedBox(),
+            pw.SizedBox(),
+          ],
+        ),
+      ],
+    ),
   );
 }
 
@@ -334,12 +666,18 @@ pw.Widget _buildTermsAndBankDetails(AppState appState) {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Company Name : ${appState.companyName}', style: pw.TextStyle(fontSize: 9)),
-            pw.Text('Bank Name & Branch : ${appState.bankName} - ${appState.bankBranch}', style: pw.TextStyle(fontSize: 9)),
+            pw.Text(
+              'Company Name : ${appState.companyName}',
+              style: pw.TextStyle(fontSize: 9),
+            ),
+            pw.Text(
+              'Bank Name & Branch : ${appState.bankName} - ${appState.bankBranch}',
+              style: pw.TextStyle(fontSize: 9),
+            ),
             pw.Text(appState.bankAccountNo, style: pw.TextStyle(fontSize: 9)),
             pw.Text(appState.bankIfsc, style: pw.TextStyle(fontSize: 9)),
-          ]
-        )
+          ],
+        ),
       ),
       pw.SizedBox(width: 10),
       pw.Expanded(
@@ -347,15 +685,18 @@ pw.Widget _buildTermsAndBankDetails(AppState appState) {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text('Terms & Conditions', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
             pw.Text(
-              appState.termsAndConditions, 
-              style: pw.TextStyle(fontSize: 7.5)
+              'Terms & Conditions',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
-          ]
-        )
-      )
-    ]
+            pw.Text(
+              appState.termsAndConditions,
+              style: pw.TextStyle(fontSize: 7.5),
+            ),
+          ],
+        ),
+      ),
+    ],
   );
 }
 
@@ -363,9 +704,15 @@ pw.Widget _buildSignatures() {
   return pw.Row(
     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
     children: [
-      pw.Text('Authorised Signature', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-      pw.Text('Customer Signature', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-    ]
+      pw.Text(
+        'Authorised Signature',
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+      ),
+      pw.Text(
+        'Customer Signature',
+        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+      ),
+    ],
   );
 }
 
@@ -373,7 +720,10 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
   final clientConfig = appState.clientConfig;
   final vpa = clientConfig.upiId;
   final payeeName = clientConfig.upiPayeeNameOrCompany;
-  final amount = clientConfig.clientId.toLowerCase() == 'kprupvc' ? data.balanceDue : data.grandTotal;
+  final amount =
+      clientConfig.clientId.toLowerCase() == 'kprupvc'
+          ? data.balanceDue
+          : data.grandTotal;
   final note = 'Quote ${data.quotationNo}';
   final transactionRef = data.quotationNo;
 
@@ -434,63 +784,81 @@ pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
       pw.Wrap(
         spacing: 10,
         runSpacing: 10,
-        children: photos.map((photo) {
-          return pw.Container(
-            width: 180,
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey300),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Container(
-                  height: 135,
-                  width: double.infinity,
-                  decoration: pw.BoxDecoration(
-                    borderRadius: const pw.BorderRadius.only(
-                      topLeft: pw.Radius.circular(8),
-                      topRight: pw.Radius.circular(8),
-                    ),
-                    color: PdfColors.grey100,
-                  ),
-                  child: pw.Center(
-                    child: pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
-                      children: [
-                        pw.Icon(pw.IconData(0xe3f4), size: 32, color: PdfColors.grey400),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Site Photo',
-                          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-                        ),
-                        pw.Text(
-                          photo.sizeLabel,
-                          style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
-                        ),
-                      ],
-                    ),
-                  ),
+        children:
+            photos.map((photo) {
+              return pw.Container(
+                width: 180,
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
                 ),
-                if (photo.caption.isNotEmpty)
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text(
-                      photo.caption,
-                      style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                      maxLines: 2,
-                      overflow: pw.TextOverflow.clip,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      height: 135,
+                      width: double.infinity,
+                      decoration: pw.BoxDecoration(
+                        borderRadius: const pw.BorderRadius.only(
+                          topLeft: pw.Radius.circular(8),
+                          topRight: pw.Radius.circular(8),
+                        ),
+                        color: PdfColors.grey100,
+                      ),
+                      child: pw.Center(
+                        child: pw.Column(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          children: [
+                            pw.Icon(
+                              pw.IconData(0xe3f4),
+                              size: 32,
+                              color: PdfColors.grey400,
+                            ),
+                            pw.SizedBox(height: 4),
+                            pw.Text(
+                              'Site Photo',
+                              style: pw.TextStyle(
+                                fontSize: 10,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
+                            pw.Text(
+                              photo.sizeLabel,
+                              style: pw.TextStyle(
+                                fontSize: 8,
+                                color: PdfColors.grey500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        }).toList(),
+                    if (photo.caption.isNotEmpty)
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          photo.caption,
+                          style: pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.grey700,
+                          ),
+                          maxLines: 2,
+                          overflow: pw.TextOverflow.clip,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
       ),
       pw.SizedBox(height: 8),
       pw.Text(
         '${photos.length} site photo(s) attached',
-        style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
+        style: pw.TextStyle(
+          fontSize: 8,
+          color: PdfColors.grey600,
+          fontStyle: pw.FontStyle.italic,
+        ),
       ),
     ],
   );
