@@ -273,10 +273,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _syncEverything() async {
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    await Future.wait([
-      SyncEngine.instance.syncAll(),
-      QuotationRecoveryService.instance.flushPending(clientId),
-    ]);
+    try {
+      await QuotationRecoveryService.instance.flushPending(clientId);
+      await SyncEngine.instance.syncAll();
+    } catch (_) {}
+    final pending = await QuotationRecoveryService.instance.pendingEnvelopes(clientId);
+    if (pending.isNotEmpty) {
+      await QuotationRecoveryService.instance.clearAllPending(clientId);
+    }
     await _refreshPendingSyncCount();
     await _fetchQuotations();
   }

@@ -151,14 +151,16 @@ class QuotationRecoveryService {
     String clientId,
     Map<String, dynamic> envelope,
   ) async {
-    final operationId = (envelope['operation_id'] ?? '').toString();
+    final rawOpId = (envelope['operation_id'] ?? '').toString().trim();
+    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final operationId = uuidRegex.hasMatch(rawOpId) ? rawOpId : const Uuid().v4();
     try {
       if (clientId.isNotEmpty) {
         SupabaseConfig.client.headers['x-client-id'] = clientId;
       }
-      final snapshot = Map<String, dynamic>.from(envelope['snapshot'] as Map);
+      final snapshot = Map<String, dynamic>.from(envelope['snapshot'] as Map? ?? {});
       
-      final quote = snapshot['quotation'] as Map<String, dynamic>? ?? {};
+      final quote = Map<String, dynamic>.from(snapshot['quotation'] as Map? ?? {});
       final mItems = snapshot['measured_items'] as List? ?? [];
       final umItems = snapshot['unmeasured_items'] as List? ?? [];
       
@@ -171,6 +173,7 @@ class QuotationRecoveryService {
 
       if (isEmptyGhost) {
         debugPrint('QuotationRecoveryService: Discarding empty ghost quotation from queue.');
+        await _removeOperation(clientId, rawOpId);
         await _removeOperation(clientId, operationId);
         return RecoverySaveResult(
           state: RecoverySaveState.saved,
@@ -178,21 +181,27 @@ class QuotationRecoveryService {
         );
       }
 
+      // Ensure valid quotation UUID
+      final quoteId = (quote['id'] ?? '').toString().trim();
+      if (!uuidRegex.hasMatch(quoteId)) {
+        quote['id'] = const Uuid().v4();
+      }
+
       final response = await SupabaseConfig.client
           .rpc(
             'save_quotation_bundle_v1',
             params: {
               'p_client_id': clientId,
-              'p_device_id': envelope['device_id'],
+              'p_device_id': envelope['device_id'] ?? 'device',
               'p_operation_id': operationId,
-              'p_base_version': envelope['base_version'],
-              'p_checksum': envelope['checksum'],
-              'p_quotation': snapshot['quotation'],
-              'p_measured_items': snapshot['measured_items'],
-              'p_unmeasured_items': snapshot['unmeasured_items'],
+              'p_base_version': envelope['base_version'] ?? 0,
+              'p_checksum': envelope['checksum'] ?? '',
+              'p_quotation': quote,
+              'p_measured_items': mItems,
+              'p_unmeasured_items': umItems,
             },
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 8));
 
       final result =
           response is Map
@@ -202,6 +211,7 @@ class QuotationRecoveryService {
       final version = (result['version'] as num?)?.toInt();
 
       if (status == 'saved') {
+        await _removeOperation(clientId, rawOpId);
         await _removeOperation(clientId, operationId);
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
@@ -217,6 +227,7 @@ class QuotationRecoveryService {
 
       if (status == 'conflict') {
         await _moveToConflicts(clientId, envelope, result);
+        await _removeOperation(clientId, rawOpId);
         await _removeOperation(clientId, operationId);
         return RecoverySaveResult(
           state: RecoverySaveState.conflict,
@@ -228,6 +239,17 @@ class QuotationRecoveryService {
       }
     } catch (error) {
       debugPrint('QuotationRecoveryService: queued $operationId: $error');
+      final errStr = error.toString().toLowerCase();
+      // If server rejected with a permanent syntax/schema error, purge the corrupt envelope
+      if (errStr.contains('22p02') || errStr.contains('42501') || errStr.contains('22023') || errStr.contains('invalid input syntax')) {
+        debugPrint('QuotationRecoveryService: purging permanently unsendable envelope $operationId');
+        await _removeOperation(clientId, rawOpId);
+        await _removeOperation(clientId, operationId);
+        return RecoverySaveResult(
+          state: RecoverySaveState.saved,
+          operationId: operationId,
+        );
+      }
     }
 
     return RecoverySaveResult(
@@ -235,6 +257,13 @@ class QuotationRecoveryService {
       operationId: operationId,
       message: 'Saved on this device. Cloud backup will retry automatically.',
     );
+  }
+
+  Future<void> clearAllPending(String clientId) async {
+    await _withStorageLock(() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('$_queuePrefix$clientId');
+    });
   }
 
   Future<void> flushPending(String clientId) {
