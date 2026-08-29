@@ -44,12 +44,19 @@ void main() async {
     }
   } catch (_) {}
 
+  final targetClientId = ClientLoader.getUrlClientId() ?? sessionClientId;
+  if (targetClientId != null && targetClientId.isNotEmpty) {
+    try {
+      SupabaseConfig.client.headers['x-client-id'] = targetClientId;
+    } catch (_) {}
+  }
+
   try {
     // An explicit tenant in the URL is authoritative. Reusing a stale
     // session tenant here caused KPR to send Venkateshwara branding and links
     // when the same browser had previously logged into Venkateshwara.
     initialConfig = await ClientLoader.loadConfig(
-      clientId: ClientLoader.getUrlClientId() ?? sessionClientId,
+      clientId: targetClientId,
     ).timeout(const Duration(seconds: 10));
   } catch (e) {
     debugPrint('Config load error: $e');
