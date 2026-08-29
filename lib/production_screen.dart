@@ -259,9 +259,9 @@ class _ProductionScreenState extends State<ProductionScreen> {
                       })
                       .eq('id', order.id!)
                       .eq('client_id', clientId);
-                  Navigator.pop(ctx);
-                  _loadProductionOrders();
+                  if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) {
+                    _loadProductionOrders();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Production order updated'), backgroundColor: Colors.green),
                     );

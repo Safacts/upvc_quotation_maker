@@ -186,8 +186,8 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
 
   Future<Uint8List> _ensurePdfBytes() async {
     if (_pdfBytes != null) return _pdfBytes!;
-    await _autoSaveToDatabase();
     final appState = Provider.of<AppState>(context, listen: false);
+    await _autoSaveToDatabase();
     await gst_pdf_gen.loadLibrary();
     final bytes = await gst_pdf_gen.generateGstPdfBytes(data, appState);
     _pdfBytes = bytes;

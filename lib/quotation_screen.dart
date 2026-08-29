@@ -584,11 +584,13 @@ class _QuotationScreenState extends State<QuotationScreen>
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (!_isNetworkError(e)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (!_isNetworkError(e)) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
+        }
       }
     }
   }
@@ -982,6 +984,7 @@ $reviewCta
       unawaited(_autoSaveToDatabase());
 
       // 2. Generate PDF bytes (0ms offline fallback)
+      if (!mounted) return;
       final appState = Provider.of<AppState>(context, listen: false);
       Uint8List pdfBytes;
       try {

@@ -279,15 +279,21 @@ class _HardwareScreenState extends State<HardwareScreen> {
                       await SupabaseConfig.client
                           .from('hardware_inventory')
                           .insert(item.toMap(clientId: clientId));
-                      Navigator.pop(ctx);
-                      _loadData();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Hardware added'), backgroundColor: Colors.green),
-                      );
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                      }
+                      if (mounted) {
+                        _loadData();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Hardware added'), backgroundColor: Colors.green),
+                        );
+                      }
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to add: $e'), backgroundColor: Colors.red),
-                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to add: $e'), backgroundColor: Colors.red),
+                        );
+                      }
                     }
                   },
                   child: const Text('Add Hardware'),
@@ -359,9 +365,9 @@ class _HardwareScreenState extends State<HardwareScreen> {
                             .update({'quantity': newQty})
                             .eq('id', item.id!)
                             .eq('client_id', clientId);
-                        Navigator.pop(ctx);
-                        _loadData();
+                        if (ctx.mounted) Navigator.pop(ctx);
                         if (mounted) {
+                          _loadData();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Quantity updated to $newQty'), backgroundColor: Colors.green),
                           );

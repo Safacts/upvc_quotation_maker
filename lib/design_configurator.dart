@@ -55,18 +55,22 @@ class _DesignConfiguratorState extends State<DesignConfigurator> {
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final result = jsonDecode(res.body);
-        Navigator.of(context).pop(result);
+        if (mounted) Navigator.of(context).pop(result);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: ${res.statusCode}')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed: ${res.statusCode}')),
+          );
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 

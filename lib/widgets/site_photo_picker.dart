@@ -162,9 +162,10 @@ class _SitePhotoPickerState extends State<SitePhotoPicker> {
       }
     }
 
-    setState(() => _isUploading = true);
+    if (mounted) setState(() => _isUploading = true);
 
     try {
+      if (!mounted) return;
       final clientId =
           Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final uuid = const Uuid().v4();

@@ -95,10 +95,12 @@ class _Design3DScreenState extends State<Design3DScreen> {
     );
 
     if (res.statusCode == 200 || res.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Render started!')),
-      );
-      _loadDesign();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Render started!')),
+        );
+        _loadDesign();
+      }
     }
   }
 

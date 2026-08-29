@@ -283,15 +283,21 @@ class _OrderScreenState extends State<OrderScreen> {
                         await SupabaseConfig.client
                             .from('orders')
                             .insert(order.toMap(clientId: clientId));
-                        Navigator.pop(ctx);
-                        _loadOrders();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Order created'), backgroundColor: Colors.green),
-                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          _loadOrders();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Order created'), backgroundColor: Colors.green),
+                          );
+                        }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to create order: $e'), backgroundColor: Colors.red),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to create order: $e'), backgroundColor: Colors.red),
+                          );
+                        }
                       }
                     },
                     child: const Text('Create Order'),

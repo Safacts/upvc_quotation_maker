@@ -300,15 +300,19 @@ class _CuttingScreenState extends State<CuttingScreen> {
                         await SupabaseConfig.client
                             .from('cutting_orders')
                             .insert(order.toMap(clientId: clientId));
-                        Navigator.pop(ctx);
-                        _loadOrders();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Cutting list created'), backgroundColor: Colors.green),
-                        );
+                        if (mounted) {
+                          Navigator.pop(ctx);
+                          _loadOrders();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Cutting list created'), backgroundColor: Colors.green),
+                          );
+                        }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to create: $e'), backgroundColor: Colors.red),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to create: $e'), backgroundColor: Colors.red),
+                          );
+                        }
                       }
                     },
                     child: const Text('Create Cutting List'),

@@ -231,7 +231,7 @@ class _MarketPagePreviewScreenState extends State<MarketPagePreviewScreen>
                                 'rating': rating,
                               })
                               .eq('id', review['id']);
-                          Navigator.pop(ctx);
+                          if (ctx.mounted) Navigator.pop(ctx);
                           await _fetchReviews();
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

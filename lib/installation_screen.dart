@@ -304,9 +304,11 @@ class _InstallationScreenState extends State<InstallationScreen> {
                               .eq('id', selectedOrderId)
                               .eq('client_id', clientId);
 
-                          Navigator.pop(ctx);
-                          _loadInstallations();
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
                           if (mounted) {
+                            _loadInstallations();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Installation scheduled'), backgroundColor: Colors.green),
                             );
@@ -409,7 +411,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               await _updateInstallationStatus(installation, 'in_progress');
-                              Navigator.pop(ctx);
+                              if (ctx.mounted) Navigator.pop(ctx);
                             },
                             icon: const Icon(Icons.play_arrow),
                             label: const Text('Start Installation'),
@@ -421,7 +423,7 @@ class _InstallationScreenState extends State<InstallationScreen> {
                           child: ElevatedButton.icon(
                             onPressed: () async {
                               await _updateInstallationStatus(installation, 'completed');
-                              Navigator.pop(ctx);
+                              if (ctx.mounted) Navigator.pop(ctx);
                             },
                             icon: const Icon(Icons.check_circle),
                             label: const Text('Mark Completed'),

@@ -94,9 +94,13 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     try {
       final helper = FileHelper();
       await helper.downloadPdf(widget.pdfBytes, 'Quotation_${widget.data.quotationNo}.pdf');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: Quotation_${widget.data.quotationNo}.pdf')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: Quotation_${widget.data.quotationNo}.pdf')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      }
     }
   }
 

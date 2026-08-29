@@ -548,6 +548,8 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () async {
                 if (passController.text.length >= 6) {
                   final newHash = _hashPassword(passController.text);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(context);
                   setState(() => _isLoading = true);
                   try {
                     final res = await http.post(
@@ -561,15 +563,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                     final data = _decodeJson(res);
                     if (!mounted) return;
-                    Navigator.pop(context);
+                    navigator.pop();
                     if (res.statusCode == 200) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         const SnackBar(
                           content: Text('Password updated successfully!'),
                         ),
                       );
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text(
                             (data?['error'] as String?) ??
@@ -582,12 +584,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     }
                   } catch (e) {
                     if (!mounted) return;
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    messenger.showSnackBar(
                       SnackBar(content: Text('Failed to update password: $e')),
                     );
                   } finally {
-                    setState(() => _isLoading = false);
+                    if (mounted) setState(() => _isLoading = false);
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(

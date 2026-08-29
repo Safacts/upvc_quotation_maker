@@ -136,8 +136,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 note: noteController.text.isNotEmpty ? noteController.text : null,
               );
               final success = await InventoryService.instance.recordMovement(movement, clientId);
-              if (mounted) {
+              if (ctx.mounted) {
                 Navigator.pop(ctx);
+              }
+              if (mounted) {
                 if (success) {
                   _loadData();
                   ScaffoldMessenger.of(context).showSnackBar(

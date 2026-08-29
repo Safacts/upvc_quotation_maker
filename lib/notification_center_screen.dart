@@ -95,14 +95,16 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               _refreshNotifications();
             }
           } catch (e) {
-            toastification.show(
-              context: context,
-              title: const Text('Error'),
-              description: Text('Failed to open quotation: $e'),
-              type: ToastificationType.error,
-              style: ToastificationStyle.fillColored,
-              autoCloseDuration: const Duration(seconds: 3),
-            );
+            if (mounted) {
+              toastification.show(
+                context: context,
+                title: const Text('Error'),
+                description: Text('Failed to open quotation: $e'),
+                type: ToastificationType.error,
+                style: ToastificationStyle.fillColored,
+                autoCloseDuration: const Duration(seconds: 3),
+              );
+            }
           }
         }
         break;

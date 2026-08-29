@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:http/http.dart' as http;
 import 'package:toastification/toastification.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';

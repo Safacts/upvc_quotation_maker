@@ -31,9 +31,13 @@ class _GstPdfConfirmationScreenState extends State<GstPdfConfirmationScreen> {
     try {
       final helper = FileHelper();
       await helper.downloadPdf(widget.pdfBytes, _fileName());
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: ${_fileName()}')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: ${_fileName()}')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      }
     }
   }
 

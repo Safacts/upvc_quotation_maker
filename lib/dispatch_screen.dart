@@ -273,9 +273,11 @@ class _DispatchScreenState extends State<DispatchScreen> {
                               .eq('id', selectedOrderId)
                               .eq('client_id', clientId);
 
-                          Navigator.pop(ctx);
-                          _loadDispatches();
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
                           if (mounted) {
+                            _loadDispatches();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Dispatch created'), backgroundColor: Colors.green),
                             );

@@ -219,15 +219,21 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                             .update({'last_activity': DateTime.now().toIso8601String()})
                             .eq('id', _lead.id!)
                             .eq('client_id', clientId);
-                        Navigator.pop(ctx);
-                        _loadActivities();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Activity added'), backgroundColor: Colors.green),
-                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          _loadActivities();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Activity added'), backgroundColor: Colors.green),
+                          );
+                        }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to add: $e'), backgroundColor: Colors.red),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to add: $e'), backgroundColor: Colors.red),
+                          );
+                        }
                       }
                     },
                     child: const Text('Save Activity'),

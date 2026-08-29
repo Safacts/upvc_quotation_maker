@@ -304,15 +304,21 @@ class _LeadsScreenState extends State<LeadsScreen> {
                         await SupabaseConfig.client
                             .from('leads')
                             .insert(lead.toMap(clientId: clientId));
-                        Navigator.pop(ctx);
-                        _loadLeads();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Lead created'), backgroundColor: Colors.green),
-                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          _loadLeads();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lead created'), backgroundColor: Colors.green),
+                          );
+                        }
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to create: $e'), backgroundColor: Colors.red),
-                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to create: $e'), backgroundColor: Colors.red),
+                          );
+                        }
                       }
                     },
                     child: const Text('Create Lead'),
