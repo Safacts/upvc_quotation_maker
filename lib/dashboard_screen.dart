@@ -58,6 +58,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// Number of locally-queued records awaiting push to the server.
   int _pendingSyncCount = 0;
 
+  Timer? _autoFlushTimer;
+  Timer? _notificationTimer;
+  Timer? _updateTimer;
+
   @override
   void initState() {
     super.initState();
@@ -68,38 +72,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _autoFlushOnStartup();
   }
 
-  Future<void> _autoFlushOnStartup() async {
-    try {
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (!mounted) return;
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      if (clientId.isNotEmpty && ConnectivityService.instance.isOnline) {
-        await QuotationRecoveryService.instance.flushPending(clientId);
-        if (mounted) _refreshPendingSyncCount();
-      }
-    } catch (_) {}
+  @override
+  void dispose() {
+    _autoFlushTimer?.cancel();
+    _notificationTimer?.cancel();
+    _updateTimer?.cancel();
+    super.dispose();
   }
 
-  Future<void> _requestNotificationPermissions() async {
-    try {
-      await Future.delayed(const Duration(milliseconds: 800));
-      await NotificationService().requestPermissions();
-    } catch (_) {}
+  void _autoFlushOnStartup() {
+    _autoFlushTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        if (!mounted) return;
+        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        if (clientId.isNotEmpty && ConnectivityService.instance.isOnline) {
+          await QuotationRecoveryService.instance.flushPending(clientId);
+          if (mounted) _refreshPendingSyncCount();
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _requestNotificationPermissions() {
+    _notificationTimer = Timer(const Duration(milliseconds: 800), () async {
+      try {
+        await NotificationService().requestPermissions();
+      } catch (_) {}
+    });
   }
 
   /// Check for updates AFTER app loads. AutoUpdateService compares the
   /// client config's published versionCode against the INSTALLED package
   /// version and, when newer, UpdatePrompt (mounted below) shows the
   /// animated download + in-place install dialog.
-  Future<void> _checkForAppUpdate() async {
-    try {
-      // Wait for app to fully load first
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
-      await AutoUpdateService.instance.checkNow();
-    } catch (_) {
-      // Silently fail — update check is optional
-    }
+  void _checkForAppUpdate() {
+    _updateTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        if (!mounted) return;
+        await AutoUpdateService.instance.checkNow();
+      } catch (_) {
+        // Silently fail — update check is optional
+      }
+    });
   }
 
   /// Read the offline write-queue depth so the banner shows a real number.

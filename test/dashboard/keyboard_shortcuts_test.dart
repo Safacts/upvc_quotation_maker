@@ -110,9 +110,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // EXPECTED: drawer closes
-      // ACTUAL: drawer stays open — no keyboard handler for Escape
-      expect(find.text('Logout'), findsOneWidget); // Drawer still open
+      // Flutter framework DismissIntent handles Escape and closes modal drawer
+      expect(find.text('Logout'), findsNothing);
     });
   });
 

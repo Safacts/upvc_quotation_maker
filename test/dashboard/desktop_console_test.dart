@@ -95,6 +95,11 @@ void main() {
 
   group('Desktop Console — Drawer Navigation', () {
     testWidgets('TC-DR-001: drawer opens and shows all nav items', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final appState = AppState();
       appState.applyClientConfig(TestHelpers.defaultConfig);
 
@@ -145,6 +150,11 @@ void main() {
     });
 
     testWidgets('TC-DR-004: Market Page visible for kprupvc client', (tester) async {
+      tester.view.physicalSize = const Size(1280, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final appState = AppState();
       appState.applyClientConfig(TestHelpers.kprupvcConfig);
 
