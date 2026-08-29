@@ -25,6 +25,7 @@ import 'services/catalog_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/quotation_recovery_service.dart';
 import 'widgets/site_photo_picker.dart';
+import 'utils/http_client.dart';
 
 class QuotationScreen extends StatefulWidget {
   final QuotationData? existingData;
@@ -823,9 +824,12 @@ $reviewCta
       }
 
       final url = '${QuoteShare.origin()}/api/send_email';
-      final res = await http.post(
+      final res = await postWithCredentials(
         Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': appState.clientConfig.clientId,
+        },
         body: jsonEncode({
           'client_id': appState.clientConfig.clientId,
           if (appState.clientConfig.adminEmails.isNotEmpty)

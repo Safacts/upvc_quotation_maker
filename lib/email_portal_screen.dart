@@ -9,6 +9,7 @@ import 'supabase_config.dart';
 import 'theme.dart';
 import 'quote_share.dart';
 import 'umami_tracker.dart';
+import 'utils/http_client.dart';
 
 class EmailPortalScreen extends StatefulWidget {
   const EmailPortalScreen({super.key});
@@ -114,9 +115,12 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
       final attachments = <Map<String, dynamic>>[];
 
       final url = '${QuoteShare.origin()}/api/send_email';
-      final res = await http.post(
+      final res = await postWithCredentials(
         Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': appState.clientConfig.clientId,
+        },
         body: jsonEncode({
           'client_id': appState.clientConfig.clientId,
           if (appState.clientConfig.adminEmails.isNotEmpty)

@@ -28,7 +28,7 @@ function corsHeaders(): Record<string, string> {
     "Access-Control-Allow-Credentials": "true",
     "Content-Type": "application/json",
     "Access-Control-Allow-Methods": "POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,x-client-id",
     "Vary": "Origin",
   };
 }
@@ -92,7 +92,9 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // 2. Flutter Native/API Credentials in body (for Android APK & tokenless callers)
-      const clientId = String(body.client_id ?? body.clientId ?? "").trim();
+      const clientId = String(
+        body.client_id ?? body.clientId ?? request.headers.get("x-client-id") ?? ""
+      ).trim();
       const phash = String(body.admin_password_hash ?? body.password_hash ?? "").trim();
 
       if (clientId && phash) {
@@ -111,11 +113,17 @@ export async function POST(request: NextRequest) {
         }
 
         if (!isAdmin) {
-          // Check if client tenant
-          const clients = await supaGet("clients", {
+          // Check if client tenant (exact or case-insensitive)
+          let clients = await supaGet("clients", {
             id: `eq.${clientId}`,
             select: "id,password_hash",
           });
+          if (!Array.isArray(clients) || clients.length === 0) {
+            clients = await supaGet("clients", {
+              id: `ilike.${clientId}`,
+              select: "id,password_hash",
+            });
+          }
           if (Array.isArray(clients) && clients.length > 0 && clients[0].password_hash) {
             if (safeEqual(String(clients[0].password_hash), phash)) {
               authenticatedClientId = String(clients[0].id);
