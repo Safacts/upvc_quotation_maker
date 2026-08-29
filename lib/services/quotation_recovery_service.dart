@@ -157,6 +157,27 @@ class QuotationRecoveryService {
         SupabaseConfig.client.headers['x-client-id'] = clientId;
       }
       final snapshot = Map<String, dynamic>.from(envelope['snapshot'] as Map);
+      
+      final quote = snapshot['quotation'] as Map<String, dynamic>? ?? {};
+      final mItems = snapshot['measured_items'] as List? ?? [];
+      final umItems = snapshot['unmeasured_items'] as List? ?? [];
+      
+      final isEmptyGhost = (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
+          (quote['reference']?.toString().trim() ?? '').isEmpty &&
+          (quote['contact_no']?.toString().trim() ?? '').isEmpty &&
+          (quote['address']?.toString().trim() ?? '').isEmpty &&
+          mItems.isEmpty &&
+          umItems.isEmpty;
+
+      if (isEmptyGhost) {
+        debugPrint('QuotationRecoveryService: Discarding empty ghost quotation from queue.');
+        await _removeOperation(clientId, operationId);
+        return RecoverySaveResult(
+          state: RecoverySaveState.saved,
+          operationId: operationId,
+        );
+      }
+
       final response = await SupabaseConfig.client
           .rpc(
             'save_quotation_bundle_v1',
