@@ -55,9 +55,9 @@ try {
   let updatedManifest = originalManifest.replace(/android:label="[^"]*"/, `android:label="${appName}"`);
   fs.writeFileSync(manifestPath, updatedManifest, "utf8");
 
-  // Run Flutter Build (Lightweight arm64-v8a by default)
-  console.log("🔨 Executing Flutter release build (split-per-abi)...");
-  execSync(`flutter build apk --release --split-per-abi --dart-define=CLIENT_ID=${clientId}`, { stdio: "inherit" });
+  // Run Flutter Build (Lightweight arm64-v8a by default with unique Package Name)
+  console.log(`🔨 Executing Flutter release build for package: com.vitharn.${clientId}...`);
+  execSync(`flutter build apk --release --split-per-abi --dart-define=CLIENT_ID=${clientId} --build-name=1.0.0 --build-number=1 -P vitharn.applicationId="com.vitharn.${clientId}"`, { stdio: "inherit" });
 
   const apkSource = path.join(rootDir, "build", "app", "outputs", "flutter-apk", "app-arm64-v8a-release.apk");
   const apkTarget = path.join(outputsDir, `${clientId}-upvc-quote.apk`);
