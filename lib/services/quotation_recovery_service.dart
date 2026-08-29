@@ -153,6 +153,9 @@ class QuotationRecoveryService {
   ) async {
     final operationId = (envelope['operation_id'] ?? '').toString();
     try {
+      if (clientId.isNotEmpty) {
+        SupabaseConfig.client.headers['x-client-id'] = clientId;
+      }
       final snapshot = Map<String, dynamic>.from(envelope['snapshot'] as Map);
       final response = await SupabaseConfig.client
           .rpc(
