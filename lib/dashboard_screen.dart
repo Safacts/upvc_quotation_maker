@@ -46,6 +46,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<QuotationData> _quotations = [];
   bool _isLoading = true;
+  bool _quotationLoadFailed = false;
   String _searchQuery = '';
   String _filterType = 'Newest';
   bool _hasHandledOpenQuote = false;
@@ -109,8 +110,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .eq('client_id', clientId)
           .order('created_at', ascending: false);
 
+      final cloud = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+      final local = await _localRecoveryQuotations(clientId, includeAcknowledgedDrafts: false);
+      final merged = <String, QuotationData>{
+        for (final quotation in cloud)
+          if (quotation.id != null) quotation.id!: quotation,
+      };
+      // Unsynced device copies override cloud rows. Acknowledged local drafts
+      // may be older than cloud and must never hide a newer cloud revision.
+      for (final quotation in local) {
+        if (quotation.id != null) merged[quotation.id!] = quotation;
+      }
+
       setState(() {
-        _quotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+        _quotations = merged.values.toList();
+        _quotationLoadFailed = false;
         _isLoading = false;
       });
 
@@ -134,27 +148,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } catch (_) {}
       }
     } catch (e) {
-      final local = await QuotationRecoveryService.instance
-          .pendingEnvelopes(clientId);
-      final recovered = <QuotationData>[];
-      for (final envelope in local.reversed) {
-        final snapshot = envelope['snapshot'];
-        if (snapshot is! Map) continue;
-        final quotation = snapshot['quotation'];
-        if (quotation is! Map) continue;
-        final map = Map<String, dynamic>.from(quotation);
-        map['measured_items'] = snapshot['measured_items'] ?? const [];
-        map['unmeasured_items'] = snapshot['unmeasured_items'] ?? const [];
-        recovered.add(QuotationData.fromMap(map));
-      }
+      final recovered = await _localRecoveryQuotations(clientId, includeAcknowledgedDrafts: true);
       if (mounted) {
         setState(() {
-          if (recovered.isNotEmpty) _quotations = recovered;
+          // A temporary request failure must never replace a populated screen
+          // with the frightening and incorrect "No quotations" state.
+          final merged = <String, QuotationData>{
+            for (final quotation in _quotations)
+              if (quotation.id != null) quotation.id!: quotation,
+          };
+          for (final quotation in recovered) {
+            if (quotation.id != null) merged[quotation.id!] = quotation;
+          }
+          _quotations = merged.values.toList();
+          _quotationLoadFailed = true;
           _isLoading = false;
         });
       }
       debugPrint('Fetch error: $e');
     }
+  }
+
+  Future<List<QuotationData>> _localRecoveryQuotations(
+    String clientId, {
+    required bool includeAcknowledgedDrafts,
+  }) async {
+    final service = QuotationRecoveryService.instance;
+    final recovered = <String, QuotationData>{};
+
+    void addSnapshot(Map<dynamic, dynamic> snapshot) {
+      final quotation = snapshot['quotation'];
+      if (quotation is! Map) return;
+      final map = Map<String, dynamic>.from(quotation);
+      if ((map['client_id'] ?? clientId).toString() != clientId) return;
+      map['measured_items'] = snapshot['measured_items'] ?? const [];
+      map['unmeasured_items'] = snapshot['unmeasured_items'] ?? const [];
+      final parsed = QuotationData.fromMap(map);
+      if (parsed.id != null) recovered[parsed.id!] = parsed;
+    }
+
+    for (final draft in await service.localDrafts(clientId)) {
+      final quotation = draft['quotation'];
+      if (quotation is! Map) continue;
+      final syncVersion = (quotation['sync_version'] as num?)?.toInt() ?? 0;
+      final needsSync = draft['needs_sync'] == true || syncVersion == 0;
+      if (includeAcknowledgedDrafts || needsSync) addSnapshot(draft);
+    }
+    // Pending envelopes are authoritative device changes and take precedence.
+    for (final envelope in await service.pendingEnvelopes(clientId)) {
+      final snapshot = envelope['snapshot'];
+      if (snapshot is Map) addSnapshot(snapshot);
+    }
+    return recovered.values.toList();
   }
 
   Future<void> _syncEverything() async {
@@ -885,9 +930,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.inbox, size: 60, color: Colors.grey.shade400),
+                            Icon(_quotationLoadFailed ? Icons.cloud_off_outlined : Icons.inbox, size: 60, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
-                            Text('No quotations found', style: TextStyle(color: Colors.grey.shade500, fontSize: 18)),
+                            Text(
+                              _quotationLoadFailed
+                                  ? 'Saved quotations could not be loaded yet'
+                                  : _quotations.isNotEmpty
+                                      ? 'No matching quotations'
+                                      : 'No quotations yet',
+                              style: TextStyle(color: Colors.grey.shade500, fontSize: 18),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_quotationLoadFailed) ...[
+                              const SizedBox(height: 8),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 28),
+                                child: Text('Your device copies are protected. Check the connection and try again.', textAlign: TextAlign.center),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(onPressed: _fetchQuotations, icon: const Icon(Icons.refresh), label: const Text('Try Again')),
+                            ],
                           ],
                         ),
                       ).animate().fade()
