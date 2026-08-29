@@ -18,6 +18,7 @@ import 'config/client_config.dart';
 import 'config/client_loader.dart';
 import 'umami_tracker.dart';
 import 'utils/http_client.dart';
+import 'services/notification_center_service.dart';
 
 // Helper: Use absolute URL for mobile, relative for web
 String get _apiBase => kIsWeb ? '' : 'https://app.vitharn.com';
@@ -185,6 +186,10 @@ class _LoginScreenState extends State<LoginScreen> {
           await ClientLoader.loadConfig(clientId: clientId);
       SupabaseConfig.client.headers['x-client-id'] = config.clientId;
       appState.applyClientConfig(config);
+      // Notification startup can run before login knows the tenant. Bind it
+      // here as soon as authentication selects the client, without delaying
+      // navigation or asking for permission automatically.
+      unawaited(NotificationCenterService().resubscribe(config.clientId));
       await _writeSessionClientId(config.clientId);
     } catch (_) {}
   }
