@@ -194,10 +194,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: const Text('Enable Important Notifications'),
                   subtitle: const Text('Asked only when you choose this option'),
                   onTap: () async {
-                    await NotificationService().requestPermissions();
+                    final enabled = await NotificationService().requestPermissions();
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notification preference updated')),
+                      SnackBar(
+                        content: Text(
+                          enabled
+                              ? 'Important notifications enabled'
+                              : 'Notifications stay off. You can enable them in device settings.',
+                        ),
+                      ),
                     );
                   },
                 ),

@@ -29,8 +29,8 @@ class NotificationService {
     await _notificationsPlugin.initialize(initSettings);
   }
 
-  Future<void> requestPermissions() async {
-    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+  Future<bool> requestPermissions() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return false;
 
     // Request permission using permission_handler
     if (await Permission.notification.isDenied) {
@@ -49,10 +49,12 @@ class NotificationService {
       badge: true,
       sound: true,
     );
+    return Permission.notification.isGranted;
   }
 
   Future<void> showImportantNotification({required String title, required String body}) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+    if (!await Permission.notification.isGranted) return;
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'important_notifications',
@@ -73,7 +75,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      DateTime.now().millisecond,
+      _stableNotificationId('$title\n$body'),
       title,
       body,
       platformChannelDetails,
@@ -83,6 +85,7 @@ class NotificationService {
   /// Show a local notification derived from an AppNotification (from realtime)
   Future<void> showNotificationFromAppNotification(AppNotification notification) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) return;
+    if (!await Permission.notification.isGranted) return;
 
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
@@ -104,10 +107,24 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      DateTime.now().millisecond,
+      _stableNotificationId(
+        notification.id ?? '${notification.kind}\n${notification.title}\n${notification.body}',
+      ),
       notification.title,
       notification.body,
       platformChannelDetails,
     );
+  }
+
+  /// Stable across reconnects and restarts, unlike String.hashCode. Replaying
+  /// one cloud event updates the same platform notification instead of
+  /// producing another alert.
+  int _stableNotificationId(String key) {
+    var hash = 0x811c9dc5;
+    for (final unit in key.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
   }
 }
