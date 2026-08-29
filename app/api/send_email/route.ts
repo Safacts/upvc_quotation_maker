@@ -113,20 +113,33 @@ export async function POST(request: NextRequest) {
         }
 
         if (!isAdmin) {
-          // Check if client tenant (exact or case-insensitive)
+          // Check if client tenant (exact or case-insensitive or email scan)
           let clients = await supaGet("clients", {
-            id: `eq.${clientId}`,
-            select: "id,password_hash",
+            select: "id,config,password_hash",
+            limit: 1000,
           });
-          if (!Array.isArray(clients) || clients.length === 0) {
-            clients = await supaGet("clients", {
-              id: `ilike.${clientId}`,
-              select: "id,password_hash",
+          if (Array.isArray(clients)) {
+            const byId = clients.find(
+              (c) => c.id === clientId || String(c.id).toLowerCase() === clientId.toLowerCase()
+            );
+            const clientMatch = byId || clients.find((c) => {
+              const cfg = c.config || {};
+              const ae = cfg.adminEmails || [];
+              return (
+                cfg.companyEmail === adminEmail ||
+                (Array.isArray(ae) && ae.includes(adminEmail))
+              );
             });
-          }
-          if (Array.isArray(clients) && clients.length > 0 && clients[0].password_hash) {
-            if (safeEqual(String(clients[0].password_hash), phash)) {
-              authenticatedClientId = String(clients[0].id);
+
+            if (clientMatch) {
+              const clientHash =
+                clientMatch.password_hash || clientMatch.config?.portalPasswordHash;
+              if (
+                (clientHash && safeEqual(String(clientHash), phash)) ||
+                (clientMatch.password_hash && safeEqual(String(clientMatch.password_hash), phash))
+              ) {
+                authenticatedClientId = String(clientMatch.id);
+              }
             }
           }
         }

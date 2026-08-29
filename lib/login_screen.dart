@@ -357,6 +357,8 @@ class _LoginScreenState extends State<LoginScreen> {
         if (localHash == _hashPassword(password)) {
           umamiTrack('login_success');
           await _writeSession('true');
+          await _writeSessionPasswordHash(localHash);
+          await _writeSessionClientId(appState.clientConfig.clientId);
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
