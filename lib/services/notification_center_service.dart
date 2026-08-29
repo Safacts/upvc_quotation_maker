@@ -99,6 +99,13 @@ class NotificationCenterService {
       final newRecord = payload.newRecord;
 
       final notification = AppNotification.fromMap(newRecord);
+
+      // Realtime may replay the same INSERT while reconnecting. Never show a
+      // second banner or inflate the unread badge for an event already held.
+      if (notification.id != null &&
+          _notifications.any((item) => item.id == notification.id)) {
+        return;
+      }
       
       // Add to in-memory list (at the top for newest first)
       _notifications.insert(0, notification);
@@ -192,12 +199,13 @@ class NotificationCenterService {
 
   /// Resubscribe when client config changes (e.g., user switches client)
   Future<void> resubscribe(String newClientId) async {
-    if (newClientId == _currentClientId) return;
+    if (newClientId == _currentClientId && _isInitialized) return;
     
     debugPrint('[NotificationCenterService] Resubscribing to new client: $newClientId');
     _currentClientId = newClientId;
     _notifications.clear();
     await _subscribeToNotifications();
+    _isInitialized = true;
   }
 
   /// Dispose the realtime subscription and clean up
