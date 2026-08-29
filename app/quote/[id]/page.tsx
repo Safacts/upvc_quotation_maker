@@ -53,6 +53,7 @@ export async function generateMetadata({
     const quote = quotes[0];
 
     let company = "";
+    let logoUrl = "";
     try {
       const clients = await supaGet("clients", {
         id: "eq." + String(quote.client_id || ""),
@@ -61,6 +62,7 @@ export async function generateMetadata({
       });
       if (Array.isArray(clients) && clients.length > 0 && clients[0]?.config) {
         company = String(clients[0].config.companyName || "").trim();
+        logoUrl = String(clients[0].config.logoUrl || clients[0].config.invoiceTopLogoUrl || "").trim();
       }
     } catch {
       // Brand name is cosmetic; the customer-facing title still works without it.
@@ -74,11 +76,25 @@ export async function generateMetadata({
           ? `${customer} — Quotation`
           : "Quotation";
     const quoteNo = String(quote.quote_no || "").trim();
+    const description = `Quotation${quoteNo ? ` ${quoteNo}` : ""} for ${customer || "Customer"}. Review details and confirm online.`.trim();
 
     return {
       title,
-      description:
-        `Quotation${quoteNo ? ` ${quoteNo}` : ""} for ${customer}. Review the details and approve or request changes.`.trim(),
+      description,
+      openGraph: {
+        title,
+        description: `Official Quotation${quoteNo ? ` ${quoteNo}` : ""} from ${company || "UPVC Windows & Doors"}. Review and confirm online.`,
+        siteName: company || "UPVC Quotation",
+        images: logoUrl ? [{ url: logoUrl, alt: `${company || "Company"} Logo` }] : [],
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description: `Official Quotation${quoteNo ? ` ${quoteNo}` : ""} from ${company || "UPVC Windows & Doors"}`,
+        images: logoUrl ? [logoUrl] : [],
+      },
+      icons: logoUrl ? { icon: logoUrl, apple: logoUrl } : undefined,
       robots: { index: false, follow: false },
     };
   } catch {

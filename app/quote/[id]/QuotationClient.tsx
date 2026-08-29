@@ -75,8 +75,9 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
       const config = parseClientConfig(data.clientConfig || {}, data.quotation.client_id);
       setClientConfig(config);
       
-      if (data.quotation.status === "won") setActionDone("approved");
-      else if (data.quotation.status === "lost") setActionDone("rejected");
+      const st = String(data.quotation.status || "").toLowerCase();
+      if (st === "won" || st === "approved") setActionDone("approved");
+      else if (st === "lost" || st === "rejected") setActionDone("rejected");
     } catch {
       setError("Failed to load quotation");
     } finally {
@@ -94,6 +95,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
   const handleAction = async (action: "approve" | "reject" | "review") => {
     if (!quotation) return;
     setSubmitting(true);
+    setError("");
     try {
       const res = await fetch(`/api/quotation/${quotation.id}`, {
         method: "POST",
@@ -101,15 +103,15 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
         body: JSON.stringify({ action, token }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) throw new Error(data.error || "Action failed");
       if (data.ok) {
         if (action === "approve") setActionDone("approved");
         else if (action === "reject") setActionDone("rejected");
         else setActionDone("review");
         setQuotation((prev) => prev ? { ...prev, status: data.status } : prev);
       }
-    } catch {
-      setError("Failed to update. Please try again.");
+    } catch (e: any) {
+      setError(e?.message || "Failed to update quotation. Please try again.");
     } finally {
       setSubmitting(false);
     }

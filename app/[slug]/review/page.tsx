@@ -24,9 +24,27 @@ export async function generateMetadata({
   const client = findClientBySlug(rows, slug);
   if (!client) return {};
   const cfg = parseClientConfig(client.config || {}, client.id);
+  const companyName = cfg.companyName || cfg.appName;
+  const logoUrl = cfg.logoUrl?.trim() || cfg.invoiceTopLogoUrl?.trim() || "";
+  const title = `Rate your experience — ${companyName}`;
+  const description = `Share your feedback with ${companyName}. We value your experience!`;
   return {
-    title: `Rate your experience - ${cfg.companyName || cfg.appName}`,
-    icons: { icon: `/api/favicon/${encodeURIComponent(client.id)}` },
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: companyName,
+      images: logoUrl ? [{ url: logoUrl, alt: `${companyName} Logo` }] : [],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: logoUrl ? [logoUrl] : [],
+    },
+    icons: { icon: logoUrl || `/api/favicon/${encodeURIComponent(client.id)}` },
   };
 }
 

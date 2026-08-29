@@ -367,6 +367,15 @@ class _QuotationScreenState extends State<QuotationScreen>
   }
 
   @override
+  Future<bool> didPopRoute() async {
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return true;
+    }
+    return false;
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
@@ -1113,11 +1122,23 @@ $reviewCta
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.existingData == null ? 'New Quotation' : 'Edit Quotation',
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          title: Text(
+            widget.existingData == null ? 'New Quotation' : 'Edit Quotation',
+          ),
         actions: [
           if (_isSaving)
             const Padding(
@@ -2480,6 +2501,7 @@ $reviewCta
           ],
         ),
       ),
+    ),
     );
   }
 

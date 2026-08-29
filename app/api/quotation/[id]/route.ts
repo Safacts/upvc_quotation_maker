@@ -66,12 +66,30 @@ export async function GET(
 
   const { data: quotation, error } = await supabaseAdmin
     .from("quotations")
-    .select("id,quote_no,date,customer_name,reference,address,contact_no,transport_cost,email,status,include_gst,gst_percentage,client_id")
+    .select("id,quote_no,date,customer_name,reference,address,contact_no,transport_cost,email,status,include_gst,gst_percentage,client_id,viewed_at,view_count")
     .eq("id", id)
     .single();
 
   if (error || !quotation) {
     return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
+  }
+
+  // Record view event for the fabricator's CRM
+  if (!quotation.viewed_at) {
+    await supabaseAdmin
+      .from("quotations")
+      .update({
+        viewed_at: new Date().toISOString(),
+        view_count: 1,
+      })
+      .eq("id", id);
+  } else {
+    await supabaseAdmin
+      .from("quotations")
+      .update({
+        view_count: (Number(quotation.view_count) || 1) + 1,
+      })
+      .eq("id", id);
   }
 
   const { data: measured } = await supabaseAdmin
@@ -134,26 +152,33 @@ export async function POST(
 
   const action = body.action;
   let newStatus: string | null = null;
-  if (action === "approve") newStatus = "approved";
-  else if (action === "reject") newStatus = "rejected";
-  else if (action === "review") newStatus = "sent";
-  else return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  const now = new Date().toISOString();
+  const updatePayload: Record<string, any> = {
+    state_changed_at: now,
+  };
 
-  // Scope the write to a LIVE row and confirm a row actually matched.
-  //
-  // `.eq("id", id)` alone is an unbounded UPDATE guarded only by a 64-bit
-  // truncated HMAC: nothing proved the target row still existed, and a
-  // soft-deleted quotation could be silently resurrected into "won"/"lost",
-  // where it would then be counted by the revenue KPIs. `deleted = false`
-  // makes the customer-facing state machine agree with every console read
-  // path, and `select("id")` turns a no-op update into an honest 404 instead
-  // of a misleading `{ ok: true }`.
+  if (action === "approve") {
+    newStatus = "approved";
+    updatePayload.status = "approved";
+    updatePayload.approved_at = now;
+    updatePayload.accepted_at = now;
+  } else if (action === "reject") {
+    newStatus = "rejected";
+    updatePayload.status = "rejected";
+    updatePayload.rejected_at = now;
+  } else if (action === "review") {
+    newStatus = "sent";
+    updatePayload.status = "sent";
+  } else {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
   const { data: updated, error } = await supabaseAdmin
     .from("quotations")
-    .update({ status: newStatus })
+    .update(updatePayload)
     .eq("id", id)
     .eq("deleted", false)
-    .select("id");
+    .select("id,status");
 
   if (error) {
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
