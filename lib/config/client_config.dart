@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../supabase_config.dart';
+
 class ClientConfig {
   final String clientId;
   final String appName;
@@ -155,7 +157,10 @@ class ClientConfig {
       .entries
       // Config rows may already contain a stored list number. Strip it before
       // applying the renderer's single authoritative numbering pass.
-      .map((e) => '${e.key + 1}. ${e.value.replaceFirst(RegExp(r'^\s*(?:\d+\s*[.)]\s*)+'), '')}')
+      .map(
+        (e) =>
+            '${e.key + 1}. ${e.value.replaceFirst(RegExp(r'^\s*(?:\d+\s*[.)]\s*)+'), '')}',
+      )
       .join('\n');
 
   /// jsonb tolerance helpers. A config writer that stores `"appVersionCode": "14"`
@@ -341,7 +346,13 @@ class ClientConfig {
       json['supabaseUrl'],
       'https://jqjxhhgfwdzckijnnede.supabase.co',
     ),
-    supabaseAnonKey: _asString(json['supabaseAnonKey']),
+    // Public config responses intentionally redact credentials. Falling back
+    // to the build-time anon key keeps cloud sync working when the remote
+    // client payload omits it, while never putting a service-role key here.
+    supabaseAnonKey: _asStringOr(
+      json['supabaseAnonKey'],
+      SupabaseConfig.supabaseAnonKey,
+    ),
     adminEmails: _asStringList(
       json['adminEmails'],
       fallback: const ['vitarn.dev@gmail.com'],

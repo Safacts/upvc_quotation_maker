@@ -98,7 +98,7 @@ Future<Uint8List> generatePdfBytes(
           _buildTotalsTable(
             data,
             currency,
-            kprAdvance: clientConfig.clientId.toLowerCase() == 'kprupvc',
+            kprAdvance: _supportsAdvanceClient(clientConfig.clientId),
           ),
           if (photos.isNotEmpty) ...[
             pw.SizedBox(height: 10),
@@ -716,12 +716,17 @@ pw.Widget _buildSignatures() {
   );
 }
 
+bool _supportsAdvanceClient(String clientId) {
+  final normalized = clientId.trim().toLowerCase();
+  return normalized == 'kprupvc' || normalized == 'venkateshwara';
+}
+
 pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
   final clientConfig = appState.clientConfig;
   final vpa = clientConfig.upiId;
   final payeeName = clientConfig.upiPayeeNameOrCompany;
   final amount =
-      clientConfig.clientId.toLowerCase() == 'kprupvc'
+      _supportsAdvanceClient(clientConfig.clientId)
           ? data.balanceDue
           : data.grandTotal;
   final note = 'Quote ${data.quotationNo}';

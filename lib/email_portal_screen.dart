@@ -119,6 +119,8 @@ class _EmailPortalScreenState extends State<EmailPortalScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'client_id': appState.clientConfig.clientId,
+          if (appState.clientConfig.adminEmails.isNotEmpty)
+            'admin_email': appState.clientConfig.adminEmails.first,
           'admin_password_hash': passwordHash,
           'to': to,
           'subject': subject,
