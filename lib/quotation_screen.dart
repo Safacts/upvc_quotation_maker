@@ -525,8 +525,16 @@ class _QuotationScreenState extends State<QuotationScreen>
     setState(() => _isLoading = true);
     try {
       if (data.id != null) {
-        final clientId =
-            Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        final qRes = await SupabaseConfig.client
+            .from('quotations')
+            .select('sync_version')
+            .eq('id', data.id!)
+            .eq('client_id', clientId)
+            .maybeSingle();
+        if (qRes != null && qRes['sync_version'] != null) {
+          data.syncVersion = (qRes['sync_version'] as num).toInt();
+        }
+
         final measuredRes = await SupabaseConfig.client
             .from('measured_items')
             .select()
@@ -573,7 +581,7 @@ class _QuotationScreenState extends State<QuotationScreen>
     try {
       final emptyCandidates = await SupabaseConfig.client
           .from('quotations')
-          .select('id,quote_no,created_at')
+          .select('id,quote_no,sync_version,created_at')
           .eq('client_id', clientId)
           .eq('deleted', false)
           .eq('status', 'draft')
@@ -600,6 +608,7 @@ class _QuotationScreenState extends State<QuotationScreen>
         if ((uCount as List).isNotEmpty) continue;
         // Reuse this empty draft — don't burn a new number
         data.id = qid;
+        data.syncVersion = (row['sync_version'] as num?)?.toInt() ?? 1;
         if (mounted) setState(() => data.quotationNo = qno);
         await _loadItems(); // will load empty lists
         // Ensure local draft points at the reused id
@@ -669,6 +678,9 @@ class _QuotationScreenState extends State<QuotationScreen>
             _isOffline = false;
             _isCloudPending = false;
           } else if (result.state == RecoverySaveState.conflict) {
+            if (result.serverVersion != null) {
+              data.syncVersion = result.serverVersion!;
+            }
             _lastSaveError = result.message;
             _isOffline = false;
             _isCloudPending = false;
