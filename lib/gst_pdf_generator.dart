@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -10,8 +11,16 @@ Future<Uint8List> generateGstPdfBytes(GstInvoiceData data, AppState appState) as
   final pdf = pw.Document();
   final currency = NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ');
 
-  final fontRegular = await PdfGoogleFonts.robotoRegular();
-  final fontBold = await PdfGoogleFonts.robotoBold();
+  pw.Font fontRegular = pw.Font.helvetica();
+  pw.Font fontBold = pw.Font.helveticaBold();
+  try {
+    fontRegular = await PdfGoogleFonts.robotoRegular().timeout(const Duration(seconds: 2));
+    fontBold = await PdfGoogleFonts.robotoBold().timeout(const Duration(seconds: 2));
+  } catch (e) {
+    debugPrint('GST PDF Generator: offline mode, using built-in Helvetica fonts: $e');
+    fontRegular = pw.Font.helvetica();
+    fontBold = pw.Font.helveticaBold();
+  }
 
   final pageTheme = pw.PageTheme(
     pageFormat: PdfPageFormat.a4,
