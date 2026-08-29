@@ -94,7 +94,7 @@ class _QuotationScreenState extends State<QuotationScreen>
       } else if (data.unmeasuredItems.isNotEmpty) {
         _node('u_0_0').requestFocus();
       } else {
-        if (_isKprupvc) {
+        if (_supportsAdvance) {
           _advancePaidFocus.requestFocus();
         } else {
           _transportFocus.requestFocus();
@@ -111,7 +111,7 @@ class _QuotationScreenState extends State<QuotationScreen>
       } else if (idx < data.unmeasuredItems.length - 1) {
         _node('u_${idx + 1}_0').requestFocus();
       } else {
-        if (_isKprupvc) {
+        if (_supportsAdvance) {
           _advancePaidFocus.requestFocus();
         } else {
           _transportFocus.requestFocus();
@@ -121,12 +121,16 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
   }
 
-  bool get _isKprupvc =>
-      Provider.of<AppState>(
-        context,
-        listen: false,
-      ).clientConfig.clientId.toLowerCase() ==
-      'kprupvc';
+  /// Advance collection is enabled only for the two clients that requested
+  /// payment tracking. This keeps the feature client-specific.
+  bool get _supportsAdvance {
+    final clientId =
+        Provider.of<AppState>(
+          context,
+          listen: false,
+        ).clientConfig.clientId.toLowerCase();
+    return clientId == 'kprupvc' || clientId == 'venkateshwara';
+  }
 
   @override
   void initState() {
@@ -525,8 +529,16 @@ class _QuotationScreenState extends State<QuotationScreen>
     setState(() => _isLoading = true);
     try {
       if (data.id != null) {
-        final clientId =
-            Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        final qRes = await SupabaseConfig.client
+            .from('quotations')
+            .select('sync_version')
+            .eq('id', data.id!)
+            .eq('client_id', clientId)
+            .maybeSingle();
+        if (qRes != null && qRes['sync_version'] != null) {
+          data.syncVersion = (qRes['sync_version'] as num).toInt();
+        }
+
         final measuredRes = await SupabaseConfig.client
             .from('measured_items')
             .select()
@@ -573,7 +585,7 @@ class _QuotationScreenState extends State<QuotationScreen>
     try {
       final emptyCandidates = await SupabaseConfig.client
           .from('quotations')
-          .select('id,quote_no,created_at')
+          .select('id,quote_no,sync_version,created_at')
           .eq('client_id', clientId)
           .eq('deleted', false)
           .eq('status', 'draft')
@@ -600,6 +612,7 @@ class _QuotationScreenState extends State<QuotationScreen>
         if ((uCount as List).isNotEmpty) continue;
         // Reuse this empty draft — don't burn a new number
         data.id = qid;
+        data.syncVersion = (row['sync_version'] as num?)?.toInt() ?? 1;
         if (mounted) setState(() => data.quotationNo = qno);
         await _loadItems(); // will load empty lists
         // Ensure local draft points at the reused id
@@ -669,6 +682,9 @@ class _QuotationScreenState extends State<QuotationScreen>
             _isOffline = false;
             _isCloudPending = false;
           } else if (result.state == RecoverySaveState.conflict) {
+            if (result.serverVersion != null) {
+              data.syncVersion = result.serverVersion!;
+            }
             _lastSaveError = result.message;
             _isOffline = false;
             _isCloudPending = false;
@@ -791,7 +807,7 @@ class _QuotationScreenState extends State<QuotationScreen>
                 <td style="padding: 8px 0; color: #7A5030; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Amount</td>
                 <td style="padding: 8px 0; color: #1A0A00; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.grandTotal.toStringAsFixed(2)}</td>
               </tr>
-              ${_isKprupvc ? '<tr><td style="padding: 8px 0; color: #2E7D32; font-size: 11.5px; font-weight: 700;">Advance Paid</td><td style="padding: 8px 0; color: #2E7D32; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.advancePaid.toStringAsFixed(2)}</td></tr><tr><td style="padding: 8px 0; color: #C44A10; font-size: 11.5px; font-weight: 700;">Remaining Amount</td><td style="padding: 8px 0; color: #C44A10; font-size: 13.5px; font-weight: 800; text-align: right;">Rs. ${data.balanceDue.toStringAsFixed(2)}</td></tr>' : ''}
+              ${_supportsAdvance ? '<tr><td style="padding: 8px 0; color: #2E7D32; font-size: 11.5px; font-weight: 700;">Advance Paid</td><td style="padding: 8px 0; color: #2E7D32; font-size: 13.5px; font-weight: 700; text-align: right;">Rs. ${data.advancePaid.toStringAsFixed(2)}</td></tr><tr><td style="padding: 8px 0; color: #C44A10; font-size: 11.5px; font-weight: 700;">Remaining Amount</td><td style="padding: 8px 0; color: #C44A10; font-size: 13.5px; font-weight: 800; text-align: right;">Rs. ${data.balanceDue.toStringAsFixed(2)}</td></tr>' : ''}
             </table>
           </div>
 $reviewCta
@@ -825,6 +841,8 @@ $reviewCta
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'client_id': appState.clientConfig.clientId,
+          if (appState.clientConfig.adminEmails.isNotEmpty)
+            'admin_email': appState.clientConfig.adminEmails.first,
           'admin_password_hash': passwordHash,
           'to': targetEmail.trim(),
           'subject':
@@ -2200,7 +2218,7 @@ $reviewCta
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (_isKprupvc) ...[
+                    if (_supportsAdvance) ...[
                       TextFormField(
                         key: const ValueKey('kpr-advance-paid-field'),
                         focusNode: _advancePaidFocus,
@@ -2315,7 +2333,7 @@ $reviewCta
                       data.grandTotal,
                       isBold: true,
                     ),
-                    if (_isKprupvc) ...[
+                    if (_supportsAdvance) ...[
                       _buildComputationRow('Advance Paid', data.advancePaid),
                       _buildComputationRow(
                         'Remaining Amount',
