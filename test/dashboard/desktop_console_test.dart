@@ -23,7 +23,7 @@ void main() {
     // The empty state test (TC-DC-002) covers the post-fetch UI.
     // In production, the loading indicator shows until first fetch completes.
 
-    testWidgets('TC-DC-002: shows empty state when no quotations (Supabase not initialized)', (tester) async {
+    testWidgets('TC-DC-002: does not claim quotations are empty when loading fails', (tester) async {
       final appState = AppState();
       appState.applyClientConfig(TestHelpers.defaultConfig);
 
@@ -31,8 +31,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('No quotations found'), findsOneWidget);
-      expect(find.byIcon(Icons.inbox), findsOneWidget);
+      expect(find.text('Saved quotations could not be loaded yet'), findsOneWidget);
+      expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+      expect(find.text('Try Again'), findsOneWidget);
     });
 
     testWidgets('TC-DC-003: renders app bar with title "Dashboard"', (tester) async {

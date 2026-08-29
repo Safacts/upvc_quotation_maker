@@ -8,23 +8,34 @@ enum QuotationStatus { draft, sent, won, lost }
 extension QuotationStatusX on QuotationStatus {
   String get label {
     switch (this) {
-      case QuotationStatus.draft: return 'Draft';
-      case QuotationStatus.sent:  return 'Sent';
-      case QuotationStatus.won:   return 'Won';
-      case QuotationStatus.lost:  return 'Lost';
+      case QuotationStatus.draft:
+        return 'Draft';
+      case QuotationStatus.sent:
+        return 'Sent';
+      case QuotationStatus.won:
+        return 'Won';
+      case QuotationStatus.lost:
+        return 'Lost';
     }
   }
+
   String get value {
     switch (this) {
-      case QuotationStatus.draft: return 'draft';
-      case QuotationStatus.sent:  return 'sent';
-      case QuotationStatus.won:   return 'approved';
-      case QuotationStatus.lost:  return 'rejected';
+      case QuotationStatus.draft:
+        return 'draft';
+      case QuotationStatus.sent:
+        return 'sent';
+      case QuotationStatus.won:
+        return 'approved';
+      case QuotationStatus.lost:
+        return 'rejected';
     }
   }
+
   static QuotationStatus fromString(String? s) {
     switch (s) {
-      case 'sent': return QuotationStatus.sent;
+      case 'sent':
+        return QuotationStatus.sent;
       case 'approved':
       case 'won':
       case 'accepted':
@@ -32,11 +43,11 @@ extension QuotationStatusX on QuotationStatus {
       case 'rejected':
       case 'lost':
         return QuotationStatus.lost;
-      default:     return QuotationStatus.draft;
+      default:
+        return QuotationStatus.draft;
     }
   }
 }
-
 
 class QuotationData {
   String? id; // Unique UUID
@@ -49,6 +60,7 @@ class QuotationData {
   String email = '';
   DateTime createdAt = DateTime.now();
   QuotationStatus status = QuotationStatus.draft;
+
   /// Server revision used to prevent one device silently overwriting another.
   /// Zero means this quotation has never been acknowledged by the cloud.
   int syncVersion = 0;
@@ -56,6 +68,7 @@ class QuotationData {
   List<MeasuredItem> measuredItems = [];
   List<UnmeasuredItem> unmeasuredItems = [];
   double transport = 0.0;
+
   /// KPRUPVC-only customer advance. This never changes [grandTotal].
   double advancePaid = 0.0;
 
@@ -63,14 +76,18 @@ class QuotationData {
   double gstPercentage = 0.0;
   String supplierCompany = '';
 
-
   // Logic to handle continuous numbering via Supabase RPC + Offline fallback
-  static Future<String> generateNextQuoteNumber({String prefix = 'JVUPVC', String? clientId}) async {
+  static Future<String> generateNextQuoteNumber({
+    String prefix = 'JVUPVC',
+    String? clientId,
+  }) async {
     final cid = clientId ?? 'default';
     final datePart = DateFormat('ddMMyyyy').format(DateTime.now());
     try {
-      final result = await SupabaseConfig.client
-          .rpc('get_next_quote_number', params: {'cid': clientId});
+      final result = await SupabaseConfig.client.rpc(
+        'get_next_quote_number',
+        params: {'cid': clientId},
+      );
       final quoteNo = result.toString();
       // Cache latest sequence locally so offline mode can continue seamlessly
       if (quoteNo.contains('-')) {
@@ -99,32 +116,93 @@ class QuotationData {
     }
   }
 
-  double get totalMeasuredAmount => measuredItems.fold(0, (sum, item) => sum + item.total);
-  double get totalUnmeasuredAmount => unmeasuredItems.fold(0, (sum, item) => sum + item.total);
+  double get totalMeasuredAmount =>
+      measuredItems.fold(0, (sum, item) => sum + item.total);
+  double get totalUnmeasuredAmount =>
+      unmeasuredItems.fold(0, (sum, item) => sum + item.total);
   double get actualAmount => totalMeasuredAmount + totalUnmeasuredAmount;
-  double get totalSft => measuredItems.fold(0, (sum, item) => sum + item.totalSft);
-  double get igst => includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
-  double get grandTotal => actualAmount + transport + igst; // Grand Total includes IGST
-  double get balanceDue => (grandTotal - advancePaid).clamp(0.0, double.infinity).toDouble();
+  double get totalSft =>
+      measuredItems.fold(0, (sum, item) => sum + item.totalSft);
+  double get igst =>
+      includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
+  double get grandTotal =>
+      actualAmount + transport + igst; // Grand Total includes IGST
+  double get balanceDue =>
+      (grandTotal - advancePaid).clamp(0.0, double.infinity).toDouble();
 
-  String get amountInWords {
-    if (grandTotal == 0) return "RUPEES ZERO ONLY";
-    int number = grandTotal.floor();
-    int paise = ((grandTotal - number) * 100).round();
-    
+  String get amountInWords => _amountInWords(grandTotal);
+
+  /// KPR's payable figure after the customer's advance is deducted.
+  ///
+  /// Keep this separate from [amountInWords]: the commercial grand total must
+  /// remain visible, while the amount requested from the customer is the
+  /// remaining balance.
+  String get balanceDueInWords => _amountInWords(balanceDue);
+
+  static String _amountInWords(double amount) {
+    if (!amount.isFinite || amount <= 0) return "RUPEES ZERO ONLY";
+    // Convert once to paise so values such as 99.999 do not produce
+    // "One Hundred Paise" instead of carrying into the rupee amount.
+    final totalPaise = (amount * 100).round();
+    int number = totalPaise ~/ 100;
+    final paise = totalPaise % 100;
+
     String convertChunk(int n) {
-      const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-      const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+      const ones = [
+        "",
+        "One",
+        "Two",
+        "Three",
+        "Four",
+        "Five",
+        "Six",
+        "Seven",
+        "Eight",
+        "Nine",
+        "Ten",
+        "Eleven",
+        "Twelve",
+        "Thirteen",
+        "Fourteen",
+        "Fifteen",
+        "Sixteen",
+        "Seventeen",
+        "Eighteen",
+        "Nineteen",
+      ];
+      const tens = [
+        "",
+        "",
+        "Twenty",
+        "Thirty",
+        "Forty",
+        "Fifty",
+        "Sixty",
+        "Seventy",
+        "Eighty",
+        "Ninety",
+      ];
       if (n < 20) return ones[n];
-      if (n < 100) return tens[n ~/ 10] + (n % 10 != 0 ? "-${ones[n % 10]}" : "");
-      if (n < 1000) return "${ones[n ~/ 100]} Hundred${n % 100 != 0 ? " ${convertChunk(n % 100)}" : ""}";
+      if (n < 100)
+        return tens[n ~/ 10] + (n % 10 != 0 ? "-${ones[n % 10]}" : "");
+      if (n < 1000)
+        return "${ones[n ~/ 100]} Hundred${n % 100 != 0 ? " ${convertChunk(n % 100)}" : ""}";
       return "";
     }
 
     String words = "";
-    if (number >= 10000000) { words += "${convertChunk(number ~/ 10000000)} Crore "; number %= 10000000; }
-    if (number >= 100000) { words += "${convertChunk(number ~/ 100000)} Lakh "; number %= 100000; }
-    if (number >= 1000) { words += "${convertChunk(number ~/ 1000)} Thousand "; number %= 1000; }
+    if (number >= 10000000) {
+      words += "${convertChunk(number ~/ 10000000)} Crore ";
+      number %= 10000000;
+    }
+    if (number >= 100000) {
+      words += "${convertChunk(number ~/ 100000)} Lakh ";
+      number %= 100000;
+    }
+    if (number >= 1000) {
+      words += "${convertChunk(number ~/ 1000)} Thousand ";
+      number %= 1000;
+    }
     if (number > 0) words += "${convertChunk(number)} ";
     words += "Rupees";
     if (paise > 0) words += " and ${convertChunk(paise)} Paise";
@@ -164,21 +242,38 @@ class QuotationData {
     q.email = map['email'] ?? '';
     q.transport = (map['transport_cost'] ?? 0).toDouble();
     q.advancePaid = (map['advance_paid'] ?? 0).toDouble();
-    q.createdAt = map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now();
+    q.createdAt =
+        map['created_at'] != null
+            ? DateTime.parse(map['created_at'])
+            : DateTime.now();
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
     q.status = QuotationStatusX.fromString(map['status']);
     q.syncVersion = (map['sync_version'] as num?)?.toInt() ?? 0;
     q.supplierCompany = map['supplier_company'] ?? '';
     if (map['measured_items'] != null && map['measured_items'] is List) {
-      q.measuredItems = (map['measured_items'] as List)
-          .map((m) => MeasuredItem.fromMap(m is Map<String, dynamic> ? m : Map<String, dynamic>.from(m as Map)))
-          .toList();
+      q.measuredItems =
+          (map['measured_items'] as List)
+              .map(
+                (m) => MeasuredItem.fromMap(
+                  m is Map<String, dynamic>
+                      ? m
+                      : Map<String, dynamic>.from(m as Map),
+                ),
+              )
+              .toList();
     }
     if (map['unmeasured_items'] != null && map['unmeasured_items'] is List) {
-      q.unmeasuredItems = (map['unmeasured_items'] as List)
-          .map((m) => UnmeasuredItem.fromMap(m is Map<String, dynamic> ? m : Map<String, dynamic>.from(m as Map)))
-          .toList();
+      q.unmeasuredItems =
+          (map['unmeasured_items'] as List)
+              .map(
+                (m) => UnmeasuredItem.fromMap(
+                  m is Map<String, dynamic>
+                      ? m
+                      : Map<String, dynamic>.from(m as Map),
+                ),
+              )
+              .toList();
     }
     return q;
   }
@@ -207,6 +302,7 @@ class MeasuredItem {
   int units = 1;
   String glass = '';
   double rate = 0;
+
   /// Mirrored by `sqft()` in src/lib/pricing.ts. 304.8 mm = 1 foot.
   double get sft => (width / 304.8) * (height / 304.8);
   double get totalSft => sft * units;
