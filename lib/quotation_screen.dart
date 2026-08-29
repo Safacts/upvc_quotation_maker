@@ -53,6 +53,7 @@ class _QuotationScreenState extends State<QuotationScreen>
   List<Map<String, dynamic>> _rateCardItems = [];
   DateTime? _lastSaved;
   String? _lastSaveError;
+  bool _hasUnsyncedChanges = false;
 
   // Product Catalog
   List<Product> _measuredProducts = [];
@@ -120,13 +121,22 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
   }
 
-  bool get _isKprupvc => Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase() == 'kprupvc';
+  bool get _isKprupvc =>
+      Provider.of<AppState>(
+        context,
+        listen: false,
+      ).clientConfig.clientId.toLowerCase() ==
+      'kprupvc';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _usePresets = Provider.of<AppState>(context, listen: false).clientConfig.enablePricePresets;
+    _usePresets =
+        Provider.of<AppState>(
+          context,
+          listen: false,
+        ).clientConfig.enablePricePresets;
     if (widget.existingData != null) {
       data = widget.existingData!;
       _lastSaved = widget.existingData!.createdAt;
@@ -143,10 +153,15 @@ class _QuotationScreenState extends State<QuotationScreen>
   }
 
   Future<void> _loadRateCard() async {
-    final enabled = Provider.of<AppState>(context, listen: false).clientConfig.enableRateCard;
+    final enabled =
+        Provider.of<AppState>(
+          context,
+          listen: false,
+        ).clientConfig.enableRateCard;
     if (!enabled) return;
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('rate_card_items')
           .select()
@@ -154,9 +169,10 @@ class _QuotationScreenState extends State<QuotationScreen>
           .eq('is_active', true);
       if (mounted) {
         setState(() {
-          _rateCardItems = (response as List)
-              .map((e) => Map<String, dynamic>.from(e as Map))
-              .toList();
+          _rateCardItems =
+              (response as List)
+                  .map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList();
         });
       }
     } catch (e) {
@@ -167,7 +183,10 @@ class _QuotationScreenState extends State<QuotationScreen>
   double? _matchRateCardRate(String code, double width, double height) {
     if (_rateCardItems.isEmpty || code.trim().isEmpty) return null;
     final now = DateTime.now();
-    final normalized = code.trim().toLowerCase().replaceAll(RegExp(r'[\s\-]+'), '_');
+    final normalized = code.trim().toLowerCase().replaceAll(
+      RegExp(r'[\s\-]+'),
+      '_',
+    );
     Map<String, dynamic>? best;
     int bestScore = -1;
     String? bestStart;
@@ -178,8 +197,12 @@ class _QuotationScreenState extends State<QuotationScreen>
       if (!exactType && rowType != 'any') continue;
       final startRaw = row['validity_start']?.toString();
       final endRaw = row['validity_end']?.toString();
-      final start = startRaw == null || startRaw.isEmpty ? null : DateTime.tryParse(startRaw);
-      final end = endRaw == null || endRaw.isEmpty ? null : DateTime.tryParse(endRaw);
+      final start =
+          startRaw == null || startRaw.isEmpty
+              ? null
+              : DateTime.tryParse(startRaw);
+      final end =
+          endRaw == null || endRaw.isEmpty ? null : DateTime.tryParse(endRaw);
       if (start != null && now.isBefore(start)) continue;
       if (end != null && now.isAfter(end)) continue;
       bool dimsOk = true;
@@ -191,7 +214,8 @@ class _QuotationScreenState extends State<QuotationScreen>
           (maxW != null && width > maxW) ||
           (minH != null && height < minH) ||
           (maxH != null && height > maxH)) {
-        if (minW != null || maxW != null || minH != null || maxH != null) dimsOk = false;
+        if (minW != null || maxW != null || minH != null || maxH != null)
+          dimsOk = false;
       }
       final price = double.tryParse('${row['price_per_sqft']}');
       if (price == null || price <= 0) continue;
@@ -199,7 +223,8 @@ class _QuotationScreenState extends State<QuotationScreen>
       if (score > bestScore ||
           (score == bestScore &&
               best != null &&
-              (bestStart == null || (startRaw != null && startRaw.compareTo(bestStart) > 0)))) {
+              (bestStart == null ||
+                  (startRaw != null && startRaw.compareTo(bestStart) > 0)))) {
         best = row;
         bestScore = score;
         bestStart = startRaw;
@@ -232,14 +257,16 @@ class _QuotationScreenState extends State<QuotationScreen>
 
   Future<void> _fetchPastQuotations() async {
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
           .select()
           .eq('client_id', clientId);
       if (mounted) {
         setState(() {
-          _pastQuotations = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+          _pastQuotations =
+              (response as List).map((e) => QuotationData.fromMap(e)).toList();
         });
       }
     } catch (e) {
@@ -250,16 +277,17 @@ class _QuotationScreenState extends State<QuotationScreen>
   Future<void> _loadCatalog({bool forceRefresh = false}) async {
     setState(() => _isLoadingCatalog = true);
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final catalogService = CatalogService.instance;
-      
+
       if (forceRefresh) {
         catalogService.invalidate(clientId);
       }
-      
+
       final measured = await catalogService.fetchMeasuredProducts(clientId);
       final unmeasured = await catalogService.fetchUnmeasuredProducts(clientId);
-      
+
       if (mounted) {
         setState(() {
           _measuredProducts = measured;
@@ -285,7 +313,8 @@ class _QuotationScreenState extends State<QuotationScreen>
   Future<void> _loadCustomers() async {
     setState(() => _isLoadingCustomers = true);
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final response = await SupabaseConfig.client
           .from('quotations')
           .select('customer_name, contact_no, email, address')
@@ -339,7 +368,10 @@ class _QuotationScreenState extends State<QuotationScreen>
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       // A phone call or app switch must never discard the latest keystroke.
-      unawaited(_persistLocalDraft());
+      // Start the normal save path immediately: it checkpoints locally before
+      // attempting the network and therefore also creates a durable outbox
+      // envelope when the call interrupts connectivity.
+      unawaited(_autoSaveToDatabase());
     }
   }
 
@@ -360,7 +392,10 @@ class _QuotationScreenState extends State<QuotationScreen>
     if (_isNetworkError(error)) {
       return 'You appear to be offline. Your draft is safe on this device.';
     }
-    if (message.contains('401') || message.contains('403') || message.contains('unauthorized') || message.contains('forbidden')) {
+    if (message.contains('401') ||
+        message.contains('403') ||
+        message.contains('unauthorized') ||
+        message.contains('forbidden')) {
       return 'Your session may have expired. Please sign in again, then retry $action.';
     }
     if (RegExp(r'\b5\d{2}\b').hasMatch(message) || message.contains('server')) {
@@ -370,7 +405,8 @@ class _QuotationScreenState extends State<QuotationScreen>
   }
 
   Future<void> _restoreLocalDraftOrInit() async {
-    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = prefs.getString('last_active_draft_$clientId');
@@ -379,37 +415,60 @@ class _QuotationScreenState extends State<QuotationScreen>
         final stored = jsonDecode(raw);
         final quotation = stored is Map ? stored['quotation'] : null;
         if (quotation is Map && quotation['id'] != null) {
-          final restored = QuotationData.fromMap(Map<String, dynamic>.from(quotation));
+          final restored = QuotationData.fromMap(
+            Map<String, dynamic>.from(quotation),
+          );
           final measured = stored['measured_items'];
           final unmeasured = stored['unmeasured_items'];
           if (measured is List) {
-            restored.measuredItems = measured
-                .map((e) => MeasuredItem.fromMap(Map<String, dynamic>.from(e as Map)))
-                .toList();
+            restored.measuredItems =
+                measured
+                    .map(
+                      (e) => MeasuredItem.fromMap(
+                        Map<String, dynamic>.from(e as Map),
+                      ),
+                    )
+                    .toList();
           }
           if (unmeasured is List) {
-            restored.unmeasuredItems = unmeasured
-                .map((e) => UnmeasuredItem.fromMap(Map<String, dynamic>.from(e as Map)))
-                .toList();
+            restored.unmeasuredItems =
+                unmeasured
+                    .map(
+                      (e) => UnmeasuredItem.fromMap(
+                        Map<String, dynamic>.from(e as Map),
+                      ),
+                    )
+                    .toList();
           }
           if (!mounted) return;
           setState(() {
             data = restored;
             _lastSaved = restored.createdAt;
+            _hasUnsyncedChanges =
+                stored['needs_sync'] == true || restored.syncVersion == 0;
           });
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (!mounted) return;
             final continueDraft = await showDialog<bool>(
               context: context,
               barrierDismissible: false,
-              builder: (dialogContext) => AlertDialog(
-                title: const Text('Continue your last quotation?'),
-                content: const Text('We found an unfinished quotation saved on this device.'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Start new')),
-                  ElevatedButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Continue')),
-                ],
-              ),
+              builder:
+                  (dialogContext) => AlertDialog(
+                    title: const Text('Continue your last quotation?'),
+                    content: const Text(
+                      'We found an unfinished quotation saved on this device.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Start new'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        child: const Text('Continue'),
+                      ),
+                    ],
+                  ),
             );
             if (continueDraft == false && mounted) {
               setState(() => data = QuotationData());
@@ -427,14 +486,24 @@ class _QuotationScreenState extends State<QuotationScreen>
 
   Future<void> _persistLocalDraft() async {
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       final prefs = await SharedPreferences.getInstance();
-      final draftKey = 'quotation_local_draft_${clientId}_${data.id ?? 'active'}';
+      final draftKey =
+          'quotation_local_draft_${clientId}_${data.id ?? 'active'}';
       final draftData = {
         'quotation': data.toMap(clientId: clientId, includeStatus: true),
-        'measured_items': data.measuredItems.map((e) => e.toMap(data.id ?? '', clientId: clientId)).toList(),
-        'unmeasured_items': data.unmeasuredItems.map((e) => e.toMap(data.id ?? '', clientId: clientId)).toList(),
+        'measured_items':
+            data.measuredItems
+                .map((e) => e.toMap(data.id ?? '', clientId: clientId))
+                .toList(),
+        'unmeasured_items':
+            data.unmeasuredItems
+                .map((e) => e.toMap(data.id ?? '', clientId: clientId))
+                .toList(),
         'updated_at': DateTime.now().toIso8601String(),
+        'needs_sync':
+            _hasUnsyncedChanges || _isCloudPending || data.syncVersion == 0,
       };
       await prefs.setString(draftKey, jsonEncode(draftData));
       await prefs.setString('last_active_draft_$clientId', draftKey);
@@ -444,6 +513,7 @@ class _QuotationScreenState extends State<QuotationScreen>
   }
 
   void _onDataChanged() {
+    _hasUnsyncedChanges = true;
     _persistLocalDraft();
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(seconds: 2), () {
@@ -455,7 +525,8 @@ class _QuotationScreenState extends State<QuotationScreen>
     setState(() => _isLoading = true);
     try {
       if (data.id != null) {
-        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        final clientId =
+            Provider.of<AppState>(context, listen: false).clientConfig.clientId;
         final measuredRes = await SupabaseConfig.client
             .from('measured_items')
             .select()
@@ -468,22 +539,31 @@ class _QuotationScreenState extends State<QuotationScreen>
             .eq('client_id', clientId);
 
         setState(() {
-          data.measuredItems = (measuredRes as List).map((e) => MeasuredItem.fromMap(e)).toList();
-          data.unmeasuredItems = (unmeasuredRes as List).map((e) => UnmeasuredItem.fromMap(e)).toList();
+          data.measuredItems =
+              (measuredRes as List)
+                  .map((e) => MeasuredItem.fromMap(e))
+                  .toList();
+          data.unmeasuredItems =
+              (unmeasuredRes as List)
+                  .map((e) => UnmeasuredItem.fromMap(e))
+                  .toList();
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (!_isNetworkError(e)) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load items: $e')));
       }
     }
   }
 
   Future<void> _initQuoteNumber() async {
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
-    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
     // SAFE REUSE: prevent 32 empty drafts from piling up (prod has 32 empties 28-08).
     // Before burning a new quote_no via RPC (which increments quotation_counters),
     // try to reuse the most recent empty draft for this client:
@@ -531,7 +611,10 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
     data.id ??= const Uuid().v4();
     if (data.quotationNo.isEmpty) {
-      String nextNo = await QuotationData.generateNextQuoteNumber(prefix: prefix, clientId: clientId);
+      String nextNo = await QuotationData.generateNextQuoteNumber(
+        prefix: prefix,
+        clientId: clientId,
+      );
       if (mounted) {
         setState(() => data.quotationNo = nextNo);
       }
@@ -552,10 +635,7 @@ class _QuotationScreenState extends State<QuotationScreen>
     await _persistLocalDraft();
 
     try {
-      final quotationMap = data.toMap(
-        clientId: clientId,
-        includeStatus: true,
-      );
+      final quotationMap = data.toMap(clientId: clientId, includeStatus: true);
       // Stable child IDs make the atomic server operation idempotent.
       for (final item in data.measuredItems) {
         item.id ??= const Uuid().v4();
@@ -566,17 +646,20 @@ class _QuotationScreenState extends State<QuotationScreen>
       final result = await QuotationRecoveryService.instance.saveBundle(
         clientId: clientId,
         quotation: quotationMap,
-        measuredItems: data.measuredItems
-            .map((item) => item.toMap(data.id!, clientId: clientId))
-            .toList(),
-        unmeasuredItems: data.unmeasuredItems
-            .map((item) => item.toMap(data.id!, clientId: clientId))
-            .toList(),
+        measuredItems:
+            data.measuredItems
+                .map((item) => item.toMap(data.id!, clientId: clientId))
+                .toList(),
+        unmeasuredItems:
+            data.unmeasuredItems
+                .map((item) => item.toMap(data.id!, clientId: clientId))
+                .toList(),
       );
 
       if (result.state == RecoverySaveState.saved &&
           result.serverVersion != null) {
         data.syncVersion = result.serverVersion!;
+        _hasUnsyncedChanges = false;
       }
       if (mounted) {
         setState(() {
@@ -598,6 +681,9 @@ class _QuotationScreenState extends State<QuotationScreen>
       }
       if (result.state == RecoverySaveState.saved) {
         _retryTimer?.cancel();
+        // Persist the acknowledged revision. Recovery Center can now
+        // distinguish this safe local copy from a draft that still needs sync.
+        await _persistLocalDraft();
       }
     } catch (e) {
       debugPrint('Auto-save error: $e');
@@ -629,15 +715,18 @@ class _QuotationScreenState extends State<QuotationScreen>
   }
 
   bool _hasLineItems() {
-    final measured = data.measuredItems.any((item) =>
-        item.code.trim().isNotEmpty ||
-        item.description.trim().isNotEmpty ||
-        item.glass.trim().isNotEmpty ||
-        item.width > 0 ||
-        item.height > 0 ||
-        item.rate > 0);
-    final unmeasured = data.unmeasuredItems.any((item) =>
-        item.description.trim().isNotEmpty || item.rate > 0);
+    final measured = data.measuredItems.any(
+      (item) =>
+          item.code.trim().isNotEmpty ||
+          item.description.trim().isNotEmpty ||
+          item.glass.trim().isNotEmpty ||
+          item.width > 0 ||
+          item.height > 0 ||
+          item.rate > 0,
+    );
+    final unmeasured = data.unmeasuredItems.any(
+      (item) => item.description.trim().isNotEmpty || item.rate > 0,
+    );
     return measured || unmeasured;
   }
 
@@ -645,17 +734,25 @@ class _QuotationScreenState extends State<QuotationScreen>
     try {
       final appState = Provider.of<AppState>(context, listen: false);
       final passwordHash = await QuoteShare.passwordHash(appState.clientConfig);
-await pdf_gen.loadLibrary();
-      final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
+      await pdf_gen.loadLibrary();
+      final effectivePhotos =
+          appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
       final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
-      final reviewUrl = QuoteShare.reviewUrl(data, config: appState.clientConfig);
+      final reviewUrl = QuoteShare.reviewUrl(
+        data,
+        config: appState.clientConfig,
+      );
       final quoteLink = await _quoteLink(data);
-      if (quoteLink == null) debugPrint('QuotationScreen: _sendEmail no quote link for ${data.quotationNo} — email will have only review CTA');
+      if (quoteLink == null)
+        debugPrint(
+          'QuotationScreen: _sendEmail no quote link for ${data.quotationNo} — email will have only review CTA',
+        );
 
       // Only render the "Review & Confirm" CTA when we hold a working token.
-      final reviewCta = quoteLink == null
-          ? ''
-          : '''
+      final reviewCta =
+          quoteLink == null
+              ? ''
+              : '''
         <p style="margin: 24px 0 8px 0; color: #3D1F08; font-size: 14px;">Please review and confirm your quotation:</p>
         <p style="margin: 0;"><a href="$quoteLink" style="display: inline-block; background-color: #C44A10; color: #ffffff; padding: 14px 34px; border-radius: 999px; text-decoration: none; font-size: 15px; font-weight: 700;">Review & Confirm Quotation</a></p>''';
 
@@ -730,7 +827,8 @@ $reviewCta
           'client_id': appState.clientConfig.clientId,
           'admin_password_hash': passwordHash,
           'to': targetEmail.trim(),
-          'subject': 'Quotation ${data.quotationNo} from ${appState.companyName}',
+          'subject':
+              'Quotation ${data.quotationNo} from ${appState.companyName}',
           'html': htmlBody,
           if (attachments.isNotEmpty) 'attachments': attachments,
         }),
@@ -755,7 +853,8 @@ $reviewCta
     if (data.status != QuotationStatus.sent && data.id != null) {
       setState(() => data.status = QuotationStatus.sent);
       try {
-        final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+        final clientId =
+            Provider.of<AppState>(context, listen: false).clientConfig.clientId;
         await SupabaseConfig.client
             .from('quotations')
             .update({'status': QuotationStatus.sent.value})
@@ -773,9 +872,9 @@ $reviewCta
   /// null instead, so the email can omit the button rather than embed a dead
   /// one. See that file for the full root-cause write-up.
   Future<String?> _quoteLink(QuotationData q) => QuoteShare.quoteLink(
-        q,
-        config: Provider.of<AppState>(context, listen: false).clientConfig,
-      );
+    q,
+    config: Provider.of<AppState>(context, listen: false).clientConfig,
+  );
 
   Future<void> _manualEmailPrompt() async {
     final emailController = TextEditingController(text: data.email);
@@ -790,42 +889,73 @@ $reviewCta
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Customer Email'), keyboardType: TextInputType.emailAddress),
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Customer Email',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                 ],
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                  ElevatedButton(
-                    onPressed: isSending ? null : () async {
-                      final email = emailController.text.trim();
-                      if (email.isEmpty) return;
-                      setDialogState(() => isSending = true);
-                      try {
-                        if (_isSendingEmail) return;
-                        if (mounted) setState(() => _isSendingEmail = true);
-                        try {
-                          await _sendEmail(email);
-                        } finally {
-                          if (mounted) setState(() => _isSendingEmail = false);
-                        }
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sent successfully!')));
-                        }
-                      } catch (e) {
-                        setDialogState(() => isSending = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_calmError(e, 'send the email'))));
-                        }
-                      }
-                    },
-                    child: isSending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Send'),
-                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      isSending
+                          ? null
+                          : () async {
+                            final email = emailController.text.trim();
+                            if (email.isEmpty) return;
+                            setDialogState(() => isSending = true);
+                            try {
+                              if (_isSendingEmail) return;
+                              if (mounted)
+                                setState(() => _isSendingEmail = true);
+                              try {
+                                await _sendEmail(email);
+                              } finally {
+                                if (mounted)
+                                  setState(() => _isSendingEmail = false);
+                              }
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Email sent successfully!'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setDialogState(() => isSending = false);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      _calmError(e, 'send the email'),
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                  child:
+                      isSending
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(),
+                          )
+                          : const Text('Send'),
+                ),
               ],
             );
-          }
+          },
         );
-      }
+      },
     );
   }
 
@@ -834,8 +964,14 @@ $reviewCta
   /// `src/templates/vaishnavi/` get the quotation data baked in and are then
   /// rendered to PDF server-side (`/api/vaishnavi-estimate/render`), with an
   /// inline pw.Document fallback inside the generator itself.
-  Future<Uint8List> _generateClientPdfBytes(AppState appState, List<QuotationPhoto> photos) async {
-    final id = appState.clientConfig.clientId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+  Future<Uint8List> _generateClientPdfBytes(
+    AppState appState,
+    List<QuotationPhoto> photos,
+  ) async {
+    final id = appState.clientConfig.clientId.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9]+'),
+      '-',
+    );
     if (id.startsWith('vaishnavi')) {
       return generateVaishnaviPdfBytes(data, appState, photos: photos);
     }
@@ -847,37 +983,41 @@ $reviewCta
     if (_isProcessingPdf) return;
     if (mounted) setState(() => _isProcessingPdf = true);
     try {
-    // 1. Force Save
-    umamiTrack('generate_pdf');
-    await _autoSaveToDatabase();
+      // 1. Force Save
+      umamiTrack('generate_pdf');
+      await _autoSaveToDatabase();
 
-    // Generate PDF bytes
-    final appState = Provider.of<AppState>(context, listen: false);
-    await pdf_gen.loadLibrary();
-    final effectivePhotos = appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
-    final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
-    
-    // 2. If email exists, send automatically in background
-    Future<void>? emailTask;
-    if (data.email.isNotEmpty && data.email.contains('@')) {
-      emailTask = _sendEmail(data.email);
-    }
+      // Generate PDF bytes
+      final appState = Provider.of<AppState>(context, listen: false);
+      await pdf_gen.loadLibrary();
+      final effectivePhotos =
+          appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
+      final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
 
-    // 3. Navigate to Confirmation Screen
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PdfConfirmationScreen(
-          data: data,
-          pdfBytes: pdfBytes,
-          emailTask: emailTask,
+      // 2. If email exists, send automatically in background
+      Future<void>? emailTask;
+      if (data.email.isNotEmpty && data.email.contains('@')) {
+        emailTask = _sendEmail(data.email);
+      }
+
+      // 3. Navigate to Confirmation Screen
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => PdfConfirmationScreen(
+                data: data,
+                pdfBytes: pdfBytes,
+                emailTask: emailTask,
+              ),
         ),
-      ),
-    );
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_calmError(e, 'generate the PDF'))));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_calmError(e, 'generate the PDF'))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isProcessingPdf = false);
@@ -890,7 +1030,13 @@ $reviewCta
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
           if (trailing != null) trailing,
         ],
       ),
@@ -899,10 +1045,14 @@ $reviewCta
 
   Color _statusColor(QuotationStatus s) {
     switch (s) {
-      case QuotationStatus.draft: return Colors.grey.shade400;
-      case QuotationStatus.sent:  return Colors.blue.shade400;
-      case QuotationStatus.won:   return Colors.green.shade500;
-      case QuotationStatus.lost:  return Colors.red.shade400;
+      case QuotationStatus.draft:
+        return Colors.grey.shade400;
+      case QuotationStatus.sent:
+        return Colors.blue.shade400;
+      case QuotationStatus.won:
+        return Colors.green.shade500;
+      case QuotationStatus.lost:
+        return Colors.red.shade400;
     }
   }
 
@@ -936,7 +1086,8 @@ $reviewCta
 
   Future<void> _updateStatus(QuotationData q, QuotationStatus newStatus) async {
     try {
-      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      final clientId =
+          Provider.of<AppState>(context, listen: false).clientConfig.clientId;
       await SupabaseConfig.client
           .from('quotations')
           .update({'status': newStatus.value})
@@ -949,18 +1100,31 @@ $reviewCta
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingData == null ? 'New Quotation' : 'Edit Quotation'),
+        title: Text(
+          widget.existingData == null ? 'New Quotation' : 'Edit Quotation',
+        ),
         actions: [
           if (_isSaving)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14.0),
-              child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))),
+              child: Center(
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
             )
           else if (_isOffline)
             Tooltip(
@@ -972,18 +1136,35 @@ $reviewCta
                     onTap: () => _autoSaveToDatabase(),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade700, width: 1),
+                        border: Border.all(
+                          color: Colors.amber.shade700,
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.cloud_off, color: Colors.amber.shade800, size: 16),
+                          Icon(
+                            Icons.cloud_off,
+                            color: Colors.amber.shade800,
+                            size: 16,
+                          ),
                           const SizedBox(width: 4),
-                          Text('Offline', style: TextStyle(color: Colors.amber.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Offline',
+                            style: TextStyle(
+                              color: Colors.amber.shade900,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -996,7 +1177,13 @@ $reviewCta
               message: 'Saved safely on this device. Cloud backup is retrying.',
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Center(child: Icon(Icons.cloud_upload, color: Colors.amber.shade800, size: 22)),
+                child: Center(
+                  child: Icon(
+                    Icons.cloud_upload,
+                    color: Colors.amber.shade800,
+                    size: 22,
+                  ),
+                ),
               ),
             )
           else if (_lastSaveError != null)
@@ -1004,20 +1191,29 @@ $reviewCta
               message: 'Sync issue: $_lastSaveError',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Center(child: Icon(Icons.cloud_off, color: Colors.red, size: 22)),
+                child: Center(
+                  child: Icon(Icons.cloud_off, color: Colors.red, size: 22),
+                ),
               ),
             )
           else
             Tooltip(
-              message: _lastSaved != null
-                  ? 'Saved to cloud at ${DateFormat('HH:mm:ss').format(_lastSaved!)}'
-                  : 'Connected to $clientId',
+              message:
+                  _lastSaved != null
+                      ? 'Saved to cloud at ${DateFormat('HH:mm:ss').format(_lastSaved!)}'
+                      : 'Connected to $clientId',
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Center(child: Icon(Icons.cloud_done, color: Colors.green, size: 22)),
+                child: Center(
+                  child: Icon(Icons.cloud_done, color: Colors.green, size: 22),
+                ),
               ),
             ),
-          IconButton(icon: const Icon(Icons.email), onPressed: _isSendingEmail ? null : _manualEmailPrompt, tooltip: 'Send to custom email'),
+          IconButton(
+            icon: const Icon(Icons.email),
+            onPressed: _isSendingEmail ? null : _manualEmailPrompt,
+            tooltip: 'Send to custom email',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -1037,15 +1233,39 @@ $reviewCta
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Quote No', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text(data.quotationNo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const Text(
+                              'Quote No',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              data.quotationNo,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text('Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                            Text(DateFormat('dd-MMM-yyyy').format(data.date), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const Text(
+                              'Date',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              DateFormat('dd-MMM-yyyy').format(data.date),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1057,30 +1277,53 @@ $reviewCta
                           const SizedBox(
                             width: 13,
                             height: 13,
-                            child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.green),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: Colors.green,
+                            ),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Saving to $clientId...',
-                            style: TextStyle(fontSize: 11.5, color: Colors.blue.shade700, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ] else if (_isOffline) ...[
-                          Icon(Icons.offline_pin, size: 15, color: Colors.amber.shade800),
+                          Icon(
+                            Icons.offline_pin,
+                            size: 15,
+                            color: Colors.amber.shade800,
+                          ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
                               'Saved on device (Offline) • Auto-syncing when connected',
-                              style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.amber.shade900,
+                                fontWeight: FontWeight.w500,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ] else if (_isCloudPending) ...[
-                          Icon(Icons.offline_pin, size: 15, color: Colors.amber.shade800),
+                          Icon(
+                            Icons.offline_pin,
+                            size: 15,
+                            color: Colors.amber.shade800,
+                          ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
                               'Saved safely • Cloud backup retrying',
-                              style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.amber.shade900,
+                                fontWeight: FontWeight.w500,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1090,16 +1333,27 @@ $reviewCta
                           Flexible(
                             child: Text(
                               'Sync issue: $_lastSaveError',
-                              style: const TextStyle(fontSize: 11, color: Colors.red),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.red,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ] else ...[
-                          const Icon(Icons.cloud_done, size: 15, color: Colors.green),
+                          const Icon(
+                            Icons.cloud_done,
+                            size: 15,
+                            color: Colors.green,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Saved to $clientId at ${DateFormat('HH:mm:ss').format(_lastSaved ?? data.createdAt)}',
-                            style: TextStyle(fontSize: 11.5, color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ],
@@ -1115,7 +1369,10 @@ $reviewCta
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   children: [
-                    const Text('Status: ', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                    const Text(
+                      'Status: ',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
                     Expanded(
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -1136,7 +1393,9 @@ $reviewCta
                 ),
               ).animate().fade().slideY(begin: -0.1),
 
-            _buildSectionTitle('Customer Details').animate().fade().fade(delay: 100.ms),
+            _buildSectionTitle(
+              'Customer Details',
+            ).animate().fade().fade(delay: 100.ms),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -1146,11 +1405,17 @@ $reviewCta
                       initialValue: TextEditingValue(text: data.customerName),
                       displayStringForOption: (option) => option.customerName,
                       optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return const Iterable<QuotationData>.empty();
+                        if (textEditingValue.text.isEmpty)
+                          return const Iterable<QuotationData>.empty();
                         final uniqueCustomers = <String, QuotationData>{};
                         for (var q in _pastQuotations) {
-                          if (q.customerName.toLowerCase().contains(textEditingValue.text.toLowerCase())) {
-                            uniqueCustomers.putIfAbsent(q.customerName, () => q);
+                          if (q.customerName.toLowerCase().contains(
+                            textEditingValue.text.toLowerCase(),
+                          )) {
+                            uniqueCustomers.putIfAbsent(
+                              q.customerName,
+                              () => q,
+                            );
                           }
                         }
                         return uniqueCustomers.values;
@@ -1164,7 +1429,12 @@ $reviewCta
                         });
                         _onDataChanged();
                       },
-                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                      fieldViewBuilder: (
+                        context,
+                        textEditingController,
+                        focusNode,
+                        onFieldSubmitted,
+                      ) {
                         return TextFormField(
                           controller: textEditingController,
                           focusNode: focusNode,
@@ -1175,29 +1445,60 @@ $reviewCta
                           },
                           decoration: InputDecoration(
                             labelText: 'Name',
-                            suffixIcon: _isLoadingCustomers
-                                ? const SizedBox(width: 16, height: 16, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 1.5)))
-                                : null,
+                            suffixIcon:
+                                _isLoadingCustomers
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 1.5,
+                                        ),
+                                      ),
+                                    )
+                                    : null,
                           ),
-                          onChanged: (val) { data.customerName = val; _onDataChanged(); },
+                          onChanged: (val) {
+                            data.customerName = val;
+                            _onDataChanged();
+                          },
                         );
                       },
                     ),
                     if (data.customerName.isNotEmpty && _customers.isNotEmpty)
                       Builder(
                         builder: (context) {
-                          final match = _customers.where((c) => c['customer_name'] == data.customerName).toList();
+                          final match =
+                              _customers
+                                  .where(
+                                    (c) =>
+                                        c['customer_name'] == data.customerName,
+                                  )
+                                  .toList();
                           if (match.isEmpty) return const SizedBox.shrink();
-                          final count = _pastQuotations.where((q) => q.customerName == data.customerName).length;
+                          final count =
+                              _pastQuotations
+                                  .where(
+                                    (q) => q.customerName == data.customerName,
+                                  )
+                                  .length;
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Row(
                               children: [
-                                Icon(Icons.history, size: 14, color: Colors.grey.shade500),
+                                Icon(
+                                  Icons.history,
+                                  size: 14,
+                                  color: Colors.grey.shade500,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '$count previous quotation${count == 1 ? '' : 's'}',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1211,7 +1512,10 @@ $reviewCta
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) => _addressFocus.requestFocus(),
                       decoration: const InputDecoration(labelText: 'Reference'),
-                      onChanged: (val) { data.reference = val; _onDataChanged(); }
+                      onChanged: (val) {
+                        data.reference = val;
+                        _onDataChanged();
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -1220,83 +1524,123 @@ $reviewCta
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) => _contactFocus.requestFocus(),
                       decoration: const InputDecoration(labelText: 'Address'),
-                      onChanged: (val) { data.address = val; _onDataChanged(); }
+                      onChanged: (val) {
+                        data.address = val;
+                        _onDataChanged();
+                      },
                     ),
                     const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              focusNode: _contactFocus,
-                              initialValue: data.contactNo,
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.next,
-                              onFieldSubmitted: (_) => _emailFocus.requestFocus(),
-                              inputFormatters: [
-                                LengthLimitingTextInputFormatter(10)
-                              ],
-                              decoration: const InputDecoration(labelText: 'Contact No'),
-                              onChanged: (val) { data.contactNo = val; _onDataChanged(); }
-                            )
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            focusNode: _contactFocus,
+                            initialValue: data.contactNo,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) => _emailFocus.requestFocus(),
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(10),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Contact No',
+                            ),
+                            onChanged: (val) {
+                              data.contactNo = val;
+                              _onDataChanged();
+                            },
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              focusNode: _emailFocus,
-                              initialValue: data.email,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.done,
-                              decoration: const InputDecoration(labelText: 'Email (Optional)'),
-                               onChanged: (val) { data.email = val; _onDataChanged(); }
-                            )
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            focusNode: _emailFocus,
+                            initialValue: data.email,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            decoration: const InputDecoration(
+                              labelText: 'Email (Optional)',
+                            ),
+                            onChanged: (val) {
+                              data.email = val;
+                              _onDataChanged();
+                            },
                           ),
+                        ),
+                      ],
+                    ),
+                    if (Provider.of<AppState>(
+                              context,
+                              listen: false,
+                            ).clientConfig.clientId ==
+                            'kprupvc' &&
+                        Provider.of<AppState>(
+                          context,
+                          listen: false,
+                        ).supplierCompanies.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue:
+                            data.supplierCompany.isEmpty
+                                ? null
+                                : data.supplierCompany,
+                        decoration: InputDecoration(
+                          labelText: 'Supplier Company',
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          border: const OutlineInputBorder(),
+                        ),
+                        isExpanded: true,
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('-- Select Supplier --'),
+                          ),
+                          ...Provider.of<AppState>(
+                            context,
+                            listen: false,
+                          ).supplierCompanies.map((c) {
+                            return DropdownMenuItem<String>(
+                              value: c,
+                              child: Text(c),
+                            );
+                          }),
                         ],
+                        onChanged: (val) {
+                          setState(() {
+                            data.supplierCompany = val ?? '';
+                          });
+                          _onDataChanged();
+                        },
                       ),
-                     if (Provider.of<AppState>(context, listen: false).clientConfig.clientId == 'kprupvc' &&
-                         Provider.of<AppState>(context, listen: false).supplierCompanies.isNotEmpty) ...[
-                       const SizedBox(height: 12),
-                       DropdownButtonFormField<String>(
-                         initialValue: data.supplierCompany.isEmpty ? null : data.supplierCompany,
-                         decoration: InputDecoration(
-                           labelText: 'Supplier Company',
-                           labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                           border: const OutlineInputBorder(),
-                         ),
-                         isExpanded: true,
-                         items: [
-                           const DropdownMenuItem<String>(
-                             value: null,
-                             child: Text('-- Select Supplier --'),
-                           ),
-                           ...Provider.of<AppState>(context, listen: false).supplierCompanies.map((c) {
-                             return DropdownMenuItem<String>(value: c, child: Text(c));
-                           }),
-                         ],
-                         onChanged: (val) {
-                           setState(() {
-                             data.supplierCompany = val ?? '';
-                           });
-                           _onDataChanged();
-                         },
-                       ),
-                     ],
+                    ],
                   ],
                 ),
               ),
             ).animate().fade(delay: 200.ms),
 
             SwitchListTile(
-              title: const Text('Enable Presets (Autofill from Catalog)', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                'Enable Presets (Autofill from Catalog)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               value: _usePresets,
               activeThumbColor: Theme.of(context).colorScheme.primary,
               onChanged: (val) => setState(() => _usePresets = val),
             ).animate().fade(delay: 250.ms),
 
-            _buildSectionTitle('Measured Items', trailing: IconButton(
-              icon: const Icon(Icons.refresh, size: 20),
-              onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
-              tooltip: 'Refresh product catalog',
-            )).animate().fade(delay: 300.ms),
+            _buildSectionTitle(
+              'Measured Items',
+              trailing: IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed:
+                    _isLoadingCatalog
+                        ? null
+                        : () => _loadCatalog(forceRefresh: true),
+                tooltip: 'Refresh product catalog',
+              ),
+            ).animate().fade(delay: 300.ms),
             ...data.measuredItems.asMap().entries.map((entry) {
               int index = entry.key;
               MeasuredItem item = entry.value;
@@ -1310,113 +1654,283 @@ $reviewCta
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Item #${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), padding: EdgeInsets.zero, constraints: const BoxConstraints(), onPressed: () { setState(() => data.measuredItems.removeAt(index)); _onDataChanged(); }),
+                          Text(
+                            'Item #${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(
+                                () => data.measuredItems.removeAt(index),
+                              );
+                              _onDataChanged();
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
-if (_usePresets) ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<Product>(
-                                  decoration: InputDecoration(
-                                    labelText: 'Select from Product Catalog (Autofills fields)',
-                                    prefixIcon: _isLoadingCatalog
-                                        ? const SizedBox(
+                      if (_usePresets) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<Product>(
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Select from Product Catalog (Autofills fields)',
+                                  prefixIcon:
+                                      _isLoadingCatalog
+                                          ? const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: Padding(
                                               padding: EdgeInsets.all(12.0),
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  initialValue: null,
-                                  isExpanded: true,
-                                  hint: Text(_isLoadingCatalog ? 'Loading catalog...' : 'Choose a product...'),
-                                  items: _measuredProducts.map((p) {
-                                    return DropdownMenuItem<Product>(
-                                      value: p,
-                                      child: Row(
-                                        children: [
-                                          Expanded(child: Text(p.displayLabel)),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: p.isLowStock
-                                                  ? Colors.red.withValues(alpha: 0.1)
-                                                  : Colors.green.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '${p.stockQuantity}',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: p.isLowStock ? Colors.red : Colors.green,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: _isLoadingCatalog ? null : (Product? product) {
-                                    if (product != null) {
-                                      setState(() {
-                                        if (product.name.isNotEmpty) item.code = product.name;
-                                        item.description = product.description.isNotEmpty ? product.description : product.name;
-                                        item.glass = '';
-                                        item.width = 0;
-                                        item.height = 0;
-                                        item.rate = product.price;
-                                        item.cardKey = UniqueKey();
-                                      });
-                                      _onDataChanged();
-                                    }
-                                  },
+                                          )
+                                          : null,
                                 ),
+                                initialValue: null,
+                                isExpanded: true,
+                                hint: Text(
+                                  _isLoadingCatalog
+                                      ? 'Loading catalog...'
+                                      : 'Choose a product...',
+                                ),
+                                items:
+                                    _measuredProducts.map((p) {
+                                      return DropdownMenuItem<Product>(
+                                        value: p,
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(p.displayLabel),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    p.isLowStock
+                                                        ? Colors.red.withValues(
+                                                          alpha: 0.1,
+                                                        )
+                                                        : Colors.green
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '${p.stockQuantity}',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      p.isLowStock
+                                                          ? Colors.red
+                                                          : Colors.green,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                onChanged:
+                                    _isLoadingCatalog
+                                        ? null
+                                        : (Product? product) {
+                                          if (product != null) {
+                                            setState(() {
+                                              if (product.name.isNotEmpty)
+                                                item.code = product.name;
+                                              item.description =
+                                                  product.description.isNotEmpty
+                                                      ? product.description
+                                                      : product.name;
+                                              item.glass = '';
+                                              item.width = 0;
+                                              item.height = 0;
+                                              item.rate = product.price;
+                                              item.cardKey = UniqueKey();
+                                            });
+                                            _onDataChanged();
+                                          }
+                                        },
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh, size: 20),
-                                onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
-                                tooltip: 'Refresh product catalog',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                      Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_0'), initialValue: item.code, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_0'), decoration: const InputDecoration(labelText: 'Code'), onChanged: (val) { item.code = val; _onDataChanged(); _applyRateCardRate(item); })),
-                        const SizedBox(width: 12),
-                        Expanded(flex: 2, child: 
-                          TextFormField(
-                            focusNode: _node('m_${index}_1'), 
-                            initialValue: item.description, 
-                            textInputAction: TextInputAction.next, 
-                            onFieldSubmitted: (_) => _nextField('m_${index}_1'), 
-                            decoration: const InputDecoration(labelText: 'Description'), 
-                            onChanged: (val) { item.description = val; _onDataChanged(); }
-                          )
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 20),
+                              onPressed:
+                                  _isLoadingCatalog
+                                      ? null
+                                      : () => _loadCatalog(forceRefresh: true),
+                              tooltip: 'Refresh product catalog',
+                            ),
+                          ],
                         ),
-                      ]),
+                        const SizedBox(height: 12),
+                      ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_0'),
+                              initialValue: item.code,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_0'),
+                              decoration: const InputDecoration(
+                                labelText: 'Code',
+                              ),
+                              onChanged: (val) {
+                                item.code = val;
+                                _onDataChanged();
+                                _applyRateCardRate(item);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_1'),
+                              initialValue: item.description,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_1'),
+                              decoration: const InputDecoration(
+                                labelText: 'Description',
+                              ),
+                              onChanged: (val) {
+                                item.description = val;
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_2'), initialValue: item.width == 0 ? '' : item.width.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_2'), decoration: const InputDecoration(labelText: 'W (MM)'), onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); _applyRateCardRate(item); })),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_3'), initialValue: item.height == 0 ? '' : item.height.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_3'), decoration: const InputDecoration(labelText: 'H (MM)'), onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); _applyRateCardRate(item); })),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_4'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_4'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_2'),
+                              initialValue:
+                                  item.width == 0 ? '' : item.width.toString(),
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_2'),
+                              decoration: const InputDecoration(
+                                labelText: 'W (MM)',
+                              ),
+                              onChanged: (val) {
+                                item.width = double.tryParse(val) ?? 0;
+                                setState(() {});
+                                _onDataChanged();
+                                _applyRateCardRate(item);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_3'),
+                              initialValue:
+                                  item.height == 0
+                                      ? ''
+                                      : item.height.toString(),
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_3'),
+                              decoration: const InputDecoration(
+                                labelText: 'H (MM)',
+                              ),
+                              onChanged: (val) {
+                                item.height = double.tryParse(val) ?? 0;
+                                setState(() {});
+                                _onDataChanged();
+                                _applyRateCardRate(item);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_4'),
+                              initialValue: item.units.toString(),
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_4'),
+                              decoration: const InputDecoration(
+                                labelText: 'Units',
+                              ),
+                              onChanged: (val) {
+                                item.units = int.tryParse(val) ?? 1;
+                                setState(() {});
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_5'), initialValue: item.glass, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_5'), decoration: const InputDecoration(labelText: 'Glass'), onChanged: (val) { item.glass = val; _onDataChanged(); })),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextFormField(focusNode: _node('m_${index}_6'), initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('m_${index}_6'), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_5'),
+                              initialValue: item.glass,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_5'),
+                              decoration: const InputDecoration(
+                                labelText: 'Glass',
+                              ),
+                              onChanged: (val) {
+                                item.glass = val;
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('m_${index}_6'),
+                              initialValue:
+                                  item.rate == 0 ? '' : item.rate.toString(),
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('m_${index}_6'),
+                              decoration: const InputDecoration(
+                                labelText: 'Rate (Rs)',
+                              ),
+                              onChanged: (val) {
+                                item.rate = double.tryParse(val) ?? 0;
+                                setState(() {});
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1424,14 +1938,27 @@ if (_usePresets) ...[
             }),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Measured Item'), onPressed: () { setState(() => data.measuredItems.add(MeasuredItem())); _onDataChanged(); }),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Add Measured Item'),
+                onPressed: () {
+                  setState(() => data.measuredItems.add(MeasuredItem()));
+                  _onDataChanged();
+                },
+              ),
             ).animate().fade(delay: 400.ms),
 
-            _buildSectionTitle('Unmeasured Items', trailing: IconButton(
-              icon: const Icon(Icons.refresh, size: 20),
-              onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
-              tooltip: 'Refresh product catalog',
-            )).animate().fade(delay: 500.ms),
+            _buildSectionTitle(
+              'Unmeasured Items',
+              trailing: IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed:
+                    _isLoadingCatalog
+                        ? null
+                        : () => _loadCatalog(forceRefresh: true),
+                tooltip: 'Refresh product catalog',
+              ),
+            ).animate().fade(delay: 500.ms),
             ...data.unmeasuredItems.asMap().entries.map((entry) {
               int index = entry.key;
               UnmeasuredItem item = entry.value;
@@ -1445,95 +1972,191 @@ if (_usePresets) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Unmeasured #${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), padding: EdgeInsets.zero, constraints: const BoxConstraints(), onPressed: () { setState(() => data.unmeasuredItems.removeAt(index)); _onDataChanged(); }),
+                          Text(
+                            'Unmeasured #${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(
+                                () => data.unmeasuredItems.removeAt(index),
+                              );
+                              _onDataChanged();
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
-if (_usePresets) ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<Product>(
-                                  decoration: InputDecoration(
-                                    labelText: 'Select from Product Catalog (Autofills fields)',
-                                    prefixIcon: _isLoadingCatalog
-                                        ? const SizedBox(
+                      if (_usePresets) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<Product>(
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Select from Product Catalog (Autofills fields)',
+                                  prefixIcon:
+                                      _isLoadingCatalog
+                                          ? const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: Padding(
                                               padding: EdgeInsets.all(12.0),
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  initialValue: null,
-                                  isExpanded: true,
-                                  hint: Text(_isLoadingCatalog ? 'Loading catalog...' : 'Choose a product...'),
-                                  items: _unmeasuredProducts.map((p) {
-                                    return DropdownMenuItem<Product>(
-                                      value: p,
-                                      child: Row(
-                                        children: [
-                                          Expanded(child: Text(p.displayLabel)),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: p.isLowStock
-                                                  ? Colors.red.withValues(alpha: 0.1)
-                                                  : Colors.green.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              '${p.stockQuantity}',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: p.isLowStock ? Colors.red : Colors.green,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: _isLoadingCatalog ? null : (Product? product) {
-                                    if (product != null) {
-                                      setState(() {
-                                        item.description = product.description.isNotEmpty ? product.description : product.name;
-                                        item.rate = product.price;
-                                        item.cardKey = UniqueKey();
-                                      });
-                                      _onDataChanged();
-                                    }
-                                  },
+                                          )
+                                          : null,
                                 ),
+                                initialValue: null,
+                                isExpanded: true,
+                                hint: Text(
+                                  _isLoadingCatalog
+                                      ? 'Loading catalog...'
+                                      : 'Choose a product...',
+                                ),
+                                items:
+                                    _unmeasuredProducts.map((p) {
+                                      return DropdownMenuItem<Product>(
+                                        value: p,
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(p.displayLabel),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    p.isLowStock
+                                                        ? Colors.red.withValues(
+                                                          alpha: 0.1,
+                                                        )
+                                                        : Colors.green
+                                                            .withValues(
+                                                              alpha: 0.1,
+                                                            ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                '${p.stockQuantity}',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      p.isLowStock
+                                                          ? Colors.red
+                                                          : Colors.green,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                onChanged:
+                                    _isLoadingCatalog
+                                        ? null
+                                        : (Product? product) {
+                                          if (product != null) {
+                                            setState(() {
+                                              item.description =
+                                                  product.description.isNotEmpty
+                                                      ? product.description
+                                                      : product.name;
+                                              item.rate = product.price;
+                                              item.cardKey = UniqueKey();
+                                            });
+                                            _onDataChanged();
+                                          }
+                                        },
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.refresh, size: 20),
-                                onPressed: _isLoadingCatalog ? null : () => _loadCatalog(forceRefresh: true),
-                                tooltip: 'Refresh product catalog',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                        ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 20),
+                              onPressed:
+                                  _isLoadingCatalog
+                                      ? null
+                                      : () => _loadCatalog(forceRefresh: true),
+                              tooltip: 'Refresh product catalog',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       TextFormField(
-                        focusNode: _node('u_${index}_0'), 
-                        initialValue: item.description, 
-                        textInputAction: TextInputAction.next, 
-                        onFieldSubmitted: (_) => _nextField('u_${index}_0'), 
-                        decoration: const InputDecoration(labelText: 'Description'), 
-                        onChanged: (val) { item.description = val; _onDataChanged(); }
+                        focusNode: _node('u_${index}_0'),
+                        initialValue: item.description,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _nextField('u_${index}_0'),
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
+                        onChanged: (val) {
+                          item.description = val;
+                          _onDataChanged();
+                        },
                       ),
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: TextFormField(focusNode: _node('u_${index}_1'), initialValue: item.units.toString(), keyboardType: TextInputType.number, textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_1'), decoration: const InputDecoration(labelText: 'Units'), onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState((){}); _onDataChanged(); })),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextFormField(focusNode: _node('u_${index}_2'), initialValue: item.rate == 0 ? '' : item.rate.toString(), keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), textInputAction: TextInputAction.next, onFieldSubmitted: (_) => _nextField('u_${index}_2'), decoration: const InputDecoration(labelText: 'Rate (Rs)'), onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState((){}); _onDataChanged(); })),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('u_${index}_1'),
+                              initialValue: item.units.toString(),
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('u_${index}_1'),
+                              decoration: const InputDecoration(
+                                labelText: 'Units',
+                              ),
+                              onChanged: (val) {
+                                item.units = int.tryParse(val) ?? 1;
+                                setState(() {});
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              focusNode: _node('u_${index}_2'),
+                              initialValue:
+                                  item.rate == 0 ? '' : item.rate.toString(),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                    signed: true,
+                                  ),
+                              textInputAction: TextInputAction.next,
+                              onFieldSubmitted:
+                                  (_) => _nextField('u_${index}_2'),
+                              decoration: const InputDecoration(
+                                labelText: 'Rate (Rs)',
+                              ),
+                              onChanged: (val) {
+                                item.rate = double.tryParse(val) ?? 0;
+                                setState(() {});
+                                _onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1541,7 +2164,14 @@ if (_usePresets) ...[
             }),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(icon: const Icon(Icons.add), label: const Text('Add Unmeasured Item'), onPressed: () { setState(() => data.unmeasuredItems.add(UnmeasuredItem())); _onDataChanged(); }),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Add Unmeasured Item'),
+                onPressed: () {
+                  setState(() => data.unmeasuredItems.add(UnmeasuredItem()));
+                  _onDataChanged();
+                },
+              ),
             ).animate().fade(delay: 600.ms),
 
             // ===== SITE PHOTOS SECTION (delegated to SitePhotoPicker) =====
@@ -1561,7 +2191,9 @@ if (_usePresets) ...[
               ),
             ],
 
-            _buildSectionTitle('Final Computations').animate().fade(delay: 700.ms),
+            _buildSectionTitle(
+              'Final Computations',
+            ).animate().fade(delay: 700.ms),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -1572,11 +2204,19 @@ if (_usePresets) ...[
                       TextFormField(
                         key: const ValueKey('kpr-advance-paid-field'),
                         focusNode: _advancePaidFocus,
-                        initialValue: data.advancePaid == 0 ? '' : data.advancePaid.toString(),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        initialValue:
+                            data.advancePaid == 0
+                                ? ''
+                                : data.advancePaid.toString(),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         textInputAction: TextInputAction.next,
                         onFieldSubmitted: (_) => _transportFocus.requestFocus(),
-                        decoration: const InputDecoration(labelText: 'Advance Paid (Rs)', helperText: 'Amount already paid by the customer'),
+                        decoration: const InputDecoration(
+                          labelText: 'Advance Paid (Rs)',
+                          helperText: 'Amount already paid by the customer',
+                        ),
                         onChanged: (val) {
                           data.advancePaid = double.tryParse(val) ?? 0;
                           if (data.advancePaid < 0) data.advancePaid = 0;
@@ -1588,7 +2228,8 @@ if (_usePresets) ...[
                     ],
                     TextFormField(
                       focusNode: _transportFocus,
-                      initialValue: data.transport == 0 ? '' : data.transport.toString(),
+                      initialValue:
+                          data.transport == 0 ? '' : data.transport.toString(),
                       keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.next,
                       onFieldSubmitted: (_) {
@@ -1596,7 +2237,9 @@ if (_usePresets) ...[
                           _gstFocus.requestFocus();
                         }
                       },
-                      decoration: const InputDecoration(labelText: 'Transport Cost (Rs)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Transport Cost (Rs)',
+                      ),
                       onChanged: (val) {
                         data.transport = double.tryParse(val) ?? 0;
                         setState(() {});
@@ -1611,26 +2254,42 @@ if (_usePresets) ...[
                           onChanged: (val) {
                             setState(() {
                               data.includeGst = val ?? false;
-                              if (data.includeGst && data.gstPercentage == 0.0) {
-                                final appState = Provider.of<AppState>(context, listen: false);
-                                data.gstPercentage = appState.defaultGstPercentage;
+                              if (data.includeGst &&
+                                  data.gstPercentage == 0.0) {
+                                final appState = Provider.of<AppState>(
+                                  context,
+                                  listen: false,
+                                );
+                                data.gstPercentage =
+                                    appState.defaultGstPercentage;
                               }
                             });
                             _onDataChanged();
                           },
                         ),
-                        const Expanded(child: Text('Do you want to add GST to the invoice?')),
+                        const Expanded(
+                          child: Text('Do you want to add GST to the invoice?'),
+                        ),
                       ],
                     ),
                     if (data.includeGst)
                       Padding(
-                        padding: const EdgeInsets.only(left: 48.0, top: 8.0, bottom: 8.0),
+                        padding: const EdgeInsets.only(
+                          left: 48.0,
+                          top: 8.0,
+                          bottom: 8.0,
+                        ),
                         child: TextFormField(
                           focusNode: _gstFocus,
-                          initialValue: data.gstPercentage == 0.0 ? '' : data.gstPercentage.toString(),
+                          initialValue:
+                              data.gstPercentage == 0.0
+                                  ? ''
+                                  : data.gstPercentage.toString(),
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(labelText: 'GST Percentage (%)'),
+                          decoration: const InputDecoration(
+                            labelText: 'GST Percentage (%)',
+                          ),
                           onChanged: (val) {
                             data.gstPercentage = double.tryParse(val) ?? 0.0;
                             setState(() {});
@@ -1640,15 +2299,29 @@ if (_usePresets) ...[
                       ),
                     const Divider(),
                     const SizedBox(height: 8),
-                    _buildComputationRow('Subtotal (Actual Amount)', data.actualAmount),
+                    _buildComputationRow(
+                      'Subtotal (Actual Amount)',
+                      data.actualAmount,
+                    ),
                     _buildComputationRow('Transport Cost', data.transport),
                     if (data.includeGst)
-                      _buildComputationRow('IGST (${data.gstPercentage}%)', data.igst),
+                      _buildComputationRow(
+                        'IGST (${data.gstPercentage}%)',
+                        data.igst,
+                      ),
                     const Divider(thickness: 1.5),
-                    _buildComputationRow('Grand Total', data.grandTotal, isBold: true),
+                    _buildComputationRow(
+                      'Grand Total',
+                      data.grandTotal,
+                      isBold: true,
+                    ),
                     if (_isKprupvc) ...[
                       _buildComputationRow('Advance Paid', data.advancePaid),
-                      _buildComputationRow('Remaining Amount', data.balanceDue, isBold: true),
+                      _buildComputationRow(
+                        'Remaining Amount',
+                        data.balanceDue,
+                        isBold: true,
+                      ),
                     ],
                     const SizedBox(height: 8),
                     Text(
@@ -1663,17 +2336,27 @@ if (_usePresets) ...[
                 ),
               ),
             ).animate().fade(delay: 700.ms),
-            
+
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               height: 60,
               child: ElevatedButton(
                 onPressed: _isProcessingPdf ? null : _generateAndProcessPdf,
-                style: ElevatedButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: Colors.transparent, elevation: 0, shadowColor: Colors.transparent),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                ),
                 child: Ink(
                   decoration: BoxDecoration(
-                    gradient: AppTheme.primaryGradientFrom(Provider.of<AppState>(context, listen: false).clientConfig),
+                    gradient: AppTheme.primaryGradientFrom(
+                      Provider.of<AppState>(
+                        context,
+                        listen: false,
+                      ).clientConfig,
+                    ),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Container(
@@ -1683,7 +2366,15 @@ if (_usePresets) ...[
                       children: const [
                         Icon(Icons.picture_as_pdf, color: Colors.white),
                         SizedBox(width: 12),
-                        Text('GENERATE PDF', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        Text(
+                          'GENERATE PDF',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1700,7 +2391,9 @@ if (_usePresets) ...[
                     label: const Text('EXPORT EXCEL'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -1712,7 +2405,9 @@ if (_usePresets) ...[
                     label: const Text('EXPORT CSV'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -1739,10 +2434,12 @@ if (_usePresets) ...[
       } else {
         await export_lib.exportQuotationCsv(data, appState);
       }
-      messenger.showSnackBar(SnackBar(
-        content: Text('Exported ${data.quotationNo}.$format'),
-        duration: const Duration(seconds: 2),
-      ));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Exported ${data.quotationNo}.$format'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
     } finally {
@@ -1750,12 +2447,17 @@ if (_usePresets) ...[
     }
   }
 
-  Widget _buildComputationRow(String label, double amount, {bool isBold = false}) {
+  Widget _buildComputationRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+  }) {
     final theme = Theme.of(context);
     final style = TextStyle(
       fontSize: isBold ? 16 : 14,
       fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-      color: isBold ? theme.colorScheme.primary : theme.textTheme.bodyLarge?.color,
+      color:
+          isBold ? theme.colorScheme.primary : theme.textTheme.bodyLarge?.color,
     );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
