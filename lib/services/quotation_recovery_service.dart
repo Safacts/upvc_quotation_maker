@@ -258,7 +258,27 @@ class QuotationRecoveryService {
   Future<List<Map<String, dynamic>>> pendingEnvelopes(String clientId) async {
     return _withStorageLock(() async {
       final prefs = await SharedPreferences.getInstance();
-      return _decodeList(prefs.getString('$_queuePrefix$clientId'));
+      final rows = _decodeList(prefs.getString('$_queuePrefix$clientId'));
+      final valid = <Map<String, dynamic>>[];
+      for (final row in rows) {
+        final snapshot = row['snapshot'] as Map<String, dynamic>? ?? {};
+        final quote = snapshot['quotation'] as Map<String, dynamic>? ?? {};
+        final mItems = snapshot['measured_items'] as List? ?? [];
+        final umItems = snapshot['unmeasured_items'] as List? ?? [];
+        final isEmptyGhost = (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
+            (quote['reference']?.toString().trim() ?? '').isEmpty &&
+            (quote['contact_no']?.toString().trim() ?? '').isEmpty &&
+            (quote['address']?.toString().trim() ?? '').isEmpty &&
+            mItems.isEmpty &&
+            umItems.isEmpty;
+        if (!isEmptyGhost) {
+          valid.add(row);
+        }
+      }
+      if (valid.length != rows.length) {
+        await prefs.setString('$_queuePrefix$clientId', jsonEncode(valid));
+      }
+      return valid;
     });
   }
 

@@ -65,6 +65,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _refreshPendingSyncCount();
     _checkForAppUpdate();
     _requestNotificationPermissions();
+    _autoFlushOnStartup();
+  }
+
+  Future<void> _autoFlushOnStartup() async {
+    try {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+      if (clientId.isNotEmpty && ConnectivityService.instance.isOnline) {
+        await QuotationRecoveryService.instance.flushPending(clientId);
+        if (mounted) _refreshPendingSyncCount();
+      }
+    } catch (_) {}
   }
 
   Future<void> _requestNotificationPermissions() async {
