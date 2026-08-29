@@ -496,36 +496,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _deleteQuotation(QuotationData q) async {
-    if (q.id == null) {
+    final quoteId = q.id;
+    if (quoteId == null || quoteId.isEmpty) {
       debugPrint('Delete skipped: quotation has null id');
       return;
     }
     try {
       final clientId = Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-      // Delete child line items first to ensure database clean-up
-      await SupabaseConfig.client
-          .from('measured_items')
-          .delete()
-          .eq('quotation_id', q.id!)
-          .eq('client_id', clientId);
-      await SupabaseConfig.client
-          .from('unmeasured_items')
-          .delete()
-          .eq('quotation_id', q.id!)
-          .eq('client_id', clientId);
-      await SupabaseConfig.client
-          .from('quotations')
-          .delete()
-          .eq('id', q.id!)
-          .eq('client_id', clientId);
-
+      
+      // 1. Optimistically remove from state & persist new cache immediately
       if (mounted) {
         setState(() {
-          _quotations.removeWhere((item) => item.id == q.id);
+          _quotations.removeWhere((item) => item.id == quoteId);
         });
+      }
+      unawaited(_saveCachedQuotationsList(
+        clientId,
+        _quotations.map((e) => e.toMap(clientId: clientId)).toList(),
+      ));
+
+      // 2. Remove from local recovery drafts, pending queue, and conflicts
+      await QuotationRecoveryService.instance.deleteQuotationDraft(clientId, quoteId);
+
+      // 3. Delete from Supabase tables
+      if (ConnectivityService.instance.isOnline && clientId.isNotEmpty) {
+        await Future.wait([
+          SupabaseConfig.client
+              .from('measured_items')
+              .delete()
+              .eq('quotation_id', quoteId)
+              .eq('client_id', clientId),
+          SupabaseConfig.client
+              .from('unmeasured_items')
+              .delete()
+              .eq('quotation_id', quoteId)
+              .eq('client_id', clientId),
+          SupabaseConfig.client
+              .from('quotation_recovery_snapshots')
+              .delete()
+              .eq('quotation_id', quoteId)
+              .eq('client_id', clientId),
+          SupabaseConfig.client
+              .from('quotation_share_tokens')
+              .delete()
+              .eq('quotation_id', quoteId)
+              .eq('client_id', clientId),
+          SupabaseConfig.client
+              .from('quotations')
+              .delete()
+              .eq('id', quoteId)
+              .eq('client_id', clientId),
+        ]);
+      }
+
+      if (mounted) {
+        _refreshPendingSyncCount();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Quotation ${q.quotationNo} deleted successfully'),
+            content: Text('Quotation ${q.quotationNo} deleted permanently'),
             backgroundColor: Colors.red.shade700,
           ),
         );

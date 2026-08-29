@@ -266,6 +266,33 @@ class QuotationRecoveryService {
     });
   }
 
+  Future<void> deleteQuotationDraft(String clientId, String quoteId) async {
+    if (clientId.isEmpty || quoteId.isEmpty) return;
+    await _withStorageLock(() async {
+      final prefs = await SharedPreferences.getInstance();
+      // 1. Remove local draft
+      await prefs.remove('$_draftPrefix${clientId}_$quoteId');
+      
+      // 2. Remove from pending queue
+      final queueKey = '$_queuePrefix$clientId';
+      final queue = _decodeList(prefs.getString(queueKey));
+      final initQueueLen = queue.length;
+      queue.removeWhere((item) => (item['quotation_id'] ?? '').toString() == quoteId);
+      if (queue.length != initQueueLen) {
+        await prefs.setString(queueKey, jsonEncode(queue));
+      }
+      
+      // 3. Remove from conflicts
+      final conflictKey = '$_conflictPrefix$clientId';
+      final conflicts = _decodeList(prefs.getString(conflictKey));
+      final initConfLen = conflicts.length;
+      conflicts.removeWhere((item) => (item['quotation_id'] ?? '').toString() == quoteId);
+      if (conflicts.length != initConfLen) {
+        await prefs.setString(conflictKey, jsonEncode(conflicts));
+      }
+    });
+  }
+
   Future<void> flushPending(String clientId) {
     final existing = _flushInFlight;
     if (existing != null) return existing;
