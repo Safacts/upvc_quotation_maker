@@ -1,4 +1,4 @@
-﻿import { execSync } from "child_process";
+import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 
@@ -50,21 +50,20 @@ try {
     console.warn("âš ï¸ Could not fetch client config from Supabase, using fallback app name.");
   }
 
-  console.log(`ðŸ“± Customizing App Title: "${appName}"`);
-
+  console.log(`📱 Customizing App Title: "${appName}"`);
   // Patch AndroidManifest.xml
   let updatedManifest = originalManifest.replace(/android:label="[^"]*"/, `android:label="${appName}"`);
   fs.writeFileSync(manifestPath, updatedManifest, "utf8");
 
-  // Run Flutter Build
-  console.log("ðŸ”¨ Executing Flutter release build...");
-  execSync("flutter build apk --release", { stdio: "inherit" });
+  // Run Flutter Build (Lightweight arm64-v8a by default)
+  console.log("🔨 Executing Flutter release build (split-per-abi)...");
+  execSync(`flutter build apk --release --split-per-abi --dart-define=CLIENT_ID=${clientId}`, { stdio: "inherit" });
 
-  const apkSource = path.join(rootDir, "build", "app", "outputs", "flutter-apk", "app-release.apk");
+  const apkSource = path.join(rootDir, "build", "app", "outputs", "flutter-apk", "app-arm64-v8a-release.apk");
   const apkTarget = path.join(outputsDir, `${clientId}-upvc-quote.apk`);
 
   fs.copyFileSync(apkSource, apkTarget);
-  console.log(`âœ… Build complete! APK saved to: ${apkTarget}`);
+  console.log(`✅ Build complete! APK saved to: ${apkTarget}`);
 
   const downloadUrl = `/downloads/${clientId}-upvc-quote.apk`;
   console.log(`ðŸ”— App Download URL ready: ${downloadUrl}`);
