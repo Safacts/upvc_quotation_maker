@@ -11,6 +11,7 @@ import 'models.dart';
 import 'models_extra.dart';
 import 'app_state.dart';
 import 'services/upi_service.dart';
+import 'services/connectivity_service.dart';
 
 Future<Uint8List> generatePdfBytes(
   QuotationData data,
@@ -44,13 +45,14 @@ Future<Uint8List> generatePdfBytes(
 
   pw.Font fontRegular = pw.Font.helvetica();
   pw.Font fontBold = pw.Font.helveticaBold();
-  try {
-    fontRegular = await PdfGoogleFonts.robotoRegular().timeout(const Duration(seconds: 2));
-    fontBold = await PdfGoogleFonts.robotoBold().timeout(const Duration(seconds: 2));
-  } catch (e) {
-    debugPrint('PDF Generator: offline mode, using built-in Helvetica fonts: $e');
-    fontRegular = pw.Font.helvetica();
-    fontBold = pw.Font.helveticaBold();
+  if (ConnectivityService.instance.isOnline) {
+    try {
+      fontRegular = await PdfGoogleFonts.robotoRegular().timeout(const Duration(seconds: 1));
+      fontBold = await PdfGoogleFonts.robotoBold().timeout(const Duration(seconds: 1));
+    } catch (_) {
+      fontRegular = pw.Font.helvetica();
+      fontBold = pw.Font.helveticaBold();
+    }
   }
 
   final pageTheme = pw.PageTheme(
@@ -140,22 +142,24 @@ Future<void> generateAndPreviewPdf(
 }
 
 Future<pw.ImageProvider> _loadLogoImage(String url, String fallbackUrl) async {
-  Future<pw.MemoryImage> fetch(String u) async {
-    final resp = await http.get(Uri.parse(u)).timeout(const Duration(seconds: 2));
-    if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
-    return pw.MemoryImage(resp.bodyBytes);
-  }
+  if (ConnectivityService.instance.isOnline) {
+    Future<pw.MemoryImage> fetch(String u) async {
+      final resp = await http.get(Uri.parse(u)).timeout(const Duration(milliseconds: 1200));
+      if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
+      return pw.MemoryImage(resp.bodyBytes);
+    }
 
-  if (url.isNotEmpty && url.startsWith('http')) {
-    try {
-      return await fetch(url);
-    } catch (_) {}
-  }
+    if (url.isNotEmpty && url.startsWith('http')) {
+      try {
+        return await fetch(url);
+      } catch (_) {}
+    }
 
-  if (fallbackUrl.isNotEmpty && fallbackUrl.startsWith('http') && fallbackUrl != url) {
-    try {
-      return await fetch(fallbackUrl);
-    } catch (_) {}
+    if (fallbackUrl.isNotEmpty && fallbackUrl.startsWith('http') && fallbackUrl != url) {
+      try {
+        return await fetch(fallbackUrl);
+      } catch (_) {}
+    }
   }
 
   try {

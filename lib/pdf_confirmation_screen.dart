@@ -13,7 +13,7 @@ import 'models.dart';
 import 'quote_share.dart';
 import 'supabase_config.dart';
 import 'file_helper.dart';
-
+import 'services/connectivity_service.dart';
 import 'notification_service.dart';
 
 class PdfConfirmationScreen extends StatefulWidget {
@@ -111,38 +111,38 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
   /// `/quote/<id>` URL renders "Access Denied" for the customer, so we would
   /// rather send no link than a broken one.
   Future<String?> _quoteLink() async {
-    // Ensure the quotation is persisted to cloud before minting a token.
-    // New offline UUID drafts (e.g. JVUPVC-24082026-0166) live only in
-    // SharedPreferences until the 2s debounce fires. If the user hits Share
-    // immediately, the token endpoint would 404 (quotation not found) and
-    // QuoteShare would return null -> the "Review & confirm online" line
-    // disappears (staging bug reported 24-08-2026). Upsert here best-effort.
+    if (!ConnectivityService.instance.isOnline) {
+      return null;
+    }
     try {
       final clientId = _config.clientId;
       final qId = widget.data.id;
       if (qId != null && qId.isNotEmpty) {
         final qMap = widget.data.toMap(clientId: clientId, includeStatus: true);
-        await SupabaseConfig.client.from('quotations').upsert(qMap, onConflict: 'id');
-        // Upsert line items best-effort so DB stays consistent; token check
-        // only needs the quotation row, but future PDF routes read items.
+        await SupabaseConfig.client
+            .from('quotations')
+            .upsert(qMap, onConflict: 'id')
+            .timeout(const Duration(seconds: 2));
         try {
           await SupabaseConfig.client
               .from('measured_items')
               .delete()
               .eq('quotation_id', qId)
-              .eq('client_id', clientId);
+              .eq('client_id', clientId)
+              .timeout(const Duration(seconds: 1));
           await SupabaseConfig.client
               .from('unmeasured_items')
               .delete()
               .eq('quotation_id', qId)
-              .eq('client_id', clientId);
+              .eq('client_id', clientId)
+              .timeout(const Duration(seconds: 1));
           if (widget.data.measuredItems.isNotEmpty) {
             await SupabaseConfig.client.from('measured_items').insert(
-                widget.data.measuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList());
+                widget.data.measuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList()).timeout(const Duration(seconds: 1));
           }
           if (widget.data.unmeasuredItems.isNotEmpty) {
             await SupabaseConfig.client.from('unmeasured_items').insert(
-                widget.data.unmeasuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList());
+                widget.data.unmeasuredItems.map((e) => e.toMap(qId, clientId: clientId)).toList()).timeout(const Duration(seconds: 1));
           }
         } catch (_) {}
       }
@@ -151,10 +151,6 @@ class _PdfConfirmationScreenState extends State<PdfConfirmationScreen> {
     }
     final link = await QuoteShare.quoteLink(widget.data, config: _config);
     if (link == null && (widget.data.id?.isNotEmpty ?? false)) {
-      // Token mint failed for a quotation that HAS an id — the shared message
-      // will silently omit the "Review & confirm online" line. Always leave a
-      // breadcrumb so support can tell a mint failure apart from a draft with
-      // no id (which legitimately has no link).
       debugPrint('PdfConfirmationScreen: quote token mint FAILED for '
           '${widget.data.quotationNo} (id=${widget.data.id}) — share message omits the confirm link');
     }

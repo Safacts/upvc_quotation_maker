@@ -975,24 +975,28 @@ $reviewCta
     if (_isProcessingPdf) return;
     if (mounted) setState(() => _isProcessingPdf = true);
     try {
-      // 1. Force Save
       umamiTrack('generate_pdf');
-      await _autoSaveToDatabase();
+      // 1. Instant local persist (0ms) so no data is ever lost
+      await _persistLocalDraft();
+      // Non-blocking background save to database/recovery queue
+      unawaited(_autoSaveToDatabase());
 
-      // Generate PDF bytes
+      // 2. Generate PDF bytes (0ms offline fallback)
       final appState = Provider.of<AppState>(context, listen: false);
       await pdf_gen.loadLibrary();
       final effectivePhotos =
           appState.enableSitePhotos ? _photos : const <QuotationPhoto>[];
       final pdfBytes = await _generateClientPdfBytes(appState, effectivePhotos);
 
-      // 2. If email exists, send automatically in background
+      // 3. If email exists and online, send in background
       Future<void>? emailTask;
-      if (data.email.isNotEmpty && data.email.contains('@')) {
+      if (ConnectivityService.instance.isOnline &&
+          data.email.isNotEmpty &&
+          data.email.contains('@')) {
         emailTask = _sendEmail(data.email);
       }
 
-      // 3. Navigate to Confirmation Screen
+      // 4. Navigate to Confirmation Screen immediately
       if (!mounted) return;
       await Navigator.push(
         context,
