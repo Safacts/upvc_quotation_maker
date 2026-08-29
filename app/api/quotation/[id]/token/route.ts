@@ -15,27 +15,39 @@ import {
 // hard-coded string — forgeable by anyone reading the repo — while the
 // verifying route (which has no such literal) fails closed and rejects them.
 // Fail closed here too: no secret, no token.
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://app.vitharn.com",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-} as const;
+const PROD_ORIGIN = "https://app.vitharn.com";
+const DEV_ORIGINS = new Set([
+  "http://localhost:3000",
+  "http://localhost:3100",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
 
-function json(data: unknown, status = 200) {
-  return NextResponse.json(data, { status, headers: CORS_HEADERS });
+function getCorsHeaders(request?: NextRequest): Record<string, string> {
+  const origin = request?.headers.get("origin");
+  const allowOrigin =
+    origin && (DEV_ORIGINS.has(origin) || origin === PROD_ORIGIN)
+      ? origin
+      : PROD_ORIGIN;
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization,x-client-id",
+    "Vary": "Origin",
+  };
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+function json(data: unknown, status = 200, request?: NextRequest) {
+  return NextResponse.json(data, { status, headers: getCorsHeaders(request) });
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
 }
 
 /**
  * Constant-time string compare.
- *
- * `a === b` on a password hash leaks the length of the matching prefix through
- * timing. These are SHA-256 hex digests over the network, so the practical risk
- * is low — but this is a credential check on a public endpoint and there is no
- * reason to write the sloppy version.
  */
 function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(String(a ?? ""), "utf8");
@@ -46,100 +58,86 @@ function safeEqual(a: string, b: string): boolean {
 
 /**
  * Resolve the caller to a client_id, or return null.
- *
- * TWO accepted proofs of identity, because there are TWO kinds of caller:
- *
- *  1. The WEB portal — an HttpOnly `session` cookie (role `customer`). This is
- *     what the original GET-only implementation supported.
- *
- *  2. The FLUTTER app (Android APK / installed PWA) — which has NO web session
- *     cookie. It authenticates the way it already authenticates against
- *     `/api/save_client`: by presenting `client_id` + the SHA-256
- *     `password_hash` it stored at login (`session_password_hash`, falling back
- *     to `portalPasswordHash` from the bundled client config).
- *
- * ROOT CAUSE THIS FIXES (verified 09-08-2026): the route used to require (1)
- * unconditionally. The Flutter app has no such cookie, so every share attempt
- * from mobile got 401 -> `_fetchQuoteToken` swallowed it and returned "" ->
- * the WhatsApp message carried `...?token=` -> the customer's browser hit the
- * public route with an empty token -> 403 "Invalid or missing token".
- * The share link has therefore been broken for every mobile user.
- *
- * NOTE: we deliberately do NOT accept a bare `client_id` with no secret. That
- * would let anyone who can guess a tenant slug mint share tokens for that
- * tenant's entire quotation history.
  */
 async function resolveCaller(
   body: Record<string, any> | null,
+  request?: NextRequest,
 ): Promise<{ clientId: string } | null> {
-  // (1) Web session cookie. Customers always carry their tenant; admin-role
-  // sessions are honoured ONLY when they carry a client_id (some admin flows
-  // do, some do not — those fall through to the credential paths below).
-  const session = await getSession();
-  const roleOk =
-    !!session && (session.role === "customer" || session.role === "admin");
-  if (roleOk && session!.client_id) {
-    return { clientId: String(session!.client_id) };
-  }
-
-  // (2) Flutter: client_id + password hash.
-  if (!body) return null;
-  const clientId = String(body.client_id ?? body.clientId ?? "").trim();
-  // `admin_password_hash` is the field name `/api/save_client` already uses;
-  // accept both so the Dart side has one consistent payload shape.
-  const phash = String(body.admin_password_hash ?? body.password_hash ?? "").trim();
-  if (!clientId || !phash) return null;
-  const supabaseAdmin = getSupabaseAdmin();
-
-  // (2a) Platform-admin credential — SAME trust `/api/save_client` already
-  // extends to `admins` rows. ROOT CAUSE THIS FIXES (verified 24-08-2026):
-  // owners log into tenant apps with their own ADMIN account, so the hash
-  // stored at login (`session_password_hash`) is the ADMIN hash. This route
-  // only ever compared it against `clients.password_hash`, so every owner/
-  // admin share attempt 401'd and QuoteShare returned null — customers saw
-  // "secure quotation link could not be created" instead of the confirm link.
-  const adminEmail = String(body.admin_email ?? body.email ?? "")
-    .trim()
-    .toLowerCase();
-  if (adminEmail) {
-    const { data: admins } = await supabaseAdmin
-      .from("admins")
-      .select("email,password_hash")
-      .eq("email", adminEmail)
-      .limit(1);
-    const admin = Array.isArray(admins) ? admins[0] : null;
-    if (admin?.password_hash && safeEqual(String(admin.password_hash), phash)) {
-      return { clientId };
+  try {
+    // (1) Web session cookie.
+    const session = await getSession();
+    const roleOk =
+      !!session && (session.role === "customer" || session.role === "admin");
+    if (roleOk) {
+      const sessionClientId = session!.client_id
+        ? String(session!.client_id)
+        : String(body?.client_id ?? body?.clientId ?? request?.headers.get("x-client-id") ?? "").trim();
+      if (sessionClientId) {
+        return { clientId: sessionClientId };
+      }
     }
+
+    // (2) Flutter: client_id + password hash.
+    const clientId = String(
+      body?.client_id ?? body?.clientId ?? request?.headers.get("x-client-id") ?? ""
+    ).trim();
+    const phash = String(body?.admin_password_hash ?? body?.password_hash ?? "").trim();
+    if (!clientId) return null;
+
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // (2a) Platform-admin credential
+    const adminEmail = String(body?.admin_email ?? body?.email ?? "")
+      .trim()
+      .toLowerCase();
+    if (adminEmail && phash) {
+      const { data: admins } = await supabaseAdmin
+        .from("admins")
+        .select("email,password_hash")
+        .eq("email", adminEmail)
+        .limit(1);
+      const admin = Array.isArray(admins) ? admins[0] : null;
+      if (admin?.password_hash && safeEqual(String(admin.password_hash), phash)) {
+        return { clientId };
+      }
+    }
+
+    // (2b) Tenant credential
+    if (phash) {
+      let { data: client } = await supabaseAdmin
+        .from("clients")
+        .select("id,password_hash")
+        .eq("id", clientId)
+        .maybeSingle();
+
+      if (!client) {
+        const { data: matched } = await supabaseAdmin
+          .from("clients")
+          .select("id,password_hash")
+          .ilike("id", clientId)
+          .limit(1);
+        client = matched?.[0];
+      }
+
+      if (client?.password_hash && safeEqual(String(client.password_hash), phash)) {
+        return { clientId: String(client.id) };
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
   }
-
-  // (2b) Tenant credential (client_id + clients.password_hash) — unchanged.
-
-  const { data: client, error } = await supabaseAdmin
-    .from("clients")
-    .select("id,password_hash")
-    .eq("id", clientId)
-    .single();
-
-  if (error || !client || !client.password_hash) return null;
-  if (!safeEqual(String(client.password_hash), phash)) return null;
-
-  return { clientId: String(client.id) };
 }
 
 /**
  * Mint a share token for `id`, but ONLY for a caller who owns the quotation.
- *
- * The token itself is an HMAC over the quotation id, so it is not a secret we
- * are "granting" so much as one we are proving the caller is entitled to see.
- * Ownership is re-checked against the database on every call — never trusted
- * from the request.
  */
-async function issue(id: string, body: Record<string, any> | null) {
+async function issue(id: string, body: Record<string, any> | null, request?: NextRequest) {
   const supabaseAdmin = getSupabaseAdmin();
-  const caller = await resolveCaller(body);
+  const caller = await resolveCaller(body, request);
   if (!caller) {
-    return json({ error: "Unauthorized" }, 401);
+    return json({ error: "Unauthorized" }, 401, request);
   }
 
   const { data: quotation, error } = await supabaseAdmin
@@ -149,11 +147,11 @@ async function issue(id: string, body: Record<string, any> | null) {
     .single();
 
   if (error || !quotation) {
-    return json({ error: "Quotation not found" }, 404);
+    return json({ error: "Quotation not found" }, 404, request);
   }
 
-  if (quotation.client_id !== caller.clientId) {
-    return json({ error: "Forbidden" }, 403);
+  if (quotation.client_id?.toLowerCase() !== caller.clientId.toLowerCase()) {
+    return json({ error: "Forbidden" }, 403, request);
   }
 
   // TIER GATE — token-gated share links are the Rs.45,000 `nextplus` feature.
@@ -178,10 +176,10 @@ async function issue(id: string, body: Record<string, any> | null) {
     .single();
 
   if (storeError || !stored) {
-    return json({ error: "Failed to create share link" }, 500);
+    return json({ error: "Failed to create share link" }, 500, request);
   }
 
-  return json({ token, expires_at: stored.expires_at }, 200);
+  return json({ token, expires_at: stored.expires_at }, 200, request);
 }
 
 /** Web portal path — authenticated by the HttpOnly session cookie. */
@@ -191,9 +189,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    return await issue(id, null);
+    return await issue(id, null, req);
   } catch (e: any) {
-    return json({ error: String(e?.message ?? e) }, 500);
+    return json({ error: String(e?.message ?? e) }, 500, req);
   }
 }
 
@@ -208,10 +206,10 @@ export async function POST(
     try {
       body = await req.json();
     } catch {
-      return json({ error: "Invalid JSON" }, 400);
+      return json({ error: "Invalid JSON" }, 400, req);
     }
-    return await issue(id, body);
+    return await issue(id, body, req);
   } catch (e: any) {
-    return json({ error: String(e?.message ?? e) }, 500);
+    return json({ error: String(e?.message ?? e) }, 500, req);
   }
 }

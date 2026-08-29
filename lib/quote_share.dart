@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'utils/session_hash.dart';
+import 'utils/http_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'config/client_config.dart';
@@ -108,29 +109,37 @@ class QuoteShare {
   }) async {
     final base = origin();
 
-    // Path 1 — credentialed POST. This is the path that works on Android,
-    // because it carries the tenant credentials in the body rather than
-    // relying on a cookie jar the Flutter http client does not have.
+    // Path 1 — credentialed POST. Sends session cookie on web and headers/body credentials
     try {
-      final res = await http.post(
+      final adminEmail = config.adminEmails.isNotEmpty
+          ? config.adminEmails.first
+          : config.companyEmail;
+      final res = await postWithCredentials(
         Uri.parse('$base/api/quotation/$quotationId/token'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-id': config.clientId,
+        },
         body: jsonEncode({
           'client_id': config.clientId,
-          'admin_email': config.companyEmail,
+          'admin_email': adminEmail,
           'admin_password_hash': await passwordHash(config),
         }),
       );
       final token = _readToken(res);
       if (token != null) return token;
     } catch (_) {
-      // Network/route missing — fall through to the cookie path.
+      // Network/route missing — fall through to GET
     }
 
-    // Path 2 — legacy cookie-authenticated GET. Still the happy path on Flutter
-    // web, where the browser attaches the HttpOnly session cookie for us.
+    // Path 2 — cookie-authenticated GET
     try {
-      final res = await http.get(Uri.parse('$base/api/quotation/$quotationId/token'));
+      final res = await http.get(
+        Uri.parse('$base/api/quotation/$quotationId/token'),
+        headers: {
+          'x-client-id': config.clientId,
+        },
+      );
       final token = _readToken(res);
       if (token != null) return token;
     } catch (_) {
