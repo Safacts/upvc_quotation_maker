@@ -73,6 +73,27 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _checkExistingSession();
     _initGoogleSignIn();
+    // Client-specific APK: autofill username so only password is needed
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autofillEmailForClientApk());
+  }
+
+  void _autofillEmailForClientApk() {
+    const clientId = String.fromEnvironment('CLIENT_ID');
+    if (clientId.isEmpty) return;
+    if (_emailController.text.isNotEmpty) return;
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final config = appState.clientConfig;
+      String email = '';
+      if (config.adminEmails.isNotEmpty) {
+        email = config.adminEmails.first;
+      } else if (config.companyEmail.isNotEmpty) {
+        email = config.companyEmail;
+      }
+      if (email.isNotEmpty) {
+        setState(() => _emailController.text = email);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -573,10 +594,30 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ClientLogo(
-                config: appState.clientConfig,
+              Container(
                 width: 120,
                 height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withOpacity(0.15),
+                      blurRadius: 24,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(4),
+                child: ClipOval(
+                  child: ClientLogo(
+                    config: appState.clientConfig,
+                    width: 112,
+                    height: 112,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ).animate().scale(
                 delay: 200.ms,
                 duration: 500.ms,
@@ -665,9 +706,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       TextField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
+                        readOnly: const String.fromEnvironment('CLIENT_ID').isNotEmpty,
+                        decoration: InputDecoration(
                           labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          helperText: const String.fromEnvironment('CLIENT_ID').isNotEmpty
+                              ? 'Autofilled for your client — just enter password'
+                              : null,
                         ),
                         keyboardType: TextInputType.emailAddress,
                       ),
