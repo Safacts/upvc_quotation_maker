@@ -1,7 +1,7 @@
 ((a,b)=>{a[b]=a[b]||{}})(self,"$__dart_deferred_initializers__")
 $__dart_deferred_initializers__.current=function(a,b,c,$){var B,A,E,F,D={
-anP(d,e){var w=0,v=B.r(x.o),u,t,s,r,q,p,o,n,m,l
-var $async$anP=B.n(function(f,g){if(f===1)return B.o(g,v)
+anQ(d,e){var w=0,v=B.r(x.o),u,t,s,r,q,p,o,n,m,l
+var $async$anQ=B.n(function(f,g){if(f===1)return B.o(g,v)
 for(;;)switch(w){case 0:t=B.bnh()
 s=B.Ar(null,"en_IN","Rs. ")
 q=B
@@ -10,10 +10,10 @@ o=C.a9E
 n=A.jL
 m=B
 w=3
-return B.e(A.y2.nS(),$async$anP)
+return B.e(A.y2.nS(),$async$anQ)
 case 3:l=g
 w=4
-return B.e(A.y1.nS(),$async$anP)
+return B.e(A.y1.nS(),$async$anQ)
 case 4:r=q.aFA(null,p,o,null,n,null,m.Su(l,g))
 d.XS()
 t.My(E.bwc(new D.bkE(e,d,s),new D.bkF(),r))
@@ -21,9 +21,9 @@ u=t.jn(0)
 w=1
 break
 case 1:return B.p(u,v)}})
-return B.q($async$anP,v)},
+return B.q($async$anQ,v)},
 bTU(d,e){var w=null,v=B.b3(w,w,w,w,w,w,w,w,w,A.a0,w,w,9,w,A.aF,w,!0,w,w,w,w),u=B.lZ(w,w,E.lp("#FFF3E6")),t=B.b3(w,w,w,w,w,w,w,w,w,A.a0,w,w,9,w,w,w,!0,w,w,w,w)
-return B.a9B(B.u3(F.jI,1),A.dq,t,B.a0([0,A.vc,1,C.aeL,2,C.aeI,3,A.kY,4,A.kY,5,C.Dn,6,C.Dn],x.e,x.a),B.oE(d.k4.length,new D.bin(d,e),!0,x.B),A.dq,u,v,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
+return B.a9C(B.u3(F.jI,1),A.dq,t,B.a0([0,A.vc,1,C.aeL,2,C.aeI,3,A.kY,4,A.kY,5,C.Dn,6,C.Dn],x.e,x.a),B.oE(d.k4.length,new D.bin(d,e),!0,x.B),A.dq,u,v,["S.No","HSN","Description","Qty","Unit","Rate","Taxable Value"])},
 bTT(d){var w,v,u,t,s,r=null,q="UPVC Quotation Maker",p="default",o="Quality UPVC solutions for your home",n=y.a,m="https://jqjxhhgfwdzckijnnede.supabase.co",l=d.r
 if(!(l.length!==0)){w=d.a
 l=(w==null?B.af(A.N,A.O,"",q,"",0,"","","","","",p,"","","","","",65,18,!1,!1,!1,"","","",!0,!1,"","","",A.o,"",A.o,"",o,"","",A.Q,A.P,"",A.w,"",A.M,"",r,n,m,A.o,A.o,r,A.w,"",""):w).x}v=d.w
@@ -58,7 +58,7 @@ w.toString
 return B.iF(A.dq,B.aY("This is a computer-generated GST invoice | Page "+(A.l.cP(u.cx.cx,w)+1)+" of "+u.cx.cx.length,v,v,B.b3(v,F.lY,v,v,v,v,v,v,v,A.a0,v,v,8,v,v,v,!0,v,v,v,v),v,v),v,v,C.a1l,v,C.a9f,C.a9m,v)},
 $S:336}
 D.bkE.prototype={
-$1(a0){var w,v,u,t,s,r,q,p,o,n=null,m="#C44A10",l="UPVC Quotation Maker",k="default",j="Quality UPVC solutions for your home",i=y.a,h="https://jqjxhhgfwdzckijnnede.supabase.co",g=this.a,f=B.aqQ(B.aY("TAX INVOICE",n,n,B.b3(n,E.lp(m),n,n,n,n,n,n,n,A.a0,n,n,20,n,A.aF,n,!0,n,n,n,n),n,n)),e=E.lp(m),d=g.c
+$1(a0){var w,v,u,t,s,r,q,p,o,n=null,m="#C44A10",l="UPVC Quotation Maker",k="default",j="Quality UPVC solutions for your home",i=y.a,h="https://jqjxhhgfwdzckijnnede.supabase.co",g=this.a,f=B.aqR(B.aY("TAX INVOICE",n,n,B.b3(n,E.lp(m),n,n,n,n,n,n,n,A.a0,n,n,20,n,A.aF,n,!0,n,n,n,n),n,n)),e=E.lp(m),d=g.c
 if(!(d.length!==0)){d=g.a
 d=(d==null?B.af(A.N,A.O,"",l,"",0,"","","","","",k,"","","","","",65,18,!1,!1,!1,"","","",!0,!1,"","","",A.o,"",A.o,"",j,"","",A.Q,A.P,"",A.w,"",A.M,"",n,i,h,A.o,A.o,n,A.w,"",""):d).c}d=B.aY(d,n,n,B.b3(n,A.ee,n,n,n,n,n,n,n,A.a0,n,n,16,n,A.aF,n,!0,n,n,n,n),n,n)
 w=g.d
@@ -134,4 +134,4 @@ C.dw=new B.d_(6,6,6,6)
 C.Dn=new B.dp(2)
 C.aeI=new B.dp(4)
 C.aeL=new B.dp(1.2)})()};
-(a=>{a["8/xzV1/pN525ETh+5RR1HxWcZdw="]=a.current})($__dart_deferred_initializers__);
+(a=>{a["+yz6iy1TKlpgfxZ0gfeXw86V3PM="]=a.current})($__dart_deferred_initializers__);
