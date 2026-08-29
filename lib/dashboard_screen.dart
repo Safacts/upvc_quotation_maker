@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'utils/http_client.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -216,22 +218,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _logout() async {
     umamiTrack('logout');
     if (kIsWeb) {
+      try {
+        await postWithCredentials(
+          Uri.parse('/api/portal_auth'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'mode': 'logout'}),
+        );
+      } catch (_) {}
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('session_active');
       await prefs.remove('session_client_id');
+      await prefs.remove('session_password_hash');
     } else {
       try {
         const storage = FlutterSecureStorage();
         await storage.delete(key: 'session_active');
         await storage.delete(key: 'session_client_id');
+        await storage.delete(key: 'session_password_hash');
       } catch (_) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('session_active');
         await prefs.remove('session_client_id');
+        await prefs.remove('session_password_hash');
       }
     }
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   Future<void> _updateStatus(QuotationData q, QuotationStatus newStatus) async {
