@@ -444,6 +444,22 @@ class _QuotationScreenState extends State<QuotationScreen>
                     )
                     .toList();
           }
+          final hasContent = restored.customerName.trim().isNotEmpty ||
+              restored.reference.trim().isNotEmpty ||
+              restored.address.trim().isNotEmpty ||
+              restored.contactNo.trim().isNotEmpty ||
+              restored.measuredItems.isNotEmpty ||
+              restored.unmeasuredItems.isNotEmpty;
+
+          if (!hasContent) {
+            if (key != null) await prefs.remove(key);
+            await prefs.remove('last_active_draft_$clientId');
+            await prefs.remove('quotation_local_draft_${clientId}_${restored.id ?? 'active'}');
+            setState(() => data = QuotationData());
+            await _initQuoteNumber();
+            return;
+          }
+
           if (!mounted) return;
           setState(() {
             data = restored;
@@ -475,6 +491,9 @@ class _QuotationScreenState extends State<QuotationScreen>
                   ),
             );
             if (continueDraft == false && mounted) {
+              if (key != null) await prefs.remove(key);
+              await prefs.remove('last_active_draft_$clientId');
+              await prefs.remove('quotation_local_draft_${clientId}_${restored.id ?? 'active'}');
               setState(() => data = QuotationData());
               await _initQuoteNumber();
             }
@@ -578,52 +597,6 @@ class _QuotationScreenState extends State<QuotationScreen>
     final prefix = Provider.of<AppState>(context, listen: false).quotePrefix;
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    // SAFE REUSE: prevent 32 empty drafts from piling up (prod has 32 empties 28-08).
-    // Before burning a new quote_no via RPC (which increments quotation_counters),
-    // try to reuse the most recent empty draft for this client:
-    // deleted=false, status=draft, no measured/unmeasured items. This keeps at most
-    // one empty draft per client and avoids the "delete empties → creation error"
-    // trap (local draft cache + burned counter).
-    try {
-      final emptyCandidates = await SupabaseConfig.client
-          .from('quotations')
-          .select('id,quote_no,sync_version,created_at')
-          .eq('client_id', clientId)
-          .eq('deleted', false)
-          .eq('status', 'draft')
-          .order('created_at', ascending: false)
-          .limit(5);
-      for (final row in (emptyCandidates as List)) {
-        final qid = row['id'] as String?;
-        final qno = (row['quote_no'] as String?) ?? '';
-        if (qid == null || qid.isEmpty || qno.isEmpty) continue;
-        // Cheap emptiness check — if either table has a row, this draft is not empty
-        final mCount = await SupabaseConfig.client
-            .from('measured_items')
-            .select('id')
-            .eq('quotation_id', qid)
-            .eq('client_id', clientId)
-            .limit(1);
-        if ((mCount as List).isNotEmpty) continue;
-        final uCount = await SupabaseConfig.client
-            .from('unmeasured_items')
-            .select('id')
-            .eq('quotation_id', qid)
-            .eq('client_id', clientId)
-            .limit(1);
-        if ((uCount as List).isNotEmpty) continue;
-        // Reuse this empty draft — don't burn a new number
-        data.id = qid;
-        data.syncVersion = (row['sync_version'] as num?)?.toInt() ?? 1;
-        if (mounted) setState(() => data.quotationNo = qno);
-        await _loadItems(); // will load empty lists
-        // Ensure local draft points at the reused id
-        await _persistLocalDraft();
-        return;
-      }
-    } catch (_) {
-      // Offline or RLS error — fall through to generating new draft
-    }
     data.id ??= const Uuid().v4();
     if (data.quotationNo.isEmpty) {
       String nextNo = await QuotationData.generateNextQuoteNumber(
@@ -634,7 +607,6 @@ class _QuotationScreenState extends State<QuotationScreen>
         setState(() => data.quotationNo = nextNo);
       }
     }
-    _autoSaveToDatabase();
   }
 
   Future<void> _autoSaveToDatabase() async {
@@ -646,7 +618,20 @@ class _QuotationScreenState extends State<QuotationScreen>
     data.id ??= const Uuid().v4();
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    // Always persist to local cache first so device never loses progress
+
+    final hasContent = data.customerName.trim().isNotEmpty ||
+        data.reference.trim().isNotEmpty ||
+        data.address.trim().isNotEmpty ||
+        data.contactNo.trim().isNotEmpty ||
+        data.measuredItems.isNotEmpty ||
+        data.unmeasuredItems.isNotEmpty;
+
+    if (!hasContent) {
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    // Persist to local cache so device never loses progress
     await _persistLocalDraft();
 
     try {
