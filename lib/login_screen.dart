@@ -38,6 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
   StreamSubscription<GoogleSignInResult>? _googleSub;
   bool _googleReady = false;
   bool _passwordVisible = false;
+  bool _showManualEmail = false;
 
   Future<String?> _readSession() async {
     if (kIsWeb) {
@@ -73,13 +74,19 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _checkExistingSession();
     _initGoogleSignIn();
-    // Client-specific APK: autofill username so only password is needed
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autofillEmailForClientApk());
+    // Client-specific app/web: autofill email so only password is required
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autofillEmailForClient());
   }
 
-  void _autofillEmailForClientApk() {
-    const clientId = String.fromEnvironment('CLIENT_ID');
-    if (clientId.isEmpty) return;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_emailController.text.isEmpty) {
+      _autofillEmailForClient();
+    }
+  }
+
+  void _autofillEmailForClient() {
     if (_emailController.text.isNotEmpty) return;
     try {
       final appState = Provider.of<AppState>(context, listen: false);
@@ -704,21 +711,71 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      TextField(
-                        controller: _emailController,
-                        readOnly: const String.fromEnvironment('CLIENT_ID').isNotEmpty,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: const Icon(Icons.email_outlined),
-                          helperText: const String.fromEnvironment('CLIENT_ID').isNotEmpty
-                              ? 'Autofilled for your client — just enter password'
-                              : null,
+                      if (_emailController.text.isNotEmpty && !_showManualEmail) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withOpacity(0.06),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: theme.primaryColor.withOpacity(0.15),
+                                child: Icon(Icons.person, color: theme.primaryColor, size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      appState.companyName,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    Text(
+                                      _emailController.text,
+                                      style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => setState(() => _showManualEmail = true),
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                child: const Text('Change', style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
                         ),
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        TextField(
+                          controller: _emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            suffixIcon: _emailController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.check_circle_outline, size: 20),
+                                    onPressed: () => setState(() => _showManualEmail = false),
+                                  )
+                                : null,
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextField(
                         controller: _passwordController,
+                        autofocus: _emailController.text.isNotEmpty && !_showManualEmail,
+                        onSubmitted: (_) => _login(),
                         decoration: InputDecoration(
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
