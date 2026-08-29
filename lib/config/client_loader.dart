@@ -82,8 +82,34 @@ class ClientLoader {
     return false;
   }
 
+  static const _configCachePrefix = 'cached_client_config_v1_';
+
+  static Future<void> _saveCachedConfig(String clientId, ClientConfig config) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_configCachePrefix$clientId', jsonEncode(config.toJson()));
+    } catch (_) {}
+  }
+
+  static Future<ClientConfig?> getCachedConfig(String clientId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_configCachePrefix$clientId');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          return ClientConfig.fromJson(decoded);
+        } else if (decoded is Map) {
+          return ClientConfig.fromJson(Map<String, dynamic>.from(decoded));
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static Future<ClientConfig> loadConfig({String? clientId}) async {
     final rawId = (clientId ?? getClientId() ?? 'venkateshwara').trim();
+    final cached = await getCachedConfig(rawId);
 
     // Check for SSO token in URL FRAGMENT (passed from web dashboard)
     if (kIsWeb) {
@@ -100,14 +126,17 @@ class ClientLoader {
             final currentClientId = await _getCurrentSessionClientId();
             if (currentClientId != null && currentClientId != validatedClientId) {
               // Signal to caller that tenant switch is needed
-            return ClientConfig.ssoPending(
+              return ClientConfig.ssoPending(
                 clientId: validatedClientId, 
                 currentClientId: currentClientId
               );
             }
 
             final config = await _loadConfigForClient(validatedClientId);
-            if (config != null) return config;
+            if (config != null) {
+              await _saveCachedConfig(config.clientId, config);
+              return config;
+            }
           }
         }
       } catch (e) {
@@ -118,12 +147,14 @@ class ClientLoader {
     // Try to fetch from static config JSON on Vercel (exact id match)
     try {
       final configUrl = const String.fromEnvironment('CONFIG_URL', defaultValue: '/config.json');
-      final response = await http.get(Uri.parse(configUrl));
+      final response = await http.get(Uri.parse(configUrl)).timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         final allConfigs = jsonDecode(response.body) as Map<String, dynamic>;
         final clientJson = allConfigs[rawId] as Map<String, dynamic>?;
         if (clientJson != null) {
-          return ClientConfig.fromJson(clientJson);
+          final config = ClientConfig.fromJson(clientJson);
+          await _saveCachedConfig(config.clientId, config);
+          return config;
         }
       }
     } catch (_) {}
@@ -135,11 +166,12 @@ class ClientLoader {
           .from('client_public')
           .select()
           .eq('id', rawId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 4));
 
       // If the URL used a slug (e.g. /upvc/<app name>), resolve it to the real id
       if (row == null || row['config'] == null) {
-        final all = await supabase.from('client_public').select();
+        final all = await supabase.from('client_public').select().timeout(const Duration(seconds: 4));
         final target = _slugify(rawId);
         for (final r in all) {
           if (_matchesClient(r, target)) {
@@ -150,9 +182,16 @@ class ClientLoader {
       }
 
       if (row != null && row['config'] != null) {
-        return _configFromRow(row, (row['id'] as String?) ?? rawId);
+        final config = _configFromRow(row, (row['id'] as String?) ?? rawId);
+        await _saveCachedConfig(config.clientId, config);
+        return config;
       }
     } catch (_) {}
+
+    // When offline or fetch fails, return previously cached config instead of an empty skeleton
+    if (cached != null) {
+      return cached;
+    }
 
     return ClientConfig(clientId: rawId);
   }
@@ -166,15 +205,17 @@ class ClientLoader {
       final response = await getWithCredentials(
         Uri.parse('/api/portal_settings'),
         headers: const {'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return null;
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) return null;
-      final config = Map<String, dynamic>.from(decoded);
-      if ((config['clientId'] as String?)?.trim() != clientId.trim()) {
+      final configMap = Map<String, dynamic>.from(decoded);
+      if ((configMap['clientId'] as String?)?.trim() != clientId.trim()) {
         return null;
       }
-      return ClientConfig.fromJson(config);
+      final config = ClientConfig.fromJson(configMap);
+      await _saveCachedConfig(config.clientId, config);
+      return config;
     } catch (_) {
       return null;
     }

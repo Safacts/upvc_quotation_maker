@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -98,10 +99,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  static const _quotationsCachePrefix = 'cached_quotations_list_v1_';
+
+  Future<void> _saveCachedQuotationsList(String clientId, List<dynamic> rawList) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('$_quotationsCachePrefix$clientId', jsonEncode(rawList));
+    } catch (_) {}
+  }
+
+  Future<List<QuotationData>> _loadCachedQuotationsList(String clientId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_quotationsCachePrefix$clientId');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded
+              .map((e) => QuotationData.fromMap(Map<String, dynamic>.from(e as Map)))
+              .toList();
+        }
+      }
+    } catch (_) {}
+    return const [];
+  }
+
   Future<void> _fetchQuotations() async {
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
-    setState(() => _isLoading = true);
+    if (_quotations.isEmpty) {
+      final initialCached = await _loadCachedQuotationsList(clientId);
+      if (initialCached.isNotEmpty && mounted) {
+        final local = await _localRecoveryQuotations(clientId, includeAcknowledgedDrafts: true);
+        final merged = <String, QuotationData>{
+          for (final q in initialCached) if (q.id != null) q.id!: q,
+          for (final q in local) if (q.id != null) q.id!: q,
+        };
+        setState(() {
+          _quotations = merged.values.toList();
+          _isLoading = false;
+        });
+      }
+    }
+
+    setState(() => _isLoading = _quotations.isEmpty);
     try {
       final response = await SupabaseConfig.client
           .from('quotations')
@@ -110,9 +151,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // (+GST on transport only), which is exactly what the client saw.
           .select('*, measured_items(*), unmeasured_items(*)')
           .eq('client_id', clientId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .timeout(const Duration(seconds: 5));
 
       final cloud = (response as List).map((e) => QuotationData.fromMap(e)).toList();
+      unawaited(_saveCachedQuotationsList(clientId, response));
+
       final local = await _localRecoveryQuotations(clientId, includeAcknowledgedDrafts: false);
       final merged = <String, QuotationData>{
         for (final quotation in cloud)
@@ -150,18 +194,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } catch (_) {}
       }
     } catch (e) {
+      final cached = await _loadCachedQuotationsList(clientId);
       final recovered = await _localRecoveryQuotations(clientId, includeAcknowledgedDrafts: true);
       if (mounted) {
         setState(() {
-          // A temporary request failure must never replace a populated screen
-          // with the frightening and incorrect "No quotations" state.
           final merged = <String, QuotationData>{
+            for (final quotation in cached)
+              if (quotation.id != null) quotation.id!: quotation,
             for (final quotation in _quotations)
               if (quotation.id != null) quotation.id!: quotation,
+            for (final quotation in recovered)
+              if (quotation.id != null) quotation.id!: quotation,
           };
-          for (final quotation in recovered) {
-            if (quotation.id != null) merged[quotation.id!] = quotation;
-          }
           _quotations = merged.values.toList();
           _quotationLoadFailed = true;
           _isLoading = false;
