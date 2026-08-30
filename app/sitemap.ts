@@ -10,6 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = [
     { url: '', priority: 1.0 },
     { url: '/upvc', priority: 0.9 },
+    { url: '/aadisheshu', priority: 0.9 },
     { url: '/upvc/pricing', priority: 0.8 },
     { url: '/upvc/pricing/show', priority: 0.7 },
     { url: '/upvc/compare', priority: 0.9 },
