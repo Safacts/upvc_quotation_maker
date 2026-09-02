@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession, type SessionPayload } from "@/lib/session";
 import { resolveTenant, type TenantResolution } from "@/lib/tenant";
-import { isServiceKeyConfigured } from "@/lib/supabase";
+import { isServiceKeyConfigured, supaGet } from "@/lib/supabase";
 import { requireTier, hasFeature, type Feature, type Tier } from "@/lib/tiers";
 
 /**
