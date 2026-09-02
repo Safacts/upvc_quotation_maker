@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Plus, Search, Download, RefreshCw, SlidersHorizontal, Cuboid } from "lucide-react";
+import { Plus, Search, Download, RefreshCw, SlidersHorizontal, Cuboid, Share2 } from "lucide-react";
 import { DataGrid, StatusPill } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
@@ -196,6 +196,22 @@ export default function QuotationsClient() {
     [router, slug],
   );
 
+  const shareRow = useCallback(async (row: Row) => {
+    try {
+      const res = await fetch(`/api/quotation/${row.id}/token`, { credentials: "same-origin" });
+      const data = await res.json();
+      if (!res.ok || !data.token) {
+        toast(data?.error || "Could not create share link", "err");
+        return;
+      }
+      const url = `${window.location.origin}/quote/${row.id}?token=${encodeURIComponent(data.token)}`;
+      await navigator.clipboard?.writeText(url);
+      toast("Share link copied to clipboard", "ok");
+    } catch (e: any) {
+      toast(String(e?.message ?? e), "err");
+    }
+  }, [toast]);
+
   /**
    * CSV export covers the CURRENT PAGE only, and the filename says so.
    *
@@ -363,25 +379,38 @@ export default function QuotationsClient() {
         enableSorting: false,
         meta: { align: "center" },
         cell: (c) => (
-          <button
-            type="button"
-            className="vc-btn vc-btn-sm"
-            title="Open the first measured opening as a 3D model"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.open(
-                `/upvc/3d-viewer?fromQuotation=${c.row.original.id}`,
-                "_blank",
-                "noopener,noreferrer",
-              );
-            }}
-          >
-            <Cuboid size={12} /> 3D
-          </button>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              title="Copy customer confirmation link"
+              onClick={(e) => {
+                e.stopPropagation();
+                void shareRow(c.row.original);
+              }}
+            >
+              <Share2 size={12} /> Share
+            </button>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              title="Open the first measured opening as a 3D model"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(
+                  `/upvc/3d-viewer?fromQuotation=${c.row.original.id}`,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }}
+            >
+              <Cuboid size={12} /> 3D
+            </button>
+          </div>
         ),
       },
     ],
-    [],
+    [shareRow],
   );
 
   // Ctrl+, applied: filter to the visible set and put them in the saved order.

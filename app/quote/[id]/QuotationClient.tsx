@@ -1,10 +1,11 @@
 "use client";
 
 import "./quote.css";
-import { useCallback, useEffect, useState } from "react";
-import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert, Download } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
+import { Check, Edit3, X, CheckCircle2, XCircle, FileWarning, ShieldAlert, Download, Layers, Eye, FileText } from "lucide-react";
 import { parseClientConfig } from "@/lib/types";
-import { measuredLineSqft, measuredLineTotal, quotationTotals } from "@/lib/pricing";
+import { sqft, measuredLineSqft, measuredLineTotal, quotationTotals } from "@/lib/pricing";
+import { WindowElevationSvg, detectWindowElevationType, getWindowElevationTitle } from "@/lib/window-elevation";
 
 interface Quotation {
   id: string;
@@ -20,6 +21,8 @@ interface Quotation {
   include_gst: boolean;
   gst_percentage: number;
   client_id: string;
+  advance_paid?: number;
+  supplier_company?: string;
 }
 
 interface Item {
@@ -30,6 +33,7 @@ interface Item {
   units: number;
   rate: number;
   glass?: string;
+  bom_config?: Record<string, any>;
 }
 
 interface ClientConfig {
@@ -54,6 +58,8 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [viewMode, setViewMode] = useState<"both" | "doc" | "cad">("both");
+  const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
   const fetchData = useCallback(async (id: string) => {
     const url = new URL(window.location.href);
@@ -211,12 +217,20 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
   // while displaying transport as a separate line — double-presenting it.
   // `quotationTotals` is the single source of truth and matches the Dart exactly.
   const totals = quotationTotals(quotation, measured, unmeasured);
-  const items = measured.map((m) => ({
-    ...m,
-    qty: Math.round(measuredLineSqft(m) * 100) / 100,
-    amount: measuredLineTotal(m),
-  }));
+  const items = measured.map((m) => {
+    const uSqft = sqft(m.width, m.height);
+    const tSqft = measuredLineSqft(m);
+    const amt = measuredLineTotal(m);
+    return {
+      ...m,
+      unitSqft: Math.round(uSqft * 100) / 100,
+      totalSqft: Math.round(tSqft * 100) / 100,
+      amount: amt,
+    };
+  });
   const { netTotal, gstAmount, grandTotal } = totals;
+  const advancePaid = Number(quotation.advance_paid) || 0;
+  const balanceDue = Math.max(0, grandTotal - advancePaid);
 
   if (actionDone) {
     const isApproved = actionDone === "approved";
@@ -289,49 +303,281 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
             </div>
           </section>
 
-          {/* Measured Items */}
+          {/* View Mode Bar */}
           {items.length > 0 && (
+            <div style={{ display: "flex", gap: "8px", marginBottom: "20px", background: "#f1f5f9", padding: "6px", borderRadius: "8px", width: "fit-content" }}>
+              <button
+                type="button"
+                onClick={() => setViewMode("both")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: viewMode === "both" ? "#ffffff" : "transparent",
+                  color: viewMode === "both" ? "#0f172a" : "#64748b",
+                  boxShadow: viewMode === "both" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                }}
+              >
+                <Layers size={14} /> Full Document &amp; CAD Schedule
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("doc")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: viewMode === "doc" ? "#ffffff" : "transparent",
+                  color: viewMode === "doc" ? "#0f172a" : "#64748b",
+                  boxShadow: viewMode === "doc" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                }}
+              >
+                <FileText size={14} /> Itemized Quotation
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("cad")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: viewMode === "cad" ? "#ffffff" : "transparent",
+                  color: viewMode === "cad" ? "#0f172a" : "#64748b",
+                  boxShadow: viewMode === "cad" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                }}
+              >
+                <Eye size={14} /> CAD Window Elevations ({items.length})
+              </button>
+            </div>
+          )}
+
+          {/* Measured Items Table */}
+          {items.length > 0 && (viewMode === "both" || viewMode === "doc") && (
             <section className="invoice-section">
-              <h3 className="section-title">Measured Items</h3>
+              <h3 className="section-title">Measured Items (Windows &amp; Doors)</h3>
               <div className="table-wrapper">
                 <table className="invoice-table">
                   <thead>
                     <tr>
-                      <th>Code</th>
-                      <th>Description</th>
-                      <th className="col-center">Size (W×H)</th>
-                      <th className="col-center">Qty</th>
-                      <th className="col-center">SFT</th>
-                      <th className="col-center">Rate</th>
+                      <th style={{ width: "40px", textAlign: "center" }}>S.No</th>
+                      <th>Description &amp; Specifications</th>
+                      <th className="col-center">Size (W×H mm)</th>
+                      <th className="col-center">Units</th>
+                      <th className="col-center" title="Area of one unit in sq.ft">Unit SFT</th>
+                      <th className="col-center" title="Total area in sq.ft (Units × Unit SFT)">Total SFT</th>
+                      <th className="col-center">Rate/SFT</th>
                       <th className="col-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, i) => (
-                      <tr key={i}>
-                        <td className="highlight">{item.code || "-"}</td>
-                        <td>{item.description} {item.glass && <span style={{opacity: 0.7}}><br/>({item.glass})</span>}</td>
-                        <td className="col-center">{item.width && item.height ? `${item.width}×${item.height}` : "-"}</td>
-                        <td className="col-center">{item.units}</td>
-                        <td className="col-center">{item.qty}</td>
-                        <td className="col-center">₹{item.rate}</td>
-                        <td className="col-right amount">₹{item.amount.toLocaleString("en-IN")}</td>
-                      </tr>
-                    ))}
+                    {items.map((item, i) => {
+      const profileType = String(item.bom_config?.profile?.type || item.bom_config?.profile?.system || "");
+      const elevType = detectWindowElevationType(`${item.description} ${profileType}`);
+                      const isExpanded = expandedItem === i;
+
+                      return (
+                        <React.Fragment key={i}>
+                          <tr>
+                            <td className="highlight" style={{ textAlign: "center" }}>{i + 1}</td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                <strong>{item.description || getWindowElevationTitle(elevType, i + 1)}</strong>
+                                {item.code && (
+                                  <span style={{ fontSize: "10.5px", background: "#f1f5f9", padding: "1px 6px", borderRadius: "4px", color: "#475569" }}>
+                                    Code: {item.code}
+                                  </span>
+                                )}
+                              </div>
+                              {item.glass && (
+                                <div style={{ fontSize: "12px", color: "#475569", marginTop: "2px" }}>
+                                  Glass: <em>{item.glass}</em>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setExpandedItem(isExpanded ? null : i)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "var(--kpr-primary, #0b4b86)",
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  padding: "2px 0",
+                                  marginTop: "4px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                {isExpanded ? "Hide CAD Elevation ▲" : "View CAD Elevation ▼"}
+                              </button>
+                            </td>
+                            <td className="col-center font-mono">
+                              {item.width && item.height ? `${Math.round(item.width)} × ${Math.round(item.height)}` : "—"}
+                            </td>
+                            <td className="col-center" style={{ fontWeight: 600 }}>{item.units}</td>
+                            <td className="col-center">{item.unitSqft.toFixed(2)}</td>
+                            <td className="col-center" style={{ fontWeight: 600 }}>{item.totalSqft.toFixed(2)}</td>
+                            <td className="col-center">₹{Number(item.rate).toLocaleString("en-IN")}</td>
+                            <td className="col-right amount" style={{ fontWeight: 700 }}>₹{item.amount.toLocaleString("en-IN")}</td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="elevation-row-preview">
+                              <td colSpan={8} style={{ background: "#f8fafc", padding: "16px", borderBottom: "2px solid #e2e8f0" }}>
+                                <div style={{ display: "flex", gap: "24px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+                                  <div style={{ background: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                                    <WindowElevationSvg
+                                      widthMm={item.width || 1000}
+                                      heightMm={item.height || 1000}
+                                      description={item.description}
+                                      itemIndex={i + 1}
+                                      targetWidth={260}
+                                      targetHeight={280}
+                                    />
+                                  </div>
+                                  <div style={{ maxWidth: "340px", fontSize: "13px", lineHeight: "1.6" }}>
+                                    <h4 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 700, color: "#1e293b" }}>
+                                      {getWindowElevationTitle(elevType, i + 1)}
+                                    </h4>
+                                    <p style={{ margin: "4px 0", color: "#64748b" }}>
+                                      <strong>Dimensions:</strong> {Math.round(item.width || 0)} mm (W) × {Math.round(item.height || 0)} mm (H)
+                                    </p>
+                                    <p style={{ margin: "4px 0", color: "#64748b" }}>
+                                      <strong>Quantity:</strong> {item.units} unit{item.units > 1 ? "s" : ""}
+                                    </p>
+                                    <p style={{ margin: "4px 0", color: "#64748b" }}>
+                                      <strong>Total Area:</strong> {item.totalSqft.toFixed(2)} sq.ft ({item.unitSqft.toFixed(2)} sq.ft / unit)
+                                    </p>
+                                    {item.glass && (
+                                      <p style={{ margin: "4px 0", color: "#64748b" }}>
+                                        <strong>Glass Spec:</strong> {item.glass}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </section>
           )}
 
+          {/* Dedicated 2D CAD Elevation Diagrams & Dimension Schedule */}
+          {items.length > 0 && (viewMode === "both" || viewMode === "cad") && (
+            <section className="invoice-section cad-schedule-section" style={{ marginTop: "32px", paddingTop: "20px", borderTop: "2px dashed #cbd5e1" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
+                <h3 className="section-title" style={{ margin: 0 }}>
+                  2D CAD Elevation &amp; Dimension Schedule
+                </h3>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>
+                  Engineering Elevation Diagrams with Parametric Witness Lines
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: "20px",
+                }}
+              >
+                {items.map((m, idx) => {
+                  const profileType = String(m.bom_config?.profile?.type || m.bom_config?.profile?.system || "");
+                  const elevType = detectWindowElevationType(`${m.description} ${profileType}`);
+                  const title = getWindowElevationTitle(elevType, idx + 1);
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px" }}>
+                        <span style={{ fontWeight: 700, fontSize: "14px", color: "#1e293b" }}>{title}</span>
+                        <span style={{ fontSize: "11px", fontWeight: 600, background: "#f1f5f9", padding: "2px 8px", borderRadius: "12px", color: "#475569" }}>
+                          Qty: {m.units}
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "280px", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", borderRadius: "6px", overflow: "hidden" }}>
+                        <WindowElevationSvg
+                          widthMm={m.width || 1000}
+                          heightMm={m.height || 1000}
+                          description={m.description}
+                          itemIndex={idx + 1}
+                          targetWidth={270}
+                          targetHeight={275}
+                        />
+                      </div>
+                      <div style={{ width: "100%", marginTop: "12px", fontSize: "12px", color: "#475569", lineHeight: "1.6" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>Dimensions:</span>
+                          <strong className="font-mono">{Math.round(m.width || 0)} × {Math.round(m.height || 0)} mm</strong>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>Area:</span>
+                          <strong>{m.totalSqft.toFixed(2)} sq.ft ({m.unitSqft.toFixed(2)} / unit)</strong>
+                        </div>
+                        {m.glass && (
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Glass:</span>
+                            <span style={{ fontWeight: 600, color: "#2563eb" }}>{m.glass}</span>
+                          </div>
+                        )}
+                        {m.code && (
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span>Code:</span>
+                            <span>{m.code}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* Unmeasured Items */}
-          {unmeasured.length > 0 && (
+          {unmeasured.length > 0 && (viewMode === "both" || viewMode === "doc") && (
             <section className="invoice-section">
-              <h3 className="section-title">Unmeasured Items</h3>
+              <h3 className="section-title">Additional Items &amp; Services</h3>
               <div className="table-wrapper">
                 <table className="invoice-table">
                   <thead>
                     <tr>
+                      <th style={{ width: "40px", textAlign: "center" }}>S.No</th>
                       <th>Description</th>
                       <th className="col-center">Qty</th>
                       <th className="col-center">Rate</th>
@@ -341,9 +587,10 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
                   <tbody>
                     {unmeasured.map((item, i) => (
                       <tr key={i}>
+                        <td className="highlight" style={{ textAlign: "center" }}>{i + 1}</td>
                         <td className="highlight">{item.description}</td>
                         <td className="col-center">{item.units}</td>
-                        <td className="col-center">₹{item.rate}</td>
+                        <td className="col-center">₹{Number(item.rate).toLocaleString("en-IN")}</td>
                         <td className="col-right amount">₹{(item.units * item.rate).toLocaleString("en-IN")}</td>
                       </tr>
                     ))}
@@ -357,12 +604,16 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
           <section className="invoice-totals">
             <div className="totals-box">
               <div className="total-row">
+                <span>Total Area (SFT)</span>
+                <span>{totals.totalSqft.toFixed(2)} sq.ft</span>
+              </div>
+              <div className="total-row">
                 <span>Subtotal</span>
                 <span>₹{totals.subtotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
               </div>
               {totals.transport > 0 && (
                 <div className="total-row">
-                  <span>Transport</span>
+                  <span>Transport &amp; Handling</span>
                   <span>₹{totals.transport.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
                 </div>
               )}
@@ -382,6 +633,18 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
                 <span>Grand Total</span>
                 <span>₹{grandTotal.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
               </div>
+              {advancePaid > 0 && (
+                <>
+                  <div className="total-row" style={{ color: "#15803d", fontWeight: 600 }}>
+                    <span>Advance Paid</span>
+                    <span>- ₹{advancePaid.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                  <div className="total-row balance-due" style={{ fontWeight: 800, fontSize: "16px", color: "#b91c1c", borderTop: "2px solid #e2e8f0", paddingTop: "8px", marginTop: "4px" }}>
+                    <span>Balance Due</span>
+                    <span>₹{balanceDue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-client";
 import { hashQuotationToken } from "@/lib/quotation-token";
+import { getSession } from "@/lib/session";
 
 
 /**
@@ -47,26 +48,26 @@ export async function GET(
   const url = new URL(req.url);
   const token = url.searchParams.get("token");
 
-  if (!token) {
-    return NextResponse.json({ error: "Invalid or missing token" }, { status: 403 });
-  }
+  let isAuthorized = false;
 
-  const { data: tokenRow } = await supabaseAdmin
-    .from("quotation_share_tokens")
-    .select("quotation_id")
-    .eq("quotation_id", id)
-    .eq("token_hash", hashQuotationToken(token))
-    .gt("expires_at", new Date().toISOString())
-    .is("revoked_at", null)
-    .maybeSingle();
+  if (token) {
+    const { data: tokenRow } = await supabaseAdmin
+      .from("quotation_share_tokens")
+      .select("quotation_id")
+      .eq("quotation_id", id)
+      .eq("token_hash", hashQuotationToken(token))
+      .gt("expires_at", new Date().toISOString())
+      .is("revoked_at", null)
+      .maybeSingle();
 
-  if (!tokenRow) {
-    return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
+    if (tokenRow) {
+      isAuthorized = true;
+    }
   }
 
   const { data: quotation, error } = await supabaseAdmin
     .from("quotations")
-    .select("id,quote_no,date,customer_name,reference,address,contact_no,transport_cost,email,status,include_gst,gst_percentage,client_id,viewed_at,view_count")
+    .select("id,quote_no,date,customer_name,reference,address,contact_no,transport_cost,email,status,include_gst,gst_percentage,client_id,advance_paid,supplier_company,viewed_at,view_count")
     .eq("id", id)
     .single();
 
@@ -74,27 +75,49 @@ export async function GET(
     return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
   }
 
-  // Record view event for the fabricator's CRM
-  if (!quotation.viewed_at) {
-    await supabaseAdmin
-      .from("quotations")
-      .update({
-        viewed_at: new Date().toISOString(),
-        view_count: 1,
-      })
-      .eq("id", id);
-  } else {
-    await supabaseAdmin
-      .from("quotations")
-      .update({
-        view_count: (Number(quotation.view_count) || 1) + 1,
-      })
-      .eq("id", id);
+  // If token was not valid, check if the caller is an authenticated fabricator for this quote
+  if (!isAuthorized) {
+    const session = await getSession();
+    if (
+      session &&
+      (session.role === "admin" ||
+        (session.role === "customer" &&
+          session.client_id &&
+          session.client_id.toLowerCase() === (quotation.client_id || "").toLowerCase()))
+    ) {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) {
+    return NextResponse.json({ error: "Invalid or expired token" }, { status: 403 });
+  }
+
+  // View telemetry must never turn an otherwise valid customer link into a 500.
+  try {
+    if (!quotation.viewed_at) {
+      await supabaseAdmin
+        .from("quotations")
+        .update({
+          viewed_at: new Date().toISOString(),
+          view_count: 1,
+        })
+        .eq("id", id);
+    } else {
+      await supabaseAdmin
+        .from("quotations")
+        .update({
+          view_count: (Number(quotation.view_count) || 1) + 1,
+        })
+        .eq("id", id);
+    }
+  } catch (e: any) {
+    console.warn(`[quotation] view telemetry skipped id=${id}: ${String(e?.message ?? e)}`);
   }
 
   const { data: measured } = await supabaseAdmin
     .from("measured_items")
-    .select("code,description,width,height,units,glass,rate")
+    .select("code,description,width,height,units,glass,rate,bom_config")
     .eq("quotation_id", id)
     .order("created_at");
 

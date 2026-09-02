@@ -416,6 +416,7 @@ export async function POST(request: NextRequest) {
             role: "customer", 
             email, 
             client_id: client.id,
+            password_hash: client.password_hash,
             config: safeClientConfig(client),
             warning: "TRIAL_EXPIRING_SOON",
             daysRemaining,
@@ -430,6 +431,7 @@ export async function POST(request: NextRequest) {
         role: "customer",
         email,
         client_id: client.id,
+        password_hash: client.password_hash,
         config: safeClientConfig(client),
       }, 200);
     }
