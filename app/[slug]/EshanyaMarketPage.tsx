@@ -1,7 +1,7 @@
 "use client";
 
 import "./eshanya.css";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import { ArrowRight, Check, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 import { parseClientConfig } from "@/lib/types";
 
@@ -50,6 +50,177 @@ export default function EshanyaMarketPage({ client, slug }: Props) {
     setSent(true);
   };
 
+  useEffect(() => {
+    const video = document.getElementById("heroScrubVideo") as HTMLVideoElement | null;
+    const scrub = document.querySelector(".eshanya-hero-scrub") as HTMLElement | null;
+    const stage = document.querySelector(".eshanya-hero-stage") as HTMLElement | null;
+    if (!video || !scrub || !stage) return;
+
+    const VIDEO_URL = "/eshanya/assets/hero-scroll.mp4";
+
+    // Five gates from scrub-pipeline.md (CSS and JS must match exactly)
+    const GATES = [
+      "(max-width: 720px)",
+      "(orientation: portrait) and (max-width: 1024px)",
+      "(orientation: portrait) and (pointer: coarse)",
+      "(orientation: landscape) and (pointer: coarse) and (max-height: 560px)",
+      "(prefers-reduced-motion: reduce)",
+    ];
+
+    let scrubOn = false;
+    let rafId: number | null = null;
+    let lastTick = 0;
+    let target = 0;
+    let shown = 0;
+    let seekBusy = false;
+    let pendingTime: number | null = null;
+    let heroOnScreen = true;
+
+    const heroProgress = () => {
+      const rect = scrub.getBoundingClientRect();
+      const scrollRange = scrub.offsetHeight - window.innerHeight;
+      if (scrollRange <= 0) return 0;
+      const progress = -rect.top / scrollRange;
+      return Math.min(1, Math.max(0, progress));
+    };
+
+    const requestSeek = (t: number) => {
+      if (!video.duration || Number.isNaN(video.duration)) return;
+      if (seekBusy) {
+        pendingTime = t;
+        return;
+      }
+      seekBusy = true;
+      try {
+        video.currentTime = Math.min(Math.max(0, t), video.duration);
+      } catch {
+        seekBusy = false;
+      }
+    };
+
+    video.addEventListener("seeked", () => {
+      seekBusy = false;
+      if (pendingTime !== null) {
+        const t = pendingTime;
+        pendingTime = null;
+        requestSeek(t);
+      }
+    });
+    video.addEventListener("error", () => {
+      seekBusy = false;
+      pendingTime = null;
+      stage.classList.add("video-failed");
+    });
+
+    const tick = (now: number) => {
+      const dt = Math.min(100, now - (lastTick || now));
+      lastTick = now;
+      const k = 0.16;
+      shown += (target - shown) * (1 - Math.pow(1 - k, dt / 16.667));
+      if (Math.abs(target - shown) < 0.0005) {
+        shown = target;
+        rafId = null;
+        lastTick = 0;
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+      if (video.duration) requestSeek(shown * video.duration);
+    };
+
+    const onScroll = () => {
+      target = heroProgress();
+      if (rafId === null && heroOnScreen) rafId = requestAnimationFrame(tick);
+    };
+
+    // IntersectionObserver to rest the loop when hero off-screen
+    const io = new IntersectionObserver(
+      (entries) => {
+        heroOnScreen = entries[0]?.isIntersecting ?? true;
+        if (heroOnScreen && Math.abs(target - shown) > 0.0005 && rafId === null && scrubOn) {
+          rafId = requestAnimationFrame(tick);
+        } else if (!heroOnScreen && rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+      },
+      { threshold: 0 }
+    );
+    io.observe(scrub);
+
+    let blobLoaded = false;
+    async function loadBlob() {
+      if (blobLoaded) return;
+      blobLoaded = true;
+      try {
+        const res = await fetch(VIDEO_URL);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        video!.src = url;
+        video!.load();
+        video!.addEventListener(
+          "loadedmetadata",
+          () => {
+            stage!.classList.add("video-ready");
+            target = heroProgress();
+            shown = target;
+            if (video!.duration) video!.currentTime = target * video!.duration;
+          },
+          { once: true }
+        );
+        // Promote to compositor layer
+        video!.style.willChange = "transform";
+      } catch {
+        stage!.classList.add("video-failed");
+      }
+    }
+
+    const enableScrub = () => {
+      if (scrubOn) return;
+      scrubOn = true;
+      stage!.classList.remove("video-failed");
+      // fetch as blob for Range-safe scrub (works even where host lacks Range)
+      loadBlob();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    };
+
+    const disableScrub = () => {
+      if (!scrubOn) return;
+      scrubOn = false;
+      window.removeEventListener("scroll", onScroll);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      // Fallback: poster + autoplay loop for static hero (phones / reduced-motion)
+      if (!video!.src) {
+        video!.src = VIDEO_URL;
+        video!.loop = true;
+        video!.autoplay = true;
+        video!.muted = true;
+        video!.playsInline = true as any;
+        video!.load();
+        video!.play().catch(() => {});
+      }
+    };
+
+    const applyHeroMode = () => {
+      if (GATES.some((q) => window.matchMedia(q).matches)) disableScrub();
+      else enableScrub();
+    };
+
+    const mqls = GATES.map((q) => window.matchMedia(q));
+    mqls.forEach((m) => m.addEventListener("change", applyHeroMode));
+    applyHeroMode();
+
+    return () => {
+      mqls.forEach((m) => m.removeEventListener("change", applyHeroMode));
+      window.removeEventListener("scroll", onScroll);
+      io.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   return (
     <div className="eshanya-site">
       <header className="eshanya-site-header">
@@ -65,28 +236,28 @@ export default function EshanyaMarketPage({ client, slug }: Props) {
       </header>
 
       <main>
-        <section className="eshanya-site-hero" id="home" style={{ "--eshanya-hero": `url(${JSON.stringify(heroImage)})` } as React.CSSProperties}>
-          <video
-            className="eshanya-site-hero-video"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster={heroImage}
-            aria-hidden="true"
-          >
-            <source src="/eshanya/assets/hero-scroll.mp4" type="video/mp4" />
-          </video>
-          <div className="eshanya-site-hero-overlay" aria-hidden="true" />
-          <div className="eshanya-site-hero-copy">
-            <p className="eshanya-site-kicker">{brand} · Coimbatore · Tamil Nadu</p>
-            <h1>{cfg.landingHeroTitle || "Trusted direction."}<em>{cfg.landingHeroTitle ? "Quality trade." : "Quality trade."}</em></h1>
-            <p className="eshanya-site-lede">{cfg.landingHeroSubtitle || "UPVC windows, doors, and practical trade solutions for homes and commercial spaces."}</p>
-            <div className="eshanya-site-actions"><a className="eshanya-site-button primary" href="#contact">Get a consultation <ArrowRight size={17} /></a><a className="eshanya-site-button secondary" href="#products">Explore solutions</a></div>
-          </div>
-          <div className="eshanya-site-hero-badge" aria-label="Eshanya Trade Links brand promise"><strong>ET</strong><span>Global connections<br />lasting trust</span></div>
-        </section>
+        <div className="eshanya-hero-scrub">
+          <section className="eshanya-hero-stage" id="home" style={{ "--eshanya-hero": `url(${JSON.stringify(heroImage)})` } as React.CSSProperties}>
+            <video
+              id="heroScrubVideo"
+              className="eshanya-site-hero-video"
+              muted
+              playsInline
+              preload="metadata"
+              poster={heroImage}
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+            <div className="eshanya-site-hero-overlay" aria-hidden="true" />
+            <div className="eshanya-site-hero-copy">
+              <p className="eshanya-site-kicker">{brand} · Coimbatore · Tamil Nadu</p>
+              <h1>{cfg.landingHeroTitle || "Trusted direction."}<em>Quality trade.</em></h1>
+              <p className="eshanya-site-lede">{cfg.landingHeroSubtitle || "UPVC windows, doors, and practical trade solutions for homes and commercial spaces."}</p>
+              <div className="eshanya-site-actions"><a className="eshanya-site-button primary" href="#contact">Get a consultation <ArrowRight size={17} /></a><a className="eshanya-site-button secondary" href="#products">Explore solutions</a></div>
+            </div>
+            <div className="eshanya-site-hero-badge" aria-label="Eshanya Trade Links brand promise"><strong>ET</strong><span>Global connections<br />lasting trust</span></div>
+          </section>
+        </div>
 
         <section className="eshanya-site-section" id="about"><p className="eshanya-site-kicker">About Eshanya</p><div className="eshanya-site-two-col"><figure><img src={gallery[0] || "/eshanya/assets/about-upvc-premium.png"} alt="UPVC window and door solutions from Eshanya Trade Links" /><figcaption>UPVC solutions for residential and commercial spaces.</figcaption></figure><div><h2>{cfg.landingAboutTitle || "Reliable trade solutions with a considered finish."}</h2><p>{cfg.landingAboutText || `${brand} helps customers discuss suitable UPVC windows, doors, glass, mesh, hardware, measurement, and installation requirements.`}</p><p>From the first enquiry to the quotation and follow-through, the focus is clear communication and a practical next step for every project.</p></div></div></section>
 
