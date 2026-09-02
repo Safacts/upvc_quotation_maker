@@ -12,3 +12,9 @@
 .eshanya-site-hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(8,11,14,.78),rgba(8,11,14,.22)),linear-gradient(0deg,rgba(8,11,14,.55),transparent 55%);pointer-events:none}
 .eshanya-site-hero-copy,.eshanya-site-hero-badge{position:relative;z-index:2}
 @media(prefers-reduced-motion:reduce){.eshanya-site-hero-video{display:none}}
+
+.eshanya-hero-scrub{height:400vh;position:relative}
+.eshanya-hero-stage{position:sticky;top:0;height:100vh;min-height:720px;display:grid;place-items:center;isolation:isolate;overflow:hidden;padding:140px clamp(18px,7vw,110px) 90px;background:linear-gradient(90deg,rgba(8,11,14,.92),rgba(8,11,14,.28)),linear-gradient(0deg,rgba(8,11,14,.8),transparent 60%),var(--eshanya-hero) center/cover}
+.eshanya-hero-stage.video-ready .eshanya-site-hero-video{opacity:1}
+.eshanya-hero-stage .eshanya-site-hero-video{opacity:0;transition:opacity .6s ease}
+
