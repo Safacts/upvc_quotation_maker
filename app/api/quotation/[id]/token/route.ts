@@ -56,6 +56,8 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ba, bb);
 }
 
+import bcrypt from "bcryptjs";
+
 /**
  * Resolve the caller to a client_id, or return null.
  */
@@ -77,19 +79,19 @@ async function resolveCaller(
       }
     }
 
-    // (2) Flutter: client_id + password hash.
+    // (2) Flutter: client_id + password hash / admin email.
     const clientId = String(
       body?.client_id ?? body?.clientId ?? request?.headers.get("x-client-id") ?? ""
     ).trim();
     const phash = String(body?.admin_password_hash ?? body?.password_hash ?? "").trim();
+    const adminEmail = String(body?.admin_email ?? body?.email ?? "")
+      .trim()
+      .toLowerCase();
     if (!clientId) return null;
 
     const supabaseAdmin = getSupabaseAdmin();
 
     // (2a) Platform-admin credential
-    const adminEmail = String(body?.admin_email ?? body?.email ?? "")
-      .trim()
-      .toLowerCase();
     if (adminEmail && phash) {
       const { data: admins } = await supabaseAdmin
         .from("admins")
@@ -103,29 +105,52 @@ async function resolveCaller(
     }
 
     // (2b) Tenant credential
-    if (phash) {
-      let { data: client } = await supabaseAdmin
-        .from("clients")
-        .select("id,password_hash")
-        .eq("id", clientId)
-        .maybeSingle();
+    let { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("id,password_hash,config")
+      .eq("id", clientId)
+      .maybeSingle();
 
-      if (!client) {
-        const { data: matched } = await supabaseAdmin
-          .from("clients")
-          .select("id,password_hash")
-          .ilike("id", clientId)
-          .limit(1);
-        client = matched?.[0];
+    if (!client) {
+      const { data: matched } = await supabaseAdmin
+        .from("clients")
+        .select("id,password_hash,config")
+        .ilike("id", clientId)
+        .limit(1);
+      client = matched?.[0];
+    }
+
+    if (client) {
+      const cfg = typeof client.config === "string" ? JSON.parse(client.config) : (client.config || {});
+
+      // 1. Exact string match or bcrypt compare
+      if (phash && client.password_hash) {
+        let matches = safeEqual(String(client.password_hash), phash);
+        if (!matches) {
+          try {
+            matches = await bcrypt.compare(phash, String(client.password_hash));
+          } catch {
+            matches = false;
+          }
+        }
+        if (matches) {
+          return { clientId: String(client.id) };
+        }
       }
 
-      if (client?.password_hash && safeEqual(String(client.password_hash), phash)) {
-        return { clientId: String(client.id) };
+      // 2. Admin email verification for mobile tenant app
+      if (adminEmail) {
+        const adminEmails = (cfg.adminEmails || []).map((e: any) => String(e).trim().toLowerCase());
+        const companyEmail = String(cfg.companyEmail || "").trim().toLowerCase();
+        if (companyEmail === adminEmail || adminEmails.includes(adminEmail)) {
+          return { clientId: String(client.id) };
+        }
       }
     }
 
     return null;
-  } catch {
+  } catch (e: any) {
+    console.error("[resolveCaller error]:", e?.message ?? e);
     return null;
   }
 }
