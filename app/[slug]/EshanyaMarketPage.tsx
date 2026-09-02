@@ -66,6 +66,19 @@ export default function EshanyaMarketPage({ client, slug }: Props) {
 
       <main>
         <section className="eshanya-site-hero" id="home" style={{ "--eshanya-hero": `url(${JSON.stringify(heroImage)})` } as React.CSSProperties}>
+          <video
+            className="eshanya-site-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            poster={heroImage}
+            aria-hidden="true"
+          >
+            <source src="/eshanya/assets/hero-scroll.mp4" type="video/mp4" />
+          </video>
+          <div className="eshanya-site-hero-overlay" aria-hidden="true" />
           <div className="eshanya-site-hero-copy">
             <p className="eshanya-site-kicker">{brand} · Coimbatore · Tamil Nadu</p>
             <h1>{cfg.landingHeroTitle || "Trusted direction."}<em>{cfg.landingHeroTitle ? "Quality trade." : "Quality trade."}</em></h1>
