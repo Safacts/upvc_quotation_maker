@@ -140,7 +140,40 @@ export async function requireConsoleSession(
   let requested: string | null = requestedInBody ?? null;
   if (!requested && request) {
     try {
-      requested = new URL(request.url).searchParams.get("client_id");
+      const url = new URL(request.url);
+      requested = url.searchParams.get("client_id");
+      if (!requested) {
+        const referer = request.headers?.get?.("referer") || "";
+        const m = referer.match(/\/(?:upvc\/)?([a-zA-Z0-9_-]+)\/console/);
+        if (m && m[1] && m[1] !== "admin" && m[1] !== "login") {
+          requested = m[1];
+        }
+      }
+      if (!requested && session?.role === "admin") {
+        const mQuote = url.pathname.match(/\/console\/quotations\/([0-9a-fA-F-]+)/);
+        if (mQuote && mQuote[1] && mQuote[1] !== "number") {
+          try {
+            const rows = await supaGet("quotations", { id: `eq.${mQuote[1]}`, select: "client_id", limit: 1 });
+            if (Array.isArray(rows) && rows[0]?.client_id) {
+              requested = rows[0].client_id;
+            }
+          } catch (_) {}
+        }
+        if (!requested) {
+          const mInv = url.pathname.match(/\/console\/invoices\/([0-9a-fA-F-]+)/);
+          if (mInv && mInv[1]) {
+            try {
+              const rows = await supaGet("gst_invoices", { id: `eq.${mInv[1]}`, select: "client_id", limit: 1 });
+              if (Array.isArray(rows) && rows[0]?.client_id) {
+                requested = rows[0].client_id;
+              }
+            } catch (_) {}
+          }
+        }
+      }
+      if (!requested && session?.client_id) {
+        requested = session.client_id;
+      }
     } catch {
       requested = null;
     }

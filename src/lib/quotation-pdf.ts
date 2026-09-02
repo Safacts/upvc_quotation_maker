@@ -2,6 +2,7 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
+  degrees,
   PDFFont,
   PDFPage,
 } from "pdf-lib";
@@ -439,8 +440,8 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
       ? ["S.No", "Description", "W", "H", "Units", "Glass", "SFT", "Rate", "Total"]
       : ["S.No", "Code", "Description", "W", "H", "Units", "Glass", "SFT", "T.SFT", "Rate", "Total"];
     const weights = kprSimplified
-      ? [1, 6, 1.2, 1.2, 1.5, 2, 1.5, 2, 2.5]
-      : [1, 1.5, 6, 1.2, 1.2, 1.5, 2, 1.5, 1.5, 2, 2.5];
+      ? [1, 4.2, 1.3, 1.3, 1.1, 4.2, 1.3, 2.0, 2.4]
+      : [1, 1.5, 4.2, 1.3, 1.3, 1.1, 4.0, 1.3, 1.3, 2.0, 2.4];
     const totalW = weights.reduce((a, b) => a + b, 0);
     const colWidths = weights.map((w) => (w / totalW) * contentW);
     const drawRow = (cells: string[], yy: number, opts: { bold?: boolean; bg?: any; size?: number } = {}) => {
@@ -449,13 +450,18 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
       for (let i = 0; i < cells.length; i++) {
         const cw = colWidths[i];
         const font = opts.bold ? bold : reg;
-        const size = opts.size ?? 8;
-        // Right-align numeric columns (index >= 2 for KPR, >= 3 otherwise).
-        const numericFrom = kprSimplified ? 2 : 3;
-        if (i >= numericFrom) {
-          page.drawText(safe(cells[i]), { x: x + cw - 4 - font.widthOfTextAtSize(safe(cells[i]), size), y: yy - 11, size, font });
+        const size = opts.size ?? 7.5;
+        let str = safe(cells[i]);
+        // Clip if text exceeds cell width - 6
+        while (font.widthOfTextAtSize(str, size) > cw - 6 && str.length > 3) {
+          str = str.substring(0, str.length - 2) + ".";
+        }
+        // Right-align numeric columns (W, H, Units, SFT, Rate, Total)
+        const isNumeric = kprSimplified ? (i === 2 || i === 3 || i === 4 || i === 6 || i === 7 || i === 8) : (i === 3 || i === 4 || i === 5 || i === 7 || i === 8 || i === 9 || i === 10);
+        if (isNumeric) {
+          page.drawText(str, { x: x + cw - 4 - font.widthOfTextAtSize(str, size), y: yy - 11, size, font });
         } else {
-          page.drawText(safe(cells[i]), { x: x + 4, y: yy - 11, size, font });
+          page.drawText(str, { x: x + 4, y: yy - 11, size, font });
         }
         x += cw;
       }
@@ -610,6 +616,32 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   text("Authorised Signature", M, y - 10, { size: 10, font: bold });
   rightText("Customer Signature", W - M, y - 10, { size: 10, font: bold });
 
+  // ---- Window Elevation & CAD Measurement Schedule Pages ----
+  const validMeasured = (data.measured || []).filter((item) => item.width > 0 && item.height > 0);
+  if (validMeasured.length > 0) {
+    const itemsPerPage = 2;
+    for (let i = 0; i < validMeasured.length; i += itemsPerPage) {
+      const elevPage = doc.addPage(A4);
+      const chunk = validMeasured.slice(i, i + itemsPerPage);
+      const cardHeight = (H - M * 2) / 2;
+
+      chunk.forEach((item, chunkIdx) => {
+        const globalIdx = i + chunkIdx + 1;
+        const cardTopY = H - M - chunkIdx * cardHeight;
+        drawWindowElevationCard(
+          elevPage,
+          item,
+          globalIdx,
+          M,
+          cardTopY,
+          contentW,
+          cardHeight - 15,
+          { reg, bold }
+        );
+      });
+    }
+  }
+
   // ---- Footer on every page ----
   const now = new Date();
   const ts = `${fmtDate(now)} ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
@@ -626,4 +658,210 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   });
 
   return doc.save();
+}
+
+function drawWindowElevationCard(
+  page: PDFPage,
+  item: QuotationPdfMeasured,
+  itemIndex: number,
+  cardX: number,
+  cardY: number, // top of the card
+  cardW: number,
+  cardH: number,
+  fonts: { reg: PDFFont; bold: PDFFont }
+) {
+  const { reg, bold } = fonts;
+  const desc = item.description || "";
+  const lowerDesc = desc.toLowerCase();
+
+  // Detect typology
+  let type = "fixed";
+  let typeTitle = `Fixed Window: Item ${itemIndex}`;
+  if (lowerDesc.includes("door") || lowerDesc.includes("french")) {
+    type = lowerDesc.includes("double") || lowerDesc.includes("2 sash") ? "doubleDoor" : "singleDoor";
+    typeTitle = type === "doubleDoor" ? `Double Door: Item ${itemIndex}` : `Single Door: Item ${itemIndex}`;
+  } else if (lowerDesc.includes("3 track") || lowerDesc.includes("3-track") || lowerDesc.includes("3track")) {
+    type = "sliding3";
+    typeTitle = `3-Track Sliding Window: Item ${itemIndex}`;
+  } else if (lowerDesc.includes("sliding") || lowerDesc.includes("slider") || lowerDesc.includes("2 track") || lowerDesc.includes("2-track")) {
+    type = "sliding2";
+    typeTitle = `2-Track Sliding Window: Item ${itemIndex}`;
+  } else if (lowerDesc.includes("casement") || lowerDesc.includes("openable") || lowerDesc.includes("side hung")) {
+    type = "casement";
+    typeTitle = `Casement Window: Item ${itemIndex}`;
+  } else if (lowerDesc.includes("ventilator") || lowerDesc.includes("vent") || lowerDesc.includes("louver")) {
+    type = "ventilator";
+    typeTitle = `Ventilator: Item ${itemIndex}`;
+  }
+
+  // Header specs
+  let hy = cardY;
+  const titleW = bold.widthOfTextAtSize(typeTitle, 12);
+  page.drawText(typeTitle, { x: cardX + (cardW - titleW) / 2, y: hy, size: 12, font: bold, color: C.ink });
+  hy -= 14;
+
+  const wText = `Width: ${item.width.toFixed(2)} mm`;
+  const wW = reg.widthOfTextAtSize(wText, 9);
+  page.drawText(wText, { x: cardX + (cardW - wW) / 2, y: hy, size: 9, font: reg, color: C.muted });
+  hy -= 12;
+
+  const hText = `Height: ${item.height.toFixed(2)} mm`;
+  const hW = reg.widthOfTextAtSize(hText, 9);
+  page.drawText(hText, { x: cardX + (cardW - hW) / 2, y: hy, size: 9, font: reg, color: C.muted });
+  hy -= 12;
+
+  if (desc) {
+    const descShort = desc.length > 50 ? desc.substring(0, 48) + "..." : desc;
+    const dW = reg.widthOfTextAtSize(descShort, 8.5);
+    page.drawText(descShort, { x: cardX + (cardW - dW) / 2, y: hy, size: 8.5, font: reg, color: C.muted });
+    hy -= 14;
+  }
+
+  // Drawing area
+  const drawAreaTop = hy - 5;
+  const drawAreaBottom = cardY - cardH + 20;
+  const maxDrawH = Math.max(80, drawAreaTop - drawAreaBottom - 40); // 40 for bottom dimension line
+  const maxDrawW = cardW - 70; // 70 for right dimension line
+
+  const wMm = item.width > 0 ? item.width : 1000;
+  const hMm = item.height > 0 ? item.height : 1000;
+  const aspect = wMm / hMm;
+
+  let drawW: number;
+  let drawH: number;
+  if (aspect >= (maxDrawW / maxDrawH)) {
+    drawW = maxDrawW;
+    drawH = maxDrawW / aspect;
+  } else {
+    drawH = maxDrawH;
+    drawW = maxDrawH * aspect;
+  }
+  drawW = Math.max(35, drawW);
+  drawH = Math.max(50, drawH);
+
+  const originX = cardX + (cardW - drawW - 40) / 2;
+  const originY = drawAreaBottom + (maxDrawH - drawH) / 2 + 30;
+
+  const isWhite = lowerDesc.includes("white");
+  const frameColor = isWhite ? rgb(0.96, 0.97, 0.98) : rgb(0.18, 0.22, 0.28);
+  const frameBorder = isWhite ? rgb(0.5, 0.55, 0.6) : rgb(0.1, 0.12, 0.15);
+  const beadBorder = isWhite ? rgb(0.75, 0.8, 0.85) : rgb(0.6, 0.68, 0.75);
+  const glassColor = rgb(0.8, 0.89, 0.96);
+  const glassSheenColor = rgb(0.92, 0.96, 0.99);
+
+  // Outer Frame
+  page.drawRectangle({
+    x: originX,
+    y: originY,
+    width: drawW,
+    height: drawH,
+    color: frameColor,
+    borderColor: frameBorder,
+    borderWidth: 2,
+  });
+
+  // Glazing bead + glass
+  const frameThickness = 5;
+  const glassX = originX + frameThickness;
+  const glassY = originY + frameThickness;
+  const glassW = drawW - frameThickness * 2;
+  const glassH = drawH - frameThickness * 2;
+
+  if (glassW > 4 && glassH > 4) {
+    page.drawRectangle({
+      x: glassX,
+      y: glassY,
+      width: glassW,
+      height: glassH,
+      color: glassColor,
+      borderColor: beadBorder,
+      borderWidth: 1,
+    });
+
+    // Glass sheen (corner highlight)
+    const sheenW = glassW * 0.45;
+    const sheenH = glassH * 0.4;
+    page.drawRectangle({
+      x: glassX + 1,
+      y: glassY + glassH - sheenH - 1,
+      width: sheenW,
+      height: sheenH,
+      color: glassSheenColor,
+      opacity: 0.8,
+    });
+
+    // Typology overlays
+    if (type === "singleDoor") {
+      const midY = glassY + glassH * 0.5;
+      page.drawText("SWING", { x: glassX + 4, y: midY + 4, size: 7, font: bold, color: rgb(0.9, 0.2, 0.2) });
+      page.drawRectangle({ x: glassX, y: glassY, width: glassW, height: Math.min(12, glassH * 0.15), color: rgb(0.9, 0.92, 0.95), borderColor: beadBorder, borderWidth: 0.8 });
+    } else if (type === "doubleDoor") {
+      const midX = glassX + glassW / 2;
+      page.drawLine({ start: { x: midX, y: glassY }, end: { x: midX, y: glassY + glassH }, thickness: 2, color: frameBorder });
+    } else if (type === "sliding2") {
+      const midX = glassX + glassW / 2;
+      page.drawLine({ start: { x: midX, y: glassY }, end: { x: midX, y: glassY + glassH }, thickness: 1.5, color: beadBorder });
+      const midY = glassY + glassH * 0.5;
+      page.drawLine({ start: { x: glassX + glassW * 0.1, y: midY }, end: { x: glassX + glassW * 0.4, y: midY }, thickness: 1, color: rgb(0.2, 0.4, 0.7) });
+      page.drawLine({ start: { x: midX + glassW * 0.1, y: midY }, end: { x: midX + glassW * 0.4, y: midY }, thickness: 1, color: rgb(0.2, 0.4, 0.7) });
+    } else if (type === "sliding3") {
+      const pW = glassW / 3;
+      page.drawLine({ start: { x: glassX + pW, y: glassY }, end: { x: glassX + pW, y: glassY + glassH }, thickness: 1.5, color: beadBorder });
+      page.drawLine({ start: { x: glassX + pW * 2, y: glassY }, end: { x: glassX + pW * 2, y: glassY + glassH }, thickness: 1.5, color: beadBorder });
+    } else if (type === "casement") {
+      page.drawLine({ start: { x: glassX, y: glassY }, end: { x: glassX + glassW, y: glassY + glassH / 2 }, thickness: 0.8, color: rgb(0.4, 0.5, 0.6) });
+      page.drawLine({ start: { x: glassX, y: glassY + glassH }, end: { x: glassX + glassW, y: glassY + glassH / 2 }, thickness: 0.8, color: rgb(0.4, 0.5, 0.6) });
+    } else if (type === "ventilator") {
+      const blades = Math.max(2, Math.floor(hMm / 100));
+      const step = glassH / (blades + 1);
+      for (let b = 1; b <= blades; b++) {
+        const by = glassY + step * b;
+        page.drawLine({ start: { x: glassX, y: by }, end: { x: glassX + glassW, y: by }, thickness: 1, color: beadBorder });
+      }
+    }
+  }
+
+  // Dimension lines & Arrows (CAD style)
+  const dimColor = rgb(0, 0, 0);
+  const bottomExtY = originY - 14;
+  const bottomDimY = originY - 10;
+
+  // Horizontal witness lines
+  page.drawLine({ start: { x: originX, y: originY - 2 }, end: { x: originX, y: bottomExtY }, thickness: 0.6, color: dimColor });
+  page.drawLine({ start: { x: originX + drawW, y: originY - 2 }, end: { x: originX + drawW, y: bottomExtY }, thickness: 0.6, color: dimColor });
+  // Horizontal dimension line
+  page.drawLine({ start: { x: originX, y: bottomDimY }, end: { x: originX + drawW, y: bottomDimY }, thickness: 0.8, color: dimColor });
+  // Horizontal arrows (tick lines)
+  page.drawLine({ start: { x: originX, y: bottomDimY }, end: { x: originX + 4, y: bottomDimY + 2 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: originX, y: bottomDimY }, end: { x: originX + 4, y: bottomDimY - 2 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: originX + drawW, y: bottomDimY }, end: { x: originX + drawW - 4, y: bottomDimY + 2 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: originX + drawW, y: bottomDimY }, end: { x: originX + drawW - 4, y: bottomDimY - 2 }, thickness: 0.8, color: dimColor });
+  // Width label
+  const wDimLabel = `${Math.round(wMm)} mm`;
+  const wDimW = bold.widthOfTextAtSize(wDimLabel, 8.5);
+  page.drawText(wDimLabel, { x: originX + (drawW - wDimW) / 2, y: bottomDimY - 9, size: 8.5, font: bold, color: dimColor });
+
+  // Vertical witness lines
+  const rightExtX = originX + drawW + 14;
+  const rightDimX = originX + drawW + 10;
+  page.drawLine({ start: { x: originX + drawW + 2, y: originY }, end: { x: rightExtX, y: originY }, thickness: 0.6, color: dimColor });
+  page.drawLine({ start: { x: originX + drawW + 2, y: originY + drawH }, end: { x: rightExtX, y: originY + drawH }, thickness: 0.6, color: dimColor });
+  // Vertical dimension line
+  page.drawLine({ start: { x: rightDimX, y: originY }, end: { x: rightDimX, y: originY + drawH }, thickness: 0.8, color: dimColor });
+  // Vertical arrows
+  page.drawLine({ start: { x: rightDimX, y: originY }, end: { x: rightDimX + 2, y: originY + 4 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: rightDimX, y: originY }, end: { x: rightDimX - 2, y: originY + 4 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: rightDimX, y: originY + drawH }, end: { x: rightDimX + 2, y: originY + drawH - 4 }, thickness: 0.8, color: dimColor });
+  page.drawLine({ start: { x: rightDimX, y: originY + drawH }, end: { x: rightDimX - 2, y: originY + drawH - 4 }, thickness: 0.8, color: dimColor });
+  // Height label (vertical text)
+  const hDimLabel = `${Math.round(hMm)} mm`;
+  const hDimW = bold.widthOfTextAtSize(hDimLabel, 8.5);
+  page.drawText(hDimLabel, {
+    x: rightDimX + 10,
+    y: originY + (drawH - hDimW) / 2,
+    size: 8.5,
+    font: bold,
+    color: dimColor,
+    rotate: degrees(90),
+  });
 }

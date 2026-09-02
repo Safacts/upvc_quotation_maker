@@ -8,18 +8,14 @@ const GATEWAY_PORT = 3000;
 function isFlutterPath(url) {
   const p = (url || "").split("?")[0];
   if (p === "/pwa-sw.js") return false;
-  if (p === "/favicon.png" || p === "/manifest.json") return true;
-  if (p === "/app" || p.startsWith("/app/")) return true;
+  if (p.startsWith("/app") || p.startsWith("/upvc")) return false; // Served by Next.js / public/app
   if (
     p.startsWith("/dwds/") ||
     p.startsWith("/packages/") ||
-    p.startsWith("/assets/") ||
-    p.startsWith("/icons/") ||
     p.startsWith("/canvaskit/") ||
     p.startsWith("/.dart_tool/")
   )
     return true;
-  if (/^\/[^/]+\.js$/.test(p)) return true;
   if (p.endsWith(".map")) return true;
   return false;
 }

@@ -12,6 +12,7 @@ import 'models_extra.dart';
 import 'app_state.dart';
 import 'services/upi_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/window_elevation_engine.dart';
 
 Future<Uint8List> generatePdfBytes(
   QuotationData data,
@@ -57,7 +58,7 @@ Future<Uint8List> generatePdfBytes(
 
   final pageTheme = pw.PageTheme(
     pageFormat: PdfPageFormat.a4,
-    margin: pw.EdgeInsets.all(30),
+    margin: const pw.EdgeInsets.all(30),
     theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
     buildBackground: (pw.Context context) {
       return pw.FullPage(
@@ -76,14 +77,14 @@ Future<Uint8List> generatePdfBytes(
       footer: (pw.Context context) {
         return pw.Container(
           alignment: pw.Alignment.center,
-          margin: pw.EdgeInsets.only(top: 10),
-          decoration: pw.BoxDecoration(
+          margin: const pw.EdgeInsets.only(top: 10),
+          decoration: const pw.BoxDecoration(
             border: pw.Border(top: pw.BorderSide(color: PdfColors.grey)),
           ),
-          padding: pw.EdgeInsets.only(top: 5),
+          padding: const pw.EdgeInsets.only(top: 5),
           child: pw.Text(
             'Generated on ${DateFormat('dd-MM-yyyy hh:mm a').format(DateTime.now())} | This is a computer-generated quotation | Page ${context.pageNumber} of ${context.pagesCount}',
-            style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
           ),
         );
       },
@@ -110,7 +111,8 @@ Future<Uint8List> generatePdfBytes(
           _buildTotalsTable(
             data,
             currency,
-            kprAdvance: _supportsAdvanceClient(clientConfig.clientId),
+            kprAdvance: clientConfig.enableAdvance ||
+                _supportsAdvanceClient(clientConfig.clientId),
           ),
           if (photos.isNotEmpty) ...[
             pw.SizedBox(height: 10),
@@ -128,6 +130,18 @@ Future<Uint8List> generatePdfBytes(
       },
     ),
   );
+
+  // Append 2D Window Elevation & Measurement Schedule Pages
+  final validMeasured = data.measuredItems.where((item) => item.width > 0 && item.height > 0).toList();
+  if (validMeasured.isNotEmpty) {
+    final elevationPages = WindowElevationEngine.buildElevationPages(
+      measuredItems: validMeasured,
+      pageFormat: PdfPageFormat.a4,
+    );
+    for (final page in elevationPages) {
+      pdf.addPage(page);
+    }
+  }
 
   return pdf.save();
 }
@@ -188,7 +202,7 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
       pw.SizedBox(height: 10),
       pw.Container(
         width: double.infinity,
-        padding: pw.EdgeInsets.all(8),
+        padding: const pw.EdgeInsets.all(8),
         color: PdfColor.fromHex('#C44A10'),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -203,15 +217,15 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
             ),
             pw.Text(
               appState.companyAddress,
-              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+              style: const pw.TextStyle(color: PdfColors.white, fontSize: 10),
             ),
             pw.Text(
               'Prop: ${appState.companyProprietor}   Contact: ${appState.companyContact}',
-              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+              style: const pw.TextStyle(color: PdfColors.white, fontSize: 10),
             ),
             pw.Text(
               'GST No: ${appState.gstNumber}',
-              style: pw.TextStyle(color: PdfColors.white, fontSize: 10),
+              style: const pw.TextStyle(color: PdfColors.white, fontSize: 10),
             ),
           ],
         ),
@@ -222,7 +236,7 @@ pw.Widget _buildHeader(pw.ImageProvider logo, AppState appState) {
 
 pw.Widget _buildTopBar(QuotationData data) {
   return pw.Padding(
-    padding: pw.EdgeInsets.symmetric(vertical: 8),
+    padding: const pw.EdgeInsets.symmetric(vertical: 8),
     child: pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
@@ -242,8 +256,8 @@ pw.Widget _buildTopBar(QuotationData data) {
 pw.Widget _buildSectionTitle(String title) {
   return pw.Container(
     width: double.infinity,
-    padding: pw.EdgeInsets.all(4),
-    margin: pw.EdgeInsets.only(top: 10, bottom: 4),
+    padding: const pw.EdgeInsets.all(4),
+    margin: const pw.EdgeInsets.only(top: 10, bottom: 4),
     color: PdfColor.fromHex('#C44A10'),
     child: pw.Text(
       title,
@@ -259,64 +273,64 @@ pw.Widget _buildSectionTitle(String title) {
 pw.Widget _buildCustomerDetails(QuotationData data) {
   return pw.Table(
     columnWidths: {
-      0: pw.FlexColumnWidth(1),
-      1: pw.FlexColumnWidth(2),
-      2: pw.FlexColumnWidth(1),
-      3: pw.FlexColumnWidth(2),
+      0: const pw.FlexColumnWidth(1),
+      1: const pw.FlexColumnWidth(2),
+      2: const pw.FlexColumnWidth(1),
+      3: const pw.FlexColumnWidth(2),
     },
     children: [
       pw.TableRow(
         children: [
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(4),
             child: pw.Text(
               'Name',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(4),
             child: pw.Text(
               data.customerName,
-              style: pw.TextStyle(fontSize: 10),
+              style: const pw.TextStyle(fontSize: 10),
             ),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(4),
             child: pw.Text(
               'Reference',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
-            child: pw.Text(data.reference, style: pw.TextStyle(fontSize: 10)),
+            padding: const pw.EdgeInsets.all(4),
+            child: pw.Text(data.reference, style: const pw.TextStyle(fontSize: 10)),
           ),
         ],
       ),
       pw.TableRow(
         children: [
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(4),
             child: pw.Text(
               'Address',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
-            child: pw.Text(data.address, style: pw.TextStyle(fontSize: 10)),
+            padding: const pw.EdgeInsets.all(4),
+            child: pw.Text(data.address, style: const pw.TextStyle(fontSize: 10)),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
+            padding: const pw.EdgeInsets.all(4),
             child: pw.Text(
               'Contact No',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
             ),
           ),
           pw.Padding(
-            padding: pw.EdgeInsets.all(4),
-            child: pw.Text(data.contactNo, style: pw.TextStyle(fontSize: 10)),
+            padding: const pw.EdgeInsets.all(4),
+            child: pw.Text(data.contactNo, style: const pw.TextStyle(fontSize: 10)),
           ),
         ],
       ),
@@ -324,7 +338,7 @@ pw.Widget _buildCustomerDetails(QuotationData data) {
         pw.TableRow(
           children: [
             pw.Padding(
-              padding: pw.EdgeInsets.all(4),
+              padding: const pw.EdgeInsets.all(4),
               child: pw.Text(
                 'Supplier Company',
                 style: pw.TextStyle(
@@ -334,10 +348,10 @@ pw.Widget _buildCustomerDetails(QuotationData data) {
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(4),
+              padding: const pw.EdgeInsets.all(4),
               child: pw.Text(
                 data.supplierCompany,
-                style: pw.TextStyle(fontSize: 10),
+                style: const pw.TextStyle(fontSize: 10),
               ),
             ),
             pw.SizedBox(),
@@ -368,19 +382,19 @@ pw.Widget _buildMeasuredTable(
       ],
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
       headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
-      cellStyle: pw.TextStyle(fontSize: 9),
+      cellStyle: const pw.TextStyle(fontSize: 9),
       cellAlignment: pw.Alignment.center,
       border: pw.TableBorder.all(color: PdfColors.grey800),
       columnWidths: {
-        0: pw.FlexColumnWidth(1),
-        1: pw.FlexColumnWidth(6),
-        2: pw.FlexColumnWidth(1.2),
-        3: pw.FlexColumnWidth(1.2),
-        4: pw.FlexColumnWidth(1.5),
-        5: pw.FlexColumnWidth(2),
-        6: pw.FlexColumnWidth(1.5),
-        7: pw.FlexColumnWidth(2),
-        8: pw.FlexColumnWidth(2.5),
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(6),
+        2: const pw.FlexColumnWidth(1.2),
+        3: const pw.FlexColumnWidth(1.2),
+        4: const pw.FlexColumnWidth(1.5),
+        5: const pw.FlexColumnWidth(2),
+        6: const pw.FlexColumnWidth(1.5),
+        7: const pw.FlexColumnWidth(2),
+        8: const pw.FlexColumnWidth(2.5),
       },
       data: List<List<String>>.generate(data.measuredItems.length, (index) {
         final item = data.measuredItems[index];
@@ -398,6 +412,7 @@ pw.Widget _buildMeasuredTable(
       }),
     );
   }
+
   return pw.TableHelper.fromTextArray(
     headers: [
       'S.No',
@@ -414,21 +429,21 @@ pw.Widget _buildMeasuredTable(
     ],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
     headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
-    cellStyle: pw.TextStyle(fontSize: 9),
+    cellStyle: const pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
     columnWidths: {
-      0: pw.FlexColumnWidth(1),
-      1: pw.FlexColumnWidth(1.5),
-      2: pw.FlexColumnWidth(6),
-      3: pw.FlexColumnWidth(1.2),
-      4: pw.FlexColumnWidth(1.2),
-      5: pw.FlexColumnWidth(1.5),
-      6: pw.FlexColumnWidth(2),
-      7: pw.FlexColumnWidth(1.5),
-      8: pw.FlexColumnWidth(1.5),
-      9: pw.FlexColumnWidth(2),
-      10: pw.FlexColumnWidth(2.5),
+      0: const pw.FlexColumnWidth(1),
+      1: const pw.FlexColumnWidth(1.5),
+      2: const pw.FlexColumnWidth(6),
+      3: const pw.FlexColumnWidth(1.2),
+      4: const pw.FlexColumnWidth(1.2),
+      5: const pw.FlexColumnWidth(1.5),
+      6: const pw.FlexColumnWidth(2),
+      7: const pw.FlexColumnWidth(1.5),
+      8: const pw.FlexColumnWidth(1.5),
+      9: const pw.FlexColumnWidth(2),
+      10: const pw.FlexColumnWidth(2.5),
     },
     data: List<List<String>>.generate(data.measuredItems.length, (index) {
       final item = data.measuredItems[index];
@@ -454,15 +469,15 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
     headers: ['S.No', 'Description', 'Units', 'Rate Per Unit', 'Total'],
     headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
     headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
-    cellStyle: pw.TextStyle(fontSize: 9),
+    cellStyle: const pw.TextStyle(fontSize: 9),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
     columnWidths: {
-      0: pw.FlexColumnWidth(1),
-      1: pw.FlexColumnWidth(6),
-      2: pw.FlexColumnWidth(1.5),
-      3: pw.FlexColumnWidth(2.5),
-      4: pw.FlexColumnWidth(2.5),
+      0: const pw.FlexColumnWidth(1),
+      1: const pw.FlexColumnWidth(6),
+      2: const pw.FlexColumnWidth(1.5),
+      3: const pw.FlexColumnWidth(2.5),
+      4: const pw.FlexColumnWidth(2.5),
     },
     data: List<List<String>>.generate(data.unmeasuredItems.length, (index) {
       final item = data.unmeasuredItems[index];
@@ -485,12 +500,12 @@ pw.Widget _buildTotalsTable(
   return pw.Container(
     color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
-      border: pw.TableBorder.all(color: PdfColor(0, 0, 0, 0)),
+      border: pw.TableBorder.all(color: const PdfColor(0, 0, 0, 0)),
       children: [
         pw.TableRow(
           children: [
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 'Total SFT',
                 textAlign: pw.TextAlign.right,
@@ -501,14 +516,14 @@ pw.Widget _buildTotalsTable(
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 data.totalSft.toStringAsFixed(2),
-                style: pw.TextStyle(fontSize: 10),
+                style: const pw.TextStyle(fontSize: 10),
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 'Subtotal',
                 textAlign: pw.TextAlign.right,
@@ -519,10 +534,10 @@ pw.Widget _buildTotalsTable(
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 currency.format(data.actualAmount),
-                style: pw.TextStyle(fontSize: 10),
+                style: const pw.TextStyle(fontSize: 10),
               ),
             ),
           ],
@@ -530,7 +545,7 @@ pw.Widget _buildTotalsTable(
         pw.TableRow(
           children: [
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 'Transport',
                 textAlign: pw.TextAlign.right,
@@ -541,15 +556,15 @@ pw.Widget _buildTotalsTable(
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 currency.format(data.transport),
-                style: pw.TextStyle(fontSize: 10),
+                style: const pw.TextStyle(fontSize: 10),
               ),
             ),
             data.includeGst
                 ? pw.Padding(
-                  padding: pw.EdgeInsets.all(6),
+                  padding: const pw.EdgeInsets.all(6),
                   child: pw.Text(
                     'IGST @ ${data.gstPercentage}%',
                     textAlign: pw.TextAlign.right,
@@ -562,10 +577,10 @@ pw.Widget _buildTotalsTable(
                 : pw.SizedBox(),
             data.includeGst
                 ? pw.Padding(
-                  padding: pw.EdgeInsets.all(6),
+                  padding: const pw.EdgeInsets.all(6),
                   child: pw.Text(
                     currency.format(data.igst),
-                    style: pw.TextStyle(fontSize: 10),
+                    style: const pw.TextStyle(fontSize: 10),
                   ),
                 )
                 : pw.SizedBox(),
@@ -576,7 +591,7 @@ pw.Widget _buildTotalsTable(
             pw.SizedBox(),
             pw.SizedBox(),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 'Grand Total',
                 textAlign: pw.TextAlign.right,
@@ -587,7 +602,7 @@ pw.Widget _buildTotalsTable(
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(6),
+              padding: const pw.EdgeInsets.all(6),
               child: pw.Text(
                 currency.format(data.grandTotal),
                 style: pw.TextStyle(
@@ -604,7 +619,7 @@ pw.Widget _buildTotalsTable(
               pw.SizedBox(),
               pw.SizedBox(),
               pw.Padding(
-                padding: pw.EdgeInsets.all(6),
+                padding: const pw.EdgeInsets.all(6),
                 child: pw.Text(
                   'Advance Paid',
                   textAlign: pw.TextAlign.right,
@@ -615,10 +630,10 @@ pw.Widget _buildTotalsTable(
                 ),
               ),
               pw.Padding(
-                padding: pw.EdgeInsets.all(6),
+                padding: const pw.EdgeInsets.all(6),
                 child: pw.Text(
                   currency.format(data.advancePaid),
-                  style: pw.TextStyle(color: PdfColors.green800, fontSize: 10),
+                  style: const pw.TextStyle(color: PdfColors.green800, fontSize: 10),
                 ),
               ),
             ],
@@ -629,7 +644,7 @@ pw.Widget _buildTotalsTable(
               pw.SizedBox(),
               pw.SizedBox(),
               pw.Padding(
-                padding: pw.EdgeInsets.all(6),
+                padding: const pw.EdgeInsets.all(6),
                 child: pw.Text(
                   'Remaining Amount',
                   textAlign: pw.TextAlign.right,
@@ -640,7 +655,7 @@ pw.Widget _buildTotalsTable(
                 ),
               ),
               pw.Padding(
-                padding: pw.EdgeInsets.all(6),
+                padding: const pw.EdgeInsets.all(6),
                 child: pw.Text(
                   currency.format(data.balanceDue),
                   style: pw.TextStyle(
@@ -660,7 +675,7 @@ pw.Widget _buildTotalsTable(
           ),
           children: [
             pw.Padding(
-              padding: pw.EdgeInsets.all(8),
+              padding: const pw.EdgeInsets.all(8),
               child: pw.Text(
                 kprAdvance ? 'Remaining Amount in Words' : 'Amount in Words',
                 textAlign: pw.TextAlign.right,
@@ -671,7 +686,7 @@ pw.Widget _buildTotalsTable(
               ),
             ),
             pw.Padding(
-              padding: pw.EdgeInsets.all(8),
+              padding: const pw.EdgeInsets.all(8),
               child: pw.Text(
                 kprAdvance ? data.balanceDueInWords : data.amountInWords,
                 style: pw.TextStyle(
@@ -700,14 +715,14 @@ pw.Widget _buildTermsAndBankDetails(AppState appState) {
           children: [
             pw.Text(
               'Company Name : ${appState.companyName}',
-              style: pw.TextStyle(fontSize: 9),
+              style: const pw.TextStyle(fontSize: 9),
             ),
             pw.Text(
               'Bank Name & Branch : ${appState.bankName} - ${appState.bankBranch}',
-              style: pw.TextStyle(fontSize: 9),
+              style: const pw.TextStyle(fontSize: 9),
             ),
-            pw.Text(appState.bankAccountNo, style: pw.TextStyle(fontSize: 9)),
-            pw.Text(appState.bankIfsc, style: pw.TextStyle(fontSize: 9)),
+            pw.Text(appState.bankAccountNo, style: const pw.TextStyle(fontSize: 9)),
+            pw.Text(appState.bankIfsc, style: const pw.TextStyle(fontSize: 9)),
           ],
         ),
       ),
@@ -723,7 +738,7 @@ pw.Widget _buildTermsAndBankDetails(AppState appState) {
             ),
             pw.Text(
               appState.termsAndConditions,
-              style: pw.TextStyle(fontSize: 7.5),
+              style: const pw.TextStyle(fontSize: 7.5),
             ),
           ],
         ),
@@ -758,7 +773,7 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
   final vpa = clientConfig.upiId;
   final payeeName = clientConfig.upiPayeeNameOrCompany;
   final amount =
-      _supportsAdvanceClient(clientConfig.clientId)
+      clientConfig.enableAdvance || _supportsAdvanceClient(clientConfig.clientId)
           ? data.balanceDue
           : data.grandTotal;
   final note = 'Quote ${data.quotationNo}';
@@ -781,7 +796,7 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
     crossAxisAlignment: pw.CrossAxisAlignment.center,
     children: [
       pw.Container(
-        padding: pw.EdgeInsets.all(12),
+        padding: const pw.EdgeInsets.all(12),
         decoration: pw.BoxDecoration(
           border: pw.TableBorder.all(color: PdfColors.grey300),
           borderRadius: pw.BorderRadius.circular(8),
@@ -797,12 +812,12 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
             pw.SizedBox(height: 4),
             pw.Text(
               'VPA: $vpa',
-              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
             ),
             pw.SizedBox(height: 4),
             pw.Text(
               'Amount: ${NumberFormat.currency(locale: 'en_IN', symbol: 'Rs. ').format(amount)}',
-              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
             ),
           ],
         ),
@@ -812,8 +827,6 @@ pw.Widget _buildUpiQrSection(QuotationData data, AppState appState) {
 }
 
 pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
-  // Pre-load images for PDF (synchronously not possible, so we use placeholder and note)
-  // For production, consider downloading images before PDF generation
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
@@ -835,8 +848,8 @@ pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
                     pw.Container(
                       height: 135,
                       width: double.infinity,
-                      decoration: pw.BoxDecoration(
-                        borderRadius: const pw.BorderRadius.only(
+                      decoration: const pw.BoxDecoration(
+                        borderRadius: pw.BorderRadius.only(
                           topLeft: pw.Radius.circular(8),
                           topRight: pw.Radius.circular(8),
                         ),
@@ -847,21 +860,21 @@ pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
                           mainAxisAlignment: pw.MainAxisAlignment.center,
                           children: [
                             pw.Icon(
-                              pw.IconData(0xe3f4),
+                              const pw.IconData(0xe3f4),
                               size: 32,
                               color: PdfColors.grey400,
                             ),
                             pw.SizedBox(height: 4),
                             pw.Text(
                               'Site Photo',
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 10,
                                 color: PdfColors.grey600,
                               ),
                             ),
                             pw.Text(
                               photo.sizeLabel,
-                              style: pw.TextStyle(
+                              style: const pw.TextStyle(
                                 fontSize: 8,
                                 color: PdfColors.grey500,
                               ),
@@ -875,7 +888,7 @@ pw.Widget _buildSitePhotosSection(List<QuotationPhoto> photos) {
                         padding: const pw.EdgeInsets.all(8),
                         child: pw.Text(
                           photo.caption,
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             fontSize: 8,
                             color: PdfColors.grey700,
                           ),

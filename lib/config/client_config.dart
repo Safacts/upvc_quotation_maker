@@ -47,6 +47,7 @@ class ClientConfig {
   final double costMarginPercent;
   final bool enablePricePresets;
   final bool enableRateCard;
+  final bool enableAdvance;
   final List<Map<String, dynamic>> measuredPresets;
   final List<Map<String, dynamic>> unmeasuredPresets;
 
@@ -132,6 +133,7 @@ class ClientConfig {
     this.costMarginPercent = 65.0,
     this.enablePricePresets = false,
     this.enableRateCard = false,
+    this.enableAdvance = false,
     this.measuredPresets = const [],
     this.unmeasuredPresets = const [],
     this.appDownloadUrl = '',
@@ -303,6 +305,7 @@ class ClientConfig {
     'costMarginPercent': costMarginPercent,
     'enablePricePresets': enablePricePresets,
     'enableRateCard': enableRateCard,
+    'enableAdvance': enableAdvance,
     'measuredPresets': measuredPresets,
     'unmeasuredPresets': unmeasuredPresets,
     'appDownloadUrl': appDownloadUrl,
@@ -386,6 +389,7 @@ class ClientConfig {
     ),
     enablePricePresets: _asBool(json['enablePricePresets']),
     enableRateCard: _asBool(json['enableRateCard']),
+    enableAdvance: _asBool(json['enableAdvance'] ?? json['enable_advance']),
     measuredPresets: _asDynamicMapList(json['measuredPresets']),
     unmeasuredPresets: _asDynamicMapList(json['unmeasuredPresets']),
     appDownloadUrl: _asString(
