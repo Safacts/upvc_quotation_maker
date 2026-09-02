@@ -14,7 +14,8 @@ class AppTheme {
       );
 
   static LinearGradient primaryGradientFrom(ClientConfig config) => LinearGradient(
-        colors: [config.primaryColor, _defaultGradientEnd],
+        // Keep gradients tenant-branded instead of leaking the Vitharn default.
+        colors: [config.primaryColor, config.accentColor],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );

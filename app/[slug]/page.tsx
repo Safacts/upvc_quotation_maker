@@ -6,6 +6,7 @@ import { supaGet } from "@/lib/supabase";
 import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
 import VaishnaviMarketPage from "./VaishnaviMarketPage";
+import EshanyaMarketPage from "./EshanyaMarketPage";
 import ClientSeoContent from "./ClientSeoContent";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 const KPR_SLUG = "kprupvc";
 const VENKATESHWARA_SLUG = "venkateshwara";
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
+const ESHANYA_SLUG = "eshanya_trade_links";
 const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLUG, "index.html");
 
 // Only these config keys may reach the browser on PUBLIC market pages.
@@ -114,6 +116,10 @@ export default async function MarketPageRoute({
     const html = readStaticHtml(KPR_INDEX_PATH);
     if (html)
       return <><ClientSeoContent client={client} slug={KPR_SLUG} /><div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: buildShell(html) }} /></>;
+  }
+
+  if (client.id === ESHANYA_SLUG) {
+    return <><ClientSeoContent client={client} slug={slug} /><EshanyaMarketPage client={client} slug={slug} /></>;
   }
 
   if (client.id === VENKATESHWARA_SLUG) {
@@ -219,6 +225,20 @@ export async function generateMetadata({
       },
       twitter: { card: "summary_large_image", title, description },
       alternates: { canonical: `https://app.vitharn.com/${KPR_SLUG}/` },
+    };
+  }
+  if (client.id === ESHANYA_SLUG) {
+    const cfg = parseClientConfig(client.config || {}, client.id);
+    const title = `${cfg.companyName || "Eshanya Trade Links"} | Global Connections, Lasting Trust`;
+    const description = "Eshanya Trade Links in Coimbatore helps businesses move requirements forward through responsive, dependable trade relationships.";
+    return {
+      title,
+      description,
+      keywords: "Eshanya Trade Links, Coimbatore trade dealer, business sourcing Coimbatore, trade links Tamil Nadu",
+      icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
+      openGraph: { title, description, url: `https://app.vitharn.com/${slug}`, siteName: cfg.companyName || "Eshanya Trade Links", type: "website", locale: "en_IN" },
+      twitter: { card: "summary_large_image", title, description },
+      alternates: { canonical: `https://app.vitharn.com/${slug}` },
     };
   }
 

@@ -468,8 +468,9 @@ export default function QuotationEditor({
       toast("Save the quotation first to generate a PDF", "info");
       return;
     }
-    window.open(`/api/console/quotations/${savedId}/pdf`, "_blank", "noopener,noreferrer");
-  }, [savedId, slug, toast]);
+    const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
+    window.open(`/api/console/quotations/${savedId}/pdf${cParam}`, "_blank", "noopener,noreferrer");
+  }, [savedId, slug, clientId, toast]);
 
   // ---- Email the quotation -------------------------------------------------
   // Sends the customer-facing PDF as an attachment via /api/send_email. The
@@ -485,7 +486,8 @@ export default function QuotationEditor({
       return;
     }
     try {
-      const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf`, {
+      const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
+      const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf${cParam}`, {
         credentials: "same-origin",
       });
       if (!pdfRes.ok) {

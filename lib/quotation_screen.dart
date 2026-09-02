@@ -121,15 +121,12 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
   }
 
-  /// Advance collection is enabled only for the two clients that requested
-  /// payment tracking. This keeps the feature client-specific.
+  /// Keep the legacy clients enabled while allowing onboarding to opt in
+  /// new tenants through their server-supplied configuration.
   bool get _supportsAdvance {
-    final clientId =
-        Provider.of<AppState>(
-          context,
-          listen: false,
-        ).clientConfig.clientId.toLowerCase();
-    return clientId == 'kprupvc' || clientId == 'venkateshwara';
+    final config = Provider.of<AppState>(context, listen: false).clientConfig;
+    final clientId = config.clientId.toLowerCase();
+    return config.enableAdvance || clientId == 'kprupvc' || clientId == 'venkateshwara';
   }
 
   @override
