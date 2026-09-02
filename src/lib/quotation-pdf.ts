@@ -673,32 +673,6 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     }
   }
 
-  // ---- Window Elevation & CAD Measurement Schedule Pages ----
-  const validMeasured = (data.measured || []).filter((item) => item.width > 0 && item.height > 0);
-  if (validMeasured.length > 0) {
-    const itemsPerPage = 2;
-    for (let i = 0; i < validMeasured.length; i += itemsPerPage) {
-      const elevPage = doc.addPage(A4);
-      const chunk = validMeasured.slice(i, i + itemsPerPage);
-      const cardHeight = (H - M * 2) / 2;
-
-      chunk.forEach((item, chunkIdx) => {
-        const globalIdx = i + chunkIdx + 1;
-        const cardTopY = H - M - chunkIdx * cardHeight;
-        drawWindowElevationCard(
-          elevPage,
-          item,
-          globalIdx,
-          M,
-          cardTopY,
-          contentW,
-          cardHeight - 15,
-          { reg, bold }
-        );
-      });
-    }
-  }
-
   // ---- Footer on every page ----
   const now = new Date();
   const ts = `${fmtDate(now)} ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
