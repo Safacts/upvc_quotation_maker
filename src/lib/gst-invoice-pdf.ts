@@ -227,25 +227,27 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
 
   // ---- Section title helper ----
   const sectionTitle = (label: string) => {
-    if (y < 120) { page = doc.addPage(A4); y = H; }
+    if (y < 130) { page = doc.addPage(A4); y = H - M - 10; }
     page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.headerBand });
     text(label, M + 6, y - 12.5, { size: 10, font: bold, color: C.white });
     y -= 22;
   };
 
   // ---- Supplier / Buyer blocks ----
-  if (y < 120) { page = doc.addPage(A4); y = H; }
+  if (y < 130) { page = doc.addPage(A4); y = H - M - 10; }
   const halfW = contentW / 2 - 2;
   const blockH = 60;
   page.drawRectangle({ x: M, y: y - blockH, width: halfW, height: blockH, borderColor: C.line, borderWidth: 0.5 });
   page.drawRectangle({ x: M + halfW + 4, y: y - blockH, width: halfW, height: blockH, borderColor: C.line, borderWidth: 0.5 });
   text("Supplier Details", M + 6, y - 12, { size: 9, font: bold });
   text(data.companyName, M + 6, y - 22, { size: 8, font: bold });
-  text(data.companyAddress, M + 6, y - 32, { size: 8 });
+  const compAddr = wrap(data.companyAddress, reg, 8, halfW - 12)[0] || "";
+  text(compAddr, M + 6, y - 32, { size: 8 });
   text(`GSTIN: ${data.gstNumber}`, M + 6, y - 42, { size: 8 });
   text("Bill To (Buyer Details)", M + halfW + 10, y - 12, { size: 9, font: bold });
   text(data.buyerName, M + halfW + 10, y - 22, { size: 8, font: bold });
-  text(data.buyerAddress, M + halfW + 10, y - 32, { size: 8 });
+  const buyerAddr = wrap(data.buyerAddress, reg, 8, halfW - 12)[0] || "";
+  text(buyerAddr, M + halfW + 10, y - 32, { size: 8 });
   text(`GSTIN: ${data.buyerGstin}`, M + halfW + 10, y - 42, { size: 8 });
   text(`State: ${data.buyerState} (${data.buyerStateCode})`, M + halfW + 10, y - 52, { size: 8 });
   y -= blockH + 10;
@@ -267,7 +269,18 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   y -= 16;
   // Data rows.
   for (const item of data.items) {
-    if (y < 100) { page = doc.addPage(A4); y = H; }
+    if (y < 100) {
+      page = doc.addPage(A4);
+      y = H - M - 10;
+      page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
+      let rhx = M;
+      for (let i = 0; i < headers.length; i++) {
+        page.drawText(safe(headers[i]), { x: rhx + 4, y: y - 11, size: 8, font: bold });
+        rhx += colWidths[i];
+      }
+      page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
+      y -= 16;
+    }
     const cells = [String(item.sno), item.hsnCode, item.description, String(item.quantity), item.unit, inr(item.rate), inr(item.taxableValue)];
     let x = M;
     for (let i = 0; i < cells.length; i++) {
@@ -285,7 +298,7 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   y -= 10;
 
   // ---- Tax summary ----
-  if (y < 160) { page = doc.addPage(A4); y = H; }
+  if (y < 180) { page = doc.addPage(A4); y = H - M - 10; }
   const totalsX = M + contentW / 2;
   const totalsW = contentW / 2;
   const drawTotalRow = (left: string, right: string, opts: { bold?: boolean; bg?: any } = {}) => {
@@ -312,7 +325,7 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   y -= 6;
 
   // ---- Amount in words ----
-  if (y < 80) { page = doc.addPage(A4); y = H; }
+  if (y < 90) { page = doc.addPage(A4); y = H - M - 10; }
   page.drawRectangle({ x: M, y: y - 22, width: contentW, height: 22, borderColor: C.line, borderWidth: 0.5 });
   text("Amount in Words: ", M + 6, y - 10, { size: 9, font: bold });
   const wordsStr = data.amountInWords || amountInWords(data.grandTotal);
@@ -320,6 +333,7 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   y -= 26;
 
   // ---- Bank Details ----
+  if (y < 140) { page = doc.addPage(A4); y = H - M - 10; }
   sectionTitle("Bank Details");
   const bankLines = [
     `Company Name : ${data.companyName}`,
@@ -328,17 +342,18 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
     `IFSC : ${data.bankIfsc}`,
   ];
   for (const ln of bankLines) {
-    if (y < 120) { page = doc.addPage(A4); y = H; }
+    if (y < 90) { page = doc.addPage(A4); y = H - M - 10; }
     text(ln, M, y - 9, { size: 8 });
     y -= 10;
   }
   y -= 6;
 
   // ---- Terms & Conditions ----
+  if (y < 120) { page = doc.addPage(A4); y = H - M - 10; }
   sectionTitle("Terms & Conditions");
   for (const t of data.termsAndConditions.slice(0, 6)) {
     for (const ln of wrap(t, reg, 7.5, contentW)) {
-      if (y < 80) { page = doc.addPage(A4); y = H; }
+      if (y < 80) { page = doc.addPage(A4); y = H - M - 10; }
       text(ln, M, y - 9, { size: 7.5 });
       y -= 10;
     }
@@ -346,13 +361,13 @@ export async function buildGstInvoicePdf(data: GstInvoicePdfData): Promise<Uint8
   y -= 6;
 
   // ---- Reverse charge ----
-  if (y < 80) { page = doc.addPage(A4); y = H; }
+  if (y < 90) { page = doc.addPage(A4); y = H - M - 10; }
   text("Reverse Charge: ", M, y - 10, { size: 9, font: bold });
   text(data.isReverseCharge ? "Yes" : "No", M + 80, y - 10, { size: 9 });
   y -= 20;
 
   // ---- Signature ----
-  if (y < 100) { page = doc.addPage(A4); y = H; }
+  if (y < 110) { page = doc.addPage(A4); y = H - M - 10; }
   rightText(`For ${data.companyName}`, W - M, y - 10, { size: 10, font: bold });
   y -= 30;
   rightText("Authorized Signature", W - M, y - 10, { size: 10 });

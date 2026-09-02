@@ -408,7 +408,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
 
   // ---- Helper: section title band ----
   const sectionTitle = (label: string) => {
-    if (y < 120) { page = doc.addPage(A4); y = H; }
+    if (y < 130) { page = doc.addPage(A4); y = H - M - 10; }
     page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.headerBand });
     text(label, M + 6, y - 12.5, { size: 11, font: bold, color: C.white });
     y -= 22;
@@ -419,7 +419,13 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   const detailCell = (label: string, value: string, x: number, w: number) => {
     page.drawRectangle({ x, y: y - 18, width: w, height: 18, borderColor: C.line, borderWidth: 0.5 });
     text(label, x + 4, y - 12.5, { size: 8, font: bold });
-    text(value, x + 4 + reg.widthOfTextAtSize(label, 8) + 6, y - 12.5, { size: 9 });
+    const labelW = bold.widthOfTextAtSize(label, 8);
+    const maxValW = w - labelW - 12;
+    let str = safe(value);
+    while (reg.widthOfTextAtSize(str, 8.5) > maxValW && str.length > 3) {
+      str = str.substring(0, str.length - 2) + ".";
+    }
+    text(str, x + 4 + labelW + 6, y - 12.5, { size: 8.5 });
   };
   const colW = contentW / 4;
   detailCell("Name", data.customerName, M, colW);
@@ -479,10 +485,19 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     // Data rows.
     for (let idx = 0; idx < data.measured.length; idx++) {
       const m = data.measured[idx];
-      if (y < 100) { page = doc.addPage(A4); y = H; }
+      if (y < 100) {
+        page = doc.addPage(A4);
+        y = H - M - 10;
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
+        let rhx = M;
+        for (let i = 0; i < headers.length; i++) {
+          page.drawText(safe(headers[i]), { x: rhx + 4, y: y - 11, size: 8, font: bold });
+          rhx += colWidths[i];
+        }
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
+        y -= 16;
+      }
       // Dart parity: sft = (w/304.8)*(h/304.8); totalSft = sft*units; total = totalSft*rate.
-      // Column 7 "SFT" must show per-unit sqft — using measuredLineSqft() here would
-      // double-multiply by units and make it identical to column 8 "T.SFT".
       const unitSqft = sqft(m.width, m.height);
       const totalSqft = measuredLineSqft({ width: m.width, height: m.height, units: m.units });
       const lineTotal = measuredLineTotal({ width: m.width, height: m.height, units: m.units, rate: m.rate });
@@ -537,7 +552,18 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     y -= 16;
     for (let idx = 0; idx < data.unmeasured.length; idx++) {
       const u = data.unmeasured[idx];
-      if (y < 100) { page = doc.addPage(A4); y = H; }
+      if (y < 100) {
+        page = doc.addPage(A4);
+        y = H - M - 10;
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
+        let rhx = M;
+        for (let i = 0; i < headers.length; i++) {
+          page.drawText(safe(headers[i]), { x: rhx + 4, y: y - 11, size: 8, font: bold });
+          rhx += colWidths[i];
+        }
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
+        y -= 16;
+      }
       const cells = [String(idx + 1), u.description, String(u.units), inr(u.rate), inr(unmeasuredLineTotal({ units: u.units, rate: u.rate }))];
       let x = M;
       for (let i = 0; i < cells.length; i++) {
@@ -556,7 +582,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   }
 
   // ---- Totals table (full-width, matches Flutter _buildTotalsTable) ----
-  if (y < 140) { page = doc.addPage(A4); y = H; }
+  if (y < 150) { page = doc.addPage(A4); y = H - M - 10; }
   // Row 1: Total SFT + value | Subtotal + value
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   text("Total SFT", M + 6, y - 12.5, { size: 10, font: bold });
@@ -585,36 +611,67 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   text(amountInWords(data.totals.grandTotal), M + 6, y - 18, { size: 8 });
   y -= 26;
 
-  // ---- Bank Details + Terms ----
-  sectionTitle("Bank Details");
-  const halfW = contentW / 2 - 4;
+  // ---- Bank Details + Terms (220 pt look-ahead guard against footer collision) ----
+  if (y < 220) { page = doc.addPage(A4); y = H - M - 10; }
+  const halfW = (contentW - 12) / 2;
+  page.drawRectangle({ x: M, y: y - 18, width: halfW, height: 18, color: C.headerBand });
+  text("Bank Details", M + 6, y - 12.5, { size: 10, font: bold, color: C.white });
+
+  page.drawRectangle({ x: M + halfW + 12, y: y - 18, width: halfW, height: 18, color: C.headerBand });
+  text("Terms & Conditions", M + halfW + 18, y - 12.5, { size: 10, font: bold, color: C.white });
+  y -= 22;
+
   const bankLines = [
     `Company Name : ${data.companyName}`,
     `Bank Name & Branch : ${data.bankName} - ${data.bankBranch}`,
-    data.bankAccountNo,
-    data.bankIfsc,
+    `Account No : ${data.bankAccountNo}`,
+    `IFSC : ${data.bankIfsc}`,
   ];
   let by = y;
   for (const ln of bankLines) {
     text(ln, M, by - 10, { size: 8 });
-    by -= 11;
+    by -= 12;
   }
-  // Terms on the right.
+
   let ty = y;
-  text("Terms & Conditions", M + halfW + 12, ty - 10, { size: 9, font: bold });
-  ty -= 13;
   for (const t of data.termsAndConditions.slice(0, 8)) {
-    for (const ln of wrap(t, reg, 7.5, halfW - 8)) {
-      text(ln, M + halfW + 12, ty - 9, { size: 7.5 });
-      ty -= 10;
+    for (const ln of wrap(t, reg, 7.5, halfW - 4)) {
+      text(ln, M + halfW + 12, ty - 10, { size: 7.5 });
+      ty -= 11;
     }
   }
-  y = Math.min(by, ty) - 20;
+  y = Math.min(by, ty) - 16;
 
   // ---- Signatures ----
-  if (y < 100) { page = doc.addPage(A4); y = H; }
-  text("Authorised Signature", M, y - 10, { size: 10, font: bold });
-  rightText("Customer Signature", W - M, y - 10, { size: 10, font: bold });
+  if (y < 110) { page = doc.addPage(A4); y = H - M - 10; }
+  text("Authorised Signature", M, y - 12, { size: 10, font: bold });
+  rightText("Customer Signature", W - M, y - 12, { size: 10, font: bold });
+
+  // ---- Window Elevation & CAD Measurement Schedule Pages ----
+  const validMeasured = (data.measured || []).filter((item) => item.width > 0 && item.height > 0);
+  if (validMeasured.length > 0) {
+    const itemsPerPage = 2;
+    for (let i = 0; i < validMeasured.length; i += itemsPerPage) {
+      const elevPage = doc.addPage(A4);
+      const chunk = validMeasured.slice(i, i + itemsPerPage);
+      const cardHeight = 355; // Plenty of clearance above footer line at y=50
+
+      chunk.forEach((item, chunkIdx) => {
+        const globalIdx = i + chunkIdx + 1;
+        const cardTopY = H - M - 10 - chunkIdx * (cardHeight + 10);
+        drawWindowElevationCard(
+          elevPage,
+          item,
+          globalIdx,
+          M,
+          cardTopY,
+          contentW,
+          cardHeight - 10,
+          { reg, bold }
+        );
+      });
+    }
+  }
 
   // ---- Window Elevation & CAD Measurement Schedule Pages ----
   const validMeasured = (data.measured || []).filter((item) => item.width > 0 && item.height > 0);

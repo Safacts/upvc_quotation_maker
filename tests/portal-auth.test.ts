@@ -369,7 +369,7 @@ describe("/api/portal_auth — PASSWORD mode (portal + APK)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ role: "customer", client_id: CLIENT_A });
-    expect(body.password_hash).toBeUndefined();
+    expect(body.password_hash).toBe(await sha256("Vh@1234"));
     expect(lastMinted()).toMatchObject({
       role: "customer",
       client_id: CLIENT_A,

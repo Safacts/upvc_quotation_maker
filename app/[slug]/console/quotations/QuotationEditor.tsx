@@ -4,10 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight, Cuboid,
+  ChevronLeft, ChevronRight, Cuboid, Compass, Share2, MessageSquare,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
+import {
+  WindowElevationSvg,
+  detectWindowElevationType,
+  getWindowElevationTitle,
+} from "@/lib/window-elevation";
 import { loadCursor, locate, type RecordCursor } from "@/lib/record-nav";
 import {
   measuredLineSqft,
@@ -168,6 +173,7 @@ export default function QuotationEditor({
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
+  const [showElevationPreview, setShowElevationPreview] = useState(true);
   const [savedId, setSavedId] = useState<string | null>(quotationId);
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
@@ -535,6 +541,46 @@ export default function QuotationEditor({
     }
   }, [savedId, slug, header.email, header.quote_no, header.customer_name, companyName, toast]);
 
+  // ---- Share link & WhatsApp ----------------------------------------------
+  const [sharing, setSharing] = useState(false);
+  const shareQuote = useCallback(async (openWhatsApp = false) => {
+    if (!savedId) {
+      toast("Save the quotation first to generate a share link", "info");
+      return;
+    }
+    setSharing(true);
+    try {
+      const res = await fetch(`/api/quotation/${savedId}/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-client-id": clientId },
+        body: JSON.stringify({ client_id: clientId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.token) {
+        toast(data.error || "Failed to generate share link", "err");
+        return;
+      }
+      const shareUrl = `${window.location.origin}/quote/${savedId}?token=${data.token}`;
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+      }
+      toast("Share link copied to clipboard!", "ok");
+
+      if (openWhatsApp) {
+        const text = `*QUOTATION — ${header.quote_no || "UPVC Quote"}*\n\nDear ${header.customer_name || "Customer"},\nPlease review your quotation and 2D CAD window elevation diagrams here:\n🔗 ${shareUrl}\n\nThank you,\n${companyName || clientId}`;
+        const phone = (header.contact_no || "").replace(/[^0-9]/g, "");
+        const waUrl = phone
+          ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encodeURIComponent(text)}`
+          : `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (e: any) {
+      toast(String(e?.message ?? e), "err");
+    } finally {
+      setSharing(false);
+    }
+  }, [savedId, clientId, header.quote_no, header.customer_name, header.contact_no, companyName, toast]);
+
   // ---- Wire into the shell's global key map -------------------------------
   useConsoleAction("save", save);
   useConsoleAction("back", goBack);
@@ -750,6 +796,25 @@ export default function QuotationEditor({
             <button
               type="button"
               className="vc-btn vc-btn-sm"
+              onClick={() => void shareQuote(false)}
+              disabled={sharing}
+              title="Copy customer confirmation & CAD link"
+            >
+              <Share2 size={12} /> {sharing ? "Sharing..." : "Share Link"}
+            </button>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              onClick={() => void shareQuote(true)}
+              disabled={sharing}
+              title="Share quotation & CAD elevation diagrams on WhatsApp"
+              style={{ color: "#16a34a" }}
+            >
+              <MessageSquare size={12} /> WhatsApp
+            </button>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
               onClick={() => void downloadPdf()}
               title="Download as PDF (Ctrl+E)"
             >
@@ -899,6 +964,15 @@ export default function QuotationEditor({
           <div className="vc-card-head">
             <span className="vc-card-title">Measured Items</span>
             <div style={{ flex: 1 }} />
+            <button
+              type="button"
+              className={`vc-btn vc-btn-sm ${showElevationPreview ? "vc-btn-primary" : ""}`}
+              style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4, marginRight: 6 }}
+              onClick={() => setShowElevationPreview((prev) => !prev)}
+              title="Toggle live 2D CAD window elevation preview for active row"
+            >
+              <Compass size={12} /> {showElevationPreview ? "Hide 2D CAD" : "Show 2D CAD"}
+            </button>
             <button type="button" className="vc-btn vc-btn-sm" onClick={addMeasured}>
               <Plus size={12} /> Add row <span className="vc-kbd">Alt I</span>
             </button>
@@ -1026,6 +1100,87 @@ export default function QuotationEditor({
               </tbody>
             </table>
           </div>
+
+          {/* Live 2D CAD Elevation Preview for Focused/Active Row */}
+          {showElevationPreview && measured[focusedMeasured] && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 14px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "#C44A10",
+                      background: "#FFF3E6",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    Row {focusedMeasured + 1} CAD Elevation
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1a202c" }}>
+                    {getWindowElevationTitle(
+                      detectWindowElevationType(
+                        measured[focusedMeasured].description || measured[focusedMeasured].code,
+                      ),
+                      focusedMeasured + 1,
+                    )}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: "#4a5568", marginBottom: 2 }}>
+                  Dimensions: <b>{measured[focusedMeasured].width || 0} × {measured[focusedMeasured].height || 0} mm</b> · Area:{" "}
+                  <b>
+                    {formatSqft(
+                      measuredLineSqft({
+                        width: measured[focusedMeasured].width,
+                        height: measured[focusedMeasured].height,
+                        units: measured[focusedMeasured].units,
+                      }),
+                    )}{" "}
+                    sqft
+                  </b>{" "}
+                  · Qty: <b>{measured[focusedMeasured].units || 1}</b>
+                </div>
+                <div style={{ fontSize: 10, color: "#718096" }}>
+                  Live architectural elevation with CAD dimension witness lines. Updates as you type width, height & description.
+                </div>
+              </div>
+              <div
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 6,
+                  padding: 4,
+                  display: "flex",
+                  justifyContent: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                }}
+              >
+                <WindowElevationSvg
+                  widthMm={Number(measured[focusedMeasured].width) || 1000}
+                  heightMm={Number(measured[focusedMeasured].height) || 1000}
+                  description={measured[focusedMeasured].description || measured[focusedMeasured].code}
+                  itemIndex={focusedMeasured + 1}
+                  targetWidth={200}
+                  targetHeight={210}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ---- Unmeasured items ---- */}
@@ -1157,6 +1312,7 @@ export default function QuotationEditor({
           companyAddress={companyAddress}
           companyContact={companyContact}
           gstNumber={gstNumber}
+          focusedIndex={focusedMeasured}
         />
       </div>
     </div>

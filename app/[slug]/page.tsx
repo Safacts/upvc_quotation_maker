@@ -229,16 +229,19 @@ export async function generateMetadata({
   }
   if (client.id === ESHANYA_SLUG) {
     const cfg = parseClientConfig(client.config || {}, client.id);
-    const title = `${cfg.companyName || "Eshanya Trade Links"} | Global Connections, Lasting Trust`;
-    const description = "Eshanya Trade Links in Coimbatore helps businesses move requirements forward through responsive, dependable trade relationships.";
+    const brand = cfg.companyName || "Eshanya Trade Links";
+    const city = cityFromAddress(cfg.companyAddress) || "Coimbatore";
+    const title = cfg.seoTitle || `${brand} | UPVC Windows & Doors in ${city}`;
+    const description = cfg.seoDescription || cfg.landingHeroSubtitle ||
+      `${brand} offers UPVC windows, doors, glass, mesh, measurement, and installation discussions for homes and commercial spaces in ${city}, Tamil Nadu.`;
     return {
       title,
       description,
-      keywords: "Eshanya Trade Links, Coimbatore trade dealer, business sourcing Coimbatore, trade links Tamil Nadu",
+      keywords: cfg.seoKeywords || "Eshanya Trade Links, Eshanya UPVC, UPVC Windows Coimbatore, UPVC Doors Coimbatore, Sliding Windows Coimbatore, Casement Windows, Mosquito Mesh, UPVC quotation",
       icons: { icon: [{ url: `/api/favicon/${encodeURIComponent(client.id)}`, type: "image/png", sizes: "48x48" }] },
-      openGraph: { title, description, url: `https://app.vitharn.com/${slug}`, siteName: cfg.companyName || "Eshanya Trade Links", type: "website", locale: "en_IN" },
+      openGraph: { title, description, url: `https://app.vitharn.com/${slug}/`, siteName: brand, type: "website", locale: "en_IN", images: [{ url: cfg.landingHeroImage || "/eshanya/assets/upvc-hero-premium.png", width: 1200, height: 675, alt: `${brand} UPVC windows and doors` }] },
       twitter: { card: "summary_large_image", title, description },
-      alternates: { canonical: `https://app.vitharn.com/${slug}` },
+      alternates: { canonical: `https://app.vitharn.com/${slug}/` },
     };
   }
 
