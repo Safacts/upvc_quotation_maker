@@ -127,6 +127,7 @@ function amountInWords(n: number): string {
   const rupees = Math.floor(Math.abs(n));
   const paise = Math.round((Math.abs(n) - rupees) * 100);
   if (rupees === 0 && paise === 0) return "RUPEES ZERO ONLY";
+  if (rupees >= 1000000000000) return "RUPEES — ONLY"; // 1e12+ would overflow Crore/Lakh logic (1e22 → UNDEFINED)
 
   const parts: string[] = [];
   let rem = rupees;
@@ -148,6 +149,25 @@ function safe(s: unknown): string {
     .replace(/[\u201C\u201D]/g, '"')
     .replace(/[\u2013\u2014]/g, "-")
     .replace(/[^\x20-\x7E\n]/g, "");
+}
+
+/** Format numbers without scientific notation and avoid cell overflow for absurd inputs (e.g. 1e+21). */
+function fmtSft(n: number): string {
+  if (!Number.isFinite(n)) return "-";
+  if (Math.abs(n) >= 1e12) return "—"; // avoid 22-digit overflow — show dash
+  const s = Number(n).toFixed(2);
+  return s.includes("e") || s.includes("E") ? "—" : s;
+}
+function fmtInt(n: number): string {
+  if (!Number.isFinite(n)) return "-";
+  if (Math.abs(n) >= 1e9) return "—";
+  const s = String(Math.round(n));
+  return s.includes("e") || s.includes("E") ? "—" : s;
+}
+function fmtMoney(n: number): string {
+  if (!Number.isFinite(n)) return "Rs. 0.00";
+  if (Math.abs(n) >= 1e12) return "Rs. —";
+  return inr(n);
 }
 
 /** Greedy word wrap constrained to a pixel width. */
@@ -506,27 +526,27 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
         cells = [
           String(idx + 1),
           m.description,
-          String(Math.round(m.width)),
-          String(Math.round(m.height)),
+          fmtInt(m.width),
+          fmtInt(m.height),
           String(m.units),
           m.glass,
-          unitSqft.toFixed(2),
-          inr(m.rate),
-          inr(lineTotal),
+          fmtSft(unitSqft),
+          fmtMoney(m.rate),
+          fmtMoney(lineTotal),
         ];
       } else {
         cells = [
           String(idx + 1),
           m.code,
           m.description,
-          String(Math.round(m.width)),
-          String(Math.round(m.height)),
+          fmtInt(m.width),
+          fmtInt(m.height),
           String(m.units),
           m.glass,
-          unitSqft.toFixed(2),
-          totalSqft.toFixed(2),
-          inr(m.rate),
-          inr(lineTotal),
+          fmtSft(unitSqft),
+          fmtSft(totalSqft),
+          fmtMoney(m.rate),
+          fmtMoney(lineTotal),
         ];
       }
       y = drawRow(cells, y);
@@ -564,7 +584,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
         page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
         y -= 16;
       }
-      const cells = [String(idx + 1), u.description, String(u.units), inr(u.rate), inr(unmeasuredLineTotal({ units: u.units, rate: u.rate }))];
+      const cells = [String(idx + 1), u.description, String(u.units), fmtMoney(u.rate), fmtMoney(unmeasuredLineTotal({ units: u.units, rate: u.rate }))];
       let x = M;
       for (let i = 0; i < cells.length; i++) {
         const cw = colWidths[i];
@@ -586,23 +606,23 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   // Row 1: Total SFT + value | Subtotal + value
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   text("Total SFT", M + 6, y - 12.5, { size: 10, font: bold });
-  text(data.totals.totalSqft.toFixed(2), M + contentW / 2 + 6, y - 12.5, { size: 10 });
+  text(fmtSft(data.totals.totalSqft), M + contentW / 2 + 6, y - 12.5, { size: 10 });
   rightText("Subtotal", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
-  rightText(inr(data.totals.subtotal), M + contentW - 6, y - 12.5, { size: 10 });
+  rightText(fmtMoney(data.totals.subtotal), M + contentW - 6, y - 12.5, { size: 10 });
   y -= 18;
   // Row 2: Transport + value | IGST + value (if applicable)
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   text("Transport", M + 6, y - 12.5, { size: 10, font: bold });
-  text(inr(data.totals.transport), M + contentW / 2 + 6, y - 12.5, { size: 10 });
+  text(fmtMoney(data.totals.transport), M + contentW / 2 + 6, y - 12.5, { size: 10 });
   if (data.totals.gstPercentage > 0) {
     rightText(`IGST @ ${data.totals.gstPercentage}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
-    rightText(inr(data.totals.gstAmount), M + contentW - 6, y - 12.5, { size: 10 });
+    rightText(fmtMoney(data.totals.gstAmount), M + contentW - 6, y - 12.5, { size: 10 });
   }
   y -= 18;
   // Row 3: empty | empty | Grand Total + value
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   rightText("Grand Total", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
-  rightText(inr(data.totals.grandTotal), M + contentW - 6, y - 12.5, { size: 10, font: bold });
+  rightText(fmtMoney(data.totals.grandTotal), M + contentW - 6, y - 12.5, { size: 10, font: bold });
   y -= 18;
   // Row 4: Amount in Words (with accent top border, full width)
   page.drawRectangle({ x: M, y: y - 22, width: contentW, height: 22, color: C.totalsBg });
@@ -731,12 +751,12 @@ function drawWindowElevationCard(
   page.drawText(typeTitle, { x: cardX + (cardW - titleW) / 2, y: hy, size: 12, font: bold, color: C.ink });
   hy -= 14;
 
-  const wText = `Width: ${item.width.toFixed(2)} mm`;
+  const wText = `Width: ${fmtInt(item.width)} mm`;
   const wW = reg.widthOfTextAtSize(wText, 9);
   page.drawText(wText, { x: cardX + (cardW - wW) / 2, y: hy, size: 9, font: reg, color: C.muted });
   hy -= 12;
 
-  const hText = `Height: ${item.height.toFixed(2)} mm`;
+  const hText = `Height: ${fmtInt(item.height)} mm`;
   const hW = reg.widthOfTextAtSize(hText, 9);
   page.drawText(hText, { x: cardX + (cardW - hW) / 2, y: hy, size: 9, font: reg, color: C.muted });
   hy -= 12;
@@ -868,7 +888,7 @@ function drawWindowElevationCard(
   page.drawLine({ start: { x: originX + drawW, y: bottomDimY }, end: { x: originX + drawW - 4, y: bottomDimY + 2 }, thickness: 0.8, color: dimColor });
   page.drawLine({ start: { x: originX + drawW, y: bottomDimY }, end: { x: originX + drawW - 4, y: bottomDimY - 2 }, thickness: 0.8, color: dimColor });
   // Width label
-  const wDimLabel = `${Math.round(wMm)} mm`;
+  const wDimLabel = `${fmtInt(wMm)} mm`;
   const wDimW = bold.widthOfTextAtSize(wDimLabel, 8.5);
   page.drawText(wDimLabel, { x: originX + (drawW - wDimW) / 2, y: bottomDimY - 9, size: 8.5, font: bold, color: dimColor });
 
@@ -885,7 +905,7 @@ function drawWindowElevationCard(
   page.drawLine({ start: { x: rightDimX, y: originY + drawH }, end: { x: rightDimX + 2, y: originY + drawH - 4 }, thickness: 0.8, color: dimColor });
   page.drawLine({ start: { x: rightDimX, y: originY + drawH }, end: { x: rightDimX - 2, y: originY + drawH - 4 }, thickness: 0.8, color: dimColor });
   // Height label (vertical text)
-  const hDimLabel = `${Math.round(hMm)} mm`;
+  const hDimLabel = `${fmtInt(hMm)} mm`;
   const hDimW = bold.widthOfTextAtSize(hDimLabel, 8.5);
   page.drawText(hDimLabel, {
     x: rightDimX + 10,
