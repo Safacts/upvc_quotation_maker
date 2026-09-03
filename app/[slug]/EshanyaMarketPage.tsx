@@ -1,282 +1,487 @@
 "use client";
 
 import "./eshanya.css";
-import { FormEvent, useState, useEffect } from "react";
-import { ArrowRight, Check, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
 import { parseClientConfig } from "@/lib/types";
 
 interface Props { client: any; slug: string; }
 
-const fallbackProducts = [
-  ["Sliding Windows", "Smooth-moving systems for balconies, bedrooms, and compact homes."],
-  ["Casement Windows", "Ventilation-focused windows with practical sealing and easy cleaning."],
-  ["UPVC Doors", "Main, balcony, and utility door options for residential and commercial spaces."],
-  ["Mosquito Mesh", "Mesh options that support airflow while helping keep interiors comfortable."],
-  ["Glass Options", "Discuss glass choices for privacy, safety, heat control, and noise reduction."],
-  ["Custom Fabrication", "Made-to-measure solutions based on the opening, design, and site requirement."],
-];
-
-const benefits = [
-  ["Noise control", "Tight sealing and suitable glass choices can help make interiors quieter."],
-  ["Weather ready", "Select systems suited to Indian sun, rain, wind, and everyday use."],
-  ["Low maintenance", "UPVC profiles are easy to clean and do not need regular painting."],
-  ["Practical design", "Plan profiles, glass, mesh, hardware, and installation around the project."],
-];
-
-const process = ["Consultation", "Site visit", "Measurement", "Design", "Quotation", "Supply", "Installation", "Support"];
-
 export default function EshanyaMarketPage({ client, slug }: Props) {
   const cfg = parseClientConfig(client.config || {}, client.id);
   const brand = cfg.companyName || "Eshanya Trade Links";
-  const proprietor = cfg.companyProprietor || brand;
-  const phone = cfg.companyContact || "";
-  const email = cfg.companyEmail || "";
-  const address = cfg.companyAddress || "Coimbatore, Tamil Nadu";
+  const proprietor = cfg.companyProprietor || "Nithikrishna L.";
+  const phone = cfg.companyContact || "9655091414";
+  const email = cfg.companyEmail || "nithi.fc@gmail.com";
+  const address = cfg.companyAddress || "28, KV Nagar Road, Vishweshwara Nagar, Villankurichi, Coimbatore - 641035, Tamil Nadu";
   const phoneDigits = phone.replace(/\D/g, "");
   const whatsapp = phoneDigits.length === 10 ? `91${phoneDigits}` : phoneDigits;
+  const telHref = `tel:+${phoneDigits.startsWith("91") ? phoneDigits : `91${phoneDigits}`}`;
+  // keep original static copy but inject tenant contact where it matters
   const heroImage = cfg.landingHeroImage || "/eshanya/assets/upvc-hero-premium.png";
-  const gallery = cfg.landingGallery.filter(Boolean);
-  const services = cfg.landingServices.filter(Boolean);
-  const products = services.length ? services.slice(0, 6).map((name) => [name, `Discuss ${name.toLowerCase()} options for your project with Eshanya Trade Links.`]) : fallbackProducts;
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [sent, setSent] = useState(false);
 
+  const products: [string, string][] = [
+    ["Sliding Windows", "Smooth moving systems for balconies, bedrooms, and compact city homes."],
+    ["Casement Windows", "Airtight profiles built for stronger sealing, ventilation, and easy cleaning."],
+    ["UPVC Doors", "Elegant main, balcony, and utility doors with durable hardware choices."],
+    ["Mosquito Mesh", "Integrated mesh options for airflow without compromising comfort."],
+    ["Toughened Glass", "Glass combinations for safety, privacy, heat control, and noise reduction."],
+    ["Custom Fabrication", "Made-to-measure solutions for villas, apartments, offices, and shops."],
+  ];
+  const benefits: [string, string][] = [
+    ["Noise Control", "Multi-chambered profiles and tight sealing help create quieter interiors."],
+    ["Weather Ready", "Designed for Indian sun, rain, wind, and daily temperature changes."],
+    ["Low Maintenance", "No painting or polishing needed; easy to clean and built for long life."],
+    ["Energy Efficient", "Better sealing reduces heat transfer and supports cooler indoor spaces."],
+  ];
+  const faqs: [string, string][] = [
+    ["What does Eshanya Trade Links supply?", "Eshanya Trade Links focuses on UPVC window and door solutions for residential and commercial spaces, including custom sizes and glass options."],
+    ["Do you visit the site before quotation?", "Yes. A site visit and measurement step helps confirm size, design, hardware, glass, and installation requirements."],
+    ["Can I request a catalogue or product photos?", "Yes. Use the enquiry form or WhatsApp button to request product categories, profile options, and available finishes."],
+    ["Where is the business located?", address],
+  ];
+  const [sent, setSent] = useState(false);
   const enquire = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    if (!whatsapp) return;
-    const message = encodeURIComponent(`Hello ${proprietor}, I need a UPVC quotation.\nName: ${data.get("name") || "Not provided"}\nPhone: ${data.get("phone") || "Not provided"}\nRequirement: ${data.get("requirement") || "UPVC windows and doors"}\nMessage: ${data.get("message") || ""}`);
-    window.open(`https://wa.me/${whatsapp}?text=${message}`, "_blank", "noopener,noreferrer");
+    const message = encodeURIComponent(`Hello Eshanya Trade Links, I need a UPVC quote.\nName: ${data.get("name") || ""}\nPhone: ${data.get("phone") || ""}\nRequirement: ${data.get("service") || ""}\nMessage: ${data.get("message") || ""}`);
+    window.location.href = `https://wa.me/${whatsapp}?text=${message}`;
     setSent(true);
   };
 
   useEffect(() => {
-    const video = document.getElementById("heroScrubVideo") as HTMLVideoElement | null;
-    const scrub = document.querySelector(".eshanya-hero-scrub") as HTMLElement | null;
-    const stage = document.querySelector(".eshanya-hero-stage") as HTMLElement | null;
-    if (!video || !scrub || !stage) return;
+    const reveals = document.querySelectorAll(".reveal");
+    const ro = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            ro.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.18 }
+    );
+    reveals.forEach((el) => ro.observe(el));
 
+    const hero = document.querySelector(".hero-section") as HTMLElement | null;
+    const heroStage = document.querySelector(".hero-stage") as HTMLElement | null;
+    const heroVideo = document.querySelector(".hero-video") as HTMLVideoElement | null;
+    const loadRing = document.querySelector(".load-ring circle") as unknown as HTMLElement | null;
+    const cursorLight = document.querySelector(".cursor-light") as HTMLElement | null;
+    const siteHeader = document.querySelector(".site-header") as HTMLElement | null;
+    if (!hero || !heroStage || !heroVideo) return;
     const VIDEO_URL = "/eshanya/assets/hero-scroll.mp4";
+    const VIDEO_BYTES = 7561203;
 
-    // Five gates from scrub-pipeline.md (CSS and JS must match exactly)
-    const GATES = [
+    const updateHeader = () => siteHeader?.classList.toggle("is-scrolled", window.scrollY > 80);
+    updateHeader();
+    window.addEventListener("scroll", updateHeader, { passive: true });
+
+    const onMouseMove = (event: MouseEvent) => {
+      const x = event.clientX / window.innerWidth - 0.5;
+      const y = event.clientY / window.innerHeight - 0.5;
+      if (cursorLight) cursorLight.style.transform = `translate(${event.clientX - 140}px, ${event.clientY - 140}px)`;
+      if (heroStage && hero.matches(":hover")) {
+        heroStage.style.setProperty("--move-x", `${x * 12}px`);
+        heroStage.style.setProperty("--move-y", `${y * 10}px`);
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+
+    const staticHeroQueries = [
       "(max-width: 720px)",
       "(orientation: portrait) and (max-width: 1024px)",
       "(orientation: portrait) and (pointer: coarse)",
       "(orientation: landscape) and (pointer: coarse) and (max-height: 560px)",
       "(prefers-reduced-motion: reduce)",
     ];
-
-    let scrubOn = false;
+    const mediaQueries = staticHeroQueries.map((q) => window.matchMedia(q));
+    let scrubEnabled = false;
+    let videoStarted = false;
+    let targetProgress = 0;
+    let shownProgress = 0;
     let rafId: number | null = null;
     let lastTick = 0;
-    let target = 0;
-    let shown = 0;
     let seekBusy = false;
     let pendingTime: number | null = null;
-    let heroOnScreen = true;
+    let heroVisible = true;
+    let lastRequestedTime = -1;
 
     const heroProgress = () => {
-      const rect = scrub.getBoundingClientRect();
-      const scrollRange = scrub.offsetHeight - window.innerHeight;
-      if (scrollRange <= 0) return 0;
-      const progress = -rect.top / scrollRange;
-      return Math.min(1, Math.max(0, progress));
+      const rect = hero.getBoundingClientRect();
+      const scrollable = Math.max(1, hero.offsetHeight - window.innerHeight);
+      return Math.min(1, Math.max(0, -rect.top / scrollable));
     };
 
-    const requestSeek = (t: number) => {
-      if (!video.duration || Number.isNaN(video.duration)) return;
+    heroVideo.addEventListener("error", () => {
+      seekBusy = false;
+      pendingTime = null;
+      heroStage.classList.add("video-failed");
+    });
+
+    const requestSeek = (time: number) => {
+      if (!heroVideo.duration || Number.isNaN(time)) return;
+      const safeTime = Math.min(heroVideo.duration - 0.05, Math.max(0, time));
+      if (Math.abs(safeTime - lastRequestedTime) < 0.055) return;
+      lastRequestedTime = safeTime;
       if (seekBusy) {
-        pendingTime = t;
+        pendingTime = safeTime;
         return;
       }
       seekBusy = true;
       try {
-        video.currentTime = Math.min(Math.max(0, t), video.duration);
+        heroVideo.currentTime = safeTime;
       } catch {
         seekBusy = false;
       }
     };
 
-    video.addEventListener("seeked", () => {
+    heroVideo.addEventListener("seeked", () => {
       seekBusy = false;
       if (pendingTime !== null) {
-        const t = pendingTime;
+        const next = pendingTime;
         pendingTime = null;
-        requestSeek(t);
+        requestSeek(next);
       }
     });
-    video.addEventListener("error", () => {
-      seekBusy = false;
-      pendingTime = null;
-      stage.classList.add("video-failed");
-    });
 
-    const tick = (now: number) => {
-      const dt = Math.min(100, now - (lastTick || now));
+    const tickScrub = (now: number) => {
+      const delta = Math.min(100, now - (lastTick || now));
       lastTick = now;
-      const k = 0.16;
-      shown += (target - shown) * (1 - Math.pow(1 - k, dt / 16.667));
-      if (Math.abs(target - shown) < 0.0005) {
-        shown = target;
+      const smoothing = 0.12;
+      shownProgress += (targetProgress - shownProgress) * (1 - Math.pow(1 - smoothing, delta / 16.667));
+      heroStage.style.setProperty("--scroll-k", shownProgress.toFixed(3));
+      requestSeek(shownProgress * heroVideo.duration);
+      if (Math.abs(targetProgress - shownProgress) < 0.0012) {
+        shownProgress = targetProgress;
+        heroStage.style.setProperty("--scroll-k", shownProgress.toFixed(3));
         rafId = null;
         lastTick = 0;
-      } else {
-        rafId = requestAnimationFrame(tick);
+        requestSeek(shownProgress * heroVideo.duration);
+        return;
       }
-      if (video.duration) requestSeek(shown * video.duration);
+      rafId = requestAnimationFrame(tickScrub);
     };
 
-    const onScroll = () => {
-      target = heroProgress();
-      if (rafId === null && heroOnScreen) rafId = requestAnimationFrame(tick);
+    const onScrubScroll = () => {
+      targetProgress = heroProgress();
+      if (scrubEnabled && heroVisible && rafId === null) rafId = requestAnimationFrame(tickScrub);
     };
 
-    // IntersectionObserver to rest the loop when hero off-screen
-    const io = new IntersectionObserver(
-      (entries) => {
-        heroOnScreen = entries[0]?.isIntersecting ?? true;
-        if (heroOnScreen && Math.abs(target - shown) > 0.0005 && rafId === null && scrubOn) {
-          rafId = requestAnimationFrame(tick);
-        } else if (!heroOnScreen && rafId !== null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
-      },
-      { threshold: 0 }
-    );
-    io.observe(scrub);
-
-    let blobLoaded = false;
-    async function loadBlob() {
-      if (blobLoaded) return;
-      blobLoaded = true;
+    const loadHeroVideo = async () => {
+      if (videoStarted) return;
+      videoStarted = true;
       try {
-        const res = await fetch(VIDEO_URL);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        video!.src = url;
-        video!.load();
-        video!.addEventListener(
-          "loadedmetadata",
+        const response = await fetch(VIDEO_URL, { priority: "low" } as any);
+        const total = Number(response.headers.get("Content-Length")) || VIDEO_BYTES;
+        const reader = (response.body as ReadableStream<Uint8Array> | null)?.getReader();
+        const chunks: Uint8Array[] = [];
+        let loaded = 0;
+        if (reader) {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              chunks.push(value);
+              loaded += value.length;
+              const progress = Math.min(1, loaded / total);
+              (loadRing as any)?.style?.setProperty("stroke-dashoffset", String(Math.round(126 * (1 - progress))));
+            }
+          }
+          heroVideo.src = URL.createObjectURL(new Blob(chunks as BlobPart[], { type: "video/mp4" }));
+        } else {
+          const blob = await response.blob();
+          heroVideo.src = URL.createObjectURL(blob);
+        }
+        heroVideo.load();
+        heroVideo.addEventListener(
+          "canplay",
           () => {
-            stage!.classList.add("video-ready");
-            target = heroProgress();
-            shown = target;
-            if (video!.duration) video!.currentTime = target * video!.duration;
+            heroStage.classList.add("video-ready");
+            heroVideo.pause();
+            targetProgress = heroProgress();
+            shownProgress = targetProgress;
+            heroStage.style.setProperty("--scroll-k", targetProgress.toFixed(3));
+            requestSeek(targetProgress * heroVideo.duration);
+            onScrubScroll();
           },
           { once: true }
         );
-        // Promote to compositor layer
-        video!.style.willChange = "transform";
       } catch {
-        stage!.classList.add("video-failed");
+        heroStage.classList.add("video-failed");
       }
-    }
+    };
 
     const enableScrub = () => {
-      if (scrubOn) return;
-      scrubOn = true;
-      stage!.classList.remove("video-failed");
-      // fetch as blob for Range-safe scrub (works even where host lacks Range)
-      loadBlob();
-      window.addEventListener("scroll", onScroll, { passive: true });
-      onScroll();
+      if (scrubEnabled) return;
+      scrubEnabled = true;
+      loadHeroVideo();
+      window.addEventListener("scroll", onScrubScroll, { passive: true } as any);
+      onScrubScroll();
     };
-
     const disableScrub = () => {
-      if (!scrubOn) return;
-      scrubOn = false;
-      window.removeEventListener("scroll", onScroll);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-      // Fallback: poster + autoplay loop for static hero (phones / reduced-motion)
-      if (!video!.src) {
-        video!.src = VIDEO_URL;
-        video!.loop = true;
-        video!.autoplay = true;
-        video!.muted = true;
-        video!.playsInline = true as any;
-        video!.load();
-        video!.play().catch(() => {});
-      }
+      scrubEnabled = false;
+      window.removeEventListener("scroll", onScrubScroll as any);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = null;
+      try {
+        heroVideo.pause();
+      } catch {}
     };
-
     const applyHeroMode = () => {
-      if (GATES.some((q) => window.matchMedia(q).matches)) disableScrub();
+      if (mediaQueries.some((q) => q.matches)) disableScrub();
       else enableScrub();
     };
 
-    const mqls = GATES.map((q) => window.matchMedia(q));
-    mqls.forEach((m) => m.addEventListener("change", applyHeroMode));
+    const heroIO = new IntersectionObserver(
+      ([entry]) => {
+        heroVisible = !!entry?.isIntersecting;
+        if (heroVisible) onScrubScroll();
+        else
+          try {
+            heroVideo.pause();
+          } catch {}
+      },
+      { threshold: 0 }
+    );
+    heroIO.observe(hero);
+    mediaQueries.forEach((q) => q.addEventListener("change", applyHeroMode));
     applyHeroMode();
 
+    const countObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const item = entry.target as HTMLElement;
+          const target = Number((item as any).dataset.count);
+          const suffix = (item as any).dataset.suffix || "";
+          const duration = target > 1000 ? 1400 : 900;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const p = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            const value = Math.round(target * eased);
+            item.textContent = `${value.toLocaleString("en-IN")}${p === 1 ? suffix : ""}`;
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          countObserver.unobserve(item);
+        });
+      },
+      { threshold: 0.7 }
+    );
+    document.querySelectorAll("[data-count]").forEach((el) => countObserver.observe(el));
+
     return () => {
-      mqls.forEach((m) => m.removeEventListener("change", applyHeroMode));
-      window.removeEventListener("scroll", onScroll);
-      io.disconnect();
+      ro.disconnect();
+      heroIO.disconnect();
+      countObserver.disconnect();
+      window.removeEventListener("scroll", updateHeader as any);
+      window.removeEventListener("scroll", onScrubScroll as any);
+      window.removeEventListener("mousemove", onMouseMove as any);
+      mediaQueries.forEach((q) => q.removeEventListener("change", applyHeroMode as any));
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 
   return (
-    <div className="eshanya-site">
-      <header className="eshanya-site-header">
-        <a className="eshanya-site-brand" href="#home" aria-label={`${brand} home`}>
-          {cfg.logoUrl ? <img src={cfg.logoUrl} alt={`${brand} logo`} /> : <span className="eshanya-site-mark">ET</span>}
-          <span><strong>ESHANYA</strong><small>TRADE LINKS</small></span>
+    <>
+      <header className="site-header" aria-label="Main navigation">
+        <a className="brand" href="#home" aria-label={`${brand} home`}>
+          <img src="/eshanya/assets/eshanya-logo.jpeg" alt={`${brand} logo`} />
+          <span>{brand.split(" ")[0]}</span>
         </a>
-        <nav className={menuOpen ? "eshanya-site-nav open" : "eshanya-site-nav"} aria-label="Main navigation">
-          {[["about", "About"], ["products", "Products"], ["process", "Process"], ["contact", "Contact"]].map(([id, label]) => <a key={id} href={`#${id}`} onClick={() => setMenuOpen(false)}>{label}</a>)}
-          <a className="eshanya-site-cta" href="#contact" onClick={() => setMenuOpen(false)}>Get quote <ArrowRight size={15} /></a>
+        <nav>
+          <a href="#about">About</a>
+          <a href="#products">Products</a>
+          <a href="#process">Process</a>
+          <a href="#contact">Contact</a>
         </nav>
-        <button className="eshanya-site-menu" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle menu" aria-expanded={menuOpen}><span /><span /></button>
+        <a className="quote-link" href="#contact">Get Quote</a>
       </header>
 
       <main>
-        <div className="eshanya-hero-scrub">
-          <section className="eshanya-hero-stage" id="home" style={{ "--eshanya-hero": `url(${JSON.stringify(heroImage)})` } as React.CSSProperties}>
-            <video
-              id="heroScrubVideo"
-              className="eshanya-site-hero-video"
-              muted
-              playsInline
-              preload="metadata"
-              poster={heroImage}
-              aria-hidden="true"
-              tabIndex={-1}
-            />
-            <div className="eshanya-site-hero-overlay" aria-hidden="true" />
-            <div className="eshanya-site-hero-copy">
-              <p className="eshanya-site-kicker">{brand} · Coimbatore · Tamil Nadu</p>
-              <h1>{cfg.landingHeroTitle || "Trusted direction."}<em>Quality trade.</em></h1>
-              <p className="eshanya-site-lede">{cfg.landingHeroSubtitle || "UPVC windows, doors, and practical trade solutions for homes and commercial spaces."}</p>
-              <div className="eshanya-site-actions"><a className="eshanya-site-button primary" href="#contact">Get a consultation <ArrowRight size={17} /></a><a className="eshanya-site-button secondary" href="#products">Explore solutions</a></div>
+        <section className="hero-section" id="home">
+          <div className="hero-stage">
+            <div className="hero-poster" aria-hidden="true" style={{ backgroundImage: `url(${JSON.stringify(heroImage)})` }} />
+            <video className="hero-video" preload="none" muted playsInline aria-hidden="true" tabIndex={-1} />
+            <div className="hero-shade" />
+            <svg className="load-ring" viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth={3} strokeDasharray="126" style={{ strokeDashoffset: "var(--ld,126)" } as any} />
+            </svg>
+            <div className="hero-trust reveal" aria-label="Brand promise">
+              <p className="hero-kicker">{brand}</p>
+              <h1>
+                <span className="hero-line">Trusted Direction.</span>
+                <strong className="hero-line">Quality Trade.</strong>
+              </h1>
+              <p className="hero-caption">Premium UPVC windows, doors, and trade supply solutions for modern homes and commercial spaces.</p>
+              <div className="hero-actions">
+                <a className="primary-btn" href="#contact">Get Free Consultation</a>
+                <a className="secondary-btn" href="#projects">Explore Projects</a>
+              </div>
             </div>
-            <div className="eshanya-site-hero-badge" aria-label="Eshanya Trade Links brand promise"><strong>ET</strong><span>Global connections<br />lasting trust</span></div>
-          </section>
-        </div>
+            <div className="scroll-cue" aria-hidden="true">
+              <span />
+            </div>
+          </div>
+        </section>
 
-        <section className="eshanya-site-section" id="about"><p className="eshanya-site-kicker">About Eshanya</p><div className="eshanya-site-two-col"><figure><img src={gallery[0] || "/eshanya/assets/about-upvc-premium.png"} alt="UPVC window and door solutions from Eshanya Trade Links" /><figcaption>UPVC solutions for residential and commercial spaces.</figcaption></figure><div><h2>{cfg.landingAboutTitle || "Reliable trade solutions with a considered finish."}</h2><p>{cfg.landingAboutText || `${brand} helps customers discuss suitable UPVC windows, doors, glass, mesh, hardware, measurement, and installation requirements.`}</p><p>From the first enquiry to the quotation and follow-through, the focus is clear communication and a practical next step for every project.</p></div></div></section>
+        <section className="intro band" id="about">
+          <div className="section-kicker">About Eshanya</div>
+          <div className="intro-grid">
+            <figure className="about-image reveal">
+              <img src="/eshanya/assets/about-upvc-premium.png" alt="Premium UPVC sliding door and window installation with warm daylight" />
+              <figcaption>Premium UPVC systems for modern homes and commercial spaces.</figcaption>
+            </figure>
+            <div className="about-copy reveal">
+              <h2>Reliable UPVC trade solutions with a premium finish.</h2>
+              <p>Eshanya Trade Links helps customers choose practical, good-looking UPVC windows and doors that suit local weather, daily use, budget, and architecture.</p>
+              <p>From profile selection to glass, mesh, hardware, and measurement support, the focus is simple: clean design, durable performance, and a trusted buying experience.</p>
+            </div>
+          </div>
+        </section>
 
-        <section className="eshanya-site-stats" aria-label="Eshanya business information"><div><strong>UPVC</strong><span>Windows and doors</span></div><div><strong>01</strong><span>Direct point of contact</span></div><div><strong>Coimbatore</strong><span>Tamil Nadu service base</span></div><div><strong>ETL</strong><span>Quotation prefix</span></div></section>
+        <section className="stats">
+          <div><strong data-count="641035">0</strong><span>Coimbatore service area</span></div>
+          <div><strong>UPVC</strong><span>Windows, doors, glazing</span></div>
+          <div><strong data-count="10">0</strong><span>AM to 8 PM listed hours</span></div>
+          <div><strong data-count="5" data-suffix=".0">0</strong><span>Online listing rating</span></div>
+        </section>
 
-        <section className="eshanya-site-section" id="products"><div className="eshanya-site-heading"><p className="eshanya-site-kicker">Product range</p><h2>Built around the opening, the space, and the requirement.</h2></div><div className="eshanya-site-feature"><img src={gallery[1] || "/eshanya/assets/upvc-products.png"} alt="UPVC product options including windows, doors, mesh, and glass" /><div><p className="eshanya-site-kicker">Discuss your requirement</p><h3>Make the right choice before installation begins.</h3><p>Ask about profile styles, glass, mesh, hardware, sizing, and installation for your home, villa, apartment, office, or shop.</p></div></div><div className="eshanya-site-grid products">{products.map(([title, text], index) => <article key={`${title}-${index}`}><div className="eshanya-site-thumb" style={{ backgroundPosition: `${(index % 3) * 50}% ${index > 2 ? "100%" : "0"}` }} /><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+        <section className="band" id="products">
+          <div className="section-heading reveal">
+            <p className="section-kicker">Product Range</p>
+            <h2>Built for residential and commercial openings.</h2>
+          </div>
+          <div className="image-feature reveal">
+            <img src="/eshanya/assets/upvc-products.png" alt="UPVC sliding door, casement window, mosquito mesh, and main door product examples" />
+            <div>
+              <p className="section-kicker">Category Visuals</p>
+              <h3>Show customers the exact kind of systems you supply.</h3>
+              <p>These visuals make the UPVC offering clearer at a glance: balcony sliding systems, casement ventilation, mesh protection, glass doors, and premium hardware details.</p>
+            </div>
+          </div>
+          <div className="product-grid">
+            {products.map(([title, body], index) => (
+              <article key={title} className="product-card reveal" style={{ ["--panel" as any]: index }}>
+                <div className="product-thumb" aria-hidden="true" />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <section className="eshanya-site-visual"><div><p className="eshanya-site-kicker">Professional finish</p><h2>Clean profiles, careful choices, dependable follow-through.</h2><p>Eshanya Trade Links is based in Coimbatore and welcomes genuine enquiries for UPVC windows, doors, and related project requirements.</p></div><figure><img src={gallery[2] || "/eshanya/assets/premium-window.png"} alt="Premium UPVC window with clear glass" /><figcaption>Discuss a finish that fits your space.</figcaption></figure></section>
+        <section className="visual-band">
+          <div className="visual-copy reveal">
+            <p className="section-kicker">Professional Finish</p>
+            <h2>Clean profiles, strong hardware, careful installation.</h2>
+            <p>Use this section to showcase actual completed Eshanya projects once client photos are available. For now, the imagery presents the correct UPVC category and premium construction feel.</p>
+          </div>
+          <figure className="premium-window reveal">
+            <img src="/eshanya/assets/premium-window.png" alt="Premium black framed UPVC window with clear glass and greenery outside" />
+            <figcaption>Premium UPVC window systems with clean sightlines and strong sealing.</figcaption>
+          </figure>
+        </section>
 
-        <section className="eshanya-site-section"><div className="eshanya-site-heading"><p className="eshanya-site-kicker">Why choose Eshanya</p><h2>A clear, human process from enquiry to support.</h2></div><div className="eshanya-site-grid benefits">{benefits.map(([title, text], index) => <article key={title}><div className="eshanya-site-benefit-thumb" style={{ backgroundPosition: `${index * 33.333}% 0` }} /><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+        <section className="project-showcase band" id="projects">
+          <div className="section-heading reveal">
+            <p className="section-kicker">Project Types</p>
+            <h2>Images for every place customers care about.</h2>
+          </div>
+          <div className="showcase-grid">
+            <figure className="showcase-large reveal">
+              <img src="/eshanya/assets/upvc-projects.png" alt="Residential balcony and commercial frontage with UPVC glazing" />
+              <figcaption>Apartment balconies, villas, shops, offices, and frontage glazing.</figcaption>
+            </figure>
+            <figure className="showcase-card reveal">
+              <img src="/eshanya/assets/upvc-hero.png" alt="Luxury villa with UPVC windows and doors" />
+              <figcaption>Villa and independent house installations.</figcaption>
+            </figure>
+            <figure className="showcase-card reveal">
+              <img src="/eshanya/assets/upvc-products.png" alt="Close views of UPVC sliding, casement, and door systems" />
+              <figcaption>Product closeups for profile, mesh, glass, and handle choices.</figcaption>
+            </figure>
+          </div>
+        </section>
 
-        <section className="eshanya-site-process" id="process"><p className="eshanya-site-kicker">Process</p><h2>From enquiry to installation.</h2><div className="eshanya-site-timeline">{process.map((step, index) => <div key={step}><span>{String(index + 1).padStart(2, "0")}</span><strong>{step}</strong></div>)}</div></section>
+        <section className="band">
+          <div className="section-heading reveal">
+            <p className="section-kicker">Why Choose Eshanya</p>
+            <h2>Comfort details customers can feel every day.</h2>
+          </div>
+          <div className="benefit-grid">
+            {benefits.map(([title, body]) => (
+              <article key={title} className="benefit reveal">
+                <div className="benefit-thumb" aria-hidden="true" />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <section className="eshanya-site-section eshanya-site-faq"><div><p className="eshanya-site-kicker">FAQ</p><h2>Common questions.</h2></div><div>{[["What does Eshanya Trade Links supply?", "Eshanya discusses UPVC window and door solutions, including suitable sizes, glass, mesh, hardware, and installation requirements."], ["Do you discuss site measurement before quotation?", "A site visit and measurement discussion can help confirm dimensions, design, hardware, glass, and installation requirements."], ["Where is Eshanya Trade Links located?", address], ["How do I request a quotation?", "Use the enquiry form below or contact Eshanya directly to start a conversation."]].map(([question, answer], index) => <details key={question} open={index === 0}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
+        <section className="process-section" id="process">
+          <p className="section-kicker">Process</p>
+          <h2 className="reveal">From enquiry to installation.</h2>
+          <div className="timeline">
+            {["Consultation", "Site Visit", "Measurement", "Design", "Quotation", "Supply", "Installation", "Support"].map((step, index) => (
+              <div key={step} className="timeline-item reveal" style={{ ["--i" as any]: index }}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{step}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
 
-        <section className="eshanya-site-contact" id="contact"><div><p className="eshanya-site-kicker">Get in touch</p><h2>Request a UPVC quote.</h2><dl><div><dt>Contact person</dt><dd>{proprietor}</dd></div>{phone && <div><dt>Phone</dt><dd><a href={`tel:${phone}`}>{phone}</a></dd></div>}{email && <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>}<div><dt>Address</dt><dd>{address}</dd></div></dl></div><form onSubmit={enquire}><img src={gallery[3] || "/eshanya/assets/upvc-projects.png"} alt="UPVC residential and commercial project reference" /><label>Full name<input name="name" required placeholder="Your name" /></label><label>Phone number<input name="phone" required type="tel" placeholder="+91" /></label><label>Requirement<select name="requirement"><option>UPVC Windows and Doors</option>{products.map(([title]) => <option key={title}>{title}</option>)}</select></label><label>Message<textarea name="message" placeholder="Tell us about your project" rows={4} /></label><button type="submit">Send enquiry <Send size={16} /></button>{sent && <p className="eshanya-site-sent"><Check size={15} /> WhatsApp opened with your enquiry.</p>}</form></section>
+        <section className="faq band">
+          <div>
+            <p className="section-kicker">F.A.Q</p>
+            <h2>Common questions.</h2>
+          </div>
+          <div className="faq-list">
+            {faqs.map(([q, a], i) => (
+              <details key={q} open={i === 0} className="reveal">
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="contact-section" id="contact">
+          <div className="contact-info reveal">
+            <p className="section-kicker">Get in Touch</p>
+            <h2>Request a UPVC quote.</h2>
+            <dl>
+              <div><dt>Contact Person</dt><dd>{proprietor}</dd></div>
+              <div><dt>Phone</dt><dd><a href={telHref}>{phone}</a></dd></div>
+              <div><dt>Email</dt><dd><a href={`mailto:${email}`}>{email}</a></dd></div>
+              <div><dt>Address</dt><dd>{address}</dd></div>
+            </dl>
+          </div>
+          <form className="enquiry-form reveal" onSubmit={enquire}>
+            <img className="form-image" src="/eshanya/assets/upvc-projects.png" alt="UPVC balcony and commercial glazing project reference" />
+            <label>Full Name<input type="text" name="name" placeholder="Your name" /></label>
+            <label>Phone Number<input type="tel" name="phone" placeholder="+91 90000 00000" /></label>
+            <label>Requirement<select name="service"><option>UPVC Windows & Doors</option><option>Sliding Windows</option><option>UPVC Door</option><option>Site Measurement</option></select></label>
+            <label>Message<textarea name="message" placeholder="Tell us about your project..." /></label>
+            <button type="submit">Send Enquiry</button>
+            {sent && <p style={{ color: "#0d777c", fontWeight: 700 }}>WhatsApp opened with your enquiry.</p>}
+          </form>
+        </section>
       </main>
-      {whatsapp && <a className="eshanya-site-whatsapp" href={`https://wa.me/${whatsapp}`} aria-label={`Chat with ${brand} on WhatsApp`}><MessageCircle size={24} /></a>}
-      <footer className="eshanya-site-footer"><div><strong>{brand}</strong><p>UPVC windows, doors, and trade conversations from Coimbatore.</p></div><div><span>Business portal</span><a href={`/${slug}/home`}>Open portal <ArrowRight size={14} /></a></div><p>© 2026 {brand}. All rights reserved.</p></footer>
-    </div>
+
+      <a className="whatsapp" href={`https://wa.me/${whatsapp}`} aria-label="Chat with Eshanya Trade Links on WhatsApp"><span aria-hidden="true">◔</span></a>
+      <div className="cursor-light" aria-hidden="true" />
+      <footer>
+        <div>
+          <strong>{brand}</strong>
+          <p>Dealer / Wholesaler for UPVC windows and doors.</p>
+        </div>
+        <p>© 2026 {brand}. All rights reserved.</p>
+      </footer>
+    </>
   );
 }
