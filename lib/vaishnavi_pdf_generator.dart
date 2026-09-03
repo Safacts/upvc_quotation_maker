@@ -51,6 +51,60 @@ Future<Uint8List> generateVaishnaviPdfBytes(
       build: (_) => _pageTwo(data, appState),
     ),
   );
+  // CAD elevations like rest clients — Vaishnavi was missing, now added (client-specific)
+  final validMeasured = data.measuredItems.where((e) => e.width > 0 && e.height > 0).toList();
+  if (validMeasured.isNotEmpty) {
+    for (var i = 0; i < validMeasured.length; i += 2) {
+      final chunk = validMeasured.skip(i).take(2).toList();
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.fromLTRB(28, 22, 28, 20),
+          theme: pw.ThemeData.withFont(base: regular, bold: bold),
+          build: (ctx) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+              children: [
+                pw.Text('CAD Window Elevations — ${i + 1}-${(i + 2).clamp(1, validMeasured.length)} of ${validMeasured.length}',
+                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColor(0.05, 0.12, 0.23))),
+                pw.SizedBox(height: 10),
+                ...chunk.asMap().entries.map((entry) {
+                  final idx = i + entry.key;
+                  final item = entry.value;
+                  return pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 18),
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColor(0.05, 0.12, 0.23), width: 1)),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Item ${idx + 1}: ${item.description}', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 6),
+                        pw.Text('${item.width.toStringAsFixed(0)} x ${item.height.toStringAsFixed(0)} mm   Qty:${item.units}   Rate: Rs ${item.rate}   SFT:${item.totalSft.toStringAsFixed(2)}',
+                            style: const pw.TextStyle(fontSize: 7)),
+                        pw.SizedBox(height: 8),
+                        pw.Container(
+                          height: 140,
+                          decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColor(0.05, 0.12, 0.23)), color: PdfColor(0.91, 0.94, 1.0)),
+                          child: pw.Center(
+                            child: pw.Text('Elevation — ${item.width.toStringAsFixed(0)} × ${item.height.toStringAsFixed(0)} mm',
+                                style: pw.TextStyle(fontSize: 8, color: PdfColor(0.05, 0.12, 0.23))),
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text('Witness lines: bottom horizontal and right vertical dimension lines with arrow ticks (engineering CAD)',
+                            style: pw.TextStyle(fontSize: 6, color: PdfColor(0.35, 0.42, 0.54))),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            );
+          },
+        ),
+      );
+    }
+  }
   return pdf.save();
 }
 
