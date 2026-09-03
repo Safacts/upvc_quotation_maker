@@ -1,8 +1,13 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-client";
 import { hashQuotationToken } from "@/lib/quotation-token";
-import { quotationTotals } from "@/lib/pricing";
+import { measuredLineSqft, measuredLineTotal, quotationTotals } from "@/lib/pricing";
 import { buildQuotationPdf, type QuotationPdfData } from "@/lib/quotation-pdf";
+import { Resvg } from "@resvg/resvg-js";
+import { injectVaishnaviSvg, type VaishnaviQuote } from "@/lib/vaishnavi-svg-inject";
+import { PDFDocument } from "pdf-lib";
 
 // pdf-lib will NOT run on Edge — same constraint as /api/invoice/[id].
 export const runtime = "nodejs";
@@ -126,6 +131,71 @@ export async function GET(
 
     // Money from pricing.ts ONLY — never inline (w/304.8)*(h/304.8).
     const totals = quotationTotals(q, measured, unmeasured);
+
+    // Vaishnavi follows Flutter's purple OASIS estimate + CAD (client-specific)
+    const normalizedVaish = String(q.client_id).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const isVaishnavi = normalizedVaish === "vaishnavi" || normalizedVaish === "vaishnaviupvcwindowsanddoors" || normalizedVaish.includes("vaishnavi");
+    if (isVaishnavi) {
+      const TEMPLATES = join(process.cwd(), "src", "templates", "vaishnavi");
+      const FONTS = [join(TEMPLATES, "fonts", "Arimo.ttf"), join(TEMPLATES, "fonts", "Tinos-Regular.ttf"), join(TEMPLATES, "fonts", "Tinos-Bold.ttf")];
+      const amountInWords = (() => {
+        const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+        const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+        const two = (x:number):string=> x<20 ? ones[x] : tens[Math.floor(x/10)] + (x%10!==0 ? "-"+ones[x%10] : "");
+        const three = (x:number):string=> x>=100 ? ones[Math.floor(x/100)]+" Hundred"+(x%100!==0 ? " "+two(x%100) : "") : two(x);
+        const rupees = Math.floor(Math.abs(totals.grandTotal));
+        const paise = Math.round((Math.abs(totals.grandTotal)-rupees)*100);
+        if (rupees===0 && paise===0) return "RUPEES ZERO ONLY";
+        const parts:string[]=[]; let rem=rupees;
+        if (rem>=10000000){ parts.push(`${three(Math.floor(rem/10000000))} Crore`); rem%=10000000; }
+        if (rem>=100000){ parts.push(`${three(Math.floor(rem/100000))} Lakh`); rem%=100000; }
+        if (rem>=1000){ parts.push(`${three(Math.floor(rem/1000))} Thousand`); rem%=1000; }
+        if (rem>0) parts.push(three(rem));
+        let s=parts.join(" ")+" Rupees"; if(paise>0) s+=` and ${two(paise)} Paise`; return (s+" Only").toUpperCase();
+      })();
+      const vaishItems = measured.map((m:any)=> ({ description:m.description, width:m.width, height:m.height, units:m.units, totalSft: measuredLineSqft(m), rate:m.rate, total: measuredLineTotal(m) })).concat(unmeasured.map((u:any)=> ({ description:u.description, width:0, height:0, units:u.units, totalSft:0, rate:u.rate, total: u.units*u.rate })));
+      const vaishQuote: VaishnaviQuote = {
+        customerName: String(q.customer_name || ""),
+        quotationNo: String(q.quote_no || ""),
+        date: (()=>{ const d=q.date? new Date(q.date): new Date(); const dd=String(d.getDate()).padStart(2,"0"); const mn=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]; return `${dd}-${mn}-${d.getFullYear()}`; })(),
+        items: vaishItems as any,
+        subtotal: Number(totals.subtotal) + Number(totals.transport),
+        gstPercentage: q.include_gst ? Number(q.gst_percentage||0) : 0,
+        grandTotal: Number(totals.grandTotal),
+        amountInWords,
+      };
+      const [p1, p2] = await Promise.all([readFile(join(TEMPLATES,"page1.svg"),"utf8"), readFile(join(TEMPLATES,"page2.svg"),"utf8")]);
+      const injected1 = injectVaishnaviSvg(p1, vaishQuote);
+      const injected2 = p2;
+      const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
+      const pdfVaish = await PDFDocument.create();
+      for(const png of pngs){ const img=await pdfVaish.embedPng(png); const page=pdfVaish.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
+      const validMeasured = measured.filter((m:any)=> m.width>0 && m.height>0);
+      if(validMeasured.length>0){
+        const { rgb } = await import("pdf-lib");
+        const { hexToRgb } = await import("@/lib/brand");
+        const frameColor = rgb(...hexToRgb("#0B1E3B"));
+        for(let i=0;i<validMeasured.length;i+=2){
+          const page = pdfVaish.addPage([595.28,841.89]);
+          const chunk = validMeasured.slice(i,i+2);
+          chunk.forEach((item:any, idx:number)=>{
+            const yBase = 700 - idx*350;
+            const wMm=item.width, hMm=item.height;
+            const fx=100, fy=yBase-220, fw=180, fh=220;
+            page.drawRectangle({x:fx,y:fy,width:fw,height:fh, borderColor:frameColor, borderWidth:2, color: rgb(...hexToRgb("#E8F0FF"))});
+            page.drawRectangle({x:fx+5,y:fy+5,width:fw-10,height:fh-10, borderColor:frameColor, borderWidth:1});
+            page.drawText(`Item ${i+idx+1}: ${String(item.description).slice(0,28)}`,{x:fx,y:fy+fh+12,size:9, color:frameColor});
+            page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`,{x:fx,y:fy-14,size:7, color:frameColor});
+            page.drawLine({start:{x:fx,y:fy-6},end:{x:fx+fw,y:fy-6},thickness:0.8, color:frameColor});
+            page.drawLine({start:{x:fx+fw+6,y:fy},end:{x:fx+fw+6,y:fy+fh},thickness:0.8, color:frameColor});
+          });
+          page.drawText(`VAISHNAVI — CAD Elevations ${i+1}-${Math.min(i+2,validMeasured.length)} of ${validMeasured.length}`,{x:30,y:30,size:7, color:frameColor});
+        }
+      }
+      const bytesVaish = await pdfVaish.save();
+      const filenameVaish = `Quotation_${safeFilename(String(q.quote_no || id))}.pdf`;
+      return new NextResponse(Buffer.from(bytesVaish), { status:200, headers:{ "Content-Type":"application/pdf","Content-Disposition":`attachment; filename="${filenameVaish}"`,"Cache-Control":"private, no-store, max-age=0"}});
+    }
 
     // Explicit field-by-field mapping. `clients.config` is a jsonb blob that
     // also carries credential material (portalPasswordHash, supabaseAnonKey);
