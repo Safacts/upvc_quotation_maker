@@ -80,6 +80,7 @@
 .lf-overline { display: flex; align-items: center; gap: 13px; }
 .lf-overline span { width: 34px; height: 1px; background: var(--cyan); }
 .lf-hero h1 { max-width: 760px; margin: 26px 0 25px; font: 400 clamp(64px, 7.8vw, 118px)/.82 Instrument Serif, serif; letter-spacing: -.045em; }
+.lf-hero h1 > span, .lf-hero h1 > em { display: block; }
 .lf-hero h1 em { color: var(--cyan-soft); font-weight: 400; }
 .lf-hero-content > p { max-width: 580px; margin: 0; color: rgba(255,255,255,.7); font-size: 15px; line-height: 1.85; }
 .lf-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 33px; }
@@ -327,7 +328,7 @@
   .lf-header.scrolled { height: 66px; background: rgba(5,45,50,.98); backdrop-filter: none; }
   .lf-logo img { width: 43px; height: 43px; }
   .lf-nav { display: none; }
-  .lf-nav.open { position: absolute; top: 72px; left: 0; right: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 18px 20px 28px; background: rgba(5,45,50,.98); border-top: 1px solid rgba(255,255,255,.12); }
+  .lf-nav.open { position: absolute; top: 100%; left: 0; right: 0; display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 18px 20px 28px; background: rgba(5,45,50,.98); border-top: 1px solid rgba(255,255,255,.12); }
   .lf-nav.open a { padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
   .lf-nav.open .lf-nav-cta { justify-content: center; margin-top: 13px; border: 1px solid rgba(255,255,255,.25); }
   .lf-menu { display: grid; }
@@ -364,6 +365,7 @@
   .lf-contact-copy, .lf-form { padding: 85px 22px; }
   .lf-footer { grid-template-columns: 1fr 1fr; padding: 55px 22px; }
   .lf-reveal, .lf-reveal-left, .lf-reveal-right { filter: none; transform: translate3d(0, 24px, 0); transition-duration: .75s; }
+  .lf-reveal.lf-image-reveal { clip-path: none; }
 }
 
 @media (max-width: 560px) {
@@ -373,12 +375,13 @@
   .lf-hero-image img { object-position: 62% center; }
   .lf-hero-shade { background: linear-gradient(180deg, rgba(2,29,33,.7), rgba(2,29,33,.82) 55%, rgba(2,29,33,.95)); }
   .lf-hero-content { padding-top: 135px; }
-  .lf-hero h1 { font-size: clamp(53px, 16.8vw, 75px); line-height: .88; }
-  .lf-hero-content > p { font-size: 12px; line-height: 1.75; }
+  .lf-hero h1 { font-size: clamp(42px, 12.7vw, 53px); line-height: .9; }
+  .lf-hero-content > p { font-size: 13px; line-height: 1.7; }
   .lf-btn { width: 100%; }
   .lf-hero-facts { grid-template-columns: 1fr; background: rgba(5,45,50,.7); }
   .lf-hero-facts > div { min-height: 57px; padding: 11px 14px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.12); }
   .lf-hero-facts > div:last-child { border-bottom: 0; }
+  .lf-hero-facts small { font-size: 9px; }
   .lf-story-copy h2, .lf-section-heading h2, .lf-spec h2, .lf-compare h2, .lf-process h2, .lf-reviews h2, .lf-faq h2, .lf-contact h2 { font-size: 48px; }
   .lf-story-image { min-height: 470px; }
   .lf-system-card { display: block; }
@@ -422,7 +425,7 @@
   .lf-logo { gap: 9px; }
   .lf-logo img { width: 39px; height: 39px; }
   .lf-hero-content { width: calc(100% - 32px); }
-  .lf-hero h1 { font-size: 57px; }
+  .lf-hero h1 { font-size: 42px; }
   .lf-hero-facts { left: 16px; right: 16px; }
   .lf-section, .lf-spec-intro, .lf-contact-copy, .lf-form { padding-left: 18px; padding-right: 18px; }
   .lf-story-copy h2, .lf-section-heading h2, .lf-spec h2, .lf-compare h2, .lf-process h2, .lf-reviews h2, .lf-faq h2, .lf-contact h2 { font-size: 43px; }

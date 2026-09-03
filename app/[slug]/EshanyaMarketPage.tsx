@@ -224,7 +224,7 @@ export default function EshanyaMarketPage({ client, slug }: Props) {
           <div className="lf-hero-shade" />
           <div className="lf-hero-content">
             <div className="lf-overline"><span /> {tagline}</div>
-            <h1>Designed around<br /><em>how your space</em><br />should feel.</h1>
+            <h1><span>Designed around</span><em>how your space</em><span>should feel.</span></h1>
             <p>{brand} brings a considered approach to UPVC windows and doors—beginning with light, airflow, comfort, movement, and the way you live every day.</p>
             <div className="lf-hero-actions">
               <a className="lf-btn primary" href="#systems">Explore the systems <ArrowRight size={17} /></a>
