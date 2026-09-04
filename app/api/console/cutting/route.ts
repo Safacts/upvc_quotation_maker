@@ -46,83 +46,45 @@ const writeSchema = z.object({
     })
     .refine(n => n > 0, { message: "Stock length must be positive" }),
   cuts: z.array(cutItemSchema).min(1, { message: "At least one cut is required" }),
+  offcuts: z.array(z.coerce.number().int().positive()).optional().default([]),
+  bar_rate: z.coerce.number().min(0).optional().default(2850),
 });
 
-function optimizeCuts(stockLengthMm: number, cuts: Array<{ piece_length_mm: number; quantity: number }>): {
+function optimizeCuts(stockLengthMm: number, cuts: Array<{ piece_length_mm: number; quantity: number }>, offcuts: number[] = []): {
   optimized_cuts: Array<{ piece_length_mm: number; quantity: number; offcut_mm: number }>;
   wastage_percent: number;
+  bars_used: number;
+  offcut_reuse: number;
+  bars: Array<{ cuts: number[]; offcut: number }>;
 } {
   const pieces: number[] = [];
-  for (const cut of cuts) {
-    for (let i = 0; i < cut.quantity; i++) {
-      pieces.push(cut.piece_length_mm);
-    }
-  }
-
+  for (const cut of cuts) for (let i = 0; i < cut.quantity; i++) pieces.push(cut.piece_length_mm);
   pieces.sort((a, b) => b - a);
-
+  // seed with offcuts as initial bins (best-fit)
   const bins: number[] = [];
   const binOffcuts: number[] = [];
-
+  const binPieces: number[][] = [];
+  let offcutReuse = 0;
+  const seeded = offcuts.filter(o => o > 0 && o <= stockLengthMm).sort((a,b)=>b-a);
+  for (const oc of seeded) { bins.push(oc); binOffcuts.push(oc); binPieces.push([]); }
   for (const piece of pieces) {
-    let placed = false;
-    for (let i = 0; i < bins.length; i++) {
-      if (binOffcuts[i] >= piece) {
-        binOffcuts[i] -= piece;
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      bins.push(stockLengthMm);
-      binOffcuts.push(stockLengthMm - piece);
-    }
+    let best = -1; let bestRem = Infinity;
+    for (let i=0;i<bins.length;i++) if (binOffcuts[i] >= piece && binOffcuts[i]-piece < bestRem) { bestRem = binOffcuts[i]-piece; best=i; }
+    if (best>=0) { binOffcuts[best]-=piece; binPieces[best].push(piece); if (best < seeded.length) offcutReuse++; }
+    else { bins.push(stockLengthMm); binOffcuts.push(stockLengthMm-piece); binPieces.push([piece]); }
   }
-
-  const totalStockUsed = bins.length * stockLengthMm;
-  const totalOffcut = binOffcuts.reduce((sum, o) => sum + o, 0);
-  const wastagePercent = totalStockUsed > 0 ? (totalOffcut / totalStockUsed) * 100 : 0;
-
-  const binPieces: Array<number[]> = bins.map(() => []);
-  const tempRemaining = [...binOffcuts];
-
-  for (const piece of pieces) {
-    for (let i = 0; i < bins.length; i++) {
-      if (tempRemaining[i] >= piece) {
-        tempRemaining[i] -= piece;
-        binPieces[i].push(piece);
-        break;
-      }
-    }
+  const totalStock = bins.reduce((s,_,i)=> s + (i < seeded.length ? seeded[i] : stockLengthMm),0); // seeded bars count as their length, not full stock
+  const totalOffcut = binOffcuts.reduce((s,v)=>s+v,0);
+  // wastage vs actual stock length used (offcuts are free stock)
+  const stockLenTotal = bins.length ? bins.reduce((s,_,i)=> s + (i < seeded.length ? seeded[i] : stockLengthMm),0) : 0;
+  const wastagePercent = stockLenTotal ? (totalOffcut/stockLenTotal)*100 : 0;
+  const m = new Map<number,{quantity:number;offcut_mm:number}>();
+  for (let i=0;i<binPieces.length;i++) for (const p of binPieces[i]) {
+    const e=m.get(p); if(e) e.quantity++; else m.set(p,{quantity:1,offcut_mm:binOffcuts[i]});
   }
-
-  const optimizedCutsMap = new Map<number, { quantity: number; offcut_mm: number }>();
-  for (let i = 0; i < binPieces.length; i++) {
-    for (const piece of binPieces[i]) {
-      const existing = optimizedCutsMap.get(piece);
-      if (existing) {
-        existing.quantity++;
-      } else {
-        optimizedCutsMap.set(piece, { quantity: 1, offcut_mm: tempRemaining[i] });
-      }
-    }
-  }
-
-  const optimized_cuts: Array<{ piece_length_mm: number; quantity: number; offcut_mm: number }> = [];
-  for (const [pieceLen, data] of optimizedCutsMap) {
-    optimized_cuts.push({
-      piece_length_mm: pieceLen,
-      quantity: data.quantity,
-      offcut_mm: data.offcut_mm,
-    });
-  }
-
-  optimized_cuts.sort((a, b) => b.piece_length_mm - a.piece_length_mm);
-
-  return {
-    optimized_cuts,
-    wastage_percent: Math.round(wastagePercent * 100) / 100,
-  };
+  const optimized_cuts = Array.from(m.entries()).map(([piece_length_mm, d])=>({piece_length_mm, quantity:d.quantity, offcut_mm:d.offcut_mm})).sort((a,b)=>b.piece_length_mm-a.piece_length_mm);
+  const bars = binPieces.map((cuts,i)=>({cuts, offcut: binOffcuts[i]}));
+  return { optimized_cuts, wastage_percent: Math.round(wastagePercent*100)/100, bars_used: bins.length, offcut_reuse: offcutReuse, bars };
 }
 
 const LIST_SELECT =
@@ -164,20 +126,38 @@ export async function GET(request: NextRequest) {
       if (safe) filters.profile_type = "ilike.*" + safe + "*";
     }
 
-    const totalCount = await supaCount("cutting_lists", {
-      client_id: "eq." + clientId,
-      ...filters,
-    });
-
-    const offset = (page - 1) * page_size;
-    const rows = await supaGetSafe("cutting_lists", {
-      client_id: "eq." + clientId,
-      ...filters,
-      select: LIST_SELECT,
-      order: `${sort}.${dir},id.desc`,
-      limit: page_size,
-      offset,
-    });
+    let totalCount = 0;
+    let rows: any = [];
+    try {
+      totalCount = await supaCount("cutting_lists", {
+        client_id: "eq." + clientId,
+        ...filters,
+      });
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg.includes("PGRST205") || msg.includes("cutting_lists")) {
+        // Table not yet migrated — show empty state, not 500
+        return consoleJson({ rows: [], page, page_size, total_count: 0, total_pages: 1, sort, dir, _migrating: true });
+      }
+      throw e;
+    }
+    try {
+      const offset = (page - 1) * page_size;
+      rows = await supaGetSafe("cutting_lists", {
+        client_id: "eq." + clientId,
+        ...filters,
+        select: LIST_SELECT,
+        order: `${sort}.${dir},id.desc`,
+        limit: page_size,
+        offset,
+      });
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg.includes("PGRST205") || msg.includes("cutting_lists")) {
+        return consoleJson({ rows: [], page, page_size, total_count: totalCount, total_pages: 1, sort, dir, _migrating: true });
+      }
+      throw e;
+    }
 
     const list = Array.isArray(rows) ? rows : [];
 
@@ -232,23 +212,35 @@ export async function POST(request: NextRequest) {
       piece_length_mm: c.piece_length_mm,
       quantity: c.quantity,
     }));
-    const { optimized_cuts, wastage_percent } = optimizeCuts(data.stock_length_mm, cutsForOptimization);
+    const { optimized_cuts, wastage_percent, bars_used, offcut_reuse, bars } = optimizeCuts(data.stock_length_mm, cutsForOptimization, data.offcuts || []);
+    const barRate = data.bar_rate || 2850;
+    const wasteRs = Math.round((wastage_percent/100) * bars_used * barRate);
 
-    const inserted = await supaPost("cutting_lists", {
-      client_id: gate.clientId,
-      order_id: data.order_id,
-      production_order_id: data.production_order_id,
-      profile_type: data.profile_type,
-      stock_length_mm: data.stock_length_mm,
-      cuts: data.cuts,
-      optimized_cuts,
-      wastage_percent,
-      status: "pending",
-    });
+    let inserted: any;
+    try {
+      inserted = await supaPost("cutting_lists", {
+        client_id: gate.clientId,
+        order_id: data.order_id,
+        production_order_id: data.production_order_id,
+        profile_type: data.profile_type,
+        stock_length_mm: data.stock_length_mm,
+        cuts: data.cuts,
+        optimized_cuts,
+        wastage_percent,
+        status: "pending",
+      } as any);
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+      if (msg.includes("PGRST205") || msg.includes("cutting_lists")) {
+        // Still return optimization result even without DB — so Optimize works locally before migration
+        return consoleJson({ cutting_list: null, bars_used, offcut_reuse, bars, waste_rs: wasteRs, bar_rate: barRate, optimized_cuts, wastage_percent, _no_store: true }, 201);
+      }
+      throw e;
+    }
     const row = Array.isArray(inserted) ? inserted[0] : inserted;
     if (!row?.id) return consoleJson({ error: "Insert failed" }, 500);
 
-    return consoleJson({ cutting_list: row }, 201);
+    return consoleJson({ cutting_list: row, bars_used, offcut_reuse, bars, waste_rs: wasteRs, bar_rate: barRate }, 201);
   } catch (e: any) {
     return consoleJson({ error: String(e?.message ?? e) }, 500);
   }

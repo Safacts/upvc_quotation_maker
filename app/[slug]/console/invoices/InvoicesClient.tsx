@@ -6,6 +6,7 @@ import { Plus, Search, Download, MessageSquare } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatDate, formatMoney, toCsv, downloadFile } from "@/lib/console-format";
+import { validateGSTIN } from "@/lib/console-validators";
 
 interface InvoiceRow {
   id: string;
@@ -43,6 +44,7 @@ export default function InvoicesClient() {
   const [isInterstate, setIsInterstate] = useState(false);
   const [gstRate, setGstRate] = useState<string>("18");
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -83,13 +85,22 @@ export default function InvoicesClient() {
 
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     if (!buyerName.trim()) {
-      toast("Please enter buyer name", "err");
+      setFieldErrors((f) => ({ ...f, buyerName: "Buyer name is required" }));
+      toast("Buyer name is required", "err");
       return;
     }
     const val = parseFloat(taxableValue);
-    if (!val || val <= 0) {
-      toast("Please enter valid taxable amount", "err");
+    if (!val || val <= 0 || isNaN(val)) {
+      setFieldErrors((f) => ({ ...f, taxableValue: "Please enter valid positive taxable amount" }));
+      toast("Please enter valid positive taxable amount", "err");
+      return;
+    }
+    const gstinErr = validateGSTIN(buyerGstin);
+    if (gstinErr) {
+      setFieldErrors((f) => ({ ...f, buyerGstin: gstinErr }));
+      toast(gstinErr, "err");
       return;
     }
 
@@ -102,7 +113,7 @@ export default function InvoicesClient() {
         body: JSON.stringify({
           buyer_name: buyerName.trim(),
           buyer_address: buyerAddress.trim(),
-          buyer_gstin: buyerGstin.trim(),
+          buyer_gstin: buyerGstin.trim().toUpperCase(),
           taxable_value: val,
           is_interstate: isInterstate,
           gst_rate: parseFloat(gstRate) || 18,
@@ -121,6 +132,7 @@ export default function InvoicesClient() {
       setBuyerAddress("");
       setBuyerGstin("");
       setTaxableValue("");
+      setFieldErrors({});
       void loadData();
     } catch (err: any) {
       toast(err?.message || "Failed to create invoice", "err");
@@ -452,17 +464,25 @@ export default function InvoicesClient() {
                   required
                   placeholder="e.g. Ramesh Kumar Builders"
                   value={buyerName}
-                  onChange={(e) => setBuyerName(e.target.value)}
+                  onChange={(e) => {
+                    setBuyerName(e.target.value);
+                    if (fieldErrors.buyerName) setFieldErrors((f) => ({ ...f, buyerName: "" }));
+                  }}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--vc-surface)",
-                    border: "1px solid var(--vc-border)",
+                    border: fieldErrors.buyerName ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                     borderRadius: "8px",
                     color: "var(--vc-text-hi)",
                     fontSize: "13px",
                   }}
                 />
+                {fieldErrors.buyerName && (
+                  <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                    {fieldErrors.buyerName}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -472,20 +492,37 @@ export default function InvoicesClient() {
                   </label>
                   <input
                     type="text"
+                    maxLength={15}
                     placeholder="36AAAAA0000A1Z5"
                     value={buyerGstin}
-                    onChange={(e) => setBuyerGstin(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setBuyerGstin(val);
+                      if (fieldErrors.buyerGstin) {
+                        const err = validateGSTIN(val);
+                        setFieldErrors((f) => ({ ...f, buyerGstin: err || "" }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const err = validateGSTIN(e.target.value.toUpperCase());
+                      setFieldErrors((f) => ({ ...f, buyerGstin: err || "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.buyerGstin ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "13px",
                       fontFamily: "monospace",
                     }}
                   />
+                  {fieldErrors.buyerGstin && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                      {fieldErrors.buyerGstin}
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -538,21 +575,30 @@ export default function InvoicesClient() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     placeholder="45000"
                     value={taxableValue}
-                    onChange={(e) => setTaxableValue(e.target.value)}
+                    onChange={(e) => {
+                      setTaxableValue(e.target.value);
+                      if (fieldErrors.taxableValue) setFieldErrors((f) => ({ ...f, taxableValue: "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.taxableValue ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "14px",
                       fontWeight: 700,
                     }}
                   />
+                  {fieldErrors.taxableValue && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                      {fieldErrors.taxableValue}
+                    </span>
+                  )}
                 </div>
 
                 <div>

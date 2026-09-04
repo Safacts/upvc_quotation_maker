@@ -81,6 +81,7 @@ export default function ProjectsClient() {
     start_date: "",
     end_date: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
   const pageSize = screen.config.pageSize;
@@ -125,8 +126,30 @@ export default function ProjectsClient() {
   }, [load]);
 
   const createProject = useCallback(async () => {
+    setFieldErrors({});
     if (!draft.project_name.trim()) {
+      setFieldErrors({ project_name: "Project name is required" });
       toast("Project name is required", "err");
+      return;
+    }
+    if (draft.budget && (isNaN(Number(draft.budget)) || Number(draft.budget) < 0)) {
+      setFieldErrors({ budget: "Budget cannot be negative" });
+      toast("Budget cannot be negative", "err");
+      return;
+    }
+    if (draft.actual_cost && (isNaN(Number(draft.actual_cost)) || Number(draft.actual_cost) < 0)) {
+      setFieldErrors({ actual_cost: "Actual cost cannot be negative" });
+      toast("Actual cost cannot be negative", "err");
+      return;
+    }
+    if (draft.progress && (isNaN(Number(draft.progress)) || Number(draft.progress) < 0 || Number(draft.progress) > 100)) {
+      setFieldErrors({ progress: "Progress must be 0–100%" });
+      toast("Progress % must be between 0 and 100", "err");
+      return;
+    }
+    if (draft.start_date && draft.end_date && draft.end_date < draft.start_date) {
+      setFieldErrors({ end_date: "End date cannot be before start date" });
+      toast("End date cannot be earlier than start date", "err");
       return;
     }
     try {
@@ -386,12 +409,16 @@ export default function ProjectsClient() {
                 Project name <span className="vc-req">*</span>
               </label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.project_name ? " vc-invalid" : "")}
                 value={draft.project_name}
                 autoFocus
-                onChange={(e) => setDraft({ ...draft, project_name: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, project_name: e.target.value });
+                  if (fieldErrors.project_name) setFieldErrors((f) => ({ ...f, project_name: "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createProject()}
               />
+              {fieldErrors.project_name && <span className="vc-err">{fieldErrors.project_name}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Status</label>
@@ -410,29 +437,41 @@ export default function ProjectsClient() {
             <div className="vc-field">
               <label className="vc-label">Budget (₹)</label>
               <input
-                className="vc-input vc-num"
+                className={"vc-input vc-num" + (fieldErrors.budget ? " vc-invalid" : "")}
                 inputMode="decimal"
                 value={draft.budget}
-                onChange={(e) => setDraft({ ...draft, budget: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, budget: e.target.value });
+                  if (fieldErrors.budget) setFieldErrors((f) => ({ ...f, budget: "" }));
+                }}
               />
+              {fieldErrors.budget && <span className="vc-err">{fieldErrors.budget}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Actual (₹)</label>
               <input
-                className="vc-input vc-num"
+                className={"vc-input vc-num" + (fieldErrors.actual_cost ? " vc-invalid" : "")}
                 inputMode="decimal"
                 value={draft.actual_cost}
-                onChange={(e) => setDraft({ ...draft, actual_cost: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, actual_cost: e.target.value });
+                  if (fieldErrors.actual_cost) setFieldErrors((f) => ({ ...f, actual_cost: "" }));
+                }}
               />
+              {fieldErrors.actual_cost && <span className="vc-err">{fieldErrors.actual_cost}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Progress %</label>
               <input
-                className="vc-input vc-num"
+                className={"vc-input vc-num" + (fieldErrors.progress ? " vc-invalid" : "")}
                 inputMode="numeric"
                 value={draft.progress}
-                onChange={(e) => setDraft({ ...draft, progress: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, progress: e.target.value });
+                  if (fieldErrors.progress) setFieldErrors((f) => ({ ...f, progress: "" }));
+                }}
               />
+              {fieldErrors.progress && <span className="vc-err">{fieldErrors.progress}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Start date</label>

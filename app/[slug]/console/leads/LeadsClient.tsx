@@ -9,6 +9,7 @@ import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
 import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
 import type { ColumnSpec } from "@/lib/screen-config";
 import { formatAmount, formatDate, toCsv, downloadFile } from "@/lib/console-format";
+import { validateEmail, validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
 
 /** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
 const COLUMN_SPECS: ColumnSpec[] = [
@@ -88,6 +89,7 @@ export default function LeadsClient() {
     assigned_to: "",
     next_followup: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
   const pageSize = screen.config.pageSize;
@@ -132,8 +134,27 @@ export default function LeadsClient() {
   }, [load]);
 
   const createLead = useCallback(async () => {
+    setFieldErrors({});
     if (!draft.name.trim()) {
+      setFieldErrors({ name: "Name is required" });
       toast("Name is required", "err");
+      return;
+    }
+    const phoneErr = validatePhone(draft.phone);
+    if (phoneErr) {
+      setFieldErrors({ phone: phoneErr });
+      toast(phoneErr, "err");
+      return;
+    }
+    const emailErr = validateEmail(draft.email);
+    if (emailErr) {
+      setFieldErrors({ email: emailErr });
+      toast(emailErr, "err");
+      return;
+    }
+    if (draft.value && (isNaN(Number(draft.value)) || Number(draft.value) < 0)) {
+      setFieldErrors({ value: "Estimated deal value cannot be negative" });
+      toast("Estimated deal value cannot be negative", "err");
       return;
     }
     try {
@@ -155,6 +176,7 @@ export default function LeadsClient() {
       toast("Lead added", "ok");
       setCreating(false);
       setDraft({ name: "", company: "", phone: "", email: "", source: "", status: "new", value: "", notes: "", assigned_to: "", next_followup: "" });
+      setFieldErrors({});
       void load();
     } catch (e: any) {
       toast(String(e?.message ?? e), "err");
@@ -348,12 +370,16 @@ export default function LeadsClient() {
                 Name <span className="vc-req">*</span>
               </label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.name ? " vc-invalid" : "")}
                 value={draft.name}
                 autoFocus
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, name: e.target.value });
+                  if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createLead()}
               />
+              {fieldErrors.name && <span className="vc-err">{fieldErrors.name}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Company</label>
@@ -366,18 +392,51 @@ export default function LeadsClient() {
             <div className="vc-field">
               <label className="vc-label">Phone</label>
               <input
-                className="vc-input"
+                type="tel"
+                className={"vc-input" + (fieldErrors.phone ? " vc-invalid" : "")}
                 value={draft.phone}
-                onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                maxLength={16}
+                placeholder="10-digit mobile"
+                inputMode="tel"
+                onChange={(e) => {
+                  const clean = sanitizePhoneInput(e.target.value);
+                  setDraft({ ...draft, phone: clean });
+                  if (fieldErrors.phone) {
+                    const err = validatePhone(clean);
+                    setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validatePhone(e.target.value);
+                  setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                }}
+                onKeyDown={(e) => e.key === "Enter" && void createLead()}
               />
+              {fieldErrors.phone && <span className="vc-err">{fieldErrors.phone}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Email</label>
               <input
-                className="vc-input"
+                type="email"
+                className={"vc-input" + (fieldErrors.email ? " vc-invalid" : "")}
                 value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                placeholder="name@domain.com"
+                maxLength={100}
+                inputMode="email"
+                onChange={(e) => {
+                  setDraft({ ...draft, email: e.target.value });
+                  if (fieldErrors.email) {
+                    const err = validateEmail(e.target.value);
+                    setFieldErrors((f) => ({ ...f, email: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validateEmail(e.target.value);
+                  setFieldErrors((f) => ({ ...f, email: err || "" }));
+                }}
+                onKeyDown={(e) => e.key === "Enter" && void createLead()}
               />
+              {fieldErrors.email && <span className="vc-err">{fieldErrors.email}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Source</label>

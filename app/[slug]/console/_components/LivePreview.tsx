@@ -93,12 +93,14 @@ export function LivePreview({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 6,
           borderBottom: "1px solid #e2e8f0",
           paddingBottom: 8,
           marginBottom: 4,
         }}
       >
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           <button
             type="button"
             className={`vc-btn vc-btn-sm ${viewMode === "both" ? "vc-btn-primary" : ""}`}
