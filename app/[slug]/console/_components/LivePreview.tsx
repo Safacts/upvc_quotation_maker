@@ -250,6 +250,12 @@ export function LivePreview({
                 <td>Subtotal</td>
                 <td>{formatAmount(view.totals.subtotal)}</td>
               </tr>
+              {view.totals.discountAmount > 0 && (
+                <tr style={{ color: "#c53030" }}>
+                  <td>Discount {view.totals.discountPercentage > 0 ? `(${view.totals.discountPercentage}%)` : ""}</td>
+                  <td>- {formatAmount(view.totals.discountAmount)}</td>
+                </tr>
+              )}
               {view.totals.transport > 0 && (
                 <tr>
                   <td>Transport</td>
@@ -262,10 +268,28 @@ export function LivePreview({
                   <td>{formatAmount(view.totals.gstAmount)}</td>
                 </tr>
               )}
+              {view.totals.roundoff !== 0 && (
+                <tr>
+                  <td>Round Off</td>
+                  <td>{view.totals.roundoff > 0 ? `+ ${formatAmount(view.totals.roundoff)}` : `- ${formatAmount(Math.abs(view.totals.roundoff))}`}</td>
+                </tr>
+              )}
               <tr className="vc-pv-grand">
                 <td>Grand Total</td>
                 <td>{formatMoney(view.totals.grandTotal)}</td>
               </tr>
+              {view.totals.advancePaid > 0 && (
+                <tr style={{ color: "#2E7D32", fontWeight: 700 }}>
+                  <td>Advance Paid</td>
+                  <td>- {formatMoney(view.totals.advancePaid)}</td>
+                </tr>
+              )}
+              {view.totals.advancePaid > 0 && (
+                <tr style={{ color: "#C44A10", fontWeight: 800, borderTop: "1px dashed #cbd5e0" }}>
+                  <td>Remaining Amount</td>
+                  <td>{formatMoney(view.totals.balanceDue)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </>

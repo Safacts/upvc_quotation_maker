@@ -300,6 +300,50 @@ describe("quotationTotals() — the only sanctioned grand total", () => {
     expect(t.gstAmount).toBe(-1800);
     expect(t.grandTotal).toBe(-11800);
   });
+
+  it("computes advancePaid and balanceDue correctly", () => {
+    const t = quotationTotals(
+      { transport_cost: 1000, include_gst: true, gst_percentage: 18, advance_paid: 5000 },
+      [{ width: 1000, height: 1000, units: 2, rate: 500 }],
+      [],
+    );
+
+    // subtotal = 2 * (1000/304.8)^2 * 500 = 10763.91
+    // netTotal = 10763.91 + 1000 = 11763.91
+    // gst = 11763.91 * 0.18 = 2117.50
+    // grandTotal = 13881.41
+    // balanceDue = 13881.41 - 5000 = 8881.41
+    expect(t.advancePaid).toBe(5000);
+    expect(t.balanceDue).toBeCloseTo(t.grandTotal - 5000, 2);
+    expect(t.balanceDue).toBeGreaterThan(0);
+  });
+
+  it("clamps balanceDue to 0 when advance exceeds grand total", () => {
+    const t = quotationTotals(
+      { transport_cost: 0, include_gst: false, advance_paid: 20000 },
+      [{ width: 304.8, height: 304.8, units: 1, rate: 500 }],
+      [],
+    );
+
+    expect(t.grandTotal).toBe(500);
+    expect(t.advancePaid).toBe(20000);
+    expect(t.balanceDue).toBe(0);
+  });
+
+  it("applies percentage discount and fixed discount before GST", () => {
+    const tPct = quotationTotals(
+      { transport_cost: 0, include_gst: true, gst_percentage: 18, discount_percentage: 10 },
+      [{ width: 304.8, height: 304.8, units: 1, rate: 1000 }],
+      [],
+    );
+
+    // subtotal = 1000, discount = 100, netTotal = 900, gst = 162, grandTotal = 1062
+    expect(tPct.subtotal).toBe(1000);
+    expect(tPct.discountAmount).toBe(100);
+    expect(tPct.netTotal).toBe(900);
+    expect(tPct.gstAmount).toBe(162);
+    expect(tPct.grandTotal).toBe(1062);
+  });
 });
 
 describe("PRICING_PARITY_FIXTURES — Dart <-> TypeScript contract", () => {

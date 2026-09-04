@@ -624,11 +624,22 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   rightText("Grand Total", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
   rightText(fmtMoney(data.totals.grandTotal), M + contentW - 6, y - 12.5, { size: 10, font: bold });
   y -= 18;
+
+  // Row 3b: Advance Paid and Remaining Amount (if advance is recorded)
+  if (data.totals.advancePaid > 0) {
+    page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
+    text("Advance Paid", M + 6, y - 12.5, { size: 10, font: bold });
+    text(`- ${fmtMoney(data.totals.advancePaid)}`, M + contentW / 2 + 6, y - 12.5, { size: 10 });
+    rightText("Remaining Balance", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+    rightText(fmtMoney(data.totals.balanceDue), M + contentW - 6, y - 12.5, { size: 10, font: bold });
+    y -= 18;
+  }
+
   // Row 4: Amount in Words (with accent top border, full width)
   page.drawRectangle({ x: M, y: y - 22, width: contentW, height: 22, color: C.totalsBg });
   page.drawLine({ start: { x: M, y: y }, end: { x: M + contentW, y: y }, thickness: 2, color: C.headerBand });
-  text("Amount in Words", M + 6, y - 10, { size: 9, font: bold });
-  text(amountInWords(data.totals.grandTotal), M + 6, y - 18, { size: 8 });
+  text(data.totals.advancePaid > 0 ? "Remaining Amount in Words" : "Amount in Words", M + 6, y - 10, { size: 9, font: bold });
+  text(amountInWords(data.totals.advancePaid > 0 ? data.totals.balanceDue : data.totals.grandTotal), M + 6, y - 18, { size: 8 });
   y -= 26;
 
   // ---- Bank Details + Terms (220 pt look-ahead guard against footer collision) ----

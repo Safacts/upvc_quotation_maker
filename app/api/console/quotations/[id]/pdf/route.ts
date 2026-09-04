@@ -45,7 +45,7 @@ export async function GET(
       client_id: "eq." + gate.clientId,
       select:
         "id,quote_no,date,customer_name,contact_no,email,address,reference," +
-        "supplier_company,transport_cost,include_gst,gst_percentage,status," +
+        "supplier_company,transport_cost,include_gst,gst_percentage,advance_paid,status," +
         "measured_items(id,code,description,glass,width,height,units,rate)," +
         "unmeasured_items(id,description,units,rate)",
       limit: 1,

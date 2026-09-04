@@ -34,7 +34,7 @@ export const dynamic = "force-dynamic";
 /** Fields the grid needs. Deliberately excludes `address` — heavy, unused in the list. */
 const LIST_SELECT =
   "id,quote_no,date,customer_name,contact_no,email,reference,supplier_company," +
-  "status,transport_cost,include_gst,gst_percentage,created_at,customer_id," +
+  "status,transport_cost,include_gst,gst_percentage,advance_paid,created_at,customer_id," +
   "measured_items(id,width,height,units,rate),unmeasured_items(id,units,rate)";
 
 /**
@@ -346,6 +346,7 @@ export async function POST(request: NextRequest) {
       supplier_company: data.supplier_company,
       status: data.status,
       transport_cost: data.transport_cost,
+      advance_paid: data.advance_paid,
       include_gst: data.include_gst,
       gst_percentage: data.gst_percentage,
       customer_id: data.customer_id,
