@@ -63,6 +63,7 @@ export default function ProductsClient() {
     price: "",
     unit: "SFT",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [configOpen, setConfigOpen] = useState(false);
   const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
@@ -116,8 +117,15 @@ export default function ProductsClient() {
   );
 
   const createProduct = useCallback(async () => {
+    setFieldErrors({});
     if (!draft.name.trim()) {
+      setFieldErrors({ name: "Name is required" });
       toast("Name is required", "err");
+      return;
+    }
+    if (draft.price && (isNaN(Number(draft.price)) || Number(draft.price) < 0)) {
+      setFieldErrors({ price: "Rate cannot be negative" });
+      toast("Rate/Price cannot be negative", "err");
       return;
     }
     try {
@@ -135,6 +143,7 @@ export default function ProductsClient() {
       toast("Product added", "ok");
       setCreating(false);
       setDraft({ name: "", category: "", description: "", price: "", unit: "SFT" });
+      setFieldErrors({});
       void load();
     } catch (e: any) {
       toast(String(e?.message ?? e), "err");
@@ -275,12 +284,16 @@ export default function ProductsClient() {
                 Name <span className="vc-req">*</span>
               </label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.name ? " vc-invalid" : "")}
                 value={draft.name}
                 autoFocus
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, name: e.target.value });
+                  if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createProduct()}
               />
+              {fieldErrors.name && <span className="vc-err">{fieldErrors.name}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Category</label>
@@ -308,12 +321,16 @@ export default function ProductsClient() {
             <div className="vc-field">
               <label className="vc-label">Rate</label>
               <input
-                className="vc-input vc-num"
+                className={"vc-input vc-num" + (fieldErrors.price ? " vc-invalid" : "")}
                 inputMode="decimal"
                 value={draft.price}
-                onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, price: e.target.value });
+                  if (fieldErrors.price) setFieldErrors((f) => ({ ...f, price: "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createProduct()}
               />
+              {fieldErrors.price && <span className="vc-err">{fieldErrors.price}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Unit</label>

@@ -50,6 +50,7 @@ export default function PaymentsClient() {
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -96,9 +97,16 @@ export default function PaymentsClient() {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
+    if (!customerName.trim()) {
+      setFieldErrors((f) => ({ ...f, customerName: "Customer name is required" }));
+      toast("Customer name is required", "err");
+      return;
+    }
     const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0) {
-      toast("Please enter a valid payment amount", "err");
+    if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+      setFieldErrors((f) => ({ ...f, amount: "Please enter a valid positive payment amount" }));
+      toast("Please enter a valid positive payment amount", "err");
       return;
     }
 
@@ -131,6 +139,7 @@ export default function PaymentsClient() {
       setAmount("");
       setReference("");
       setNote("");
+      setFieldErrors({});
       void loadData();
     } catch (err: any) {
       toast(err?.message || "Failed to record payment", "err");
@@ -486,17 +495,25 @@ export default function PaymentsClient() {
                   required
                   placeholder="e.g. Ramesh Kumar"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    if (fieldErrors.customerName) setFieldErrors((f) => ({ ...f, customerName: "" }));
+                  }}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--vc-surface)",
-                    border: "1px solid var(--vc-border)",
+                    border: fieldErrors.customerName ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                     borderRadius: "8px",
                     color: "var(--vc-text-hi)",
                     fontSize: "13px",
                   }}
                 />
+                {fieldErrors.customerName && (
+                  <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                    {fieldErrors.customerName}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -507,21 +524,30 @@ export default function PaymentsClient() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     placeholder="25000"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      if (fieldErrors.amount) setFieldErrors((f) => ({ ...f, amount: "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.amount ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "14px",
                       fontWeight: 700,
                     }}
                   />
+                  {fieldErrors.amount && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                      {fieldErrors.amount}
+                    </span>
+                  )}
                 </div>
 
                 <div>

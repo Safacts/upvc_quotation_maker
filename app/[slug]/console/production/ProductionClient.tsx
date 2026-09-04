@@ -276,10 +276,10 @@ export default function ProductionClient() {
             <div
               key={s.key}
               style={{
-                borderRadius: 6,
+                borderRadius: "var(--vc-radius)",
                 border: "1px solid var(--vc-border)",
-                background: "#FFEDD5",
-                minHeight: 220,
+                background: "var(--vc-surface-2)",
+                minHeight: 240,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -287,37 +287,42 @@ export default function ProductionClient() {
             >
               <div
                 style={{
-                  padding: "7px 10px",
+                  padding: "8px 11px",
                   fontSize: 12,
                   fontWeight: 700,
-                  color: "#fff",
-                  background: s.key === "ready" ? "#16A34A" : "#EA580C",
+                  color: "var(--vc-text)",
+                  borderBottom: "1px solid var(--vc-border)",
+                  background: "var(--vc-surface)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
                 }}
               >
-                <span>{s.label}</span>
-                <span style={{ opacity: 0.85, fontSize: 11 }}>{cards.length}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {s.label}
+                </span>
+                <span className="vc-pill" style={{ fontSize: 10.5, padding: "1px 6px" }}>
+                  {cards.length}
+                </span>
               </div>
-              <div style={{ padding: 7, display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
+              <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
                 {cards.length === 0 && (
-                  <div style={{ fontSize: 11.5, color: "#7C2D12", opacity: 0.55, textAlign: "center", paddingTop: 16 }}>
-                    Empty
+                  <div style={{ fontSize: 11.5, color: "var(--vc-text-dim)", textAlign: "center", paddingTop: 20 }}>
+                    No orders at this stage
                   </div>
                 )}
                 {cards.map((po) => (
                   <div
                     key={po.id}
                     style={{
-                      borderRadius: 5,
-                      border: "1px solid var(--vc-border-strong)",
-                      background: "#fff",
-                      padding: "7px 9px",
+                      borderRadius: "var(--vc-radius)",
+                      border: "1px solid var(--vc-border)",
+                      background: "var(--vc-surface)",
+                      padding: "8px 10px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 4,
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                      gap: 5,
+                      boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>

@@ -65,6 +65,7 @@
   background: var(--vc-bg);
   color: var(--vc-text);
   font-family: var(--vc-sans);
+  transition: grid-template-columns 0.18s ease;
   /* 13px, not 16px. This is a DENSITY tool: the whole premise is seeing the
      header, every line item, the running totals and the document preview at
      once. Tally's information density is the feature we are copying, not its
@@ -89,6 +90,53 @@
 
 .vc-root * {
   box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbars — match console UI (not browser default)
+   --------------------------------------------------------------------------
+   Browser scrollbars default to thick grey/white that clash with the dark
+   sidebar and the dense light grids. We theme them thin and token-driven.
+   WebKit + Firefox covered. Overlay fallback for browsers that ignore.
+   -------------------------------------------------------------------------- */
+.vc-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.vc-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.vc-root ::-webkit-scrollbar-thumb {
+  background: #c4cbd4;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.vc-root ::-webkit-scrollbar-thumb:hover {
+  background: #a8b0bd;
+  background-clip: content-box;
+}
+.vc-root ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Dark sidebar scrollbar — gold on hover */
+.vc-sidebar::-webkit-scrollbar-thumb {
+  background: #2a3444;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.vc-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--vc-accent);
+  background-clip: content-box;
+}
+/* Firefox */
+.vc-root, .vc-main, .vc-nav, .vc-grid-wrap, .vc-preview {
+  scrollbar-width: thin;
+  scrollbar-color: #c4cbd4 transparent;
+}
+.vc-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3444 transparent;
 }
 
 /* --------------------------------------------------------------------------
@@ -435,6 +483,11 @@
   height: 24px;
   padding: 0 7px;
   font-size: 11.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* --------------------------------------------------------------------------
@@ -516,11 +569,31 @@ textarea.vc-input {
 .vc-card-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   /* 6px instead of 8px — saves 4px of vertical height per card (4 cards = 16px back). */
   padding: 6px 11px;
   border-bottom: 1px solid var(--vc-border);
   background: var(--vc-surface-2);
+  min-height: 38px;
+}
+
+.vc-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.vc-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .vc-card-title {

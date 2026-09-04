@@ -33,6 +33,10 @@ import {
   PhoneCall,
   FolderKanban,
   Box,
+  Ruler,
+  Wallet,
+  Copy,
+  Pin,
 } from "lucide-react";
 import {
   useHotkeys,
@@ -188,10 +192,13 @@ export function useConsoleAction(name: ConsoleActionName, fn: (() => void) | nul
 const NAV = [
   { key: "", label: "Overview", icon: LayoutDashboard, hint: "1" },
   { key: "quotations", label: "Quotations", icon: FileText, hint: "2" },
+  { key: "builder", label: "Window Builder", icon: Ruler, hint: "B" },
   { key: "customers", label: "Customers", icon: Users, hint: "3" },
   { key: "products", label: "Products", icon: Package, hint: "4" },
   { key: "production", label: "Production", icon: Factory, hint: "5" },
   { key: "cutting", label: "Cutting", icon: Scissors, hint: "6" },
+  { key: "bulk", label: "Bulk Import", icon: Copy, hint: "B" },
+  { key: "money", label: "Money", icon: Wallet, hint: "M" },
   { key: "leads", label: "CRM (Leads)", icon: PhoneCall, hint: "7" },
   { key: "projects", label: "Projects", icon: FolderKanban, hint: "8" },
   { key: "reports", label: "Reports", icon: BarChart3, hint: "9" },
@@ -217,7 +224,21 @@ export default function ConsoleShell({
   const pathname = usePathname();
   const { applyTo } = useUI();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const [hoverExpand, setHoverExpand] = useState(false);
+  const [hoverEnabled, setHoverEnabled] = useState(true);
+  const isCollapsed = collapsed && !(hoverEnabled && hoverExpand);
+  // Persist hover+collapsed so refresh keeps "collapsed + hover peek" state
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem("vc_collapsed");
+      const h = localStorage.getItem("vc_hover");
+      if (c !== null) setCollapsed(c === "1");
+      if (h !== null) setHoverEnabled(h === "1");
+    } catch {}
+  }, []);
+  useEffect(() => { try { localStorage.setItem("vc_collapsed", collapsed ? "1" : "0"); } catch {} }, [collapsed]);
+  useEffect(() => { try { localStorage.setItem("vc_hover", hoverEnabled ? "1" : "0"); } catch {} }, [hoverEnabled]);
   const [status, setStatus] = useState<StatusInfo>({});
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -311,13 +332,17 @@ export default function ConsoleShell({
   // it snapping back to expanded on the next pixel of window resize.
   const manuallyToggled = useRef(false);
   useEffect(() => {
+    // If user has persisted choice, respect it — don't auto-collapse over it
+    try { if (localStorage.getItem("vc_collapsed") !== null) return; } catch {}
+    // Default hover ON means start collapsed for peek behaviour — don't auto-expand on wide
+    if (hoverEnabled) return;
     function onResize() {
       if (!manuallyToggled.current) setCollapsed(window.innerWidth < 1280);
     }
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
+  }, [hoverEnabled]);
 
   const logout = useCallback(async () => {
     localStorage.clear();
@@ -689,10 +714,14 @@ export default function ConsoleShell({
     >
       <div
         ref={rootRef}
-        className={"vc-root" + (collapsed ? " vc-collapsed" : "")}
+        className={"vc-root" + (isCollapsed ? " vc-collapsed" : "")}
       >
         {/* ---- Sidebar ---- */}
-        <aside className="vc-sidebar">
+        <aside
+          className="vc-sidebar"
+          onMouseEnter={() => { if (collapsed && hoverEnabled) setHoverExpand(true); }}
+          onMouseLeave={() => setHoverExpand(false)}
+        >
           <div className="vc-brand">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -752,15 +781,26 @@ export default function ConsoleShell({
           <div className="vc-sidebar-foot">
             <button
               type="button"
+              className={"vc-nav-item" + (hoverEnabled ? " vc-active" : "")}
+              onClick={() => setHoverEnabled(v => !v)}
+              title={hoverEnabled ? "Hover expand ON — pin active" : "Hover expand OFF — click to enable hover peek"}
+              style={{ marginBottom: 4 }}
+            >
+              <Pin size={13} strokeWidth={2} />
+              <span className="vc-nav-label">{hoverEnabled ? "Hover: ON" : "Hover: OFF"}</span>
+            </button>
+            <button
+              type="button"
               className="vc-nav-item"
               onClick={() => {
                 manuallyToggled.current = true;
+                setHoverExpand(false);
                 setCollapsed((v) => !v);
               }}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              {collapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
-              <span className="vc-nav-label">{collapsed ? "Expand" : "Collapse"}</span>
+              {isCollapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
+              <span className="vc-nav-label">{isCollapsed ? "Expand" : "Collapse"}</span>
             </button>
             <button type="button" className="vc-nav-item" onClick={() => void logout()}>
               <LogOut size={15} strokeWidth={2} />

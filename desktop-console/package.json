@@ -1,0 +1,39 @@
+{
+  "name": "vitharn-desktop-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Installable Windows desktop shell for the Vitharn UPVC quotation console",
+  "main": "main.cjs",
+  "scripts": {
+    "configure-client": "node configure-client.mjs",
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --config electron-builder.config.cjs"
+  },
+  "devDependencies": {
+    "electron": "^38.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "client-config.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "Vitharn-Desktop-Console-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vitharn Desktop Console"
+    }
+  }
+}

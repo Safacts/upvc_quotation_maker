@@ -75,3 +75,5 @@ pwtest.*
 backup.js
 replicate.js
 scratch_*.js
+test_output/
+.playwright-mcp/
