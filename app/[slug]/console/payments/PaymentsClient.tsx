@@ -96,9 +96,13 @@ export default function PaymentsClient() {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!customerName.trim()) {
+      toast("Customer name is required", "err");
+      return;
+    }
     const numAmount = parseFloat(amount);
-    if (!numAmount || numAmount <= 0) {
-      toast("Please enter a valid payment amount", "err");
+    if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+      toast("Please enter a valid positive payment amount", "err");
       return;
     }
 

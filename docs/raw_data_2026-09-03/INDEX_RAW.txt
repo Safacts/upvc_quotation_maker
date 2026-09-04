@@ -1,0 +1,48 @@
+=== RAW FETCHED DATA INDEX — 03-09-2026 ===
+DO NOT DELETE — All raw firecrawl outputs stored in this folder
+
+Searches run (firecrawl_search, 2 credits each):
+1. Eshanya Trade Links Coimbatore UPVC — id 01a0659e-54c3-738c-a818-013986623810 — 10 web results
+   - https://m.indiamart.com/sri-taksh-enterprises/ (Eshanya - Wholesaler 7949303849)
+   - https://www.instagram.com/p/Dcteb_tNRvK/ (Luftung x Eshanya)
+   - https://www.facebook.com/61573127609849/posts/122188966814770920/ (Luftung)
+   - https://m.indiamart.com/sri-taksh-enterprises/profile.html (Wholesaler Coimbatore)
+   - https://www.instagram.com/reel/DWEOwVcDS2f/ (Eshanya Authorized Channel Partner LUFTUNG +91 63819 60878)
+
+2. Luftung uPVC Coimbatore Eshanya — id 01a0659e-62fb-76dc-b96d-455e7bab7322 — 10 results
+   - https://www.instagram.com/luftungupvc/ (Luftung hub)
+   - Facebook Luftung posts, Instagram reels Dcteb, DWEOwVc, DTmTS0k, etc.
+   - https://m.indiamart.com/sri-taksh-enterprises/profile.html
+
+3. Eshanya IndiaMART Justdial Luftung — id 01a0659e-6ff0-701e-aaa8-71991e965465 — 10 results (IndiaMART sri-taksh, JustDial Coimbatore UPVC Wholesalers)
+
+4. KPR UPVC Hastinapur Hyderabad 9848264478 — id 01a065aa-6bff-7075-9f7a-8334ce090011 — 10 results
+   - https://m.indiamart.com/kprupvcwindowsanddoorsystems/profile.html (Trader 5.0(1) 14+11+2+2+1 products)
+   - https://www.justdial.com/Hyderabad/Kpr-Upvc-Windows-And-Door-Systems-Closed-Down-Hasthinapuram/040PXX40-XX40-100721112255-G5B7_BZDET (3.7(9) Est 1999)
+   - https://www.tradeindia.com/kpr-upvc-windows-door-systems-13281956/ (33 Anupama Nagar 500070)
+   - https://www.instagram.com/kprupvcwindowsanddoorsystems/ (27 followers, bio: upvc, Aluminum, Toughened glass, Glazing, ACP)
+
+5. VAISHNAVI UPVC Jillelaguda 9640000825 — id 01a065aa-9630-71b6-b61c-d0ac98699fc2 — 10 results
+   - https://www.instagram.com/p/C5NWZ2_Lu9C/ (Beautify home with Vaishnavi UPVC 01-04-2024)
+   - https://m.indiamart.com/vaishnavi-industrieshyderabad/ (Vaishnavi Industries 2020 Manufacturer 5.0(1) — similar, filtered as distinct)
+   - https://www.facebook.com/Swathiecotexupdoorsandwindows/posts/1660939872705190/ (VAISHNAVI UPVC)
+   - https://www.instagram.com/p/Dab7gSXh6OI/ (VAISHNAVI UPVC TRANSFORM 9640000825 www.vaishnaviupvc.com)
+
+6. Vaishnavi Industries ecotexupvc — id 01a065aa-c1b7-7777-aa9a-3594eca9a15e — 0 results (correctly filtered)
+
+7. KPR Instagram filter — id 01a065ab-04b7-700d-8573-f7bf449ee523 — 3 results (kprupvc profile + ₹460 per sft doors)
+
+8. Vaishnavi IG deep — id 01a065ab-2f7b-75d4-b644-c44a5dd068d6 — 9 results (Swathiecotex, VARAHI, etc., all with 9640000825)
+
+Scrapes (firecrawl_scrape markdown, cachedAt 03-09-2026 05:16 UTC):
+- sri-taksh-enterprises/profile.html — Factsheet: Nature Trader - Wholesaler/Distributor, Addl Business Warehouse/Depot, CEO C Lalitesh, GST Reg 2026, Partnership, GST 33********1ZK, Categories UPVC Profile (3), UPVC Window Profile (2), New Items (2), 9 company board/location images, Keywords White Upvc Profile, Golden oak, Door Hardware. OG title Trader - Wholesaler from Coimbatore.
+- kprupvcwindowsanddoorsystems/profile.html — Our Products 5 categories (UPVC Windows 14, UPVC Door 11, Sliding 2, Window Frame 2, Office Partition 1), Established Partnership 2014 (vs JustDial 1999 — discrepancy noted), Nature Trader - Wholesaler/Distributor + Retail, CEO K Reddy, 11-25 employees, GST 2017, Banker Andhra Bank, Payment Cash/Cheque/DD/Credit/Online, Rating 5/5 1 review by SATYANARAYANA JUKANTI 11-Dec-24 UPVC Sliding Door, warehouse/infrastructure images.
+- tradeindia.com/kpr-upvc-windows-door-systems-13281956 — Registered 2018, Parbhakar Reddy, Plot No 33 Anupama Nagar Hasthinapuram Near Court 500070, Business Supplier Trading Company, Global aluminium partition / aluminium window / upvc door.
+
+Agents started (firecrawl_agent, still processing as of 03-09-2026 05:16 UTC, expires 04-09-2026):
+- Eshanya: 01a065b1-dacb-719b-ad22-124f3f3bed64
+- KPR: 01a065b1-e81b-77d3-911e-2cd765468df2
+- Vaishnavi: 01a065b2-e171-74db-bab3-ba744dc3afe9
+
+Raw markdowns of scrapes are stored as .md files alongside this index.
+Do not delete. Next step: poll agents every 60s until completed, then append to this folder as *_agent_result.json and rebuild 15-page dossiers v2.

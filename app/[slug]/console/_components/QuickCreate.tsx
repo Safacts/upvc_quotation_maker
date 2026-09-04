@@ -116,6 +116,14 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
       nameRef.current?.focus();
       return;
     }
+    if (isCustomer && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    if (!isCustomer && price && (isNaN(Number(price)) || Number(price) < 0)) {
+      setError("Price cannot be negative");
+      return;
+    }
     setSaving(true);
     setError("");
     try {

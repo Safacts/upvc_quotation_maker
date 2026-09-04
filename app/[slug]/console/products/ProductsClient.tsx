@@ -120,6 +120,10 @@ export default function ProductsClient() {
       toast("Name is required", "err");
       return;
     }
+    if (draft.price && (isNaN(Number(draft.price)) || Number(draft.price) < 0)) {
+      toast("Rate/Price cannot be negative", "err");
+      return;
+    }
     try {
       const res = await fetch("/api/console/products", {
         method: "POST",

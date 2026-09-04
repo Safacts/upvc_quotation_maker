@@ -129,6 +129,22 @@ export default function ProjectsClient() {
       toast("Project name is required", "err");
       return;
     }
+    if (draft.budget && (isNaN(Number(draft.budget)) || Number(draft.budget) < 0)) {
+      toast("Budget cannot be negative", "err");
+      return;
+    }
+    if (draft.actual_cost && (isNaN(Number(draft.actual_cost)) || Number(draft.actual_cost) < 0)) {
+      toast("Actual cost cannot be negative", "err");
+      return;
+    }
+    if (draft.progress && (isNaN(Number(draft.progress)) || Number(draft.progress) < 0 || Number(draft.progress) > 100)) {
+      toast("Progress % must be between 0 and 100", "err");
+      return;
+    }
+    if (draft.start_date && draft.end_date && draft.end_date < draft.start_date) {
+      toast("End date cannot be earlier than start date", "err");
+      return;
+    }
     try {
       const res = await fetch("/api/console/projects", {
         method: "POST",

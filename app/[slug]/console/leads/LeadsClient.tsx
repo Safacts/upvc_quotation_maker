@@ -136,6 +136,14 @@ export default function LeadsClient() {
       toast("Name is required", "err");
       return;
     }
+    if (draft.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {
+      toast("Please enter a valid email address", "err");
+      return;
+    }
+    if (draft.value && (isNaN(Number(draft.value)) || Number(draft.value) < 0)) {
+      toast("Estimated deal value cannot be negative", "err");
+      return;
+    }
     try {
       const res = await fetch("/api/console/leads", {
         method: "POST",

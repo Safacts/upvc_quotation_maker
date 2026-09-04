@@ -93,6 +93,18 @@ export default function InventoryClient() {
       toast("Please enter item name", "err");
       return;
     }
+    if (price && (isNaN(parseFloat(price)) || parseFloat(price) < 0)) {
+      toast("Price cannot be negative", "err");
+      return;
+    }
+    if (stockQuantity && (isNaN(parseInt(stockQuantity, 10)) || parseInt(stockQuantity, 10) < 0)) {
+      toast("Stock quantity cannot be negative", "err");
+      return;
+    }
+    if (lowStockThreshold && (isNaN(parseInt(lowStockThreshold, 10)) || parseInt(lowStockThreshold, 10) < 0)) {
+      toast("Low stock threshold cannot be negative", "err");
+      return;
+    }
 
     setSaving(true);
     try {

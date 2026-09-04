@@ -74,7 +74,11 @@ export default function ChallansClient() {
   const handleCreateChallan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      toast("Please enter customer name", "err");
+      toast("Customer name is required", "err");
+      return;
+    }
+    if (totalUnits && (isNaN(parseInt(totalUnits, 10)) || parseInt(totalUnits, 10) < 1)) {
+      toast("Total units must be at least 1", "err");
       return;
     }
 

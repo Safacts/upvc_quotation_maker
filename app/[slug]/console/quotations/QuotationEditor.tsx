@@ -4,9 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight, Cuboid, Compass, Share2, MessageSquare,
+  ChevronLeft, ChevronRight, Cuboid, Compass, Share2,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+
+function WhatsAppIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
 import {
   WindowElevationSvg,
@@ -306,12 +321,54 @@ export default function QuotationEditor({
     if (saving) return;
     setFieldErrors({});
 
-    // A cheap client-side check so the obvious mistake does not cost a round
-    // trip. The SAME zod schema still runs on the server — this is a courtesy,
-    // never the enforcement.
+    // Comprehensive client-side validation check
+    const errors: Record<string, string> = {};
     if (!header.customer_name.trim()) {
-      setFieldErrors({ customer_name: "Customer name is required" });
-      toast("Customer name is required", "err");
+      errors.customer_name = "Customer name is required";
+    }
+    if (header.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(header.email.trim())) {
+      errors.email = "Please enter a valid email address";
+    }
+    const gst = Number(header.gst_percentage);
+    if (header.include_gst && (isNaN(gst) || gst < 0 || gst > 100)) {
+      errors.gst_percentage = "GST must be between 0% and 100%";
+    }
+    const transport = Number(header.transport_cost);
+    if (header.transport_cost && (isNaN(transport) || transport < 0)) {
+      errors.transport_cost = "Transport cost cannot be negative";
+    }
+
+    // Check measured items for negative numbers or invalid values
+    for (let i = 0; i < measured.length; i++) {
+      const m = measured[i];
+      if (m.code || m.description || m.width || m.height || m.rate) {
+        const w = Number(m.width);
+        const h = Number(m.height);
+        const r = Number(m.rate);
+        const u = Number(m.units);
+        if (m.width && (isNaN(w) || w < 0)) {
+          errors.measured = `Row ${i + 1}: Width cannot be negative`;
+          break;
+        }
+        if (m.height && (isNaN(h) || h < 0)) {
+          errors.measured = `Row ${i + 1}: Height cannot be negative`;
+          break;
+        }
+        if (m.rate && (isNaN(r) || r < 0)) {
+          errors.measured = `Row ${i + 1}: Rate cannot be negative`;
+          break;
+        }
+        if (m.units && (isNaN(u) || u < 0)) {
+          errors.measured = `Row ${i + 1}: Units cannot be negative`;
+          break;
+        }
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = Object.values(errors)[0];
+      toast(firstError, "err");
       return;
     }
 
@@ -357,6 +414,7 @@ export default function QuotationEditor({
       }
 
       setDirty(false);
+      setLastAutoSavedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
       toast("Saved", "ok");
 
       if (isNew && data.id) {
@@ -371,6 +429,38 @@ export default function QuotationEditor({
       setSaving(false);
     }
   }, [saving, header, measured, unmeasured, savedId, router, slug, toast]);
+
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<string | null>(null);
+
+  // ---- Auto-save (draft only, debounced) ----------------------------------
+  // 2s after last edit, if dirty + already saved once (has savedId), silently
+  // PATCH. No toast — status bar shows state. Never for brand-new unsaved.
+  useEffect(() => {
+    if (!dirty || !savedId || saving) return;
+    // Don't auto-save invalid header — would spam validation errors.
+    if (!header.customer_name.trim()) return;
+    const t = setTimeout(async () => {
+      // Re-check guard inside timeout (dirty may have been cleared manually).
+      if (saving) return;
+      try {
+        setSaving(true);
+        const payload = {
+          ...header,
+          measured_items: measured
+            .filter((m) => m.code || m.description || m.width || m.height || m.rate)
+            .map((m) => ({ code: m.code, description: m.description, glass: m.glass, width: m.width, height: m.height, units: m.units, rate: m.rate })),
+          unmeasured_items: unmeasured.filter((u) => u.description || u.rate).map((u) => ({ description: u.description, units: u.units, rate: u.rate })),
+        };
+        const res = await fetch(`/api/console/quotations/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(payload) });
+        if (res.ok) {
+          setDirty(false);
+          setLastAutoSavedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+        }
+      } catch {}
+      finally { setSaving(false); }
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [dirty, savedId, saving, header, measured, unmeasured]);
 
   const goBack = useCallback(() => {
     // Esc is Tally's Ctrl+Q (quit without saving) — but silently discarding a
@@ -626,9 +716,8 @@ export default function QuotationEditor({
     dirty,
     count:
       `${measured.length} measured · ${unmeasured.length} other` +
-      // "Record 74 of 210" is the Tally caption that tells a reviewer how far
-      // through the batch they are. Only shown when a rail actually exists.
-      (nav.index >= 0 ? ` · record ${nav.position} of ${nav.total}` : ""),
+      (nav.index >= 0 ? ` · record ${nav.position} of ${nav.total}` : "") +
+      (lastAutoSavedAt ? ` · auto-saved ${lastAutoSavedAt}` : dirty ? " · unsaved" : ""),
     total: formatMoney(totals.grandTotal),
     hints: [
       { keys: "Ctrl+S", label: "Save" },
@@ -700,135 +789,139 @@ export default function QuotationEditor({
       {/* ================= LEFT: entry ================= */}
       <div className="vc-split-left">
         <div className="vc-card">
-          <div className="vc-card-head">
-            <button type="button" className="vc-btn vc-btn-sm" onClick={goBack}>
-              <ArrowLeft size={12} /> Back
-            </button>
-            <span className="vc-card-title">
-              {savedId ? "Edit Quotation" : "New Quotation"}
-            </span>
+          <div className="vc-card-head vc-card-head-editor">
+            <div className="vc-card-head-left">
+              <button type="button" className="vc-btn vc-btn-sm" onClick={goBack}>
+                <ArrowLeft size={12} /> Back
+              </button>
+              <span className="vc-card-title">
+                {savedId ? "Edit Quotation" : "New Quotation"}
+              </span>
 
-            {/* The PgUp/PgDn rail, made visible. The keyboard is the fast path,
-                but a user who does not yet know the shortcut needs to see that
-                stepping through records is possible at all — and the caption is
-                where they learn the key. */}
-            {nav.index >= 0 && (
-              <div className="vc-recnav">
+              {/* The PgUp/PgDn rail, made visible. The keyboard is the fast path,
+                  but a user who does not yet know the shortcut needs to see that
+                  stepping through records is possible at all — and the caption is
+                  where they learn the key. */}
+              {nav.index >= 0 && (
+                <div className="vc-recnav">
+                  <button
+                    type="button"
+                    className="vc-icon-btn"
+                    onClick={() => goToRecord(nav.prevId)}
+                    disabled={!nav.prevId}
+                    title={
+                      nav.prevId
+                        ? "Previous quotation (PgUp)"
+                        : nav.atPageStart
+                          ? "Start of this page — go back to the list for earlier records"
+                          : "First record"
+                    }
+                  >
+                    <ChevronLeft size={12} />
+                  </button>
+                  <span className="vc-recnav-label">
+                    {nav.position} / {nav.total}
+                  </span>
+                  <button
+                    type="button"
+                    className="vc-icon-btn"
+                    onClick={() => goToRecord(nav.nextId)}
+                    disabled={!nav.nextId}
+                    title={
+                      nav.nextId
+                        ? "Next quotation (PgDn)"
+                        : nav.atPageEnd
+                          ? "End of this page — go back to the list for more"
+                          : "Last record"
+                    }
+                  >
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="vc-card-actions">
+              {savedId && (
                 <button
                   type="button"
-                  className="vc-icon-btn"
-                  onClick={() => goToRecord(nav.prevId)}
-                  disabled={!nav.prevId}
-                  title={
-                    nav.prevId
-                      ? "Previous quotation (PgUp)"
-                      : nav.atPageStart
-                        ? "Start of this page — go back to the list for earlier records"
-                        : "First record"
-                  }
+                  className="vc-btn vc-btn-sm"
+                  onClick={() => void duplicate()}
+                  title="Duplicate as new draft (Alt+D)"
                 >
-                  <ChevronLeft size={12} />
+                  <FileText size={12} /> Duplicate <span className="vc-kbd">Alt D</span>
                 </button>
-                <span className="vc-recnav-label">
-                  {nav.position} / {nav.total}
-                </span>
+              )}
+              {savedId && (
                 <button
                   type="button"
-                  className="vc-icon-btn"
-                  onClick={() => goToRecord(nav.nextId)}
-                  disabled={!nav.nextId}
-                  title={
-                    nav.nextId
-                      ? "Next quotation (PgDn)"
-                      : nav.atPageEnd
-                        ? "End of this page — go back to the list for more"
-                        : "Last record"
+                  className="vc-btn vc-btn-sm"
+                  onClick={() =>
+                    window.open(
+                      `/upvc/3d-viewer?fromQuotation=${savedId}`,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
                   }
+                  title="Open the measured opening as a 3D model"
                 >
-                  <ChevronRight size={12} />
+                  <Cuboid size={12} /> 3D
                 </button>
-              </div>
-            )}
-
-            <div style={{ flex: 1 }} />
-            {savedId && (
+              )}
               <button
                 type="button"
                 className="vc-btn vc-btn-sm"
-                onClick={() => void duplicate()}
-                title="Duplicate as new draft (Alt+D)"
+                onClick={() => window.print()}
+                title="Print preview (Ctrl+P)"
               >
-                <FileText size={12} /> Duplicate <span className="vc-kbd">Alt D</span>
+                <Printer size={12} /> Print <span className="vc-kbd">Ctrl P</span>
               </button>
-            )}
-            {savedId && (
               <button
                 type="button"
                 className="vc-btn vc-btn-sm"
-                onClick={() =>
-                  window.open(
-                    `/upvc/3d-viewer?fromQuotation=${savedId}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
-                }
-                title="Open the measured opening as a 3D model"
+                onClick={() => void emailQuote()}
+                title="Email the saved quotation as a PDF"
               >
-                <Cuboid size={12} /> 3D
+                <Mail size={12} /> Email
               </button>
-            )}
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm"
-              onClick={() => window.print()}
-              title="Print preview"
-            >
-              <Printer size={12} /> <span className="vc-kbd">Ctrl P</span>
-            </button>
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm"
-              onClick={() => void emailQuote()}
-              title="Email the saved quotation as a PDF"
-            >
-              <Mail size={12} /> Email
-            </button>
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm"
-              onClick={() => void shareQuote(false)}
-              disabled={sharing}
-              title="Copy customer confirmation & CAD link"
-            >
-              <Share2 size={12} /> {sharing ? "Sharing..." : "Share Link"}
-            </button>
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm"
-              onClick={() => void shareQuote(true)}
-              disabled={sharing}
-              title="Share quotation & CAD elevation diagrams on WhatsApp"
-              style={{ color: "#16a34a" }}
-            >
-              <MessageSquare size={12} /> WhatsApp
-            </button>
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm"
-              onClick={() => void downloadPdf()}
-              title="Download as PDF (Ctrl+E)"
-            >
-              <Download size={12} /> PDF <span className="vc-kbd">Ctrl E</span>
-            </button>
-            <button
-              type="button"
-              className="vc-btn vc-btn-sm vc-btn-primary"
-              onClick={() => void save()}
-              disabled={saving}
-            >
-              {saving ? <span className="vc-spinner" /> : <Save size={12} />} Save{" "}
-              <span className="vc-kbd">Ctrl S</span>
-            </button>
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => void shareQuote(false)}
+                disabled={sharing}
+                title="Copy customer confirmation & CAD link"
+              >
+                <Share2 size={12} /> {sharing ? "Sharing..." : "Share Link"}
+              </button>
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => void shareQuote(true)}
+                disabled={sharing}
+                title="Share quotation & CAD elevation diagrams on WhatsApp"
+                style={{ color: "#16a34a" }}
+              >
+                <WhatsAppIcon size={13} /> WhatsApp
+              </button>
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => void downloadPdf()}
+                title="Download as PDF (Ctrl+E)"
+              >
+                <Download size={12} /> PDF <span className="vc-kbd">Ctrl E</span>
+              </button>
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm vc-btn-primary"
+                onClick={() => void save()}
+                disabled={saving}
+                title="Save quotation (Ctrl+S)"
+              >
+                {saving ? <span className="vc-spinner" /> : <Save size={12} />} Save{" "}
+                <span className="vc-kbd">Ctrl S</span>
+              </button>
+            </div>
           </div>
 
           {/* Header: 3 columns, everything visible. No wizard, no accordion. */}
@@ -875,21 +968,27 @@ export default function QuotationEditor({
             <div className="vc-field">
               <label className="vc-label">Phone</label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.contact_no ? " vc-invalid" : "")}
                 value={header.contact_no}
                 onChange={(e) => setHeaderField("contact_no", e.target.value)}
                 inputMode="tel"
               />
+              {fieldErrors.contact_no && (
+                <span className="vc-err">{fieldErrors.contact_no}</span>
+              )}
             </div>
 
             <div className="vc-field">
               <label className="vc-label">Email</label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.email ? " vc-invalid" : "")}
                 value={header.email}
                 onChange={(e) => setHeaderField("email", e.target.value)}
                 inputMode="email"
               />
+              {fieldErrors.email && (
+                <span className="vc-err">{fieldErrors.email}</span>
+              )}
             </div>
 
             <div className="vc-field">
@@ -905,10 +1004,13 @@ export default function QuotationEditor({
             <div className="vc-field vc-span-2">
               <label className="vc-label">Address</label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.address ? " vc-invalid" : "")}
                 value={header.address}
                 onChange={(e) => setHeaderField("address", e.target.value)}
               />
+              {fieldErrors.address && (
+                <span className="vc-err">{fieldErrors.address}</span>
+              )}
             </div>
 
             <div className="vc-field">
@@ -947,7 +1049,7 @@ export default function QuotationEditor({
             <div className="vc-field">
               <label className="vc-label">Transport (Rs.)</label>
               <input
-                className="vc-input vc-num"
+                className={"vc-input vc-num" + (fieldErrors.transport_cost ? " vc-invalid" : "")}
                 value={header.transport_cost}
                 onChange={(e) => setHeaderField("transport_cost", e.target.value)}
                 inputMode="decimal"
@@ -955,6 +1057,9 @@ export default function QuotationEditor({
                 // says what it will write into.
                 data-calc-label="Transport"
               />
+              {fieldErrors.transport_cost && (
+                <span className="vc-err">{fieldErrors.transport_cost}</span>
+              )}
             </div>
           </div>
         </div>

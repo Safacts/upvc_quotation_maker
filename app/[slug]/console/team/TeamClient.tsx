@@ -65,8 +65,12 @@ export default function TeamClient() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      toast("Please enter a valid email", "err");
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast("Please enter a valid email address", "err");
+      return;
+    }
+    if (!fullName.trim()) {
+      toast("Please enter full name", "err");
       return;
     }
 

@@ -84,12 +84,16 @@ export default function InvoicesClient() {
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyerName.trim()) {
-      toast("Please enter buyer name", "err");
+      toast("Buyer name is required", "err");
       return;
     }
     const val = parseFloat(taxableValue);
-    if (!val || val <= 0) {
-      toast("Please enter valid taxable amount", "err");
+    if (!val || val <= 0 || isNaN(val)) {
+      toast("Please enter valid positive taxable amount", "err");
+      return;
+    }
+    if (buyerGstin.trim() && buyerGstin.trim().length !== 15) {
+      toast("GSTIN must be 15 characters long", "err");
       return;
     }
 
