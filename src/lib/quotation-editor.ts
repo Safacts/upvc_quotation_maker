@@ -57,6 +57,10 @@ export interface QuotationHeader {
   supplier_company: string;
   status: string;
   transport_cost: string;
+  advance_paid: string;
+  discount_amount: string;
+  discount_percentage: string;
+  roundoff: string;
   include_gst: boolean;
   gst_percentage: string;
   customer_id: string | null;
@@ -103,6 +107,10 @@ export function blankHeader(gstPercentage = 18): QuotationHeader {
     supplier_company: "",
     status: "draft",
     transport_cost: "0",
+    advance_paid: "0",
+    discount_amount: "0",
+    discount_percentage: "0",
+    roundoff: "0",
     include_gst: false,
     gst_percentage: String(gstPercentage),
     customer_id: null,
