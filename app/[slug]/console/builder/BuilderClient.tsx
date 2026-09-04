@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatMoney, formatSqft } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 import {
   buildBom,
   optimizeCuts,
@@ -208,9 +209,10 @@ export default function BuilderClient() {
                 value={cfg.width || ""}
                 min={300}
                 max={6000}
-                onChange={(e) =>
-                  setCfg({ ...cfg, width: parseInt(e.target.value || "0", 10) })
-                }
+                onChange={(e) => {
+                  const cleaned = sanitizeNumericInput(e.target.value, false);
+                  setCfg({ ...cfg, width: parseInt(cleaned || "0", 10) });
+                }}
               />
             </div>
             <div className="vc-field">
@@ -223,9 +225,10 @@ export default function BuilderClient() {
                 value={cfg.height || ""}
                 min={300}
                 max={3000}
-                onChange={(e) =>
-                  setCfg({ ...cfg, height: parseInt(e.target.value || "0", 10) })
-                }
+                onChange={(e) => {
+                  const cleaned = sanitizeNumericInput(e.target.value, false);
+                  setCfg({ ...cfg, height: parseInt(cleaned || "0", 10) });
+                }}
               />
             </div>
           </div>
@@ -288,9 +291,10 @@ export default function BuilderClient() {
                 type="number"
                 className="vc-input vc-num"
                 value={cfg.ratePerSqft || ""}
-                onChange={(e) =>
-                  setCfg({ ...cfg, ratePerSqft: parseFloat(e.target.value || "0") })
-                }
+                onChange={(e) => {
+                  const cleaned = sanitizeNumericInput(e.target.value, true);
+                  setCfg({ ...cfg, ratePerSqft: parseFloat(cleaned || "0") });
+                }}
               />
             </div>
             <div className="vc-field">
@@ -300,9 +304,10 @@ export default function BuilderClient() {
                 className="vc-input vc-num"
                 value={qty}
                 min={1}
-                onChange={(e) =>
-                  setQty(Math.max(1, parseInt(e.target.value || "1", 10)))
-                }
+                onChange={(e) => {
+                  const cleaned = sanitizeNumericInput(e.target.value, false);
+                  setQty(Math.max(1, parseInt(cleaned || "1", 10)));
+                }}
               />
             </div>
           </div>

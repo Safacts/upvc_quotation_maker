@@ -42,7 +42,7 @@ import {
   toDateInputValue,
 } from "@/lib/console-format";
 import { QUOTATION_STATUSES } from "@/lib/console-schemas";
-import { validateEmail, validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
+import { validateEmail, validatePhone, sanitizePhoneInput, sanitizeNumericInput } from "@/lib/console-validators";
 import { LivePreview } from "../_components/LivePreview";
 
 /**
@@ -1101,7 +1101,7 @@ export default function QuotationEditor({
               <input
                 className={"vc-input vc-num" + (fieldErrors.transport_cost ? " vc-invalid" : "")}
                 value={header.transport_cost}
-                onChange={(e) => setHeaderField("transport_cost", e.target.value)}
+                onChange={(e) => setHeaderField("transport_cost", sanitizeNumericInput(e.target.value, true))}
                 inputMode="decimal"
                 // Names the field in the calculator's header so the popover
                 // says what it will write into.
@@ -1193,13 +1193,10 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="width"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="decimal"
+                          inputMode="numeric"
                           value={row.width}
                           onFocus={() => setFocusedMeasured(i)}
-                          onChange={(e) => updateMeasured(i, "width", e.target.value)}
+                          onChange={(e) => updateMeasured(i, "width", sanitizeNumericInput(e.target.value, false))}
                           onKeyDown={(e) => onGridKeyDown(e, i, "width")}
                         />
                       </td>
@@ -1207,13 +1204,10 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="height"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="decimal"
+                          inputMode="numeric"
                           value={row.height}
                           onFocus={() => setFocusedMeasured(i)}
-                          onChange={(e) => updateMeasured(i, "height", e.target.value)}
+                          onChange={(e) => updateMeasured(i, "height", sanitizeNumericInput(e.target.value, false))}
                           onKeyDown={(e) => onGridKeyDown(e, i, "height")}
                         />
                       </td>
@@ -1221,13 +1215,10 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="units"
-                          type="number"
-                          min="0"
-                          step="1"
                           inputMode="numeric"
                           value={row.units}
                           onFocus={() => setFocusedMeasured(i)}
-                          onChange={(e) => updateMeasured(i, "units", e.target.value)}
+                          onChange={(e) => updateMeasured(i, "units", sanitizeNumericInput(e.target.value, false))}
                           onKeyDown={(e) => onGridKeyDown(e, i, "units")}
                         />
                       </td>
@@ -1240,13 +1231,10 @@ export default function QuotationEditor({
                           className="vc-cell-input vc-num"
                           data-c="rate"
                           data-calc-label={`Rate, row ${i + 1}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
                           inputMode="decimal"
                           value={row.rate}
                           onFocus={() => setFocusedMeasured(i)}
-                          onChange={(e) => updateMeasured(i, "rate", e.target.value)}
+                          onChange={(e) => updateMeasured(i, "rate", sanitizeNumericInput(e.target.value, true))}
                           onKeyDown={(e) => onGridKeyDown(e, i, "rate")}
                         />
                       </td>
@@ -1389,22 +1377,17 @@ export default function QuotationEditor({
                     <td>
                       <input
                         className="vc-cell-input vc-num"
-                        type="number"
-                        min="0"
                         inputMode="numeric"
                         value={row.units}
-                        onChange={(e) => updateUnmeasured(i, "units", e.target.value)}
+                        onChange={(e) => updateUnmeasured(i, "units", sanitizeNumericInput(e.target.value, false))}
                       />
                     </td>
                     <td>
                       <input
                         className="vc-cell-input vc-num"
-                        type="number"
-                        min="0"
-                        step="0.01"
                         inputMode="decimal"
                         value={row.rate}
-                        onChange={(e) => updateUnmeasured(i, "rate", e.target.value)}
+                        onChange={(e) => updateUnmeasured(i, "rate", sanitizeNumericInput(e.target.value, true))}
                       />
                     </td>
                     <td className="vc-cell-calc vc-amt">
@@ -1451,7 +1434,7 @@ export default function QuotationEditor({
                   className="vc-input vc-num"
                   style={{ width: 52, height: 22, fontSize: 12 }}
                   value={header.gst_percentage}
-                  onChange={(e) => setHeaderField("gst_percentage", e.target.value)}
+                  onChange={(e) => setHeaderField("gst_percentage", sanitizeNumericInput(e.target.value, true))}
                   disabled={!header.include_gst}
                   inputMode="decimal"
                   // Calculator OFF here deliberately: in a GST-percent box

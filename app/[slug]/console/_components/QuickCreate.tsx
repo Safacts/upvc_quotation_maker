@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UserPlus, PackagePlus } from "lucide-react";
-import { validateEmail, validatePhone, sanitizePhoneInput, validateGSTIN } from "@/lib/console-validators";
+import { validateEmail, validatePhone, sanitizePhoneInput, validateGSTIN, sanitizeNumericInput } from "@/lib/console-validators";
 
 /**
  * QuickCreate — Alt+C, Tally's own "create master on the fly" key.
@@ -379,7 +379,7 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
                   className="vc-input vc-num"
                   value={price}
                   inputMode="decimal"
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => setPrice(sanitizeNumericInput(e.target.value, true))}
                 />
               </div>
               <div className="vc-field">
