@@ -47,8 +47,8 @@ function pressKey(key: string, opts: KeyboardEventInit = {}) {
   });
 }
 
-const Z = { totalMeasured: 0, totalUnmeasured: 0, subtotal: 0, transport: 0, netTotal: 0, gstPercentage: 0, gstAmount: 0, grandTotal: 0, totalSqft: 0 };
-const HDR = { quote_no: "Q-001", date: "2026-08-13", customer_name: "Test Customer", contact_no: "9876543210", email: "", address: "", reference: "", include_gst: true, gst_percentage: "18" };
+const Z = { totalMeasured: 0, totalUnmeasured: 0, subtotal: 0, transport: 0, discountAmount: 0, discountPercentage: 0, netTotal: 0, gstPercentage: 0, gstAmount: 0, grandTotal: 0, advancePaid: 0, balanceDue: 0, roundoff: 0, totalSqft: 0 };
+const HDR = { quote_no: "Q-001", date: "2026-08-13", customer_name: "Test Customer", contact_no: "9876543210", email: "", address: "", reference: "", supplier_company: "", status: "draft", transport_cost: "0", advance_paid: "0", discount_amount: "0", discount_percentage: "0", roundoff: "0", include_gst: true, gst_percentage: "18", customer_id: null };
 
 beforeEach(() => { mockPush.mockClear(); localStorage.clear(); sessionStorage.clear(); });
 
@@ -309,7 +309,7 @@ describe("LivePreview", () => {
   });
   it("renders line items and grand total", async () => {
     const m = [{ key: "m1", code: "W1", description: "Sliding Window", glass: "Clear", width: "1200", height: "1500", units: "2", rate: "450" }];
-    const t = { totalMeasured: 5000, totalUnmeasured: 0, subtotal: 5000, transport: 0, netTotal: 5000, gstPercentage: 18, gstAmount: 900, grandTotal: 5900, totalSqft: 25 };
+    const t = { totalMeasured: 5000, totalUnmeasured: 0, subtotal: 5000, transport: 0, discountAmount: 0, discountPercentage: 0, netTotal: 5000, gstPercentage: 18, gstAmount: 900, grandTotal: 5900, advancePaid: 0, balanceDue: 5900, roundoff: 0, totalSqft: 25 };
     render(<LivePreview header={HDR} measured={m} unmeasured={[]} totals={t} companyName="Co" />);
     await waitFor(() => { expect(screen.getByText("Sliding Window")).toBeTruthy(); expect(screen.getByText("Grand Total")).toBeTruthy(); });
   });
