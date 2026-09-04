@@ -67,6 +67,10 @@ export interface QuotationLike {
   transport_cost?: number | string | null;
   include_gst?: boolean | null;
   gst_percentage?: number | string | null;
+  advance_paid?: number | string | null;
+  discount_percentage?: number | string | null;
+  discount_amount?: number | string | null;
+  roundoff?: number | string | null;
 }
 
 export interface QuotationTotals {
@@ -78,14 +82,24 @@ export interface QuotationTotals {
   subtotal: number;
   /** Transport / freight charge from the quotation row. */
   transport: number;
-  /** subtotal + transport. The taxable base, and the pre-GST money figure. */
+  /** Discount amount deducted before or from subtotal. */
+  discountAmount: number;
+  /** Discount percentage applied. */
+  discountPercentage: number;
+  /** subtotal + transport - discount. The taxable base, and the pre-GST money figure. */
   netTotal: number;
   /** The GST rate actually applied, as a percentage (0 when include_gst is false). */
   gstPercentage: number;
   /** The rupee value of GST. Dart calls this `igst`. */
   gstAmount: number;
-  /** netTotal + gstAmount. Dart calls this `grandTotal`. */
+  /** netTotal + gstAmount + roundoff. Dart calls this `grandTotal`. */
   grandTotal: number;
+  /** Advance paid by customer. */
+  advancePaid: number;
+  /** Remaining balance due: max(0, grandTotal - advancePaid). */
+  balanceDue: number;
+  /** Roundoff adjustment. */
+  roundoff: number;
   /** Total square footage across all measured items (for reporting, not billing). */
   totalSqft: number;
 }
@@ -186,7 +200,14 @@ export function quotationTotals(
 
   const subtotal = totalMeasured + totalUnmeasured;
   const transport = num(quotation?.transport_cost);
-  const netTotal = subtotal + transport;
+
+  // Discount (supports percentage or fixed amount)
+  const discountPercentage = num(quotation?.discount_percentage);
+  let discountAmount = num(quotation?.discount_amount);
+  if (discountPercentage > 0 && discountAmount === 0) {
+    discountAmount = (subtotal * discountPercentage) / 100;
+  }
+  const netTotal = subtotal + transport - discountAmount;
 
   // Dart: igst = includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0
   let gstPercentage: number;
@@ -196,17 +217,27 @@ export function quotationTotals(
     gstPercentage = quotation?.include_gst ? num(quotation?.gst_percentage) : 0;
   }
   const gstAmount = netTotal * (gstPercentage / 100);
-  const grandTotal = netTotal + gstAmount;
+  const roundoff = num(quotation?.roundoff);
+  const grandTotal = netTotal + gstAmount + roundoff;
+
+  // Advance paid and balance due
+  const advancePaid = num(quotation?.advance_paid);
+  const balanceDue = Math.max(0, grandTotal - advancePaid);
 
   return {
     totalMeasured,
     totalUnmeasured,
     subtotal,
     transport,
+    discountAmount,
+    discountPercentage,
     netTotal,
     gstPercentage,
     gstAmount,
     grandTotal,
+    advancePaid,
+    balanceDue,
+    roundoff,
     totalSqft,
   };
 }

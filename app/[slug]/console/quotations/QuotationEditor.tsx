@@ -109,6 +109,10 @@ export interface QuotationHeader {
   supplier_company: string;
   status: string;
   transport_cost: string;
+  advance_paid: string;
+  discount_amount: string;
+  discount_percentage: string;
+  roundoff: string;
   include_gst: boolean;
   gst_percentage: string;
   customer_id: string | null;
@@ -155,6 +159,10 @@ export function blankHeader(gstPercentage = 18): QuotationHeader {
     supplier_company: "",
     status: "draft",
     transport_cost: "0",
+    advance_paid: "0",
+    discount_amount: "0",
+    discount_percentage: "0",
+    roundoff: "0",
     include_gst: false,
     gst_percentage: String(gstPercentage),
     customer_id: null,
@@ -249,11 +257,25 @@ export default function QuotationEditor({
           transport_cost: header.transport_cost,
           include_gst: header.include_gst,
           gst_percentage: header.gst_percentage,
+          advance_paid: header.advance_paid,
+          discount_amount: header.discount_amount,
+          discount_percentage: header.discount_percentage,
+          roundoff: header.roundoff,
         },
         measured.map((m) => ({ width: m.width, height: m.height, units: m.units, rate: m.rate })),
         unmeasured.map((u) => ({ units: u.units, rate: u.rate })),
       ),
-    [header.transport_cost, header.include_gst, header.gst_percentage, measured, unmeasured],
+    [
+      header.transport_cost,
+      header.include_gst,
+      header.gst_percentage,
+      header.advance_paid,
+      header.discount_amount,
+      header.discount_percentage,
+      header.roundoff,
+      measured,
+      unmeasured,
+    ],
   );
 
   // ---- Row operations -----------------------------------------------------
@@ -342,6 +364,18 @@ export default function QuotationEditor({
     const transport = Number(header.transport_cost);
     if (header.transport_cost && (isNaN(transport) || transport < 0)) {
       errors.transport_cost = "Transport cost cannot be negative";
+    }
+    const advance = Number(header.advance_paid);
+    if (header.advance_paid && (isNaN(advance) || advance < 0)) {
+      errors.advance_paid = "Advance paid cannot be negative";
+    }
+    const discount = Number(header.discount_amount);
+    if (header.discount_amount && (isNaN(discount) || discount < 0)) {
+      errors.discount_amount = "Discount cannot be negative";
+    }
+    const discPct = Number(header.discount_percentage);
+    if (header.discount_percentage && (isNaN(discPct) || discPct < 0 || discPct > 100)) {
+      errors.discount_percentage = "Discount percentage must be between 0% and 100%";
     }
 
     // Check measured items for negative numbers or invalid values
@@ -1415,8 +1449,28 @@ export default function QuotationEditor({
               <span className="vc-total-value">{formatAmount(totals.subtotal)}</span>
             </div>
             <div className="vc-total-item">
-              <span className="vc-total-label">Transport</span>
-              <span className="vc-total-value">{formatAmount(totals.transport)}</span>
+              <span className="vc-total-label">Discount (Rs.)</span>
+              <input
+                className="vc-input vc-num"
+                style={{ width: 62, height: 22, fontSize: 12 }}
+                placeholder="0.00"
+                value={header.discount_amount}
+                onChange={(e) => setHeaderField("discount_amount", sanitizeNumericInput(e.target.value, true))}
+                inputMode="decimal"
+                data-calc-label="Discount"
+              />
+            </div>
+            <div className="vc-total-item">
+              <span className="vc-total-label">Transport (Rs.)</span>
+              <input
+                className="vc-input vc-num"
+                style={{ width: 62, height: 22, fontSize: 12 }}
+                placeholder="0.00"
+                value={header.transport_cost}
+                onChange={(e) => setHeaderField("transport_cost", sanitizeNumericInput(e.target.value, true))}
+                inputMode="decimal"
+                data-calc-label="Transport"
+              />
             </div>
             <div className="vc-total-item">
               <span className="vc-total-label">
@@ -1432,25 +1486,36 @@ export default function QuotationEditor({
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <input
                   className="vc-input vc-num"
-                  style={{ width: 52, height: 22, fontSize: 12 }}
+                  style={{ width: 44, height: 22, fontSize: 12 }}
                   value={header.gst_percentage}
                   onChange={(e) => setHeaderField("gst_percentage", sanitizeNumericInput(e.target.value, true))}
                   disabled={!header.include_gst}
                   inputMode="decimal"
-                  // Calculator OFF here deliberately: in a GST-percent box
-                  // "18" already means 18%, so the calculator's contextual `+
-                  // 18%` semantics would mean something different from what
-                  // the field says. Ambiguity in a tax field is not worth the
-                  // convenience.
                   data-calc="off"
                 />
                 <span className="vc-total-value">{formatAmount(totals.gstAmount)}</span>
               </span>
             </div>
-            <div style={{ flex: 1 }} />
-            <div className="vc-total-item vc-total-grand">
+            <div className="vc-total-item">
               <span className="vc-total-label">Grand Total</span>
-              <span className="vc-total-value">{formatMoney(totals.grandTotal)}</span>
+              <span className="vc-total-value" style={{ fontWeight: 800 }}>{formatMoney(totals.grandTotal)}</span>
+            </div>
+            <div className="vc-total-item" style={{ borderLeft: "1px solid #cbd5e0", paddingLeft: 8 }}>
+              <span className="vc-total-label" style={{ color: "#2E7D32", fontWeight: 700 }}>Advance (Rs.)</span>
+              <input
+                className={"vc-input vc-num" + (fieldErrors.advance_paid ? " vc-invalid" : "")}
+                style={{ width: 75, height: 22, fontSize: 12, borderColor: "#81C784", color: "#2E7D32", fontWeight: 700 }}
+                placeholder="0.00"
+                value={header.advance_paid}
+                onChange={(e) => setHeaderField("advance_paid", sanitizeNumericInput(e.target.value, true))}
+                inputMode="decimal"
+                data-calc-label="Advance Paid"
+              />
+            </div>
+            <div style={{ flex: 1 }} />
+            <div className="vc-total-item vc-total-grand" style={{ background: "#fff7ed", borderColor: "#fdba74", padding: "3px 9px", borderRadius: 4 }}>
+              <span className="vc-total-label" style={{ color: "#c2410c", fontWeight: 700 }}>Balance Due</span>
+              <span className="vc-total-value" style={{ color: "#c2410c", fontWeight: 800, fontSize: 14 }}>{formatMoney(totals.balanceDue)}</span>
             </div>
           </div>
         </div>

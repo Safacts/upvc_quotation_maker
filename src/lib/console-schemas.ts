@@ -158,6 +158,10 @@ export const quotationWriteSchema = z.object({
   date: text(40),
   status: quotationStatusSchema,
   transport_cost: numberish(0).refine((n) => n >= 0, { message: "Transport cannot be negative" }),
+  advance_paid: numberish(0).refine((n) => n >= 0, { message: "Advance paid cannot be negative" }).default(0),
+  discount_percentage: numberish(0).refine((n) => n >= 0 && n <= 100, { message: "Discount percentage must be between 0 and 100" }).default(0).optional(),
+  discount_amount: numberish(0).refine((n) => n >= 0, { message: "Discount amount cannot be negative" }).default(0).optional(),
+  roundoff: numberish(0).default(0).optional(),
   include_gst: z
     .union([z.boolean(), z.string(), z.number(), z.null(), z.undefined()])
     .transform((v) => v === true || v === "true" || v === 1 || v === "1"),
