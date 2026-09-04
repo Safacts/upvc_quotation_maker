@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatMoney, formatSqft } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 import { buildBom, type WindowConfig, type WindowType } from "@/lib/bom-engine";
 
 type Row = {
@@ -218,9 +219,14 @@ export default function BulkClient() {
             <label className="vc-label">Global Rate / sq.ft (₹)</label>
             <input
               type="number"
+              min="0"
+              step="1"
               className="vc-input vc-num"
               value={rate}
-              onChange={(e) => setRate(parseFloat(e.target.value || "0"))}
+              onChange={(e) => {
+                const cleaned = sanitizeNumericInput(e.target.value, true);
+                setRate(cleaned ? parseFloat(cleaned) : 0);
+              }}
             />
           </div>
 

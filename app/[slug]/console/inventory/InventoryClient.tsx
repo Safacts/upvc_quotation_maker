@@ -6,6 +6,7 @@ import { Plus, Search, Download, AlertTriangle, RefreshCw } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatMoney, toCsv, downloadFile } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 
 interface InventoryItem {
   id: string;
@@ -605,7 +606,7 @@ export default function InventoryClient() {
                 required
                 autoFocus
                 value={adjustmentQty}
-                onChange={(e) => setAdjustmentQty(e.target.value)}
+                onChange={(e) => setAdjustmentQty(sanitizeNumericInput(e.target.value, false))}
                 placeholder="e.g. 50"
                 style={{
                   width: "100%",
@@ -789,7 +790,8 @@ export default function InventoryClient() {
                     min="0"
                     value={stockQuantity}
                     onChange={(e) => {
-                      setStockQuantity(e.target.value);
+                      const cleaned = sanitizeNumericInput(e.target.value, false);
+                      setStockQuantity(cleaned);
                       if (fieldErrors.stockQuantity) setFieldErrors((f) => ({ ...f, stockQuantity: "" }));
                     }}
                     style={{
@@ -819,7 +821,8 @@ export default function InventoryClient() {
                     min="0"
                     value={lowStockThreshold}
                     onChange={(e) => {
-                      setLowStockThreshold(e.target.value);
+                      const cleaned = sanitizeNumericInput(e.target.value, false);
+                      setLowStockThreshold(cleaned);
                       if (fieldErrors.lowStockThreshold) setFieldErrors((f) => ({ ...f, lowStockThreshold: "" }));
                     }}
                     style={{
@@ -852,7 +855,8 @@ export default function InventoryClient() {
                     placeholder="450.00"
                     value={price}
                     onChange={(e) => {
-                      setPrice(e.target.value);
+                      const cleaned = sanitizeNumericInput(e.target.value, true);
+                      setPrice(cleaned);
                       if (fieldErrors.price) setFieldErrors((f) => ({ ...f, price: "" }));
                     }}
                     style={{

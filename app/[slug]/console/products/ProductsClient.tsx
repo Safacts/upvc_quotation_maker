@@ -9,6 +9,7 @@ import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
 import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
 import type { ColumnSpec } from "@/lib/screen-config";
 import { formatAmount, formatDate, toCsv, downloadFile } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 
 /** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
 const COLUMN_SPECS: ColumnSpec[] = [
@@ -325,7 +326,8 @@ export default function ProductsClient() {
                 inputMode="decimal"
                 value={draft.price}
                 onChange={(e) => {
-                  setDraft({ ...draft, price: e.target.value });
+                  const cleaned = sanitizeNumericInput(e.target.value, true);
+                  setDraft({ ...draft, price: cleaned });
                   if (fieldErrors.price) setFieldErrors((f) => ({ ...f, price: "" }));
                 }}
                 onKeyDown={(e) => e.key === "Enter" && void createProduct()}

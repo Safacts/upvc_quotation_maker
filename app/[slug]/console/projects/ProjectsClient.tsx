@@ -9,6 +9,7 @@ import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
 import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
 import type { ColumnSpec } from "@/lib/screen-config";
 import { formatAmount, formatDate, toCsv, downloadFile } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 
 /** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
 const COLUMN_SPECS: ColumnSpec[] = [
@@ -441,7 +442,8 @@ export default function ProjectsClient() {
                 inputMode="decimal"
                 value={draft.budget}
                 onChange={(e) => {
-                  setDraft({ ...draft, budget: e.target.value });
+                  const cleaned = sanitizeNumericInput(e.target.value, true);
+                  setDraft({ ...draft, budget: cleaned });
                   if (fieldErrors.budget) setFieldErrors((f) => ({ ...f, budget: "" }));
                 }}
               />
@@ -454,7 +456,8 @@ export default function ProjectsClient() {
                 inputMode="decimal"
                 value={draft.actual_cost}
                 onChange={(e) => {
-                  setDraft({ ...draft, actual_cost: e.target.value });
+                  const cleaned = sanitizeNumericInput(e.target.value, true);
+                  setDraft({ ...draft, actual_cost: cleaned });
                   if (fieldErrors.actual_cost) setFieldErrors((f) => ({ ...f, actual_cost: "" }));
                 }}
               />
@@ -467,7 +470,8 @@ export default function ProjectsClient() {
                 inputMode="numeric"
                 value={draft.progress}
                 onChange={(e) => {
-                  setDraft({ ...draft, progress: e.target.value });
+                  const cleaned = sanitizeNumericInput(e.target.value, false);
+                  setDraft({ ...draft, progress: cleaned });
                   if (fieldErrors.progress) setFieldErrors((f) => ({ ...f, progress: "" }));
                 }}
               />

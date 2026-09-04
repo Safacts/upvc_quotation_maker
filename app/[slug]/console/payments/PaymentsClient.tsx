@@ -6,6 +6,7 @@ import { Plus, Search, Download, CreditCard, Banknote, Landmark, Smartphone, Mes
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatDate, formatMoney, toCsv, downloadFile } from "@/lib/console-format";
+import { sanitizeNumericInput } from "@/lib/console-validators";
 
 interface PaymentRow {
   id: string;
@@ -529,7 +530,8 @@ export default function PaymentsClient() {
                     placeholder="25000"
                     value={amount}
                     onChange={(e) => {
-                      setAmount(e.target.value);
+                      const cleaned = sanitizeNumericInput(e.target.value, true);
+                      setAmount(cleaned);
                       if (fieldErrors.amount) setFieldErrors((f) => ({ ...f, amount: "" }));
                     }}
                     style={{
