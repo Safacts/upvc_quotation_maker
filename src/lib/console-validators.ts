@@ -148,3 +148,25 @@ export function validateGSTIN(gstin: string): string | null {
 
   return null;
 }
+
+/**
+ * Sanitizes numeric input:
+ * - Strips all characters except digits (and optionally a single decimal point).
+ * - Prevents letters, symbols, 'e', 'E', '+', '-', spaces.
+ * - If allowDecimal is false: strictly integer digits only.
+ * - If allowDecimal is true: only the first decimal point is kept.
+ */
+export function sanitizeNumericInput(value: string, allowDecimal = true): string {
+  if (!value) return "";
+  if (!allowDecimal) {
+    return value.replace(/\D/g, "");
+  }
+  // Strip dots preceded by letters (e.g. "Rs.", "No.") so they don't hijack decimal point
+  let cleaned = value.replace(/[a-zA-Z]+\./g, "");
+  // Remove all characters except digits and decimal point
+  cleaned = cleaned.replace(/[^\d.]/g, "");
+  const parts = cleaned.split(".");
+  if (parts.length <= 1) return cleaned;
+  // Keep first dot only: integerPart + '.' + decimalPart
+  return parts[0] + "." + parts.slice(1).join("");
+}

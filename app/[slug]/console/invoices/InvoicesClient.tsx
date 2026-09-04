@@ -6,7 +6,7 @@ import { Plus, Search, Download, MessageSquare } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatDate, formatMoney, toCsv, downloadFile } from "@/lib/console-format";
-import { validateGSTIN } from "@/lib/console-validators";
+import { validateGSTIN, sanitizeNumericInput } from "@/lib/console-validators";
 
 interface InvoiceRow {
   id: string;
@@ -580,7 +580,8 @@ export default function InvoicesClient() {
                     placeholder="45000"
                     value={taxableValue}
                     onChange={(e) => {
-                      setTaxableValue(e.target.value);
+                      const cleaned = sanitizeNumericInput(e.target.value, true);
+                      setTaxableValue(cleaned);
                       if (fieldErrors.taxableValue) setFieldErrors((f) => ({ ...f, taxableValue: "" }));
                     }}
                     style={{

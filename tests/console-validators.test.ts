@@ -4,6 +4,7 @@ import {
   validatePhone,
   sanitizePhoneInput,
   validateGSTIN,
+  sanitizeNumericInput,
 } from "../src/lib/console-validators";
 
 describe("console-validators — validatePhone", () => {
@@ -151,5 +152,30 @@ describe("console-validators — validateGSTIN", () => {
 
   it("rejects invalid format", () => {
     expect(validateGSTIN("INVALIDGSTIN123")).toContain("Invalid GSTIN format");
+  });
+});
+
+describe("console-validators — sanitizeNumericInput", () => {
+  it("strips alphabets and special characters", () => {
+    expect(sanitizeNumericInput("123abc456")).toBe("123456");
+    expect(sanitizeNumericInput("Rs. 1,500.50")).toBe("1500.50");
+    expect(sanitizeNumericInput("text-only")).toBe("");
+  });
+
+  it("handles decimal numbers properly when allowDecimal=true", () => {
+    expect(sanitizeNumericInput("123.45")).toBe("123.45");
+    expect(sanitizeNumericInput("123.45.67")).toBe("123.4567");
+    expect(sanitizeNumericInput(".50")).toBe(".50");
+  });
+
+  it("strips decimal points when allowDecimal=false", () => {
+    expect(sanitizeNumericInput("123.45", false)).toBe("12345");
+    expect(sanitizeNumericInput("100 nos", false)).toBe("100");
+  });
+
+  it("strips exponential notation e and signs", () => {
+    expect(sanitizeNumericInput("1e5")).toBe("15");
+    expect(sanitizeNumericInput("-500")).toBe("500");
+    expect(sanitizeNumericInput("+123.45")).toBe("123.45");
   });
 });
