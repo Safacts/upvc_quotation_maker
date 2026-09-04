@@ -6,6 +6,7 @@ import { Plus, Search, Shield, Mail } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatDate } from "@/lib/console-format";
+import { validateEmail, validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
 
 interface UserRow {
   id: string;
@@ -31,6 +32,7 @@ export default function TeamClient() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -39,6 +41,7 @@ export default function TeamClient() {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"owner" | "manager" | "accountant" | "salesperson">("salesperson");
   const [phone, setPhone] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -65,12 +68,22 @@ export default function TeamClient() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast("Please enter a valid email address", "err");
+    setFieldErrors({});
+    if (!fullName.trim()) {
+      setFieldErrors((f) => ({ ...f, fullName: "Full name is required" }));
+      toast("Please enter full name", "err");
       return;
     }
-    if (!fullName.trim()) {
-      toast("Please enter full name", "err");
+    const emailErr = validateEmail(email, true);
+    if (emailErr) {
+      setFieldErrors((f) => ({ ...f, email: emailErr }));
+      toast(emailErr, "err");
+      return;
+    }
+    const phoneErr = validatePhone(phone);
+    if (phoneErr) {
+      setFieldErrors((f) => ({ ...f, phone: phoneErr }));
+      toast(phoneErr, "err");
       return;
     }
 
@@ -98,6 +111,7 @@ export default function TeamClient() {
       setEmail("");
       setFullName("");
       setPhone("");
+      setFieldErrors({});
       void loadData();
     } catch (err: any) {
       toast(err?.message || "Failed to invite member", "err");
@@ -311,17 +325,25 @@ export default function TeamClient() {
                   required
                   placeholder="e.g. Suresh Kumar"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (fieldErrors.fullName) setFieldErrors((f) => ({ ...f, fullName: "" }));
+                  }}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--vc-surface)",
-                    border: "1px solid var(--vc-border)",
+                    border: fieldErrors.fullName ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                     borderRadius: "8px",
                     color: "var(--vc-text-hi)",
                     fontSize: "13px",
                   }}
                 />
+                {fieldErrors.fullName && (
+                  <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                    {fieldErrors.fullName}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -332,18 +354,34 @@ export default function TeamClient() {
                   type="email"
                   required
                   placeholder="suresh@factory.com"
+                  maxLength={100}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      const err = validateEmail(e.target.value, true);
+                      setFieldErrors((f) => ({ ...f, email: err || "" }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const err = validateEmail(e.target.value, true);
+                    setFieldErrors((f) => ({ ...f, email: err || "" }));
+                  }}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--vc-surface)",
-                    border: "1px solid var(--vc-border)",
+                    border: fieldErrors.email ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                     borderRadius: "8px",
                     color: "var(--vc-text-hi)",
                     fontSize: "13px",
                   }}
                 />
+                {fieldErrors.email && (
+                  <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                    {fieldErrors.email}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -376,20 +414,37 @@ export default function TeamClient() {
                     Phone Number
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     placeholder="9876543210"
+                    maxLength={16}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const clean = sanitizePhoneInput(e.target.value);
+                      setPhone(clean);
+                      if (fieldErrors.phone) {
+                        const err = validatePhone(clean);
+                        setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const err = validatePhone(e.target.value);
+                      setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.phone ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "13px",
                     }}
                   />
+                  {fieldErrors.phone && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                      {fieldErrors.phone}
+                    </span>
+                  )}
                 </div>
               </div>
 

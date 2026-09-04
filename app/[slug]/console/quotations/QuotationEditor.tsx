@@ -42,6 +42,7 @@ import {
   toDateInputValue,
 } from "@/lib/console-format";
 import { QUOTATION_STATUSES } from "@/lib/console-schemas";
+import { validateEmail, validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
 import { LivePreview } from "../_components/LivePreview";
 
 /**
@@ -326,8 +327,13 @@ export default function QuotationEditor({
     if (!header.customer_name.trim()) {
       errors.customer_name = "Customer name is required";
     }
-    if (header.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(header.email.trim())) {
-      errors.email = "Please enter a valid email address";
+    const emailErr = validateEmail(header.email);
+    if (emailErr) {
+      errors.email = emailErr;
+    }
+    const phoneErr = validatePhone(header.contact_no);
+    if (phoneErr) {
+      errors.contact_no = phoneErr;
     }
     const gst = Number(header.gst_percentage);
     if (header.include_gst && (isNaN(gst) || gst < 0 || gst > 100)) {
@@ -360,6 +366,23 @@ export default function QuotationEditor({
         }
         if (m.units && (isNaN(u) || u < 0)) {
           errors.measured = `Row ${i + 1}: Units cannot be negative`;
+          break;
+        }
+      }
+    }
+
+    // Check unmeasured items for negative numbers or invalid values
+    for (let i = 0; i < unmeasured.length; i++) {
+      const u = unmeasured[i];
+      if (u.description || u.rate) {
+        const r = Number(u.rate);
+        const un = Number(u.units);
+        if (u.rate && (isNaN(r) || r < 0)) {
+          errors.unmeasured = `Other item ${i + 1}: Rate cannot be negative`;
+          break;
+        }
+        if (u.units && (isNaN(un) || un < 0)) {
+          errors.unmeasured = `Other item ${i + 1}: Qty cannot be negative`;
           break;
         }
       }
@@ -968,9 +991,23 @@ export default function QuotationEditor({
             <div className="vc-field">
               <label className="vc-label">Phone</label>
               <input
+                type="tel"
                 className={"vc-input" + (fieldErrors.contact_no ? " vc-invalid" : "")}
                 value={header.contact_no}
-                onChange={(e) => setHeaderField("contact_no", e.target.value)}
+                maxLength={16}
+                placeholder="10-digit mobile"
+                onChange={(e) => {
+                  const cleaned = sanitizePhoneInput(e.target.value);
+                  setHeaderField("contact_no", cleaned);
+                  if (fieldErrors.contact_no) {
+                    const err = validatePhone(cleaned);
+                    setFieldErrors((f) => ({ ...f, contact_no: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validatePhone(e.target.value);
+                  setFieldErrors((f) => ({ ...f, contact_no: err || "" }));
+                }}
                 inputMode="tel"
               />
               {fieldErrors.contact_no && (
@@ -981,9 +1018,22 @@ export default function QuotationEditor({
             <div className="vc-field">
               <label className="vc-label">Email</label>
               <input
+                type="email"
                 className={"vc-input" + (fieldErrors.email ? " vc-invalid" : "")}
                 value={header.email}
-                onChange={(e) => setHeaderField("email", e.target.value)}
+                placeholder="name@domain.com"
+                maxLength={100}
+                onChange={(e) => {
+                  setHeaderField("email", e.target.value);
+                  if (fieldErrors.email) {
+                    const err = validateEmail(e.target.value);
+                    setFieldErrors((f) => ({ ...f, email: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validateEmail(e.target.value);
+                  setFieldErrors((f) => ({ ...f, email: err || "" }));
+                }}
                 inputMode="email"
               />
               {fieldErrors.email && (
@@ -1143,6 +1193,9 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="width"
+                          type="number"
+                          min="0"
+                          step="1"
                           inputMode="decimal"
                           value={row.width}
                           onFocus={() => setFocusedMeasured(i)}
@@ -1154,6 +1207,9 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="height"
+                          type="number"
+                          min="0"
+                          step="1"
                           inputMode="decimal"
                           value={row.height}
                           onFocus={() => setFocusedMeasured(i)}
@@ -1165,6 +1221,9 @@ export default function QuotationEditor({
                         <input
                           className="vc-cell-input vc-num"
                           data-c="units"
+                          type="number"
+                          min="0"
+                          step="1"
                           inputMode="numeric"
                           value={row.units}
                           onFocus={() => setFocusedMeasured(i)}
@@ -1181,6 +1240,9 @@ export default function QuotationEditor({
                           className="vc-cell-input vc-num"
                           data-c="rate"
                           data-calc-label={`Rate, row ${i + 1}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
                           inputMode="decimal"
                           value={row.rate}
                           onFocus={() => setFocusedMeasured(i)}
@@ -1327,6 +1389,8 @@ export default function QuotationEditor({
                     <td>
                       <input
                         className="vc-cell-input vc-num"
+                        type="number"
+                        min="0"
                         inputMode="numeric"
                         value={row.units}
                         onChange={(e) => updateUnmeasured(i, "units", e.target.value)}
@@ -1335,6 +1399,9 @@ export default function QuotationEditor({
                     <td>
                       <input
                         className="vc-cell-input vc-num"
+                        type="number"
+                        min="0"
+                        step="0.01"
                         inputMode="decimal"
                         value={row.rate}
                         onChange={(e) => updateUnmeasured(i, "rate", e.target.value)}

@@ -10,6 +10,7 @@ import { ScreenConfigDialog } from "../_components/ScreenConfigDialog";
 import { useScreenConfig } from "@/lib/hooks/useScreenConfig";
 import type { ColumnSpec } from "@/lib/screen-config";
 import { formatDate, toCsv, downloadFile } from "@/lib/console-format";
+import { validateEmail, validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
 
 /** Ctrl+, column catalogue. Ids must match the accessorKeys below. */
 const COLUMN_SPECS: ColumnSpec[] = [
@@ -63,6 +64,7 @@ export default function CustomersClient() {
   const [creating, setCreating] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [draft, setDraft] = useState({ name: "", phone: "", email: "", company: "" });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const screen = useScreenConfig(clientId, SCREEN_ID, COLUMN_SPECS);
   const pageSize = screen.config.pageSize;
@@ -109,12 +111,22 @@ export default function CustomersClient() {
   }, [load]);
 
   const createCustomer = useCallback(async () => {
+    setFieldErrors({});
     if (!draft.name.trim()) {
+      setFieldErrors({ name: "Name is required" });
       toast("Name is required", "err");
       return;
     }
-    if (draft.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {
-      toast("Please enter a valid email address", "err");
+    const phoneErr = validatePhone(draft.phone);
+    if (phoneErr) {
+      setFieldErrors({ phone: phoneErr });
+      toast(phoneErr, "err");
+      return;
+    }
+    const emailErr = validateEmail(draft.email);
+    if (emailErr) {
+      setFieldErrors({ email: emailErr });
+      toast(emailErr, "err");
       return;
     }
     try {
@@ -135,6 +147,7 @@ export default function CustomersClient() {
       toast(data.existing ? "Customer already existed" : "Customer added", "ok");
       setCreating(false);
       setDraft({ name: "", phone: "", email: "", company: "" });
+      setFieldErrors({});
       void load();
     } catch (e: any) {
       toast(String(e?.message ?? e), "err");
@@ -275,21 +288,41 @@ export default function CustomersClient() {
                 Name <span className="vc-req">*</span>
               </label>
               <input
-                className="vc-input"
+                className={"vc-input" + (fieldErrors.name ? " vc-invalid" : "")}
                 value={draft.name}
                 autoFocus
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(e) => {
+                  setDraft({ ...draft, name: e.target.value });
+                  if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createCustomer()}
               />
+              {fieldErrors.name && <span className="vc-err">{fieldErrors.name}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Phone</label>
               <input
-                className="vc-input"
+                type="tel"
+                className={"vc-input" + (fieldErrors.phone ? " vc-invalid" : "")}
                 value={draft.phone}
-                onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                maxLength={16}
+                placeholder="10-digit mobile"
+                inputMode="tel"
+                onChange={(e) => {
+                  const clean = sanitizePhoneInput(e.target.value);
+                  setDraft({ ...draft, phone: clean });
+                  if (fieldErrors.phone) {
+                    const err = validatePhone(clean);
+                    setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validatePhone(e.target.value);
+                  setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createCustomer()}
               />
+              {fieldErrors.phone && <span className="vc-err">{fieldErrors.phone}</span>}
             </div>
             <div className="vc-field">
               <label className="vc-label">Company</label>
@@ -303,11 +336,26 @@ export default function CustomersClient() {
             <div className="vc-field">
               <label className="vc-label">Email</label>
               <input
-                className="vc-input"
+                type="email"
+                className={"vc-input" + (fieldErrors.email ? " vc-invalid" : "")}
                 value={draft.email}
-                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                placeholder="name@domain.com"
+                maxLength={100}
+                inputMode="email"
+                onChange={(e) => {
+                  setDraft({ ...draft, email: e.target.value });
+                  if (fieldErrors.email) {
+                    const err = validateEmail(e.target.value);
+                    setFieldErrors((f) => ({ ...f, email: err || "" }));
+                  }
+                }}
+                onBlur={(e) => {
+                  const err = validateEmail(e.target.value);
+                  setFieldErrors((f) => ({ ...f, email: err || "" }));
+                }}
                 onKeyDown={(e) => e.key === "Enter" && void createCustomer()}
               />
+              {fieldErrors.email && <span className="vc-err">{fieldErrors.email}</span>}
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="vc-btn vc-btn-primary" onClick={() => void createCustomer()}>

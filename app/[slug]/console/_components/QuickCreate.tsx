@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UserPlus, PackagePlus } from "lucide-react";
+import { validateEmail, validatePhone, sanitizePhoneInput, validateGSTIN } from "@/lib/console-validators";
 
 /**
  * QuickCreate — Alt+C, Tally's own "create master on the fly" key.
@@ -94,6 +95,7 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -111,16 +113,35 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
     if (saving) return;
     // Guard: Enter during the chooser step must not POST a nameless record.
     if (!chosen) return;
+    setFieldErrors({});
     if (!name.trim()) {
+      setFieldErrors({ name: "Name is required" });
       setError("Name is required");
       nameRef.current?.focus();
       return;
     }
-    if (isCustomer && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Please enter a valid email address");
-      return;
+    if (isCustomer) {
+      const phoneErr = validatePhone(phone);
+      if (phoneErr) {
+        setFieldErrors({ phone: phoneErr });
+        setError(phoneErr);
+        return;
+      }
+      const emailErr = validateEmail(email);
+      if (emailErr) {
+        setFieldErrors({ email: emailErr });
+        setError(emailErr);
+        return;
+      }
+      const gstErr = validateGSTIN(gst);
+      if (gstErr) {
+        setFieldErrors({ gst: gstErr });
+        setError(gstErr);
+        return;
+      }
     }
     if (!isCustomer && price && (isNaN(Number(price)) || Number(price) < 0)) {
+      setFieldErrors({ price: "Price cannot be negative" });
       setError("Price cannot be negative");
       return;
     }
@@ -247,14 +268,29 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
               <div className="vc-field">
                 <label className="vc-label">Phone</label>
                 <input
-                  className="vc-input"
+                  type="tel"
+                  className={"vc-input" + (fieldErrors.phone ? " vc-invalid" : "")}
                   value={phone}
+                  maxLength={16}
+                  placeholder="10-digit mobile"
                   inputMode="tel"
-                  // Not a calculable field: a phone number is not arithmetic and
-                  // Ctrl+/ here would only ever be an accident.
                   data-calc="off"
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    const clean = sanitizePhoneInput(e.target.value);
+                    setPhone(clean);
+                    if (fieldErrors.phone) {
+                      const err = validatePhone(clean);
+                      setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                    }
+                    if (error) setError("");
+                  }}
+                  onBlur={(e) => {
+                    const err = validatePhone(e.target.value);
+                    setFieldErrors((f) => ({ ...f, phone: err || "" }));
+                    if (err) setError(err);
+                  }}
                 />
+                {fieldErrors.phone && <span className="vc-err">{fieldErrors.phone}</span>}
               </div>
               <div className="vc-field">
                 <label className="vc-label">Company</label>
@@ -267,20 +303,52 @@ export function QuickCreate({ kind, initialName = "", onCreated, onClose }: Prop
               <div className="vc-field">
                 <label className="vc-label">Email</label>
                 <input
-                  className="vc-input"
+                  type="email"
+                  className={"vc-input" + (fieldErrors.email ? " vc-invalid" : "")}
                   value={email}
+                  placeholder="name@domain.com"
+                  maxLength={100}
                   inputMode="email"
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) {
+                      const err = validateEmail(e.target.value);
+                      setFieldErrors((f) => ({ ...f, email: err || "" }));
+                    }
+                    if (error) setError("");
+                  }}
+                  onBlur={(e) => {
+                    const err = validateEmail(e.target.value);
+                    setFieldErrors((f) => ({ ...f, email: err || "" }));
+                    if (err) setError(err);
+                  }}
                 />
+                {fieldErrors.email && <span className="vc-err">{fieldErrors.email}</span>}
               </div>
               <div className="vc-field">
                 <label className="vc-label">GSTIN</label>
                 <input
-                  className="vc-input"
+                  className={"vc-input" + (fieldErrors.gst ? " vc-invalid" : "")}
                   value={gst}
+                  maxLength={15}
+                  placeholder="15-digit GSTIN"
                   data-calc="off"
-                  onChange={(e) => setGst(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setGst(val);
+                    if (fieldErrors.gst) {
+                      const err = validateGSTIN(val);
+                      setFieldErrors((f) => ({ ...f, gst: err || "" }));
+                    }
+                    if (error) setError("");
+                  }}
+                  onBlur={(e) => {
+                    const err = validateGSTIN(e.target.value.toUpperCase());
+                    setFieldErrors((f) => ({ ...f, gst: err || "" }));
+                    if (err) setError(err);
+                  }}
                 />
+                {fieldErrors.gst && <span className="vc-err">{fieldErrors.gst}</span>}
               </div>
               <div className="vc-field vc-span-2">
                 <label className="vc-label">Address</label>

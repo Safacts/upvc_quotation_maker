@@ -163,6 +163,16 @@ export default function CuttingClient() {
       toast("At least one cut is required", "err");
       return;
     }
+    const invalidCut = cuts.find((c) => c.piece_length_mm <= 0);
+    if (invalidCut) {
+      toast("Piece length must be greater than 0 mm", "err");
+      return;
+    }
+    const tooLongCut = cuts.find((c) => c.piece_length_mm > stock);
+    if (tooLongCut) {
+      toast(`Cut piece (${tooLongCut.piece_length_mm} mm) cannot exceed stock bar length (${stock} mm)`, "err");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/console/cutting", {

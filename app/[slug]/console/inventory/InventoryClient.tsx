@@ -49,6 +49,7 @@ export default function InventoryClient() {
   const [stockQuantity, setStockQuantity] = useState<string>("0");
   const [lowStockThreshold, setLowStockThreshold] = useState<string>("10");
   const [hsnCode, setHsnCode] = useState("3925");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -89,19 +90,24 @@ export default function InventoryClient() {
 
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     if (!name.trim()) {
+      setFieldErrors((f) => ({ ...f, name: "Please enter item name" }));
       toast("Please enter item name", "err");
       return;
     }
     if (price && (isNaN(parseFloat(price)) || parseFloat(price) < 0)) {
+      setFieldErrors((f) => ({ ...f, price: "Price cannot be negative" }));
       toast("Price cannot be negative", "err");
       return;
     }
     if (stockQuantity && (isNaN(parseInt(stockQuantity, 10)) || parseInt(stockQuantity, 10) < 0)) {
+      setFieldErrors((f) => ({ ...f, stockQuantity: "Stock quantity cannot be negative" }));
       toast("Stock quantity cannot be negative", "err");
       return;
     }
     if (lowStockThreshold && (isNaN(parseInt(lowStockThreshold, 10)) || parseInt(lowStockThreshold, 10) < 0)) {
+      setFieldErrors((f) => ({ ...f, lowStockThreshold: "Low stock threshold cannot be negative" }));
       toast("Low stock threshold cannot be negative", "err");
       return;
     }
@@ -135,6 +141,7 @@ export default function InventoryClient() {
       setDescription("");
       setPrice("");
       setStockQuantity("0");
+      setFieldErrors({});
       void loadData();
     } catch (err: any) {
       toast(err?.message || "Failed to create item", "err");
@@ -148,7 +155,11 @@ export default function InventoryClient() {
     if (!selectedItem) return;
     const qty = parseInt(adjustmentQty, 10);
     if (isNaN(qty)) {
-      toast("Invalid quantity", "err");
+      toast("Please enter a valid quantity", "err");
+      return;
+    }
+    if (adjustType === "set" && qty < 0) {
+      toast("Stock quantity cannot be negative", "err");
       return;
     }
 
@@ -694,17 +705,25 @@ export default function InventoryClient() {
                   required
                   placeholder="e.g. 3925 Outer Frame (6 Meter Bar)"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: "" }));
+                  }}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
                     background: "var(--vc-surface)",
-                    border: "1px solid var(--vc-border)",
+                    border: fieldErrors.name ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                     borderRadius: "8px",
                     color: "var(--vc-text-hi)",
                     fontSize: "13px",
                   }}
                 />
+                {fieldErrors.name && (
+                  <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.name}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -767,19 +786,28 @@ export default function InventoryClient() {
                   </label>
                   <input
                     type="number"
+                    min="0"
                     value={stockQuantity}
-                    onChange={(e) => setStockQuantity(e.target.value)}
+                    onChange={(e) => {
+                      setStockQuantity(e.target.value);
+                      if (fieldErrors.stockQuantity) setFieldErrors((f) => ({ ...f, stockQuantity: "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.stockQuantity ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "13px",
                       fontWeight: 600,
                     }}
                   />
+                  {fieldErrors.stockQuantity && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                      {fieldErrors.stockQuantity}
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -788,18 +816,27 @@ export default function InventoryClient() {
                   </label>
                   <input
                     type="number"
+                    min="0"
                     value={lowStockThreshold}
-                    onChange={(e) => setLowStockThreshold(e.target.value)}
+                    onChange={(e) => {
+                      setLowStockThreshold(e.target.value);
+                      if (fieldErrors.lowStockThreshold) setFieldErrors((f) => ({ ...f, lowStockThreshold: "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.lowStockThreshold ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "13px",
                     }}
                   />
+                  {fieldErrors.lowStockThreshold && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                      {fieldErrors.lowStockThreshold}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -810,20 +847,29 @@ export default function InventoryClient() {
                   </label>
                   <input
                     type="number"
+                    min="0"
                     step="0.01"
                     placeholder="450.00"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => {
+                      setPrice(e.target.value);
+                      if (fieldErrors.price) setFieldErrors((f) => ({ ...f, price: "" }));
+                    }}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
                       background: "var(--vc-surface)",
-                      border: "1px solid var(--vc-border)",
+                      border: fieldErrors.price ? "1px solid var(--vc-danger)" : "1px solid var(--vc-border)",
                       borderRadius: "8px",
                       color: "var(--vc-text-hi)",
                       fontSize: "13px",
                     }}
                   />
+                  {fieldErrors.price && (
+                    <span style={{ color: "var(--vc-danger)", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                      {fieldErrors.price}
+                    </span>
+                  )}
                 </div>
 
                 <div>

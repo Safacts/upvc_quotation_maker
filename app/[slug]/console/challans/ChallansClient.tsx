@@ -6,6 +6,7 @@ import { Plus, Search, Download, Truck, Printer } from "lucide-react";
 import { DataGrid } from "../_components/DataGrid";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
 import { formatDate, toCsv, downloadFile } from "@/lib/console-format";
+import { validatePhone, sanitizePhoneInput } from "@/lib/console-validators";
 
 interface ChallanRow {
   id: string;
@@ -75,6 +76,11 @@ export default function ChallansClient() {
     e.preventDefault();
     if (!customerName.trim()) {
       toast("Customer name is required", "err");
+      return;
+    }
+    const phoneErr = validatePhone(driverPhone);
+    if (phoneErr) {
+      toast(phoneErr, "err");
       return;
     }
     if (totalUnits && (isNaN(parseInt(totalUnits, 10)) || parseInt(totalUnits, 10) < 1)) {
@@ -581,10 +587,11 @@ export default function ChallansClient() {
                     Driver Phone
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     placeholder="9876543210"
+                    maxLength={16}
                     value={driverPhone}
-                    onChange={(e) => setDriverPhone(e.target.value)}
+                    onChange={(e) => setDriverPhone(sanitizePhoneInput(e.target.value))}
                     style={{
                       width: "100%",
                       padding: "8px 12px",
