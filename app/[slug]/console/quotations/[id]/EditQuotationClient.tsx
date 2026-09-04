@@ -110,6 +110,10 @@ export default function EditQuotationClient({
             // saving would then silently rewrite the status.
             status: toStr(q.status, "draft").toLowerCase(),
             transport_cost: toStr(q.transport_cost, "0"),
+            advance_paid: toStr(q.advance_paid, "0"),
+            discount_amount: toStr(q.discount_amount, "0"),
+            discount_percentage: toStr(q.discount_percentage, "0"),
+            roundoff: toStr(q.roundoff, "0"),
             include_gst: q.include_gst === true,
             gst_percentage: toStr(q.gst_percentage, "0"),
             customer_id: q.customer_id || null,
