@@ -149,26 +149,29 @@ export function buildBom(c: WindowConfig): BomResult {
       break;
     }
     case "sliding_2track_2panel": {
-      push("SF60", "Sliding Frame 2T", W, 2);
-      push("SF60", "Sliding Frame 2T", H, 2);
+      push("PS62-UF-02", "112MM 3 TRACK SLIDING FRAME", W, 2);
+      push("PS62-UF-02", "112MM 3 TRACK SLIDING FRAME", H, 2);
       const interlock = 34;
       const sashW = (W + interlock) / 2;
       const sashH = H - 60;
-      push("SS60", "Sliding Sash", Math.round(sashW), 4);
-      push("SS60", "Sliding Sash", Math.round(sashH), 4);
-      push("M_S", "Interlock", Math.round(sashH), 2, "profile");
+      push("PS62-US-03", "62MM SLIDING SASH 24MM DGU", Math.round(sashW), 4);
+      push("PS62-US-03", "62MM SLIDING SASH 24MM DGU", Math.round(sashH), 4);
+      push("PS62-UO-05", "SL INTERLOCK WINDOW PROFILE", Math.round(sashH), 2, "profile");
+      push("PAM116", "ALUMINIUM GUIDE RAIL", W, 2, "profile");
+      push("PA62-UB-03", "62MM SLIDING SINGLE GLASS BEAD 24MM DGU", Math.round(sashW) - 80, 4, "bead");
       glass.push({ w: Math.round(sashW) - 80, h: Math.round(sashH) - 60, qty: 2, spec });
       break;
     }
     case "sliding_2track_3panel":
     case "sliding_3track": {
-      push("SF60", "Sliding Frame", W, 2);
-      push("SF60", "Sliding Frame", H, 2);
+      push("PS62-UF-02", "112MM 3 TRACK SLIDING FRAME", W, 2);
+      push("PS62-UF-02", "112MM 3 TRACK SLIDING FRAME", H, 2);
       const n = c.type === "sliding_3track" ? 3 : 3;
       const sashW = (W + 68) / n;
       const sashH = H - 60;
-      push("SS60", "Sliding Sash", Math.round(sashW), n * 2);
-      push("SS60", "Sliding Sash", Math.round(sashH), n * 2);
+      push("PS62-US-03", "62MM SLIDING SASH 24MM DGU", Math.round(sashW), n * 2);
+      push("PS62-US-03", "62MM SLIDING SASH 24MM DGU", Math.round(sashH), n * 2);
+      push("PS62-UO-05", "SL INTERLOCK WINDOW PROFILE", Math.round(sashH), n, "profile");
       glass.push({ w: Math.round(sashW) - 80, h: Math.round(sashH) - 60, qty: n, spec });
       break;
     }

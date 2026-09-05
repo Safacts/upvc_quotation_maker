@@ -78,7 +78,12 @@ export async function POST(request: NextRequest) {
     
     const allowedFields = [
       "companyName", "companyProprietor", "companyContact", "companyEmail",
-      "companyAddress", "gstNumber", "defaultGstPercentage", "cost_margin_percent",
+      "companyAddress", "gstNumber", "panNumber", "defaultGstPercentage", "cost_margin_percent",
+      "quoteValidityDays", "quoteNotes", "authorizedSignatory", "signatureUrl", "placeOfSupply",
+      "labourCostPerSqft", "installationCostPerSqft", "wastagePercent", "defaultTransportCost", "defaultAdvancePercent",
+      "establishmentYear", "businessHours", "serviceAreas",
+      "upiId", "secondaryContact", "whatsappNumber", "stateCode", "hsnCode",
+      "facebookUrl", "instagramUrl", "youtubeUrl", "googleMapsUrl",
       "enablePricePresets", "pricePresets", "measuredPresets", "unmeasuredPresets",
       "supplierCompanies", "bankName", "bankBranch", "bankAccountNo", "bankIfsc", "termsAndConditions"
     ];

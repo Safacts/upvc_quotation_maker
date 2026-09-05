@@ -22,6 +22,8 @@ import {
   type WindowType,
 } from "@/lib/bom-engine";
 import { WindowElevationSvg } from "@/lib/window-elevation";
+import { calculateRetailPrice } from "@/lib/eva-price-structure";
+import { PROMINANCE_INVENTA_3T } from "@/lib/profile-catalog";
 
 const TYPES: Array<{ v: WindowType; label: string; elevationDesc: string }> = [
   { v: "fixed", label: "Fixed Window", elevationDesc: "Fixed Window" },
@@ -49,6 +51,7 @@ export default function BuilderClient() {
   const [qty, setQty] = useState(2);
   const [offcuts, setOffcuts] = useState<string>("");
   const [rateOptions, setRateOptions] = useState<Array<{ name: string; price: number }>>([]);
+  const [inventoryOffcuts, setInventoryOffcuts] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"bom" | "glass" | "cuts">("bom");
 
   useEffect(() => {
@@ -64,6 +67,13 @@ export default function BuilderClient() {
         );
       })
       .catch(() => {});
+    fetch("/api/console/offcuts", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => {
+        const rows = Array.isArray(j?.rows) ? j.rows : [];
+        setInventoryOffcuts(rows.map((r: any) => Number(r.length_mm)).filter((n: number) => Number.isFinite(n) && n > 0).slice(0, 20));
+      })
+      .catch(() => {});
   }, []);
 
   const currentType = useMemo(
@@ -72,14 +82,20 @@ export default function BuilderClient() {
   );
 
   const bom = useMemo(() => buildBom(cfg), [cfg]);
-  const offcutNums = useMemo(
-    () =>
-      offcuts
-        .split(",")
-        .map((s) => parseInt(s.trim(), 10))
-        .filter((n) => Number.isFinite(n) && n > 0),
-    [offcuts],
-  );
+  const retailPrice = useMemo(() => {
+    const profileCost = bom.totalProfileMm * 0.85;
+    const riCost = bom.lines.filter((l) => l.kind === "reinforcement").reduce((s, l) => s + l.lengthMm * l.qty, 0) * 0.45;
+    const hwCost = bom.price.hardware * qty;
+    const glassCost = bom.glass.reduce((s, g) => s + (g.w * g.h) / 1e6 * 850, 0) * qty;
+    return calculateRetailPrice({ profileCost, riCost, hwCost, glassCost, areaSqft: bom.sqft * qty });
+  }, [bom, qty]);
+  const offcutNums = useMemo(() => {
+    const manual = offcuts
+      .split(",")
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return [...inventoryOffcuts, ...manual];
+  }, [offcuts, inventoryOffcuts]);
   const scaledCuts = useMemo(
     () => bom.cuts.map((c) => ({ ...c, qty: c.qty * qty })),
     [bom.cuts, qty],
@@ -155,6 +171,21 @@ export default function BuilderClient() {
         `Draft ${j?.quote_no || "created"} — ${formatMoney(bom.price.total * qty)}`,
         "ok",
       );
+      // Save opening for project merge + revision snapshot (Eva Total Area) — fire-and-forget
+      fetch("/api/console/project-openings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ project_name: "Walk-in Project", opening_code: `01-${cfg.width}x${cfg.height}`, window_json: cfg, bom_json: bom, quotation_id: j?.id || null }),
+      }).catch(() => {});
+      if (j?.id) {
+        fetch("/api/console/revisions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ quotation_id: j.id, snapshot: { cfg, bom, retailPrice, qty, opt } }),
+        }).catch(() => {});
+      }
     } catch (e: any) {
       toast(e.message, "err");
     }
@@ -467,7 +498,24 @@ export default function BuilderClient() {
               </div>
 
               <div style={{ fontSize: 11.5, color: "var(--vc-text-dim)" }}>
-                Stock cost ~ {formatMoney(barsCost)} @ ₹{barCost.toLocaleString("en-IN")}/bar • Optimizer: offcut-first Best-Fit-Decreasing
+                Stock cost ~ {formatMoney(barsCost)} @ ₹{barCost.toLocaleString("en-IN")}/bar • Optimizer: offcut-first Best-Fit-Decreasing (per-bar cuts auditable)
+              </div>
+
+              {/* Eva Retail Projects 20-step breakdown (read-only, tenant-editable rates) */}
+              <div style={{ border: "1px solid var(--vc-border)", borderRadius: "var(--vc-radius)", overflow: "hidden" }}>
+                <div style={{ background: "var(--vc-surface-2)", padding: "6px 10px", fontWeight: 700, fontSize: 11, display: "flex", justifyContent: "space-between" }}>
+                  <span>Retail Projects Breakdown (20 steps)</span>
+                  <span style={{ fontWeight: 400, color: "var(--vc-text-dim)" }}>Grand {formatMoney(retailPrice["Grand Total"])} • GST {formatMoney(retailPrice["GST"])}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, fontSize: 11 }}>
+                  {Object.entries(retailPrice).slice(0, 8).map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 10px", borderBottom: "1px solid var(--vc-border)", background: k.includes("Total") ? "var(--vc-surface-2)" : "transparent" }}>
+                      <span style={{ color: "var(--vc-text-dim)" }}>{k}</span>
+                      <span style={{ fontWeight: 600 }}>{formatMoney(v as number)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 6, padding: "6px 10px", fontSize: 10.5, color: "var(--vc-text-dim)" }}>Basic {formatMoney(retailPrice["Basic Value"])} • Sub Total {formatMoney(retailPrice["Sub Total"])} • Total Project {formatMoney(retailPrice["Total Project Cost"])}</div>
               </div>
 
               {/* Margin Pill */}
@@ -545,6 +593,10 @@ export default function BuilderClient() {
                           <span className="vc-pill" style={{ fontSize: 10, padding: "0 6px" }}>
                             {l.profileId}
                           </span>
+                          {(() => {
+                            const e = PROMINANCE_INVENTA_3T.find((p) => p.code === l.profileId);
+                            return e ? <span style={{ fontSize: 10, color: "var(--vc-text-dim)", marginLeft: 4 }}>{e.stockMm / 1000}m</span> : null;
+                          })()}
                         </td>
                         <td className="vc-num">{l.lengthMm.toLocaleString("en-IN")} mm</td>
                         <td className="vc-num">{unitQty}</td>
