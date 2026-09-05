@@ -1,0 +1,178 @@
+/* Editorial workspace finish. Scoped to the portal; no market/console styles. */
+.portal-root {
+  /* Keep sidebar background paired with its light foreground, even in base overrides. */
+  --portal-sidebar-surface: #242722;
+  --portal-sidebar-muted: #b5bdac;
+  --paper: #f6f5f1;
+  --line: #e8e6df;
+  --stone: #706c63;
+  --shadow: 0 2px 4px rgba(35,31,22,.025), 0 8px 24px rgba(35,31,22,.025);
+  --sidebar-w: 256px;
+  --header-h: 68px;
+}
+.portal-root .dashboard-sidebar {background:#242722; border-color:#33362e}
+.portal-root .sidebar-header {height:94px; padding:20px; background:none; border-color:#3a3d34}
+.portal-root .sidebar-header h2 {color:#f5f3e9; font-size:12px; line-height:1.55; letter-spacing:.025em}
+.portal-root .sidebar-header img {background:#34372e; border-color:#555747; padding:4px}
+.portal-root .sidebar-badge {color:#bdd0aa; font-size:8px; letter-spacing:.09em; margin-top:7px}
+.portal-root .sidebar-badge::before {background:#b8cc9c; box-shadow:none}
+.portal-root .sidebar-nav {padding:28px 14px; gap:7px}
+.portal-root .nav-item {height:46px; border-radius:8px; color:#c3c5b9; font-size:13px; padding:0 14px}
+.portal-root .nav-item svg {color:#969d8a; width:19px; height:19px}
+.portal-root .nav-item:hover {background:#30342b; border-color:transparent; color:#fff}
+.portal-root .nav-item.active {background:#e8dfbd; border-color:#e8dfbd; color:#303322; box-shadow:none}
+.portal-root .nav-item.active svg {color:#655c32}
+.portal-root .sidebar-console-wrap {padding:0 14px; margin-bottom:18px}
+.portal-root .sidebar-console-btn {background:#30342b; color:#eeeede; border-color:#484d3e; border-radius:8px; min-height:48px}
+.portal-root .sidebar-console-btn:hover {background:#3a3e32}
+.portal-root .console-tag {background:#d9c996; color:#35341f; font-size:9px; border-radius:4px}
+.portal-root .sidebar-footer {padding:18px 14px; background:transparent; border-color:#3a3d34; gap:10px}
+.portal-root .sidebar-tool-btn {background:transparent; border-color:#44483c; color:#dfe2d4; border-radius:8px; min-height:44px; font-size:12px}
+.portal-root .sidebar-tool-btn:hover {background:#30342b; border-color:#687153}
+.portal-root .tool-badge {background:#343c2b; border-color:#58644b; color:#d0ddbd; font-size:9px; border-radius:4px}
+.portal-root .btn-logout {color:#c3c5b9; min-height:40px}
+.portal-root .btn-logout:hover {background:#37332d; color:#f9d1c8; border-color:#635047}
+.portal-root .dashboard-header {padding:0 32px; background:#fcfcf9; backdrop-filter:none}
+.portal-root .header-title {font-size:13px; font-weight:600; color:#575c4d}
+.portal-root .header-user {background:transparent; box-shadow:none; border:0; padding:0; font-size:11px; letter-spacing:.015em; max-width:340px}
+.portal-root .header-user svg {width:30px; height:30px; padding:7px; background:#eaece2; color:#65704f; border-radius:50%}
+.portal-root .tab-pane {max-width:1440px; padding:32px 36px 64px}
+.portal-root .hero-growth-banner {background:none; border:0; border-radius:0; padding:8px 0 28px; box-shadow:none; gap:24px; margin-bottom:4px; overflow:visible}
+.portal-root .hero-growth-banner::before {display:none}
+.portal-root .hero-copy {min-width:0}
+.portal-root .portal-eyebrow {color:#797653; font-size:9px; letter-spacing:.18em; font-weight:700; margin-bottom:12px}
+.portal-root .hero-greeting {font-size:clamp(25px,2.1vw,34px); font-weight:600; line-height:1.25; letter-spacing:-.035em; margin:0 0 10px}
+.portal-root .hero-name {text-transform:capitalize}
+.portal-root .hero-sub {font-size:12px; color:#77786d}
+.portal-root .hero-actions {gap:10px}
+.portal-root .btn-hero-primary {min-height:44px; border-radius:8px; background:#30392b; border-color:#30392b; color:#fff; font-size:12px; padding:11px 16px; box-shadow:0 3px 5px #22291c12}
+.portal-root .btn-hero-primary:hover {background:#414d37; border-color:#414d37; box-shadow:0 5px 12px #22291c18}
+.portal-root .btn-hero-secondary {min-height:44px; border-radius:8px; border-color:#d8d8cc; background:transparent; font-size:12px; box-shadow:none; padding:11px 14px}
+.portal-root .metrics-grid {gap:16px; margin-bottom:26px}
+.portal-root .metric-card {padding:20px; border-radius:12px; box-shadow:var(--shadow); min-height:174px; display:flex; flex-direction:column}
+.portal-root .metric-card:hover {transform:none; border-color:#c4c7b6; box-shadow:var(--shadow)}
+.portal-root .metric-card::before {display:none}
+.portal-root .metric-header {gap:10px; margin-bottom:19px}
+.portal-root .metric-title {font-size:10px; letter-spacing:.065em; line-height:1.6}
+.portal-root .metric-icon-wrap {display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#f2f3ec; color:#7c856a; flex-shrink:0}
+.portal-root .metric-val {font-family:var(--font); font-size:clamp(23px,1.7vw,30px); font-weight:600; letter-spacing:-.055em; margin-bottom:12px}
+.portal-root .metric-sub {font-size:11px; gap:6px; line-height:1.65; margin-top:auto}
+.portal-root .metric-pill {font-size:9px; padding:2px 6px; border-radius:4px}
+.portal-root .metric-card:first-child {background:#30392b; color:#fff; border-color:#30392b}
+.portal-root .metric-card:first-child .metric-title {color:#d5d9c8}
+.portal-root .metric-card:first-child .metric-val {color:#fff9e6}
+.portal-root .metric-card:first-child .metric-sub {color:#ccd2bf}
+.portal-root .metric-card:first-child .metric-icon-wrap {background:#46503e; color:#ddd4a1}
+.portal-root .action-feature-grid {gap:20px; margin-bottom:26px}
+.portal-root .feature-card {border-radius:12px; padding:24px; box-shadow:var(--shadow)}
+.portal-root .feature-card:hover {transform:none; box-shadow:var(--shadow)}
+.portal-root .feature-card-header {margin-bottom:12px}
+.portal-root .feature-card-title {font-size:14px; font-weight:600; gap:10px}
+.portal-root .feature-card-title svg {color:#858b73}
+.portal-root .feature-badge {font-size:8px; letter-spacing:.09em; padding:4px 7px; border:1px solid #e7e8df; border-radius:4px; color:#737965; background:#f8f9f4}
+.portal-root .feature-desc {font-size:12px; margin-bottom:16px}
+.portal-root .showroom-preview {display:flex; align-items:center; gap:17px; padding:15px 18px; margin-bottom:16px; background:#f4f4ed; border:1px solid #e6e8dc; border-radius:8px; min-width:0}
+.portal-root .showroom-preview svg {width:64px; height:64px; flex-shrink:0; color:#7d8467}
+.portal-root .showroom-preview>div {min-width:0; display:flex; flex-direction:column; gap:5px}
+.portal-root .showroom-preview-label {font-size:9px; font-weight:700; letter-spacing:.1em; color:#727b5d}
+.portal-root .showroom-preview strong {font-size:11px; font-weight:600; color:#3a4130; line-height:1.5; overflow-wrap:anywhere}
+.portal-root .showroom-preview div>span:last-child {font-size:10px; color:#797e6e}
+.portal-root .showroom-url-bar {background:#fff; padding:5px 10px 5px 13px; border-radius:7px; margin-bottom:15px}
+.portal-root .showroom-url-text {font-size:11px; font-weight:500}
+.portal-root .showroom-url-bar button {min-width:38px; min-height:38px; justify-content:center}
+.portal-root .btn-card-action {border-radius:7px; min-height:44px; font-size:12px}
+.portal-root .estimator-type-pills {gap:4px; background:#f4f5ee; padding:4px; border:1px solid #eaebe1; border-radius:8px; margin:3px 0 22px}
+.portal-root .estimator-pill {flex:1; font-size:11px; border:0; border-radius:5px; margin:0; padding:9px 4px; white-space:nowrap}
+.portal-root .estimator-pill.active {background:#fff; color:#353e2a; box-shadow:0 1px 4px #202a1712}
+.portal-root .estimator-input-wrap label {font-size:10px; letter-spacing:.04em; margin-bottom:8px}
+.portal-root .estimator-input-wrap input {border-radius:7px; background:#fdfdfb; padding:11px; min-height:43px; font-size:14px}
+.portal-root .estimator-inputs-row {margin-bottom:20px}
+.portal-root .estimator-result-box {margin-top:auto; background:#f1f3e9; border-color:#dfe4d2; border-radius:8px; padding:17px 18px; flex-wrap:wrap}
+.portal-root .estimator-result-label {color:#69734e; font-size:9px}
+.portal-root .estimator-result-val {font-family:var(--font); font-size:25px; font-weight:600; letter-spacing:-.04em; margin-top:4px}
+.portal-root .estimator-result-box .btn-hero-primary {border-radius:6px; background:#30392b; border-color:#30392b; font-size:11px; padding:10px 13px}
+.portal-root .followup-card,.portal-root .portal-panel,.portal-root .info-card {border-radius:12px; padding:24px; box-shadow:var(--shadow)}
+.portal-root .followup-header {padding-bottom:17px; margin-bottom:0; border-bottom:1px solid var(--line)}
+.portal-root .followup-list {gap:0}
+.portal-root .followup-item-card {border:0; border-bottom:1px solid var(--line-soft); border-radius:0; padding:17px 0; box-shadow:none; flex-wrap:wrap}
+.portal-root .followup-item-card:last-child {border-bottom:0; padding-bottom:0}
+.portal-root .followup-item-card:hover {background:#fafbf7; box-shadow:none}
+.portal-root .followup-item-card>div {min-width:0}
+.portal-root .followup-client-row {flex-wrap:wrap; gap:8px}
+.portal-root .followup-client-name,.portal-root .followup-quote-badge {overflow-wrap:anywhere}
+.portal-root .followup-quote-badge {font-size:9px; border:0; background:#f3f4ee; color:#737968; font-weight:500}
+.portal-root .followup-btns-row {flex-wrap:wrap}
+.portal-root .btn-followup-call,.portal-root .btn-followup-wa,.portal-root .btn-followup-view {min-height:38px; border-radius:6px; font-size:11px}
+.portal-root .followup-meta {font-size:10px; margin-top:3px}
+.portal-root .panel-grid {gap:20px; margin:26px 0}
+.portal-root :is(button,a,input,select,textarea):focus-visible {outline:2px solid #987821; outline-offset:3px}
+.portal-root .dashboard-sidebar :is(button,a):focus-visible {outline-color:#eee0ab}
+.portal-root .mobile-toggle {width:44px; height:44px; flex-shrink:0}
+.portal-root .sidebar-close {display:none}
+@media (max-width:1200px) {
+  .portal-root .hero-growth-banner {align-items:flex-start}
+  .portal-root .tab-pane {padding:26px 24px 48px}
+}
+@media (max-width:860px) {
+  .portal-root .dashboard-sidebar {visibility:hidden; overflow-y:auto; height:100dvh}
+  .portal-root .dashboard-sidebar.open {visibility:visible}
+  .portal-root .sidebar-close {display:flex; align-items:center; justify-content:space-between; min-height:44px; margin:12px 14px 0; padding:10px 14px; border:1px solid #484d3e; border-radius:7px; background:transparent; color:#dfe2d4; font:inherit}
+  .portal-root .sidebar-nav {flex-shrink:0}
+  .portal-root .dashboard-header {padding:0 16px; gap:14px}
+  .portal-root .header-user {max-width:210px; font-size:9px}
+  .portal-root .hero-growth-banner {padding-top:0; gap:20px}
+  .portal-root .hero-greeting {font-size:30px}
+  .portal-root .tab-pane {padding:26px 20px 40px}
+  .portal-root .metrics-grid {gap:12px}
+  .portal-root .metric-card {min-height:158px}
+}
+@media (max-width:600px) {
+  .portal-root .header-user {display:none}
+  .portal-root .header-title {font-size:13px}
+  .portal-root .hero-actions {width:100%}
+  .portal-root .hero-actions>* {flex:1; justify-content:center}
+  .portal-root .feature-card,.portal-root .followup-card,.portal-root .portal-panel,.portal-root .info-card {padding:18px}
+  .portal-root .metric-card {min-height:150px}
+  .portal-root .metric-val {font-size:28px}
+  .portal-root .metric-title {font-size:10px}
+  .portal-root .metric-sub {font-size:11px}
+  .portal-root .followup-item-card {align-items:stretch}
+  .portal-root .followup-btns-row {gap:6px}
+  .portal-root .btn-followup-call,.portal-root .btn-followup-wa,.portal-root .btn-followup-view {min-height:44px; flex:1; padding:8px}
+  .portal-root .estimator-inputs-row {grid-template-columns:1fr 1fr; gap:12px}
+  .portal-root .estimator-input-wrap:last-child {grid-column:1/-1}
+  .portal-root .estimator-input-wrap input {font-size:16px}
+  .portal-root .showroom-preview {padding:12px; gap:10px}
+  .portal-root .showroom-preview svg {width:48px; height:48px}
+}
+/* Daily-use comfort: readable secondary information and stationary controls. */
+.portal-root .metric-title {font-size:11px; letter-spacing:.025em; text-transform:none}
+.portal-root .metric-sub {font-size:12px; line-height:1.6}
+.portal-root .metric-pill {font-size:11px}
+.portal-root .feature-desc,.portal-root .hero-sub {font-size:13px; line-height:1.65}
+.portal-root .followup-meta {font-size:12px; color:#65695c}
+.portal-root .followup-quote-badge {font-size:11px}
+.portal-root .showroom-url-text {font-size:12px}
+.portal-root .estimator-pill {font-size:12px; min-height:40px}
+.portal-root .estimator-input-wrap label {font-size:12px; text-transform:none; letter-spacing:0}
+.portal-root .btn-followup-call,.portal-root .btn-followup-wa,.portal-root .btn-followup-view {font-size:12px; min-height:44px}
+.portal-root .followup-shortcut {display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0; background:none; border:0; color:#45553a; font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-decoration-color:#c3cab8; text-underline-offset:4px}
+.portal-root .followup-shortcut:hover {color:#1f3020; text-decoration-color:currentColor}
+.portal-root .followup-card {scroll-margin-top:20px}
+.portal-root .followup-card:focus-visible {outline:2px solid #987821; outline-offset:3px}
+.portal-root .tab-pane {animation:none}
+.portal-root .btn-hero-primary:hover,.portal-root .feature-card:hover,.portal-root .metric-card:hover {transform:none}
+.portal-root .dashboard-content {scrollbar-gutter:stable}
+.portal-root .portal-connection-note {display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:0 0 20px; padding:16px; background:#eef0e6; border:1px solid #dbe0cf; border-radius:8px; color:#424c36; font-size:13px}
+.portal-root .portal-connection-note button,.portal-root .portal-recovery button {min-height:44px; padding:10px 16px; background:#30392b; color:#fff; border:0; border-radius:7px; font:inherit; cursor:pointer}
+.portal-root .portal-recovery {max-width:480px; margin:15vh auto; padding:28px; line-height:1.65}
+.portal-root .portal-recovery h1 {font-size:26px; margin-bottom:12px}
+.portal-root .portal-recovery button {margin:20px 16px 0 0}
+.portal-root .portal-recovery a {color:#45553a}
+@media (max-width:420px) {
+  .portal-root .estimator-type-pills {display:grid; grid-template-columns:1fr 1fr}
+  .portal-root .hero-actions {display:grid; grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce) {
+  .portal-root *, .portal-root *::before, .portal-root *::after {animation:none!important; transition:none!important; scroll-behavior:auto!important}
+}

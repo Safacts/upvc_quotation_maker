@@ -195,6 +195,11 @@ export default function QuotationEditor({
   const [unmeasured, setUnmeasured] = useState<UnmeasuredRow[]>(initial.unmeasured);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
+  const editRevision = useRef(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const emailInFlight = useRef(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
   const [showElevationPreview, setShowElevationPreview] = useState(true);
@@ -235,7 +240,10 @@ export default function QuotationEditor({
     };
   }, [quotationId, header.quote_no]);
 
-  const markDirty = useCallback(() => setDirty(true), []);
+  const markDirty = useCallback(() => {
+    editRevision.current += 1;
+    setDirty(true);
+  }, []);
 
   const setHeaderField = useCallback(
     <K extends keyof QuotationHeader>(field: K, value: QuotationHeader[K]) => {
@@ -341,7 +349,7 @@ export default function QuotationEditor({
 
   // ---- Save ---------------------------------------------------------------
   const save = useCallback(async () => {
-    if (saving) return;
+    if (saveInFlight.current) return;
     setFieldErrors({});
 
     // Comprehensive client-side validation check
@@ -429,6 +437,9 @@ export default function QuotationEditor({
       return;
     }
 
+    saveInFlight.current = true;
+    const revision = editRevision.current;
+    setSaveError(null);
     setSaving(true);
     try {
       const payload = {
@@ -466,23 +477,28 @@ export default function QuotationEditor({
 
       if (!res.ok) {
         if (data?.fields) setFieldErrors(data.fields);
+        setSaveError("Your changes are still on this screen. Check the details and choose Retry Save.");
         toast(data?.error || "Save failed", "err");
         return;
       }
 
-      setDirty(false);
+      const hasNewerEdits = editRevision.current !== revision;
+      setDirty(hasNewerEdits);
       setLastAutoSavedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
-      toast("Saved", "ok");
+      toast(hasNewerEdits ? "Earlier changes saved. Saving your latest edits next." : "Saved", "ok");
 
       if (isNew && data.id) {
         setSavedId(data.id);
         // `replace`, not `push`: the user should not be able to press Back into
         // a "new quotation" URL that would create a SECOND copy on next save.
-        router.replace(`/${slug}/console/quotations/${data.id}`);
+        // Do not unmount a new draft while newer local edits are still unsaved.
+        if (!hasNewerEdits) router.replace(`/${slug}/console/quotations/${data.id}`);
       }
     } catch (e: any) {
-      toast(String(e?.message ?? e), "err");
+      setSaveError("Could not confirm the save. Keep this page open and choose Retry Save when connected.");
+      toast("Could not confirm the save. Your changes are still on this screen.", "err");
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   }, [saving, header, measured, unmeasured, savedId, router, slug, toast]);
@@ -493,12 +509,14 @@ export default function QuotationEditor({
   // 2s after last edit, if dirty + already saved once (has savedId), silently
   // PATCH. No toast — status bar shows state. Never for brand-new unsaved.
   useEffect(() => {
-    if (!dirty || !savedId || saving) return;
+    if (!dirty || !savedId || saving || saveError) return;
     // Don't auto-save invalid header — would spam validation errors.
     if (!header.customer_name.trim()) return;
     const t = setTimeout(async () => {
       // Re-check guard inside timeout (dirty may have been cleared manually).
-      if (saving) return;
+      if (saveInFlight.current) return;
+      saveInFlight.current = true;
+      const revision = editRevision.current;
       try {
         setSaving(true);
         const payload = {
@@ -510,14 +528,18 @@ export default function QuotationEditor({
         };
         const res = await fetch(`/api/console/quotations/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify(payload) });
         if (res.ok) {
-          setDirty(false);
+          setDirty(editRevision.current !== revision);
           setLastAutoSavedAt(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+        } else {
+          setSaveError("Auto-save paused. Your changes are still on this screen. Choose Retry Save.");
         }
-      } catch {}
-      finally { setSaving(false); }
+      } catch {
+        setSaveError("Auto-save paused. Keep this page open and choose Retry Save when connected.");
+      }
+      finally { saveInFlight.current = false; setSaving(false); }
     }, 1500);
     return () => clearTimeout(t);
-  }, [dirty, savedId, saving, header, measured, unmeasured]);
+  }, [dirty, savedId, saving, saveError, header, measured, unmeasured]);
 
   const goBack = useCallback(() => {
     // Esc is Tally's Ctrl+Q (quit without saving) — but silently discarding a
@@ -617,18 +639,27 @@ export default function QuotationEditor({
   // Opens the PDF route in a new tab. The route re-reads the stored row, so the
   // download always reflects the last saved state — never the unsaved draft.
   const downloadPdf = useCallback(() => {
+    if (dirty || saveInFlight.current) {
+      toast("Save your latest changes before downloading the PDF.", "info");
+      return;
+    }
     if (!savedId) {
       toast("Save the quotation first to generate a PDF", "info");
       return;
     }
     const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
     window.open(`/api/console/quotations/${savedId}/pdf${cParam}`, "_blank", "noopener,noreferrer");
-  }, [savedId, slug, clientId, toast]);
+  }, [dirty, savedId, slug, clientId, toast]);
 
   // ---- Email the quotation -------------------------------------------------
   // Sends the customer-facing PDF as an attachment via /api/send_email. The
   // quotation's own `email` field is used as the default recipient.
   const emailQuote = useCallback(async () => {
+    if (emailInFlight.current) return;
+    if (dirty || saveInFlight.current) {
+      toast("Save your latest changes before emailing the quotation.", "info");
+      return;
+    }
     if (!savedId) {
       toast("Save the quotation before emailing", "info");
       return;
@@ -638,6 +669,8 @@ export default function QuotationEditor({
       toast("Add a customer email first", "info");
       return;
     }
+    emailInFlight.current = true;
+    setSendingEmail(true);
     try {
       const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
       const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf${cParam}`, {
@@ -685,8 +718,11 @@ export default function QuotationEditor({
       toast(`Quotation emailed to ${to}`, "ok");
     } catch (e: any) {
       toast(String(e?.message ?? e), "err");
+    } finally {
+      emailInFlight.current = false;
+      setSendingEmail(false);
     }
-  }, [savedId, slug, header.email, header.quote_no, header.customer_name, companyName, toast]);
+  }, [dirty, savedId, slug, clientId, header.email, header.quote_no, header.customer_name, companyName, toast]);
 
   // ---- Share link & WhatsApp ----------------------------------------------
   const [sharing, setSharing] = useState(false);
@@ -774,7 +810,7 @@ export default function QuotationEditor({
     count:
       `${measured.length} measured · ${unmeasured.length} other` +
       (nav.index >= 0 ? ` · record ${nav.position} of ${nav.total}` : "") +
-      (lastAutoSavedAt ? ` · auto-saved ${lastAutoSavedAt}` : dirty ? " · unsaved" : ""),
+      (saveError ? " · save needs attention" : dirty ? " · unsaved" : lastAutoSavedAt ? ` · saved ${lastAutoSavedAt}` : ""),
     total: formatMoney(totals.grandTotal),
     hints: [
       { keys: "Ctrl+S", label: "Save" },
@@ -937,6 +973,7 @@ export default function QuotationEditor({
                 type="button"
                 className="vc-btn vc-btn-sm"
                 onClick={() => void emailQuote()}
+                disabled={sendingEmail}
                 title="Email the saved quotation as a PDF"
               >
                 <Mail size={12} /> Email
@@ -981,6 +1018,13 @@ export default function QuotationEditor({
             </div>
           </div>
 
+          {saveError && (
+            <div role="alert" style={{ padding: "12px 16px", background: "#fff7ed", color: "#9a3412", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+              <span>{saveError}</span>
+              <button type="button" className="vc-btn vc-btn-sm" disabled={saving} onClick={() => void save()}>Retry Save</button>
+            </div>
+          )}
+          {sendingEmail && <div role="status" style={{ padding: "8px 16px" }}>Sending quotation email…</div>}
           {/* Header: 3 columns, everything visible. No wizard, no accordion. */}
           <div className="vc-hdr-grid">
             <div className="vc-field vc-span-2">

@@ -7,6 +7,8 @@ import type { ClientRow } from "@/lib/slug";
 import { slugify } from "@/lib/slug";
 import { parseClientConfig } from "@/lib/types";
 import "./portal.css";
+import "./portal-premium.css";
+import { portalRequest } from "@/lib/portal-request";
 import { MarketPageSettings } from "./MarketPageSettings";
 
 interface InfoField {
@@ -19,8 +21,39 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   const config = useMemo(() => parseClientConfig(client.config || {}, client.id), [client.config, client.id]);
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [authAttempt, setAuthAttempt] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigationToggle = useRef<HTMLButtonElement>(null);
+  const navigationClose = useRef<HTMLButtonElement>(null);
+  const followUps = useRef<HTMLDivElement>(null);
+  const closeNavigation = useCallback(() => {
+    setSidebarOpen(false);
+    navigationToggle.current?.focus();
+  }, []);
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    navigationClose.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeNavigation();
+      if (event.key === "Tab" && window.matchMedia("(max-width: 860px)").matches) {
+        const items = Array.from(document.querySelectorAll<HTMLElement>(
+          '#portal-navigation a[href], #portal-navigation button:not([disabled])'
+        )).filter(item => item.getClientRects().length > 0);
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [sidebarOpen, closeNavigation]);
   const [activeTab, setActiveTab] = useState<"overview" | "catalog" | "market" | "market-settings" | "settings">("overview");
 
   const [brand, setBrand] = useState("Loading...");
@@ -46,6 +79,22 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   );
 
   const [stats, setStats] = useState<any>(null);
+  const [statsStatus, setStatsStatus] = useState<"loading" | "ready" | "error">("loading");
+  const statsBusy = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const loadStats = useCallback(async () => {
+    if (statsBusy.current) return;
+    statsBusy.current = true;
+    setStatsStatus("loading");
+    try {
+      const data = await portalRequest("/api/portal_stats");
+      if (mounted.current) { setStats(data); setStatsStatus("ready"); }
+    } catch {
+      if (mounted.current) setStatsStatus("error");
+    } finally { statsBusy.current = false; }
+  }, []);
+  const settingsBusy = useRef(false);
   const [formData, setFormData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -58,9 +107,48 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   const [isStandalone, setIsStandalone] = useState(false);
   const [showA2hsModal, setShowA2hsModal] = useState(false);
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
   const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 6000);
+    toastTimer.current = setTimeout(() => setToast(null), 6000);
+  };
+
+  const [estimatorType, setEstimatorType] = useState<"2-track" | "3-track" | "casement" | "fixed">("2-track");
+  const [estimatorWidth, setEstimatorWidth] = useState<number>(5);
+  const [estimatorHeight, setEstimatorHeight] = useState<number>(4);
+  const [estimatorRate, setEstimatorRate] = useState<number>(480);
+
+  const handleEstimatorTypeChange = (type: "2-track" | "3-track" | "casement" | "fixed") => {
+    setEstimatorType(type);
+    if (type === "2-track") setEstimatorRate(480);
+    else if (type === "3-track") setEstimatorRate(620);
+    else if (type === "casement") setEstimatorRate(580);
+    else if (type === "fixed") setEstimatorRate(380);
+  };
+
+  const copyShowroomLink = async () => {
+    const fullUrl = typeof window !== "undefined" ? window.location.origin + marketUrl : marketUrl;
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(fullUrl);
+      showToast("Showroom link copied to clipboard! Share with your clients.", "success");
+    } catch {
+      showToast("Couldn’t copy automatically. Select and copy the showroom address shown on this page.", "info");
+    }
+  };
+
+  const shareShowroomWhatsApp = () => {
+    const fullUrl = typeof window !== "undefined" ? window.location.origin + marketUrl : marketUrl;
+    const text = `Explore ${brand}'s premium UPVC & Aluminium window and door collections, 3D architectural elevations, and completed projects: ${fullUrl}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const sendWhatsAppFollowUp = (customerName: string, quoteNo: string, amount: number, contactNo: string) => {
+    const cleanPhone = (contactNo || "").replace(/\D/g, "");
+    const text = `Hello ${customerName}, this is ${config.companyProprietor || brand}. Following up regarding your UPVC window & door quotation #${quoteNo} (₹${amount.toLocaleString('en-IN')}). Please let us know if you would like to proceed or need any adjustments in the sizes or specifications!`;
+    window.open(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   useEffect(() => {
@@ -107,14 +195,13 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
     (async () => {
       try {
-        const authRes = await fetch("/api/portal_auth", {
+        const authData = await portalRequest("/api/portal_auth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode: "session" }),
         });
-        const authData = await authRes.json();
         if (cancelled) return;
-        if (!authRes.ok || authData.role !== "customer" || authData.client_id !== clientId) {
+        if (authData.role !== "customer" || authData.client_id !== clientId) {
           localStorage.clear();
           router.replace("/upvc/login");
           return;
@@ -122,16 +209,18 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
         const primaryColor = config.primaryColor
           ? "#" + config.primaryColor.toString(16).padStart(8, "0").slice(2)
-          : "#6366f1";
+          : "#d89b25";
         const accentColor = config.accentColor
           ? "#" + config.accentColor.toString(16).padStart(8, "0").slice(2)
-          : "#ec4899";
+          : "#101722";
 
         document.documentElement.style.setProperty("--primary", primaryColor);
         document.documentElement.style.setProperty("--accent", accentColor);
         document.documentElement.style.setProperty(
           "--primary-gradient",
-          "linear-gradient(135deg, " + primaryColor + " 0%, " + accentColor + " 100%)",
+          config.primaryColor
+            ? "linear-gradient(135deg, " + primaryColor + " 0%, " + accentColor + " 100%)"
+            : "linear-gradient(135deg, #d89b25 0%, #b26a00 100%)",
         );
 
         setBrand(config.companyName || client.id);
@@ -159,36 +248,55 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           companyEmail: config.companyEmail || "",
           companyAddress: config.companyAddress || "",
           gstNumber: config.gstNumber || "",
+          panNumber: (config as any).panNumber || "",
+          upiId: (config as any).upiId || "",
+          secondaryContact: (config as any).secondaryContact || "",
+          whatsappNumber: (config as any).whatsappNumber || config.companyContact || "",
+          stateCode: (config as any).stateCode || "",
+          hsnCode: (config as any).hsnCode || "3925",
           bankName: config.bankName || "",
           bankBranch: config.bankBranch || "",
           bankAccountNo: config.bankAccountNo || "",
           bankIfsc: config.bankIfsc || "",
           termsAndConditions: config.termsAndConditions || [],
-          defaultGstPercentage: config.defaultGstPercentage || 0,
+          defaultGstPercentage: config.defaultGstPercentage ?? 18,
           cost_margin_percent: config.cost_margin_percent || 0,
+          quoteValidityDays: (config as any).quoteValidityDays ?? 15,
+          quoteNotes: (config as any).quoteNotes || "",
+          authorizedSignatory: (config as any).authorizedSignatory || config.companyProprietor || "",
+          placeOfSupply: (config as any).placeOfSupply || "",
+          labourCostPerSqft: (config as any).labourCostPerSqft ?? 0,
+          installationCostPerSqft: (config as any).installationCostPerSqft ?? 0,
+          wastagePercent: (config as any).wastagePercent ?? 3,
+          defaultTransportCost: (config as any).defaultTransportCost ?? 0,
+          defaultAdvancePercent: (config as any).defaultAdvancePercent ?? 50,
+          establishmentYear: (config as any).establishmentYear || "",
+          businessHours: (config as any).businessHours || "Mon-Sat 9:30 AM - 7:30 PM",
+          serviceAreas: (config as any).serviceAreas || [],
+          facebookUrl: (config as any).facebookUrl || "",
+          instagramUrl: (config as any).instagramUrl || "",
+          googleMapsUrl: (config as any).googleMapsUrl || "",
           enablePricePresets: config.enablePricePresets || false,
           measuredPresets: config.measuredPresets || [],
           unmeasuredPresets: config.unmeasuredPresets || [],
           supplierCompanies: config.supplierCompanies || [],
         });
 
-        // Fetch stats in parallel
-        fetch("/api/portal_stats").then(r => r.json()).then(data => {
-          if (!cancelled && !data.error) setStats(data);
-        }).catch(e => console.error(e));
+        // Keep the workspace usable while statistics load, with explicit recovery.
+        void loadStats();
 
         setStatus("ready");
       } catch (e) {
         if (cancelled) return;
         setStatus("error");
-        setErrorMsg("Error: " + (e as Error).message);
+        setErrorMsg("We couldn’t verify your session. Check your connection and try again, or sign in again.");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [router, client, config]);
+  }, [router, client, config, loadStats, authAttempt]);
 
   const handleLogout = useCallback(async () => {
     localStorage.clear();
@@ -202,20 +310,21 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
   
   const handleSettingsSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (settingsBusy.current) return;
+    settingsBusy.current = true;
     setIsSaving(true);
     setSaveMessage("");
     try {
-      const res = await fetch("/api/portal_settings", {
+      await portalRequest("/api/portal_settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
       setSaveMessage("Settings saved successfully! Changes will reflect on app reload.");
     } catch (err: any) {
-      setSaveMessage("Error: " + err.message);
+      setSaveMessage("We couldn’t confirm the save. Your entries are still here. Check your connection and retry; if the connection dropped, the server may already have saved them.");
     } finally {
+      settingsBusy.current = false;
       setIsSaving(false);
     }
   };
@@ -250,16 +359,18 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
 
   if (status === "error") {
     return (
-      <div className="dashboard-layout" style={{ justifyContent: "center", alignItems: "center" }}>
-        <div className="error">{errorMsg}</div>
-      </div>
+      <div className="portal-root"><div className="portal-recovery" role="alert">
+        <h1>Let’s reconnect</h1><p>{errorMsg}</p>
+        <button type="button" onClick={() => { setStatus("loading"); setAuthAttempt(value => value + 1); }}>Try again</button>
+        <a href="/upvc/login">Back to sign in</a>
+      </div></div>
     );
   }
 
   if (status === "loading") {
     return (
       <div className="dashboard-layout" style={{ justifyContent: "center", alignItems: "center" }}>
-        <div className="loading">Loading your workspace...</div>
+        <div className="loading" role="status">Opening your workspace…</div>
       </div>
     );
   }
@@ -276,7 +387,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
     <div className="portal-root">
       {/* Custom Theme Toast Notification */}
       {toast && (
-        <div style={{
+        <div role="status" aria-live="polite" style={{
           position: 'fixed',
           top: '24px',
           right: '24px',
@@ -310,7 +421,8 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           </div>
           <div style={{ flex: 1 }}>{toast.message}</div>
           <button 
-            onClick={() => setToast(null)} 
+            onClick={() => setToast(null)}
+            aria-label="Dismiss notification"
             style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -319,18 +431,22 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
       )}
       <div className="dashboard-layout">
       {/* Sidebar */}
-      <div className={`mobile-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
-      <aside className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
+      <div className={`mobile-overlay ${sidebarOpen ? "open" : ""}`} onClick={closeNavigation} />
+      <aside id="portal-navigation" className={`dashboard-sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           {config.logoUrl && <img src={config.logoUrl} alt="Logo" />}
-          <h2>{brand}</h2>
+          <div className="sidebar-brand-meta">
+            <h2>{brand}</h2>
+            <span className="sidebar-badge">Verified Fabricator</span>
+          </div>
         </div>
-        <nav className="sidebar-nav">
+        <button ref={navigationClose} type="button" className="sidebar-close" onClick={closeNavigation} aria-label="Close navigation">Close menu <span aria-hidden="true">×</span></button>
+        <nav className="sidebar-nav" aria-label="Workspace navigation">
           <button 
             className={`nav-item ${activeTab === "overview" ? "active" : ""}`}
             onClick={() => { setActiveTab("overview"); setSidebarOpen(false); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="14" y="14" width="7" height="7" rx="1" />
@@ -345,14 +461,14 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             rel="noopener noreferrer"
             onClick={() => setSidebarOpen(false)}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <path d="M3 9h18M9 21V9" />
             </svg>
             Quotation App
             <svg
-              width="14"
-              height="14"
+              width="13"
+              height="13"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -368,7 +484,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             className={`nav-item ${activeTab === "catalog" ? "active" : ""}`}
             onClick={() => { setActiveTab("catalog"); setSidebarOpen(false); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
             Product Catalog
@@ -377,7 +493,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             className={`nav-item ${activeTab === "market" ? "active" : ""}`}
             onClick={() => { setActiveTab("market"); setSidebarOpen(false); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -388,7 +504,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
             onClick={() => { setActiveTab("settings"); setSidebarOpen(false); }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
@@ -396,68 +512,36 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           </button>
         </nav>
         {/* Desktop Console — prominent shortcut to the Tally-style desktop workspace */}
-        <div style={{ padding: '0 12px', marginTop: '8px' }}>
+        <div className="sidebar-console-wrap">
           <Link
             href={`/${slug}/console`}
             onClick={() => setSidebarOpen(false)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '10px 14px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              color: '#e2e8f0',
-              fontWeight: '600',
-              fontSize: '13px',
-              textDecoration: 'none',
-              border: '1px solid #334155',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-            }}
+            className="sidebar-console-btn"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
-            <span>Desktop Console</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>Desktop Console</span>
+            </div>
+            <span className="console-tag">PRO</span>
           </Link>
         </div>
-        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="sidebar-footer">
           {/* Lite Mode: Instant Web App / PWA */}
           <button 
             onClick={handleLiteMode}
-            className="btn-download" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              padding: '10px 14px', 
-              color: 'var(--text)', 
-              borderRadius: '10px', 
-              border: '1px solid var(--border, #e2e8f0)',
-              background: 'white',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '13px'
-            }}
+            className="sidebar-tool-btn"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
               <span>{isStandalone ? "Open App" : "App Lite Mode"}</span>
             </div>
-            <span style={{ fontSize: '10px', background: (canInstall || isIOS) && !isStandalone ? '#dcfce7' : isStandalone ? '#ede9fe' : '#e0e7ff', color: (canInstall || isIOS) && !isStandalone ? '#166534' : isStandalone ? '#5b21b6' : '#3730a3', padding: '2px 6px', borderRadius: '10px' }}>{isStandalone ? 'Open' : canInstall || isIOS ? 'Install' : 'Instant'}</span>
+            <span className="tool-badge tool-badge-green">{isStandalone ? 'Open' : canInstall || isIOS ? 'Install' : 'Instant'}</span>
           </button>
 
           {/* Pro Mode: Native APK */}
@@ -490,7 +574,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                     e.preventDefault();
                     const btn = e.currentTarget;
                     const originalText = btn.innerHTML;
-                    btn.innerHTML = `<span style="font-size: 13px; font-weight: 600;">Triggering Build...</span>`;
+                    btn.innerHTML = `<span style="font-size: 12px; font-weight: 600;">Triggering...</span>`;
                     btn.style.pointerEvents = 'none';
                     try {
                       const res = await fetch("/api/trigger_build", {
@@ -518,24 +602,12 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                     }
                   }
                 }}
-                className="btn-download" 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  gap: '4px',
-                  padding: '10px 14px', 
-                  color: 'var(--text)', 
-                  textDecoration: 'none', 
-                  borderRadius: '10px', 
-                  border: '1px solid var(--border, #e2e8f0)',
-                  background: isBuilding ? '#fef3c7' : config.appDownloadUrl ? '#f0fdf4' : '#f8fafc',
-                  fontWeight: '600',
-                  fontSize: '13px'
-                }}
+                className="sidebar-tool-btn"
+                style={{ flexDirection: 'column', alignItems: 'stretch' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       {isBuilding ? (
                         <>
                           <circle cx="12" cy="12" r="10" />
@@ -551,23 +623,17 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                     </svg>
                     <span>App Pro Mode</span>
                   </div>
-                  <span style={{ 
-                    fontSize: '10px', 
-                    background: isBuilding ? '#fde68a' : config.appDownloadUrl ? '#dcfce7' : '#f1f5f9', 
-                    color: isBuilding ? '#92400e' : config.appDownloadUrl ? '#166534' : '#64748b', 
-                    padding: '2px 6px', 
-                    borderRadius: '10px' 
-                  }}>
-                    {isBuilding ? `Building (~${buildMinutesRemaining}m left)` : config.appDownloadUrl ? 'Install APK' : 'Request Build'}
+                  <span className={`tool-badge ${isBuilding ? 'tool-badge-amber' : config.appDownloadUrl ? 'tool-badge-green' : 'tool-badge-blue'}`}>
+                    {isBuilding ? `Building (~${buildMinutesRemaining}m)` : config.appDownloadUrl ? 'APK' : 'Build'}
                   </span>
                 </div>
                 {config.appDownloadUrl && config.lastBuildCompletedAt && (
-                  <div style={{ fontSize: '10px', color: '#64748b', paddingLeft: '24px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--portal-sidebar-muted, #64748b)', paddingLeft: '22px', marginTop: '2px' }}>
                     {(() => {
                       const d = new Date(config.lastBuildCompletedAt);
                       if (isNaN(d.getTime())) return null;
                       const pad = (n: number) => String(n).padStart(2, '0');
-                      return `Last updated: ${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+                      return `Updated: ${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
                     })()}
                   </div>
                 )}
@@ -575,7 +641,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
             );
           })()}
           <button className="btn-logout" onClick={handleLogout}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
@@ -589,7 +655,7 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
       <main className="dashboard-main">
         <header className="dashboard-header">
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <button className="mobile-toggle" onClick={() => setSidebarOpen(true)}>
+            <button ref={navigationToggle} className="mobile-toggle" aria-label="Open navigation" aria-controls="portal-navigation" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="3" y1="12" x2="21" y2="12" />
                 <line x1="3" y1="6" x2="21" y2="6" />
@@ -602,9 +668,9 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 <button
                   onClick={() => setActiveTab("market")}
                   style={{
-                    padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-                    background: activeTab === "market" ? "#6366f1" : "#f1f5f9",
-                    color: activeTab === "market" ? "white" : "#64748b",
+                    padding: "4px 12px", borderRadius: 6, border: "1px solid " + (activeTab === "market" ? "#c08a1d" : "#dfe3e8"), cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    background: activeTab === "market" ? "#d89b25" : "#fbfcfd",
+                    color: activeTab === "market" ? "#101722" : "#5b6673",
                   }}
                 >
                   Preview
@@ -612,9 +678,9 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 <button
                   onClick={() => setActiveTab("market-settings")}
                   style={{
-                    padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-                    background: activeTab === "market-settings" ? "#6366f1" : "#f1f5f9",
-                    color: activeTab === "market-settings" ? "white" : "#64748b",
+                    padding: "4px 12px", borderRadius: 6, border: "1px solid " + (activeTab === "market-settings" ? "#c08a1d" : "#dfe3e8"), cursor: "pointer", fontSize: 12, fontWeight: 600,
+                    background: activeTab === "market-settings" ? "#d89b25" : "#fbfcfd",
+                    color: activeTab === "market-settings" ? "#101722" : "#5b6673",
                   }}
                 >
                   Testimonials
@@ -635,107 +701,330 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           
           {/* Overview Tab */}
           <div className={`tab-pane ${activeTab === "overview" ? "active" : ""}`}>
-                {/* Greeting & Quick Action Banner */}
-            <div className="info-card" style={{ 
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', 
-              color: 'white', 
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '16px'
-            }}>
-              <div>
-                <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '4px' }}>
-                  Welcome back, {config.companyProprietor || config.companyName || "Partner"}!
+            {/* Hero Sales & Attraction Banner */}
+            <div className="hero-growth-banner">
+              <div className="hero-copy">
+                <div className="portal-eyebrow">YOUR BUSINESS, AT A GLANCE</div>
+                <h2 className="hero-greeting">
+                  Welcome back, <span className="hero-name">{(config.companyProprietor || config.companyName || "Partner").toLowerCase().split(' ')[0]}</span>.
                 </h2>
-                <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-                  Here is your real-time business summary. Keep closing orders!
-                </p>
+                <div className="hero-sub">
+                  <span>{stats ? `${stats.totalCount} proposals. One clear view of your business.` : brand}</span>
+                </div>
               </div>
-              <a
-                href={appUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  background: 'var(--primary-gradient)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '12px',
-                  fontWeight: '700',
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Create New Quotation
-              </a>
+              <div className="hero-actions">
+                <a
+                  href={appUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-hero-primary"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Create New Quotation
+                </a>
+                <button
+                  type="button"
+                  onClick={copyShowroomLink}
+                  className="btn-hero-secondary"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy Showroom Link
+                </button>
+              </div>
             </div>
 
-            {/* Hero Stats */}
+            {/* North Star Sales Metrics (4-Card Grid) */}
+            {statsStatus !== "ready" && (
+              <div className="portal-connection-note" role="status">
+                <span>{statsStatus === "loading" ? "Loading your latest figures. You can keep using the workspace." : "Your figures couldn’t load. This doesn’t mean your quotations are missing."}</span>
+                {statsStatus === "error" && <button type="button" onClick={loadStats}>Retry figures</button>}
+              </div>
+            )}
             {stats && (
-              <div className="stats-grid" style={{ marginBottom: '24px' }}>
-                <div className="stat-card" style={{ background: 'var(--primary-gradient)', color: 'white' }}>
-                  <div className="label" style={{ color: 'rgba(255,255,255,0.8)' }}>Orders Won %</div>
-                  <div className="value" style={{ fontSize: '32px' }}>{stats.winRate.toFixed(1)}%</div>
-                  <div style={{ fontSize: '14px', marginTop: '4px', opacity: 0.9 }}>
-                    {stats.wonCount} won out of {stats.totalCount} total quotes
+              <div className="metrics-grid">
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <span className="metric-title">Quoted Deal Pipeline</span>
+                    <div className="metric-icon-wrap amber">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                  </div>
+                  <div className="metric-val">₹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  <div className="metric-sub">
+                    {Math.abs(stats.monthChangePercent) >= 99.9 ? (
+                      <span className="metric-pill" style={{ background:'#f5f5f4', color:'#57534e', border:'1px solid #e7e5e4' }}>New pipeline</span>
+                    ) : stats.monthChangePercent !== 0 ? (
+                      <span className={`metric-pill ${stats.monthChangePercent >= 0 ? "metric-pill-up" : "metric-pill-down"}`}>
+                        {stats.monthChangePercent >= 0 ? "↑" : "↓"} {Math.abs(stats.monthChangePercent).toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="metric-pill" style={{ background:'#f5f5f4', color:'#57534e', border:'1px solid #e7e5e4' }}>Steady</span>
+                    )}
+                    <span>vs last month · {stats.totalCount} proposals</span>
                   </div>
                 </div>
 
-                <div className="stat-card">
-                  <div className="label">Total Work Quoted</div>
-                  <div className="value" style={{ fontSize: '24px' }}>₹ {stats.totalQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                  {stats.monthChangePercent !== 0 && (
-                    <div style={{ 
-                      fontSize: '13px', 
-                      marginTop: '6px', 
-                      fontWeight: '600',
-                      color: stats.monthChangePercent >= 0 ? '#10b981' : '#ef4444',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      {stats.monthChangePercent >= 0 ? '↑' : '↓'} {Math.abs(stats.monthChangePercent).toFixed(1)}% vs last month
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <span className="metric-title">Confirmed Orders Won</span>
+                    <div className="metric-icon-wrap green">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     </div>
-                  )}
+                  </div>
+                  <div className="metric-val" style={{ color: '#059669' }}>
+                    ₹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </div>
+                  <div className="metric-sub">
+                    <span style={{ color: '#059669', fontWeight: 700 }}>{stats.wonCount} closed projects</span>
+                    <span>from accepted quotes</span>
+                  </div>
                 </div>
 
-                <div className="stat-card">
-                  <div className="label">Confirmed Orders (Revenue)</div>
-                  <div className="value" style={{ fontSize: '24px', color: '#10b981' }}>₹ {stats.wonQuoted.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '6px' }}>
-                    From {stats.wonCount} closed deal{stats.wonCount !== 1 ? 's' : ''}
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <span className="metric-title">Quotation Win Rate</span>
+                    <div className="metric-icon-wrap blue">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                  </div>
+                  <div className="metric-val">{stats.winRate.toFixed(1)}%</div>
+                  <div className="metric-sub">
+                    <span>{stats.wonCount} won of {stats.totalCount} total quotes</span>
+                  </div>
+                  <div className="metric-progress-track">
+                    <div className="metric-progress-bar" style={{ width: `${Math.min(stats.winRate, 100)}%` }} />
+                  </div>
+                </div>
+
+                <div className="metric-card">
+                  <div className="metric-header">
+                    <span className="metric-title">Quotes to follow up</span>
+                    <div className="metric-icon-wrap amber">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                  </div>
+                  <div className="metric-val">
+                    {stats.pendingFollowUps?.length || 0} Quotes
+                  </div>
+                  <div className="metric-sub">
+                    {(stats.pendingFollowUps?.length || 0) > 0 ? (
+                      <button type="button" className="followup-shortcut" onClick={() => {
+                        followUps.current?.focus({ preventScroll: true });
+                        followUps.current?.scrollIntoView({ behavior: "auto", block: "start" });
+                      }}>View follow-ups <span aria-hidden="true">↓</span></button>
+                    ) : <span>No quotes waiting for a follow-up.</span>}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Visual Charts */}
+            {/* DUAL ACTION FEATURE: DIGITAL SHOWROOM SHARE + WALK-IN ESTIMATOR */}
+            <div className="action-feature-grid">
+              {/* Feature 1: Digital Showroom Showcase */}
+              <div className="feature-card showroom-card">
+                <div className="feature-card-header">
+                  <span className="feature-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="1.7"><circle cx="12" cy="12" r="8"/><path d="M2 12h20"/><path d="M12 2a14 14 0 0 1 0 20 14 14 0 0 1 0-20z" opacity=".25"/></svg>
+                    Showroom link
+                  </span>
+                  <span className="feature-badge">Public</span>
+                </div>
+                <div className="feature-desc">
+                  Share your catalog and project gallery with clients.
+                </div>
+                <div className="showroom-preview">
+                  <svg viewBox="0 0 72 72" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="12" y="10" width="48" height="52" rx="1" />
+                    <path d="M17 15h38v42H17zM36 15v42M17 36h38M10 65h52M32 39v6M40 39v6" />
+                  </svg>
+                  <div><span className="showroom-preview-label">YOUR DIGITAL SHOWROOM</span><strong>{brand}</strong><span>Catalog · Projects · Contact</span></div>
+                </div>
+                <div className="showroom-url-bar">
+                  <span className="showroom-url-text">
+                    {typeof window !== "undefined" ? window.location.origin + marketUrl : marketUrl}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyShowroomLink}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--portal-primary)', padding: '2px', display: 'flex', alignItems: 'center' }}
+                    title="Copy Link"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                </div>
+                <div className="showroom-btn-row">
+                  <button type="button" onClick={copyShowroomLink} className="btn-card-action">
+                    Copy link
+                  </button>
+                  <a href={marketUrl} target="_blank" rel="noopener noreferrer" className="btn-card-action">
+                    Preview
+                  </a>
+                  <button type="button" onClick={shareShowroomWhatsApp} className="btn-card-action" aria-label="Share on WhatsApp" title="Share on WhatsApp" style={{ flex: '0 0 38px', padding: '9px' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21l1.7-5.1A8.3 8.3 0 0 1 11 3h.6A8.3 8.3 0 0 1 21 11.5v.5A8.3 8.3 0 0 1 12.7 20 8.3 8.3 0 0 1 8 18.7L3 21z"/><path d="M8.3 9.3c.2-.5.3-.5.6-.5h.6c.1 0 .3.1.4.2l.9 1.3c.1.1.1.3 0 .4l-.7.8c-.1.1-.1.2 0 .4.2.3.5.7.9 1.1.4.4.8.7 1.2.8.1 0 .2 0 .3-.1l.8-.8c.1-.1.2-.2.4-.1l1.3.6c.1.1.2.2.2.3v.6c0 .2 0 .4-.3.6-.3.2-.6.3-1 .3-.4 0-1.7-.6-2.9-1.8-1.2-1.2-1.8-2.4-1.8-2.8 0-.4.1-.7.3-1z"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Feature 2: Quick Walk-in Estimator */}
+              <div className="feature-card">
+                <div className="feature-card-header">
+                  <span className="feature-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg>
+                    Quick estimator
+                  </span>
+                  <span className="feature-badge">Estimate</span>
+                </div>
+                <div className="estimator-type-pills">
+                  {[
+                    { id: "2-track", label: "2-Track" },
+                    { id: "3-track", label: "3-Trk Mesh" },
+                    { id: "casement", label: "Casement" },
+                    { id: "fixed", label: "Fixed" },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`estimator-pill ${estimatorType === t.id ? "active" : ""}`}
+                      aria-pressed={estimatorType === t.id}
+                      onClick={() => handleEstimatorTypeChange(t.id as any)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="estimator-inputs-row">
+                  <div className="estimator-input-wrap">
+                    <label htmlFor="estimator-width">Width (Ft)</label>
+                    <input
+                      id="estimator-width"
+                      type="number"
+                      min="1"
+                      value={estimatorWidth}
+                      onChange={(e) => setEstimatorWidth(Math.max(1, parseFloat(e.target.value) || 1))}
+                    />
+                  </div>
+                  <div className="estimator-input-wrap">
+                    <label htmlFor="estimator-height">Height (Ft)</label>
+                    <input
+                      id="estimator-height"
+                      type="number"
+                      min="1"
+                      value={estimatorHeight}
+                      onChange={(e) => setEstimatorHeight(Math.max(1, parseFloat(e.target.value) || 1))}
+                    />
+                  </div>
+                  <div className="estimator-input-wrap">
+                    <label htmlFor="estimator-rate">Rate (₹/Sq.ft)</label>
+                    <input
+                      id="estimator-rate"
+                      type="number"
+                      min="50"
+                      value={estimatorRate}
+                      onChange={(e) => setEstimatorRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                    />
+                  </div>
+                </div>
+                <div className="estimator-result-box">
+                  <div>
+                    <div className="estimator-result-label">Approx {(estimatorWidth * estimatorHeight).toFixed(1)} Sq.Ft</div>
+                    <div className="estimator-result-val">
+                      ₹ {Math.round(estimatorWidth * estimatorHeight * estimatorRate).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openApp()}
+                    className="btn-hero-primary"
+                    style={{ padding: '8px 14px', fontSize: '12px' }}
+                  >
+                    Build Full Quote →
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* High-Priority Follow-ups Action Center */}
+            {stats && stats.pendingFollowUps && stats.pendingFollowUps.length > 0 && (
+              <div ref={followUps} className="followup-card" tabIndex={-1} role="region" aria-label="Quotes to follow up">
+                <div className="followup-header">
+                  <div className="followup-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="1.7"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 8.1 2 2 0 0 1 4.1 6h3a2 2 0 0 1 2 1.7c.2.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1l-1.2 1.2a16 16 0 0 0 5 5l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.7A2 2 0 0 1 22 16.9z"/></svg>
+                    Follow-ups · {stats.pendingFollowUps.length}
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#78716c' }}>{stats.pendingFollowUps.length} open</span>
+                </div>
+                <div className="followup-list">
+                  {stats.pendingFollowUps.map((item: any) => (
+                    <div key={item.id} className="followup-item-card">
+                      <div>
+                        <div className="followup-client-row">
+                          <span className="followup-client-name">{item.customer_name}</span>
+                          <span className="followup-quote-badge">{item.quote_no}</span>
+                        </div>
+                        <div className="followup-price">
+                          ₹ {item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="followup-meta">
+                          Quoted on {new Date(item.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </div>
+                      </div>
+                      <div className="followup-btns-row">
+                        {item.contact_no && (
+                          <>
+                            <a href={`tel:${item.contact_no}`} className="btn-followup-call" title="Call">
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 8.1 2 2 0 0 1 4.1 6h3a2 2 0 0 1 2 1.7c.2.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1l-1.2 1.2a16 16 0 0 0 5 5l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.7A2 2 0 0 1 22 16.9z"/></svg>
+                              Call
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => sendWhatsAppFollowUp(item.customer_name, item.quote_no, item.total, item.contact_no)}
+                              className="btn-followup-wa"
+                              title="WhatsApp"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 21l1.7-5.1A8.3 8.3 0 0 1 11 3h.6A8.3 8.3 0 0 1 21 11.5v.5A8.3 8.3 0 0 1 12.7 20 8.3 8.3 0 0 1 8 18.7L3 21z"/><path d="M8.3 9.3c.2-.5.3-.5.6-.5h.6c.1 0 .3.1.4.2l.9 1.3c.1.1.1.3 0 .4l-.7.8c-.1.1-.1.2 0 .4.2.3.5.7.9 1.1.4.4.8.7 1.2.8.1 0 .2 0 .3-.1l.8-.8c.1-.1.2-.2.4-.1l1.3.6c.1.1.2.2.2.3v.6c0 .2 0 .4-.3.6-.3.2-.6.3-1 .3-.4 0-1.7-.6-2.9-1.8-1.2-1.2-1.8-2.4-1.8-2.8 0-.4.1-.7.3-1z"/></svg>
+                              WhatsApp
+                            </button>
+                          </>
+                        )}
+                        <a
+                          href={appUrl + "&open_quote=" + encodeURIComponent(item.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-followup-view"
+                        >
+                          View Quote ↗
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Visual Analytics */}
             {stats && (
-              <div className="stats-grid" style={{ marginBottom: '32px' }}>
+              <div className="panel-grid">
                 {/* Status Summary Donut Chart */}
-                <div className="info-card" style={{ flex: 1 }}>
-                  <h3>Quote Status Summary</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                    <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                <div className="portal-panel">
+                  <div className="portal-panel-head">
+                    <span className="portal-panel-title">Pipeline</span>
+                    <span style={{ fontSize: '11px', color: '#78716c', fontWeight: 600 }}>{stats.totalCount} quotes</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+                    <div style={{ position: 'relative', width: '120px', height: '120px', flexShrink: 0 }}>
                       <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
                         {(() => {
                           const total = stats.totalCount;
-                          if (total === 0) return <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="20" />;
+                          if (total === 0) return <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" strokeWidth="18" />;
                           
                           let currentAngle = 0;
-                          const colors: Record<string, string> = { Draft: '#94a3b8', Sent: '#60a5fa', Won: '#22c55e', Lost: '#f87171' };
+                          const colors: Record<string, string> = { Draft: '#d6d3cd', Sent: '#171412', Won: '#9f7a0e', Lost: '#a8a29e' };
                           
                           return ['Draft', 'Sent', 'Won', 'Lost'].map(status => {
                             const count = stats.countsByStatus[status] || 0;
@@ -746,31 +1035,33 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                             currentAngle += percentage;
                             return (
                               <circle key={status} cx="50" cy="50" r="40" fill="none"
-                                stroke={colors[status]} strokeWidth="20"
+                                stroke={colors[status]} strokeWidth="11"
                                 strokeDasharray={dasharray} strokeDashoffset={dashoffset}
+                                strokeLinecap="round"
+                                style={{ filter: status === 'Sent' ? 'drop-shadow(0 1px 2px rgba(23,20,18,.08))' : undefined }}
                               />
                             );
                           });
                         })()}
                       </svg>
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '20px', fontWeight: 'bold' }}>{stats.winRate.toFixed(0)}%</span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>won</span>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '22px', fontWeight: 800, fontFamily: 'var(--num)', letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' }}>{stats.winRate.toFixed(0)}%</span>
+                        <span style={{ fontSize: '9px', color: '#78716c', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '.08em', marginTop: '1px' }}>Won</span>
                       </div>
                     </div>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {[
-                        { label: 'Draft', name: 'Being Prepared', color: '#94a3b8' },
-                        { label: 'Sent', name: 'Delivered to Client', color: '#60a5fa' },
-                        { label: 'Won', name: 'Order Confirmed', color: '#22c55e' },
-                        { label: 'Lost', name: 'Did Not Close', color: '#f87171' }
+                        { label: 'Draft', name: 'Being Prepared', color: '#d6d3cd' },
+                        { label: 'Sent', name: 'Delivered', color: '#171412' },
+                        { label: 'Won', name: 'Order Confirmed', color: '#9f7a0e' },
+                        { label: 'Lost', name: 'Did Not Close', color: '#a8a29e' }
                       ].map(s => (
-                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: s.color }} />
-                            <span style={{ fontSize: '13px' }}>{s.name}</span>
+                        <div key={s.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: s.color, border: s.label==='Sent' ? '1px solid #2b2926' : '1px solid rgba(0,0,0,.06)', flexShrink: 0, display:'inline-block' }} />
+                            <span style={{ color: '#57534e', fontWeight: 500 }}>{s.name}</span>
                           </div>
-                          <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{stats.countsByStatus[s.label] || 0}</span>
+                          <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#171412' }}>{stats.countsByStatus[s.label] || 0}</span>
                         </div>
                       ))}
                     </div>
@@ -778,35 +1069,30 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 </div>
 
                 {/* Weekly Bar Chart */}
-                <div className="info-card" style={{ flex: 1 }}>
-                  <h3>Weekly Work Trend</h3>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '8px', marginTop: '16px' }}>
+                <div className="portal-panel">
+                  <div className="portal-panel-head">
+                    <span className="portal-panel-title">Revenue · 8w</span>
+                    <span style={{ fontSize: '11px', color: '#78716c', fontWeight: 600 }}>₹ total quoted</span>
+                  </div>
+                  <div className="trend-bars-wrap">
                     {(() => {
                       const maxAmount = Math.max(...stats.weeklyBars.map((b: any) => b.amount), 1);
                       const formatInd = (v: number) => {
-                        // Indian numbering: crore (1,00,00,000) and lakh (1,00,000).
-                        // Under one lakh we print the full rupee amount with Indian digit
-                        // grouping instead of a Western "k" — "₹77,500" reads instantly to
-                        // an Indian reader; "₹77.5k" does not. Every branch carries the ₹
-                        // prefix so the chart labels stay unambiguous.
                         if (v >= 10000000) return "₹" + (v / 10000000).toFixed(1).replace(/\.0$/, "") + " Cr";
                         if (v >= 100000) return "₹" + (v / 100000).toFixed(1).replace(/\.0$/, "") + " L";
                         return "₹" + v.toLocaleString("en-IN", { maximumFractionDigits: 0 });
                       };
                       return stats.weeklyBars.map((b: any, i: number) => {
-                        const height = (b.amount / maxAmount) * 100;
-                        const isLast = i === stats.weeklyBars.length - 1;
+                        const height = maxAmount ? (b.amount / maxAmount) * 100 : 0;
+                        const isPeak = b.amount === maxAmount && b.amount > 0;
                         return (
-                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-                            {b.amount > 0 && <span style={{ fontSize: '9px', fontWeight: '600', color: 'var(--text-dark)', marginBottom: '4px' }}>{formatInd(b.amount)}</span>}
-                            <div style={{ 
-                              width: '100%', 
-                              height: `${Math.max(height, 5)}%`, 
-                              background: isLast ? 'var(--primary-gradient)' : '#cbd5e1', 
-                              borderRadius: '4px 4px 0 0',
-                              transition: 'height 0.5s ease'
-                            }} />
-                            <span style={{ fontSize: '9px', color: 'var(--text-light)', marginTop: '4px', whiteSpace: 'nowrap' }}>{b.label}</span>
+                          <div key={i} className="trend-col">
+                            <span className="trend-amount" style={{ visibility: b.amount > 0 ? 'visible' as const : 'hidden' as const, opacity: isPeak ? 1 : .72 }}>{formatInd(b.amount)}</span>
+                            <div 
+                              className={`trend-bar ${isPeak ? 'peak' : ''} ${b.amount===0 ? 'empty' : ''}`} 
+                              style={{ height: `${b.amount===0 ? 4 : Math.max(height, 10)}%` }} 
+                            />
+                            <span className="trend-label">{b.label}</span>
                           </div>
                         );
                       });
@@ -815,85 +1101,16 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 </div>
               </div>
             )}
-
-            {/* Pending Follow-ups Reminder Section */}
-            {stats && stats.pendingFollowUps && stats.pendingFollowUps.length > 0 && (
-              <div className="info-card" style={{ marginBottom: '24px', borderLeft: '4px solid #f59e0b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '20px' }}>!</span>
-                    <h3 style={{ margin: 0, padding: 0, border: 'none' }}>Quotes Needing Follow-up ({stats.pendingFollowUps.length})</h3>
-                  </div>
-                  <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontWeight: '600' }}>
-                    High Conversion Opportunity
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {stats.pendingFollowUps.map((item: any) => (
-                    <div key={item.id} style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between', 
-                      padding: '12px 16px', 
-                      background: 'var(--bg-light)', 
-                      borderRadius: '12px',
-                      flexWrap: 'wrap',
-                      gap: '8px'
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: '700', fontSize: '15px' }}>{item.customer_name} ({item.quote_no})</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
-                          Value: ₹{item.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })} • Date: {new Date(item.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {item.contact_no && (
-                          <a 
-                            href={`tel:${item.contact_no}`} 
-                            style={{ 
-                              padding: '8px 14px', 
-                              borderRadius: '8px', 
-                              background: '#2563eb', 
-                              color: 'white', 
-                              textDecoration: 'none', 
-                              fontSize: '13px', 
-                              fontWeight: '600',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            Call Client
-                          </a>
-                        )}
-                        <a
-                          href={appUrl + "&open_quote=" + encodeURIComponent(item.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ 
-                            padding: '8px 14px', 
-                            borderRadius: '8px', 
-                            background: 'white', 
-                            border: '1px solid #cbd5e1', 
-                            fontSize: '13px', 
-                            fontWeight: '600',
-                            color: '#334155',
-                            textDecoration: 'none',
-                            cursor: 'pointer' 
-                          }}
-                        >
-                          View Quote
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             
-            {/* Profile Info */}
-            <div className="info-card">
-              <h3>Business Profile Details</h3>
+            {/* Business Profile & Trust Credentials */}
+            <div className="portal-panel">
+              <div className="portal-panel-head">
+                <span className="portal-panel-title">Verified Business Profile</span>
+                <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  Active Verified Enterprise
+                </span>
+              </div>
               <div className="info-grid">
                 {infoFields.map((f) => (
                   <div className="info-item" key={f.label}>
@@ -903,10 +1120,10 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 ))}
               </div>
 
-              {/* Account Status Footer Note */}
-              <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1', display: 'flex', gap: '24px', fontSize: '13px', color: 'var(--text-light)' }}>
-                <div>Account Status: <strong style={{ color: client.is_active ? '#10b981' : '#ef4444' }}>{client.is_active ? 'Active' : 'Inactive'}</strong></div>
-                <div>Plan Expiration: <strong>{client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'Lifetime Unlimited'}</strong></div>
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid var(--portal-border)', display: 'flex', gap: '24px', fontSize: '12.5px', color: 'var(--portal-text-muted)', flexWrap: 'wrap' }}>
+                <div>Business Status: <strong style={{ color: client.is_active ? '#059669' : '#dc2626' }}>{client.is_active ? 'Active' : 'Inactive'}</strong></div>
+                <div>Account Tier: <strong>{client.trial_expires_at ? new Date(client.trial_expires_at).toLocaleDateString() : 'Enterprise Lifetime'}</strong></div>
+                <div>Customer Portal: <strong style={{ color: 'var(--portal-text)' }}>{brand} Official</strong></div>
               </div>
             </div>
           </div>
@@ -915,14 +1132,14 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
           <div className={`tab-pane ${activeTab === "settings" ? "active" : ""}`}>
             <form onSubmit={handleSettingsSave} className="settings-form" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              {/* Header Card */}
-              <div className="info-card" style={{ background: 'var(--primary-gradient)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Header Card — minimal system bar */}
+              <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: '24px' }}>Update Business Information</h2>
-                  <p style={{ margin: '4px 0 0', opacity: 0.9 }}>Manage your profile, contact details, bank accounts, and profit margins.</p>
+                  <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#111827', letterSpacing: '-.01em' }}>Update business information</h2>
+                  <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#6b7280' }}>Profile, contact, bank and margin settings.</p>
                 </div>
-                <button type="submit" disabled={isSaving} style={{ background: 'white', color: 'var(--primary)', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                  {isSaving ? "Saving..." : "Save Changes"}
+                <button type="submit" disabled={isSaving} className="btn-save">
+                  {isSaving ? "Saving…" : "Save changes"}
                 </button>
               </div>
               
@@ -963,25 +1180,130 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 </div>
               </div>
 
-              {/* Bank Details */}
+              {/* Bank & Payments */}
               <div className="info-card">
-                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Bank Details</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Bank & Payments</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontWeight: '600' }}>Bank Name</label>
                     <input type="text" value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontWeight: '600' }}>Branch Name</label>
+                    <label style={{ fontWeight: '600' }}>Branch</label>
                     <input type="text" value={formData.bankBranch} onChange={e => setFormData({...formData, bankBranch: e.target.value})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontWeight: '600' }}>Account Number</label>
-                    <input type="text" value={formData.bankAccountNo} onChange={e => setFormData({...formData, bankAccountNo: e.target.value})} placeholder="A/C.NO: 123456" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                    <label style={{ fontWeight: '600' }}>Account No.</label>
+                    <input type="text" value={formData.bankAccountNo} onChange={e => setFormData({...formData, bankAccountNo: e.target.value})} placeholder="1785xxxxxx" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontWeight: '600' }}>IFSC Code</label>
-                    <input type="text" value={formData.bankIfsc} onChange={e => setFormData({...formData, bankIfsc: e.target.value})} placeholder="IFSC CODE: ABCD0123" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                    <label style={{ fontWeight: '600' }}>IFSC</label>
+                    <input type="text" value={formData.bankIfsc} onChange={e => setFormData({...formData, bankIfsc: e.target.value})} placeholder="UBIN0xxxxx" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>UPI ID <span style={{ fontWeight:400, color:'#78716c', fontSize:'11px' }}>· for QR on invoices</span></label>
+                    <input type="text" value={formData.upiId} onChange={e => setFormData({...formData, upiId: e.target.value})} placeholder="6304562779@nyes" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tax & Compliance */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Tax & Compliance</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>PAN</label>
+                    <input type="text" value={formData.panNumber} onChange={e => setFormData({...formData, panNumber: e.target.value.toUpperCase()})} placeholder="AAQFK269C" maxLength={10} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', textTransform:'uppercase' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>State Code</label>
+                    <input type="text" value={formData.stateCode} onChange={e => setFormData({...formData, stateCode: e.target.value})} placeholder="36" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>HSN Code</label>
+                    <input type="text" value={formData.hsnCode} onChange={e => setFormData({...formData, hsnCode: e.target.value})} placeholder="3925" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Secondary Contact</label>
+                    <input type="text" value={formData.secondaryContact} onChange={e => setFormData({...formData, secondaryContact: e.target.value})} placeholder="98765 43210" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>WhatsApp Number <span style={{ fontWeight:400, color:'#0e7a5a', fontSize:'11px' }}>· for follow-ups</span></label>
+                    <input type="text" value={formData.whatsappNumber} onChange={e => setFormData({...formData, whatsappNumber: e.target.value})} placeholder="Same as primary if empty" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quotation Defaults */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Quotation Defaults</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Validity (days)</label>
+                    <input type="number" min={1} value={formData.quoteValidityDays} onChange={e => setFormData({...formData, quoteValidityDays: parseInt(e.target.value)||15})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Place of Supply</label>
+                    <input type="text" value={formData.placeOfSupply} onChange={e => setFormData({...formData, placeOfSupply: e.target.value})} placeholder="Hyderabad" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Authorized Signatory</label>
+                    <input type="text" value={formData.authorizedSignatory} onChange={e => setFormData({...formData, authorizedSignatory: e.target.value})} placeholder="Prabhakaar Reddi" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Advance %</label>
+                    <input type="number" min={0} max={100} value={formData.defaultAdvancePercent} onChange={e => setFormData({...formData, defaultAdvancePercent: parseInt(e.target.value)||0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Transport (₹)</label>
+                    <input type="number" min={0} value={formData.defaultTransportCost} onChange={e => setFormData({...formData, defaultTransportCost: parseInt(e.target.value)||0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Labour /sqft (₹)</label>
+                    <input type="number" min={0} value={formData.labourCostPerSqft} onChange={e => setFormData({...formData, labourCostPerSqft: parseFloat(e.target.value)||0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Installation /sqft (₹)</label>
+                    <input type="number" min={0} value={formData.installationCostPerSqft} onChange={e => setFormData({...formData, installationCostPerSqft: parseFloat(e.target.value)||0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Wastage %</label>
+                    <input type="number" min={0} max={20} step={0.5} value={formData.wastagePercent} onChange={e => setFormData({...formData, wastagePercent: parseFloat(e.target.value)||0})} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                    <label style={{ fontWeight: '600' }}>Quote footer note <span style={{ fontWeight:400, color:'#78716c', fontSize:'11px' }}>· printed below every quote</span></label>
+                    <textarea value={formData.quoteNotes} onChange={e => setFormData({...formData, quoteNotes: e.target.value})} rows={2} placeholder="Thank you for your inquiry..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Presence & Social */}
+              <div className="info-card">
+                <h3 style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', color: 'var(--primary)' }}>Presence</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Est. Year</label>
+                    <input type="text" value={formData.establishmentYear} onChange={e => setFormData({...formData, establishmentYear: e.target.value})} placeholder="2018" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Business Hours</label>
+                    <input type="text" value={formData.businessHours} onChange={e => setFormData({...formData, businessHours: e.target.value})} placeholder="Mon-Sat 9:30 AM - 7:30 PM" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                    <label style={{ fontWeight: '600' }}>Service Areas <span style={{ fontWeight:400, color:'#78716c', fontSize:'11px' }}>· comma separated</span></label>
+                    <input type="text" value={(formData.serviceAreas||[]).join(', ')} onChange={e => setFormData({...formData, serviceAreas: e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})} placeholder="Hastinapur, LB Nagar, Hayathnagar" style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Google Maps URL</label>
+                    <input type="url" value={formData.googleMapsUrl} onChange={e => setFormData({...formData, googleMapsUrl: e.target.value})} placeholder="https://maps.google.com/..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Facebook</label>
+                    <input type="url" value={formData.facebookUrl} onChange={e => setFormData({...formData, facebookUrl: e.target.value})} placeholder="https://facebook.com/..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontWeight: '600' }}>Instagram</label>
+                    <input type="url" value={formData.instagramUrl} onChange={e => setFormData({...formData, instagramUrl: e.target.value})} placeholder="https://instagram.com/..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
                   </div>
                 </div>
               </div>
@@ -1104,9 +1426,9 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                       });
                     }}
                     style={{
-                      width: '44px', height: '24px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                      background: formData.enablePricePresets ? 'var(--primary, #2563eb)' : '#cbd5e1',
-                      position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+                      width: '44px', height: '24px', borderRadius: '12px', border: '1px solid ' + (formData.enablePricePresets ? '#b7790f' : '#d1d5db'), cursor: 'pointer',
+                      background: formData.enablePricePresets ? '#b7790f' : '#e5e7eb',
+                      position: 'relative', transition: 'background 0.12s', padding: 0, flexShrink: 0,
                     }}
                   >
                     <span style={{
@@ -1119,6 +1441,17 @@ export default function CustomerPortal({ client, slug }: { client: ClientRow; sl
                 </div>
               </div>
 
+              {!formData.enablePricePresets && (
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: '12px', textAlign: 'center' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#ffffff', border: '1px solid #e5e7eb', display: 'grid', placeItems: 'center', marginBottom: '12px', color: '#6b7280' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                  </div>
+                  <div style={{ fontFamily: 'var(--portal-display)', fontSize: '14px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>Presets are off</div>
+                  <div style={{ fontSize: '13px', color: '#78716c', maxWidth: '440px', lineHeight: 1.5, marginBottom: '4px' }}>
+                    Save types and rates once — create quotes without retyping.
+                  </div>
+                </div>
+              )}
               {formData.enablePricePresets && (
                 <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
                   
