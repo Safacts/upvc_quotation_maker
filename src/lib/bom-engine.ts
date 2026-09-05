@@ -216,43 +216,45 @@ export function buildBom(c: WindowConfig): BomResult {
   return { lines, totalProfileMm, cuts, glass, sqft, price: { material, perSqft: rate, hardware, total }, warnings };
 }
 
-/** Cutting: offcut-first Best-Fit-Decreasing. Pure function, no DB. */
+/** Cutting: offcut-first Best-Fit-Decreasing with traceable per-bar cuts. Pure function, no DB.
+ * Now returns exact bar layouts so the saw sheet is auditable — fixes Eva gap where bars had empty cuts[].
+ * Each piece is lengthMm + weldLoss (3mm) for packing, but display stores original lengthMm.
+ */
 export function optimizeCuts(
   cuts: Array<{ profileId: string; lengthMm: number; qty: number }>,
   stockLen: number = STOCK_BAR_MM,
   offcuts: number[] = []
 ): { bars: Array<{ cuts: number[]; offcut: number; wastePct: number }>; barsUsed: number; wastePct: number; offcutReuse: number } {
-  const pieces: number[] = [];
-  for (const c of cuts) for (let i = 0; i < c.qty; i++) pieces.push(c.lengthMm + D.weldLoss);
-  pieces.sort((a, b) => b - a);
+  type Piece = { len: number; lenWithLoss: number };
+  const pieces: Piece[] = [];
+  for (const c of cuts) for (let i = 0; i < c.qty; i++) pieces.push({ len: c.lengthMm, lenWithLoss: c.lengthMm + D.weldLoss });
+  pieces.sort((a, b) => b.lenWithLoss - a.lenWithLoss);
 
-  const bars: number[][] = [];
-  // seed with existing offcuts as bars
-  const seededBars: number[] = offcuts.filter(o => o >= Math.min(...pieces, 9999)).map(o => o);
-  for (const oc of seededBars) bars.push([oc]); // marker length = available
-  // convert seeded to remaining space bars
-  const barRemaining: number[] = seededBars.map(v => v);
+  // Seed with offcuts as initial bars
+  const seededBars: number[] = offcuts.filter(o => o >= Math.min(...pieces.map(p => p.lenWithLoss), 9999)).map(o => o);
+  const barRemaining: number[] = [...seededBars];
+  const barCuts: number[][] = seededBars.map(() => []);
 
   let offcutReuse = 0;
   for (const p of pieces) {
     let bestIdx = -1; let bestRem = Infinity;
     for (let i = 0; i < barRemaining.length; i++) {
-      if (barRemaining[i] >= p && barRemaining[i] - p < bestRem) { bestRem = barRemaining[i] - p; bestIdx = i; }
+      if (barRemaining[i] >= p.lenWithLoss && barRemaining[i] - p.lenWithLoss < bestRem) { bestRem = barRemaining[i] - p.lenWithLoss; bestIdx = i; }
     }
     if (bestIdx >= 0) {
       if (bestIdx < seededBars.length) offcutReuse++;
-      barRemaining[bestIdx] -= p;
+      barRemaining[bestIdx] -= p.lenWithLoss;
+      barCuts[bestIdx].push(p.len);
     } else {
-      bars.push([stockLen]); // placeholder
-      barRemaining.push(stockLen - p);
+      barRemaining.push(stockLen - p.lenWithLoss);
+      barCuts.push([p.len]);
     }
   }
-  // build display: we don't have per-bar cut lists in this simple version, compute waste globally
   const barsUsed = barRemaining.length;
-  const totalNeeded = pieces.reduce((s, v) => s + v, 0);
+  const totalNeeded = pieces.reduce((s, v) => s + v.lenWithLoss, 0);
   const totalStock = barsUsed * stockLen - seededBars.reduce((s, v) => s + (stockLen - v), 0);
   const waste = Math.max(0, totalStock - totalNeeded);
   const wastePct = totalStock ? (waste / totalStock) * 100 : 0;
-  const barsDetail = barRemaining.map(rem => ({ cuts: [], offcut: rem, wastePct: stockLen ? (rem / stockLen) * 100 : 0 }));
+  const barsDetail = barRemaining.map((rem, i) => ({ cuts: barCuts[i] || [], offcut: rem, wastePct: rem >= 0 ? (rem / stockLen) * 100 : 0 }));
   return { bars: barsDetail, barsUsed, wastePct, offcutReuse };
 }
