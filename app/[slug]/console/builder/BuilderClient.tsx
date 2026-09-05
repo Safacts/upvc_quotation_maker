@@ -22,6 +22,8 @@ import {
   type WindowType,
 } from "@/lib/bom-engine";
 import { WindowElevationSvg } from "@/lib/window-elevation";
+import { calculateRetailPrice } from "@/lib/eva-price-structure";
+import { PROMINANCE_INVENTA_3T } from "@/lib/profile-catalog";
 
 const TYPES: Array<{ v: WindowType; label: string; elevationDesc: string }> = [
   { v: "fixed", label: "Fixed Window", elevationDesc: "Fixed Window" },
@@ -72,6 +74,13 @@ export default function BuilderClient() {
   );
 
   const bom = useMemo(() => buildBom(cfg), [cfg]);
+  const retailPrice = useMemo(() => {
+    const profileCost = bom.totalProfileMm * 0.85;
+    const riCost = bom.lines.filter((l) => l.kind === "reinforcement").reduce((s, l) => s + l.lengthMm * l.qty, 0) * 0.45;
+    const hwCost = bom.price.hardware * qty;
+    const glassCost = bom.glass.reduce((s, g) => s + (g.w * g.h) / 1e6 * 850, 0) * qty;
+    return calculateRetailPrice({ profileCost, riCost, hwCost, glassCost, areaSqft: bom.sqft * qty });
+  }, [bom, qty]);
   const offcutNums = useMemo(
     () =>
       offcuts
@@ -467,7 +476,24 @@ export default function BuilderClient() {
               </div>
 
               <div style={{ fontSize: 11.5, color: "var(--vc-text-dim)" }}>
-                Stock cost ~ {formatMoney(barsCost)} @ ₹{barCost.toLocaleString("en-IN")}/bar • Optimizer: offcut-first Best-Fit-Decreasing
+                Stock cost ~ {formatMoney(barsCost)} @ ₹{barCost.toLocaleString("en-IN")}/bar • Optimizer: offcut-first Best-Fit-Decreasing (per-bar cuts auditable)
+              </div>
+
+              {/* Eva Retail Projects 20-step breakdown (read-only, tenant-editable rates) */}
+              <div style={{ border: "1px solid var(--vc-border)", borderRadius: "var(--vc-radius)", overflow: "hidden" }}>
+                <div style={{ background: "var(--vc-surface-2)", padding: "6px 10px", fontWeight: 700, fontSize: 11, display: "flex", justifyContent: "space-between" }}>
+                  <span>Retail Projects Breakdown (20 steps)</span>
+                  <span style={{ fontWeight: 400, color: "var(--vc-text-dim)" }}>Grand {formatMoney(retailPrice["Grand Total"])} • GST {formatMoney(retailPrice["GST"])}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, fontSize: 11 }}>
+                  {Object.entries(retailPrice).slice(0, 8).map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 10px", borderBottom: "1px solid var(--vc-border)", background: k.includes("Total") ? "var(--vc-surface-2)" : "transparent" }}>
+                      <span style={{ color: "var(--vc-text-dim)" }}>{k}</span>
+                      <span style={{ fontWeight: 600 }}>{formatMoney(v as number)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 6, padding: "6px 10px", fontSize: 10.5, color: "var(--vc-text-dim)" }}>Basic {formatMoney(retailPrice["Basic Value"])} • Sub Total {formatMoney(retailPrice["Sub Total"])} • Total Project {formatMoney(retailPrice["Total Project Cost"])}</div>
               </div>
 
               {/* Margin Pill */}
