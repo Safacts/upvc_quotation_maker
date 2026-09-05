@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Banknote,
   Search,
   RefreshCw,
   Copy,
-  AlertTriangle,
   CheckCircle2,
   Phone,
+  Download,
+  AlertTriangle,
+  Clock,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
-import { formatMoney, formatDate } from "@/lib/console-format";
+import { formatMoney, toCsv, downloadFile } from "@/lib/console-format";
 
 function WhatsAppIcon({ size = 12 }: { size?: number }) {
   return (
@@ -42,8 +45,9 @@ export default function MoneyClient() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "overdue" | "current">("all");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await fetch("/api/console/payments/overdue", {
@@ -94,31 +98,68 @@ export default function MoneyClient() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return rows;
+    let list = rows;
+    if (statusFilter === "overdue") {
+      list = list.filter((r) => r.overdue > 0);
+    } else if (statusFilter === "current") {
+      list = list.filter((r) => r.overdue <= 0);
+    }
+
+    if (!q.trim()) return list;
     const query = q.toLowerCase();
-    return rows.filter(
+    return list.filter(
       (r) =>
         r.customer_name.toLowerCase().includes(query) ||
         (r.phone && r.phone.includes(query)),
     );
-  }, [rows, q]);
+  }, [rows, q, statusFilter]);
 
   const total = useMemo(
-    () => filtered.reduce((s, r) => s + r.outstanding, 0),
-    [filtered],
+    () => rows.reduce((s, r) => s + r.outstanding, 0),
+    [rows],
   );
 
   const overdueTotal = useMemo(
-    () => filtered.reduce((s, r) => s + r.overdue, 0),
-    [filtered],
+    () => rows.reduce((s, r) => s + r.overdue, 0),
+    [rows],
   );
+
+  const currentTotal = useMemo(
+    () => Math.max(0, total - overdueTotal),
+    [total, overdueTotal],
+  );
+
+  const overdueCount = useMemo(
+    () => rows.filter((r) => r.overdue > 0).length,
+    [rows],
+  );
+
+  const exportCsv = useCallback(() => {
+    if (filtered.length === 0) {
+      toast("No accounts to export", "info");
+      return;
+    }
+    const csv = toCsv(
+      ["Customer Name", "Contact Phone", "Current (Rs.)", "Overdue >30d (Rs.)", "Total Outstanding (Rs.)", "Status"],
+      filtered.map((r) => [
+        r.customer_name,
+        r.phone || "",
+        Math.max(0, r.outstanding - r.overdue).toFixed(2),
+        r.overdue.toFixed(2),
+        r.outstanding.toFixed(2),
+        r.overdue > 0 ? "Overdue" : "Current",
+      ]),
+    );
+    downloadFile(`receivables-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    toast(`Exported ${filtered.length} customer accounts`, "ok");
+  }, [filtered, toast]);
 
   // Status bar integration
   useConsoleStatus({
@@ -126,6 +167,7 @@ export default function MoneyClient() {
     total: `Total: ${formatMoney(total)} (Overdue: ${formatMoney(overdueTotal)})`,
     hints: [
       { keys: "Ctrl+F", label: "Search Customer" },
+      { keys: "Ctrl+E", label: "Export CSV" },
       { keys: "F5", label: "Refresh Receivables" },
     ],
   });
@@ -134,24 +176,60 @@ export default function MoneyClient() {
     document.getElementById("money-search-input")?.focus();
   });
 
+  useConsoleAction("export", exportCsv);
+
   function reminderText(r: Row) {
     return `Hello ${r.customer_name}, your outstanding with us is ${formatMoney(r.outstanding)}${r.overdue ? ` (overdue >30d: ${formatMoney(r.overdue)})` : ""}. Kindly arrange payment at your earliest convenience. Thank you — ${new Date().toLocaleDateString("en-IN")}`;
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Top Metrics Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-        <div className="vc-card" style={{ padding: "12px 16px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--vc-text-dim)" }}>Total Receivables Outstanding</div>
-          <div style={{ fontSize: 20, fontWeight: 800, marginTop: 4 }}>{formatMoney(total)}</div>
-          <div style={{ fontSize: 11, color: "var(--vc-text-dim)", marginTop: 2 }}>{filtered.length} active customer accounts</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Top Metrics Cards - Standard Console Summary Tiles */}
+      <div className="vc-reports-summary">
+        <div className="vc-summary-tile">
+          <div className="vc-summary-tile-label">Total Receivables</div>
+          <div className="vc-summary-tile-value vc-tone-accent">
+            {formatMoney(total)}
+          </div>
+          <div className="vc-summary-tile-sub vc-muted">
+            <Users size={11} style={{ display: "inline-block", verticalAlign: "-1px", marginRight: 3 }} />
+            {rows.length} customer accounts
+          </div>
         </div>
 
-        <div className="vc-card" style={{ padding: "12px 16px", borderLeft: "3px solid var(--vc-red, #ef4444)" }}>
-          <div style={{ fontSize: 11.5, color: "var(--vc-red, #dc2626)" }}>Overdue (&gt; 30 Days)</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "var(--vc-red, #dc2626)", marginTop: 4 }}>{formatMoney(overdueTotal)}</div>
-          <div style={{ fontSize: 11, color: "var(--vc-text-dim)", marginTop: 2 }}>Requires payment follow-up</div>
+        <div className="vc-summary-tile" style={{ borderLeft: "3px solid var(--vc-red, #c62828)" }}>
+          <div className="vc-summary-tile-label" style={{ color: "var(--vc-red, #c62828)" }}>
+            Overdue (&gt; 30 Days)
+          </div>
+          <div className="vc-summary-tile-value vc-tone-err">
+            {formatMoney(overdueTotal)}
+          </div>
+          <div className="vc-summary-tile-sub vc-tone-err">
+            <AlertTriangle size={11} style={{ display: "inline-block", verticalAlign: "-1px", marginRight: 3 }} />
+            {overdueCount} accounts require collection follow-up
+          </div>
+        </div>
+
+        <div className="vc-summary-tile">
+          <div className="vc-summary-tile-label">Current (&lt; 30 Days)</div>
+          <div className="vc-summary-tile-value vc-tone-ok">
+            {formatMoney(currentTotal)}
+          </div>
+          <div className="vc-summary-tile-sub vc-tone-ok">
+            <Clock size={11} style={{ display: "inline-block", verticalAlign: "-1px", marginRight: 3 }} />
+            Within normal payment terms
+          </div>
+        </div>
+
+        <div className="vc-summary-tile">
+          <div className="vc-summary-tile-label">Collection Health</div>
+          <div className="vc-summary-tile-value">
+            {total > 0 ? `${Math.round(((total - overdueTotal) / total) * 100)}%` : "100%"}
+          </div>
+          <div className="vc-summary-tile-sub vc-muted">
+            <Wallet size={11} style={{ display: "inline-block", verticalAlign: "-1px", marginRight: 3 }} />
+            {rows.length - overdueCount} accounts in good standing
+          </div>
         </div>
       </div>
 
@@ -170,46 +248,92 @@ export default function MoneyClient() {
             />
           </div>
 
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              type="button"
+              className={`vc-btn vc-btn-sm ${statusFilter === "all" ? "vc-btn-primary" : ""}`}
+              onClick={() => setStatusFilter("all")}
+            >
+              All ({rows.length})
+            </button>
+            <button
+              type="button"
+              className={`vc-btn vc-btn-sm ${statusFilter === "overdue" ? "vc-btn-primary" : ""}`}
+              onClick={() => setStatusFilter("overdue")}
+              style={{ color: statusFilter !== "overdue" && overdueCount > 0 ? "var(--vc-red)" : undefined }}
+            >
+              Overdue ({overdueCount})
+            </button>
+            <button
+              type="button"
+              className={`vc-btn vc-btn-sm ${statusFilter === "current" ? "vc-btn-primary" : ""}`}
+              onClick={() => setStatusFilter("current")}
+            >
+              Current ({rows.length - overdueCount})
+            </button>
+          </div>
+
           <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+            <button
+              type="button"
+              className="vc-btn vc-btn-sm"
+              onClick={exportCsv}
+              title="Export filtered records to CSV (Ctrl+E)"
+            >
+              <Download size={12} /> Export CSV <span className="vc-kbd">Ctrl E</span>
+            </button>
             <button
               type="button"
               className="vc-btn vc-btn-sm"
               onClick={() => void load()}
               disabled={loading}
-              title="Refresh receivables data"
+              title="Refresh receivables data (F5)"
             >
-              <RefreshCw size={12} className={loading ? "vc-spinner" : ""} /> Refresh
+              <RefreshCw size={12} className={loading ? "vc-spin" : ""} /> Refresh
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div style={{ overflowX: "auto" }}>
-          <table className="vc-table" style={{ width: "100%" }}>
+        {/* Table Container */}
+        <div className="vc-grid-wrap" style={{ maxHeight: "calc(100vh - 270px)" }}>
+          <table className="vc-table">
             <thead>
               <tr>
-                <th>Customer Name</th>
-                <th className="vc-num">Outstanding</th>
-                <th className="vc-num">Overdue (&gt;30d)</th>
-                <th>Contact Phone</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Collection Action</th>
+                <th style={{ width: 240 }}>Customer Name</th>
+                <th style={{ width: 140 }}>Contact Phone</th>
+                <th className="vc-num" style={{ width: 130 }}>Current (&lt;30d)</th>
+                <th className="vc-num" style={{ width: 130 }}>Overdue (&gt;30d)</th>
+                <th className="vc-num" style={{ width: 150 }}>Total Outstanding</th>
+                <th style={{ width: 100 }}>Status</th>
+                <th style={{ width: 190, textAlign: "right" }}>Collection Action</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "var(--vc-text-dim)" }}>
-                    <span className="vc-spinner" style={{ display: "inline-block", marginRight: 8 }} /> Loading accounts receivable...
+                  <td colSpan={7} style={{ padding: 0 }}>
+                    <div className="vc-empty">
+                      <span className="vc-spinner" />
+                      <div style={{ marginTop: 8 }}>Loading accounts receivable...</div>
+                    </div>
                   </td>
                 </tr>
               )}
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "var(--vc-text-dim)" }}>
-                    <CheckCircle2 size={20} style={{ margin: "0 auto 6px", color: "var(--vc-green)" }} />
-                    {q ? "No matching customer found." : "All accounts clear — zero outstanding balance!"}
+                  <td colSpan={7} style={{ padding: 0 }}>
+                    <div className="vc-empty">
+                      <CheckCircle2 size={32} style={{ margin: "0 auto 8px", color: "var(--vc-green)" }} />
+                      <div className="vc-empty-title">
+                        {q || statusFilter !== "all" ? "No matching accounts found" : "All accounts clear"}
+                      </div>
+                      <div>
+                        {q || statusFilter !== "all"
+                          ? "Try adjusting your search query or status filter."
+                          : "Zero outstanding receivables across active customer accounts."}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -217,42 +341,62 @@ export default function MoneyClient() {
               {!loading &&
                 filtered.map((r, i) => {
                   const hasOverdue = r.overdue > 0;
+                  const currentAmt = Math.max(0, r.outstanding - r.overdue);
                   const cleanPhone = (r.phone || "").replace(/\D/g, "");
                   const waNumber = cleanPhone.length === 10 ? "91" + cleanPhone : cleanPhone;
 
                   return (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{r.customer_name}</td>
-                      <td className="vc-num" style={{ fontWeight: 700, fontSize: 13 }}>
-                        {formatMoney(r.outstanding)}
+                    <tr key={r.customer_id || r.customer_name || i}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: "var(--vc-text)" }}>
+                          {r.customer_name}
+                        </div>
+                      </td>
+                      <td style={{ color: "var(--vc-text-dim)" }}>
+                        {r.phone ? (
+                          <a
+                            href={`tel:${r.phone}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              color: "inherit",
+                              textDecoration: "none",
+                            }}
+                          >
+                            <Phone size={11} /> {r.phone}
+                          </a>
+                        ) : (
+                          <span style={{ color: "var(--vc-text-faint)" }}>—</span>
+                        )}
+                      </td>
+                      <td className="vc-num" style={{ color: "var(--vc-text)" }}>
+                        {formatMoney(currentAmt)}
+                      </td>
+                      <td
+                        className="vc-num"
+                        style={{
+                          fontWeight: hasOverdue ? 700 : 400,
+                          color: hasOverdue ? "var(--vc-red, #c62828)" : "var(--vc-text-faint)",
+                        }}
+                      >
+                        {formatMoney(r.overdue)}
                       </td>
                       <td
                         className="vc-num"
                         style={{
                           fontWeight: 700,
-                          color: hasOverdue ? "var(--vc-red, #dc2626)" : "var(--vc-green, #16a34a)",
+                          fontSize: 13,
+                          color: hasOverdue ? "var(--vc-red, #c62828)" : "var(--vc-accent, #d89b25)",
                         }}
                       >
-                        {formatMoney(r.overdue)}
-                      </td>
-                      <td style={{ color: "var(--vc-text-dim)" }}>
-                        {r.phone ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <Phone size={11} /> {r.phone}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                        {formatMoney(r.outstanding)}
                       </td>
                       <td>
                         {hasOverdue ? (
-                          <span className="vc-pill vc-pill-lost" style={{ fontSize: 10 }}>
-                            Overdue
-                          </span>
+                          <span className="vc-pill vc-pill-lost">Overdue</span>
                         ) : (
-                          <span className="vc-pill vc-pill-won" style={{ fontSize: 10 }}>
-                            Current
-                          </span>
+                          <span className="vc-pill vc-pill-won">Current</span>
                         )}
                       </td>
                       <td style={{ textAlign: "right" }}>
@@ -274,7 +418,7 @@ export default function MoneyClient() {
                               target="_blank"
                               rel="noreferrer"
                               className="vc-btn vc-btn-sm"
-                              style={{ color: "#16a34a" }}
+                              style={{ color: "var(--vc-green)", borderColor: "var(--vc-green-dim)" }}
                               title="Send payment reminder on WhatsApp"
                             >
                               <WhatsAppIcon size={12} /> WhatsApp
