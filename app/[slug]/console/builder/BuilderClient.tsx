@@ -171,6 +171,21 @@ export default function BuilderClient() {
         `Draft ${j?.quote_no || "created"} — ${formatMoney(bom.price.total * qty)}`,
         "ok",
       );
+      // Save opening for project merge + revision snapshot (Eva Total Area) — fire-and-forget
+      fetch("/api/console/project-openings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ project_name: "Walk-in Project", opening_code: `01-${cfg.width}x${cfg.height}`, window_json: cfg, bom_json: bom, quotation_id: j?.id || null }),
+      }).catch(() => {});
+      if (j?.id) {
+        fetch("/api/console/revisions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ quotation_id: j.id, snapshot: { cfg, bom, retailPrice, qty, opt } }),
+        }).catch(() => {});
+      }
     } catch (e: any) {
       toast(e.message, "err");
     }
