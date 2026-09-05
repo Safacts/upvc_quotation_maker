@@ -593,6 +593,10 @@ export default function BuilderClient() {
                           <span className="vc-pill" style={{ fontSize: 10, padding: "0 6px" }}>
                             {l.profileId}
                           </span>
+                          {(() => {
+                            const e = PROMINANCE_INVENTA_3T.find((p) => p.code === l.profileId);
+                            return e ? <span style={{ fontSize: 10, color: "var(--vc-text-dim)", marginLeft: 4 }}>{e.stockMm / 1000}m</span> : null;
+                          })()}
                         </td>
                         <td className="vc-num">{l.lengthMm.toLocaleString("en-IN")} mm</td>
                         <td className="vc-num">{unitQty}</td>
