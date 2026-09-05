@@ -77,7 +77,15 @@ export async function GET(
 
   // If token was not valid, check if the caller is an authenticated fabricator for this quote
   if (!isAuthorized) {
-    const session = await getSession();
+    // Route tests and some non-HTTP callers may not have a Next request scope.
+    // Treat that as unauthenticated rather than turning an invalid public link
+    // into a 500; real requests still use the cookie-backed session normally.
+    let session = null;
+    try {
+      session = await getSession();
+    } catch (sessionError) {
+      console.warn("[quotation] session unavailable while checking public token:", sessionError);
+    }
     if (
       session &&
       (session.role === "admin" ||
