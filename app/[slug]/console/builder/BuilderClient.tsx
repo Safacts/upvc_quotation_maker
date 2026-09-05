@@ -51,6 +51,7 @@ export default function BuilderClient() {
   const [qty, setQty] = useState(2);
   const [offcuts, setOffcuts] = useState<string>("");
   const [rateOptions, setRateOptions] = useState<Array<{ name: string; price: number }>>([]);
+  const [inventoryOffcuts, setInventoryOffcuts] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState<"bom" | "glass" | "cuts">("bom");
 
   useEffect(() => {
@@ -64,6 +65,13 @@ export default function BuilderClient() {
             .filter((x: any) => x.price > 0)
             .slice(0, 8),
         );
+      })
+      .catch(() => {});
+    fetch("/api/console/offcuts", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((j) => {
+        const rows = Array.isArray(j?.rows) ? j.rows : [];
+        setInventoryOffcuts(rows.map((r: any) => Number(r.length_mm)).filter((n: number) => Number.isFinite(n) && n > 0).slice(0, 20));
       })
       .catch(() => {});
   }, []);
@@ -81,14 +89,13 @@ export default function BuilderClient() {
     const glassCost = bom.glass.reduce((s, g) => s + (g.w * g.h) / 1e6 * 850, 0) * qty;
     return calculateRetailPrice({ profileCost, riCost, hwCost, glassCost, areaSqft: bom.sqft * qty });
   }, [bom, qty]);
-  const offcutNums = useMemo(
-    () =>
-      offcuts
-        .split(",")
-        .map((s) => parseInt(s.trim(), 10))
-        .filter((n) => Number.isFinite(n) && n > 0),
-    [offcuts],
-  );
+  const offcutNums = useMemo(() => {
+    const manual = offcuts
+      .split(",")
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return [...inventoryOffcuts, ...manual];
+  }, [offcuts, inventoryOffcuts]);
   const scaledCuts = useMemo(
     () => bom.cuts.map((c) => ({ ...c, qty: c.qty * qty })),
     [bom.cuts, qty],
