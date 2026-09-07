@@ -7,6 +7,92 @@ import { slugify } from "@/lib/slug";
 import "./admin.css";
 import LegalDocFiller from "./LegalDocFiller";
 
+// ── Lightweight inline icon set (no external deps, stroke = currentColor) ──
+const Icon = {
+  Search: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+  ),
+  Building: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" {...p}>
+      <rect x="4" y="2" width="16" height="20" rx="1.5" />
+      <path d="M9 22V12h6v10M9 7h.01M12 7h.01M15 7h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01" strokeWidth="1.9" />
+    </svg>
+  ),
+  FileText: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M10 13H8M16 17H8M13 13h3" />
+    </svg>
+  ),
+  Mail: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m2 7 10 7 10-7" />
+    </svg>
+  ),
+  Bot: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="3" y="11" width="18" height="10" rx="2" />
+      <path d="M12 11V9a3 3 0 1 0-3 3h6a3 3 0 1 0-3-3" />
+      <circle cx="9" cy="16" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="16" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  Upload: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M17 8l-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  ),
+  Plus: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" {...p}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  ),
+  X: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14" {...p}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  ),
+  Trash: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  ),
+  Archive: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="2" y="4" width="20" height="5" rx="1" />
+      <path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" />
+      <path d="M10 13h4" />
+    </svg>
+  ),
+  Undo: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M9 8H5V4" />
+      <path d="M5 8a7 7 0 1 1 7 7H5" />
+    </svg>
+  ),
+  Check: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14" {...p}>
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  Users: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+};
+
 // LIVE Supabase project (Mumbai, jqjxhhgfwdzckijnnede) via client-safe config.
 // Anon key is PUBLIC by design — safe in client bundles; RLS is the boundary.
 import { SUPABASE_PUBLIC_URL as API_BASE, SUPABASE_PUBLIC_ANON_KEY as KEY } from "@/lib/supabase-public";
@@ -243,6 +329,9 @@ export default function PlatformAdmin() {
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [focusedClientIdx, setFocusedClientIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -928,6 +1017,86 @@ export default function PlatformAdmin() {
     }
   }
 
+
+  // ── Global shortcuts: Cmd/Ctrl+K, /, Esc, Cmd/Ctrl+N, Cmd/Ctrl+S, ?, arrows ──
+  useEffect(() => {
+    function isTypingTarget(el: Element | null) {
+      if (!el) return false;
+      const tag = (el as HTMLElement).tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as HTMLElement).isContentEditable;
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      const active = document.activeElement;
+      if (mod && (e.key.toLowerCase() === "k" || e.key === "/")) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+      if (!mod && e.key === "/" && !isTypingTarget(active) && !editorOpen && !showShortcuts && !showSignupModal && !composeMail && !legalOpen && !confirmDialog) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (!mod && e.key === "?" && !isTypingTarget(active)) {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (confirmDialog) { setConfirmDialog(null); return; }
+        if (composeMail) { setComposeMail(null); return; }
+        if (showSignupModal) { setShowSignupModal(false); return; }
+        if (legalOpen) { setLegalOpen(false); return; }
+        if (editorOpen) { closeEditor(); return; }
+        if (searchQuery && active === searchInputRef.current) { setSearchQuery(""); return; }
+        (active as HTMLElement)?.blur?.();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "n" && !isCustomer) {
+        e.preventDefault();
+        if (!editorOpen && !legalOpen) openEditor(null);
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "s" && editorOpen) {
+        e.preventDefault();
+        const formEl = document.querySelector(".admin-editor") as HTMLFormElement | null;
+        if (formEl) formEl.requestSubmit();
+        return;
+      }
+      const cards = document.querySelectorAll(".client-card");
+      if (!editorOpen && !showSignupModal && !composeMail && !legalOpen && cards.length > 0) {
+        const inSearch = active === searchInputRef.current;
+        const inList = active?.closest?.(".admin-client-list") != null;
+        if ((inSearch || inList || !isTypingTarget(active)) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          e.preventDefault();
+          setFocusedClientIdx(idx => {
+            const len = document.querySelectorAll(".client-card").length;
+            const next = e.key === "ArrowDown" ? Math.min(len - 1, idx + 1) : Math.max(0, idx - 1);
+            setTimeout(() => {
+              const el = document.querySelectorAll(".client-card")[next] as HTMLElement | undefined;
+              el?.scrollIntoView({ block: "nearest" });
+            }, 0);
+            return next;
+          });
+          return;
+        }
+        if (e.key === "Enter" && (inSearch || inList || !isTypingTarget(active))) {
+          if (cards.length > 0 && focusedClientIdx >= 0 && focusedClientIdx < cards.length) {
+            const el = cards[focusedClientIdx] as HTMLElement;
+            e.preventDefault();
+            el.click();
+          }
+          return;
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editorOpen, showShortcuts, showSignupModal, composeMail, legalOpen, confirmDialog, isCustomer, searchQuery, focusedClientIdx]);
+
   if (!ready) {
     return <div className="admin-loading">Loading admin panel...</div>;
   }
@@ -936,10 +1105,18 @@ export default function PlatformAdmin() {
     const statusOk =
       statusFilter === "all" || (statusFilter === "active") === !!c.is_active;
     if (!statusOk) return false;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    const name = (c.config?.companyName || c.id).toLowerCase();
-    return name.includes(q) || c.id.toLowerCase().includes(q);
+    const cfg = c.config || {};
+    const hay = [
+      cfg.companyName || "",
+      c.id || "",
+      cfg.companyEmail || "",
+      cfg.companyContact || "",
+      cfg.companyAddress || "",
+      cfg.companyProprietor || "",
+    ].join(" ").toLowerCase();
+    return hay.includes(q);
   });
 
   const activeCount = clients.filter((c) => c.is_active).length;
@@ -952,9 +1129,11 @@ export default function PlatformAdmin() {
   return (
     <>
       {toast && (
-        <div className={`toast ${toast.type}`}>
-          <span>{toast.type === "success" ? "✓" : "✕"}</span>
-          {toast.msg}
+        <div className={`toast-container`}>
+          <div className={`toast ${toast.type}`}>
+            <span style={{ display: 'inline-flex' }}>{toast.type === "success" ? <Icon.Check /> : <Icon.X />}</span>
+            {toast.msg}
+          </div>
         </div>
       )}
 
@@ -975,14 +1154,35 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="admin-search">
-              <span className="admin-search-icon">⌕</span>
+              <span className="admin-search-icon"><Icon.Search width={14} height={14} /></span>
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search clients..."
+                placeholder="Search name, ID, email…"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setFocusedClientIdx(0); }}
+                onKeyDown={(e) => { if (e.key === "Escape") { (e.target as HTMLInputElement).blur(); } }}
+                aria-label="Search clients"
               />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="admin-search-clear"
+                  aria-label="Clear search"
+                  onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+                >
+                  <Icon.X width={12} height={12} />
+                </button>
+              ) : (
+                <span className="admin-search-kbd" title="Press / or Ctrl+K to focus">/</span>
+              )}
             </div>
+            {searchQuery && (
+              <div className="admin-search-meta">
+                <span>{filteredClients.length} match{filteredClients.length !== 1 ? "es" : ""}</span>
+                <button type="button" className="admin-search-meta-clear" onClick={() => setSearchQuery("")}>Clear</button>
+              </div>
+            )}
             <div className="admin-status-filter">
               {(["active", "inactive", "all"] as const).map((f) => (
                 <button
@@ -1008,18 +1208,22 @@ export default function PlatformAdmin() {
                 {statusFilter === "active" ? "Active" : statusFilter === "inactive" ? "Inactive" : "All"} Clients ({filteredClients.length})
               </div>
             )}
-            {filteredClients.map((client) => {
+            {filteredClients.map((client, idx) => {
               const config = client.config || {};
               const isActive = client.is_active;
               const trialDate = client.trial_expires_at ? new Date(client.trial_expires_at) : null;
               const trialExpired = !!trialDate && new Date() > trialDate;
               const isSelected = editingClient?.id === client.id;
+              const isFocused = idx === focusedClientIdx;
               const initials = (config.companyName || client.id).slice(0, 2).toUpperCase();
               return (
                 <div
                   key={client.id}
-                  className={`client-card${isSelected ? " active" : ""}`}
+                  className={`client-card${isSelected ? " active" : ""}${isFocused ? " focused" : ""}`}
                   onClick={() => openEditor(client)}
+                  onMouseEnter={() => setFocusedClientIdx(idx)}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") openEditor(client); }}
                 >
                   <div className="client-avatar">
                     {config.logoUrl
@@ -1040,15 +1244,15 @@ export default function PlatformAdmin() {
           <div className="admin-sidebar-footer">
             {!isCustomer && (
               <>
-                <button className="add-client-btn" onClick={() => openEditor(null)}>
-                  <span>+</span> New Client
+                <button className="add-client-btn" onClick={() => openEditor(null)} title="New client (⌘ N)">
+                  <Icon.Plus /> New Client
                 </button>
                 <div className="sidebar-action-row">
                   <button
                     className="sidebar-action-btn"
                     onClick={() => setShowSignupModal(true)}
                   >
-                    Requests
+                    <Icon.Users width={13} height={13} /> Requests
                     {(signupRequests?.length ?? 0) > 0 && (
                       <span className="sidebar-badge">{signupRequests.length}</span>
                     )}
@@ -1057,22 +1261,23 @@ export default function PlatformAdmin() {
                     className="sidebar-action-btn"
                     onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
                   >
-                    ✉ Compose
+                    <Icon.Mail width={13} height={13} /> Compose
                   </button>
                   <button
                     className="sidebar-action-btn"
                     onClick={() => router.push("/admin/agent")}
                   >
-                    🤖 AI Agent
+                    <Icon.Bot width={13} height={13} /> AI Agent
                   </button>
                   <button className="sidebar-action-btn" onClick={openLegalDocuments}>
-                    📄 Legal Docs
+                    <Icon.FileText width={13} height={13} /> Legal Docs
                   </button>
                 </div>
               </>
             )}
             <div className="sidebar-meta">
               <span className="sidebar-user">{currentUser}{isCustomer ? " (customer)" : ""}</span>
+              <button className="sidebar-kbd-help" onClick={() => setShowShortcuts(true)} title="Shortcuts (?)">?</button>
               <button className="sidebar-logout" onClick={handleLogout}>Sign out</button>
             </div>
           </div>
@@ -1084,13 +1289,13 @@ export default function PlatformAdmin() {
             <div className="admin-editor legal-editor">
               <div className="admin-editor-header">
                 <div className="editor-client-info">
-                  <div className="editor-client-logo">📄</div>
+                  <div className="editor-client-logo"><Icon.FileText width={22} height={22} /></div>
                   <div className="editor-client-meta">
                     <h2>Legal Documents</h2>
                     <div className="editor-client-desc">Edit client-ready policies and agreements</div>
                   </div>
                   <div className="editor-client-actions">
-                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}><Icon.X /> Close</button>
                   </div>
                 </div>
               </div>
@@ -1131,7 +1336,7 @@ export default function PlatformAdmin() {
             </div>
           ) : !editorOpen ? (
             <div className="admin-welcome">
-              <div className="admin-welcome-icon">🏢</div>
+              <div className="admin-welcome-icon"><Icon.Building width={38} height={38} style={{ color: 'var(--rust)' }} /></div>
               <h2>Welcome back!</h2>
               <p>Select a client from the sidebar to edit their configuration, or create a new client.</p>
               <div className="admin-stats">
@@ -1175,7 +1380,7 @@ export default function PlatformAdmin() {
                     <span className={`badge ${form.active ? "active" : "inactive"}`}>
                       {form.active ? "Active" : "Inactive"}
                     </span>
-                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}><Icon.X style={{ marginRight: 6 }} /> Close</button>
                   </div>
                 </div>
 
@@ -1244,7 +1449,7 @@ export default function PlatformAdmin() {
                         <label>Company Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Logo
+                            <Icon.Upload /> Upload Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1280,7 +1485,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Top Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Top Logo
+                            <Icon.Upload /> Upload Top Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1299,7 +1504,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceTopLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} className="btn-danger" style={{ padding: '8px 14px', fontSize: 13, whiteSpace: 'nowrap' }}><Icon.X style={{ marginRight: 6 }} /> Remove</button>
                           )}
                         </div>
                       </div>
@@ -1307,7 +1512,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Background Watermark Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Background Logo
+                            <Icon.Upload /> Upload Background Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1326,7 +1531,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceBackgroundLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} className="btn-danger" style={{ padding: '8px 14px', fontSize: 13, whiteSpace: 'nowrap' }}><Icon.X style={{ marginRight: 6 }} /> Remove</button>
                           )}
                         </div>
                       </div>
@@ -1444,7 +1649,7 @@ export default function PlatformAdmin() {
                         <input type="url" value={form.heroImage} placeholder="https://example.com/hero.jpg" onChange={(e) => onHeroImageUrlChange(e.target.value)} />
                       </div>
                       <label className="upload-btn-label" style={{ display: "inline-flex", marginBottom: 12 }}>
-                        <span>📁</span> Upload Hero Image
+                        <Icon.Upload /> Upload Hero Image
                         <input
                           type="file"
                           accept="image/*"
@@ -1541,7 +1746,7 @@ export default function PlatformAdmin() {
                 </button>
                 {editingClient && !isCustomer && (
                   <button type="button" className="btn-danger" onClick={() => deleteClient()}>
-                    🗑 Delete Client
+                    <Icon.Trash /> Delete Client
                   </button>
                 )}
                 <div style={{ flex: 1 }} />
@@ -1592,7 +1797,7 @@ export default function PlatformAdmin() {
                     color: signupView === v ? "white" : "var(--text-mid)",
                   }}
                 >
-                  {v === "active" ? "Active" : "🗄 Archive"}
+                  {v === "active" ? "Active" : "Archive"}
                 </button>
               ))}
             </div>
@@ -1648,13 +1853,13 @@ export default function PlatformAdmin() {
                             title="Move to archive — data is preserved"
                             onClick={() => archiveRequest(req)}
                           >
-                            🗄 Archive
+                            <Icon.Archive style={{ marginRight: 6 }} /> Archive
                           </button>
                         </>
                       )}
                       {isArchived && (
                         <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}>
-                          ↩ Restore
+                          <Icon.Undo style={{ marginRight: 6 }} /> Restore
                         </button>
                       )}
                       <button
@@ -1663,7 +1868,7 @@ export default function PlatformAdmin() {
                         title="Permanently delete — cannot be undone"
                         onClick={() => deleteSignupRequest(req)}
                       >
-                        🗑 Delete
+                        <Icon.Trash style={{ marginRight: 6 }} /> Delete
                       </button>
                     </div>
                   </div>
@@ -1678,10 +1883,38 @@ export default function PlatformAdmin() {
         </div>
       )}
 
+      {showShortcuts && (
+        <div className="modal" style={{ display: "flex" }} onClick={() => setShowShortcuts(false)}>
+          <div className="modal-content" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 10 }}>Keyboard Shortcuts <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999, color: "var(--t-muted)" }}>Press ? to toggle</span></h3>
+            <p style={{ marginBottom: 18 }}>Fast, compatible on Mac (⌘) and Windows/Linux (Ctrl). Works anywhere unless you are typing.</p>
+            <div style={{ display: "grid", gap: 10 }}>
+              {[
+                ["Focus search", "⌘ K  /  Ctrl K  or  /"],
+                ["Clear search / Close", "Esc"],
+                ["New client", "⌘ N  /  Ctrl N"],
+                ["Save client", "⌘ S  /  Ctrl S"],
+                ["Navigate list", "↑  ↓  then Enter"],
+                ["Toggle this help", "?"],
+                ["Quick filter", "Click Active / Inactive / All"],
+              ].map(([a,b]) => (
+                <div key={a} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t-body)" }}>{a}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, background: "var(--white)", border: "1px solid var(--line-strong)", padding: "4px 8px", borderRadius: 8, color: "var(--t-muted)", fontFamily: "ui-monospace, monospace" }}>{b}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions" style={{ marginTop: 18 }}>
+              <button className="btn-secondary" onClick={() => setShowShortcuts(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {composeMail && (
         <div className="modal" style={{ display: "flex" }}>
           <div className="modal-content" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
-            <h3>✉ Compose Email</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon.Mail /> Compose Email</h3>
             {composeMail.req && (
               <p className="modal-hint">
                 Replying to <strong>{composeMail.req.email}</strong> — status: {composeMail.req.status}
