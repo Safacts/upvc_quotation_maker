@@ -12,11 +12,10 @@
  *   1. Landing page serves HTML.
  *   2. Flutter web app serves at /upvc/venkateshwara (portal slug).
  *   3. /app/ boots and references flutter_bootstrap.js.
- *   4. main.dart.js contains the Google Sign-In markers (google-signin-button
- *      view type + gsi/client loader) — the feature shipped on this deploy.
+ *   4. main.dart.js contains Google Sign-In markers when Google is enabled.
  *   5. /api/portal_auth answers OPTIONS with CORS preflight.
- *   6. Google-mode login for a REAL registered client email returns role
- *      admin/customer (no writes for registered users).
+ *   6. Google-mode login when a real Google ID token is supplied, or password
+ *      login when E2E_PASSWORD_EMAIL/E2E_PASSWORD are supplied.
  *   7. Tenant review page loads (public review feed).
  *   8. OPTIONAL (E2E_ALLOW_SIGNUP_WRITE=true): an unknown email via Google
  *      mode gets role=signup — writes one signup_requests row, off by default.
@@ -25,6 +24,10 @@
  */
 const BASE = (process.env.E2E_BASE_URL || "https://app.vitharn.com").replace(/\/+$/, "");
 const GOOGLE_EMAIL = process.env.E2E_GOOGLE_EMAIL || "jvenkateshupvc@gmail.com";
+const GOOGLE_CREDENTIAL = process.env.E2E_GOOGLE_CREDENTIAL || "";
+const GOOGLE_ENABLED = process.env.E2E_GOOGLE_ENABLED !== "false";
+const PASSWORD_EMAIL = process.env.E2E_PASSWORD_EMAIL || "";
+const PASSWORD = process.env.E2E_PASSWORD || "";
 const ALLOW_SIGNUP_WRITE = process.env.E2E_ALLOW_SIGNUP_WRITE === "true";
 
 const results = [];
@@ -76,13 +79,17 @@ async function main() {
     if (!html.includes("flutter_bootstrap.js")) throw new Error("flutter_bootstrap.js missing from /app/");
   });
 
-  await check("4. main.dart.js contains Google Sign-In markers", async () => {
-    const res = await get("/app/main.dart.js");
-    if (res.status !== 200) throw new Error(`GET /app/main.dart.js → ${res.status}`);
-    const js = await res.text();
-    if (!js.includes("google-signin-button")) throw new Error("google-signin-button view type not compiled in");
-    if (!js.includes("gsi/client")) throw new Error("GSI loader not compiled in");
-  });
+  if (GOOGLE_ENABLED) {
+    await check("4. main.dart.js contains Google Sign-In markers", async () => {
+      const res = await get("/app/main.dart.js");
+      if (res.status !== 200) throw new Error(`GET /app/main.dart.js → ${res.status}`);
+      const js = await res.text();
+      if (!js.includes("google-signin-button")) throw new Error("google-signin-button view type not compiled in");
+      if (!js.includes("gsi/client")) throw new Error("GSI loader not compiled in");
+    });
+  } else {
+    console.log("   (4. Google marker check skipped — E2E_GOOGLE_ENABLED=false)");
+  }
 
   await check("5. /api/portal_auth CORS preflight", async () => {
     const res = await get("/api/portal_auth", { method: "OPTIONS" });
@@ -90,19 +97,36 @@ async function main() {
     if (!res.headers.get("access-control-allow-origin")) throw new Error("missing CORS headers");
   });
 
-  await check("6. Google-mode login for a registered client", async () => {
-    const res = await get("/api/portal_auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "google", email: GOOGLE_EMAIL }),
+  if (GOOGLE_CREDENTIAL) {
+    await check("6. Google-mode login for a registered client", async () => {
+      const res = await get("/api/portal_auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "google", email: GOOGLE_EMAIL, credential: GOOGLE_CREDENTIAL }),
+      });
+      if (res.status !== 200) throw new Error(`POST google mode → ${res.status}`);
+      const body = await res.json();
+      if (body.role !== "admin" && body.role !== "customer") {
+        throw new Error(`unexpected role ${body.role} for registered email`);
+      }
+      if (!body.email) throw new Error("google login returned no email");
     });
-    if (res.status !== 200) throw new Error(`POST google mode → ${res.status}`);
-    const body = await res.json();
-    if (body.role !== "admin" && body.role !== "customer") {
-      throw new Error(`unexpected role ${body.role} for registered email`);
-    }
-    if (!body.email) throw new Error("google login returned no email");
-  });
+  } else if (PASSWORD_EMAIL && PASSWORD) {
+    await check("6. Password login for a registered client", async () => {
+      const res = await get("/api/portal_auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "password", email: PASSWORD_EMAIL, password: PASSWORD }),
+      });
+      if (res.status !== 200) throw new Error(`POST password mode → ${res.status}`);
+      const body = await res.json();
+      if (body.role !== "admin" && body.role !== "customer") {
+        throw new Error(`unexpected role ${body.role} for registered email`);
+      }
+    });
+  } else {
+    console.log("   (6. authenticated login skipped — supply E2E_GOOGLE_CREDENTIAL or E2E_PASSWORD_EMAIL/E2E_PASSWORD)");
+  }
 
   await check("7. Tenant review feed loads", async () => {
     const res = await get("/venkateshwara/review");
