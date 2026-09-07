@@ -352,6 +352,7 @@ export default function PlatformAdmin() {
   const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
   const [signupRequests, setSignupRequests] = useState<any[]>([]);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [requestsPageOpen, setRequestsPageOpen] = useState(false);
   const [composeMail, setComposeMail] = useState<{ req: any; to: string; subject: string; body: string } | null>(null);
   const [sendingMail, setSendingMail] = useState(false);
   const [signupView, setSignupView] = useState<"active" | "archived">("active");
@@ -1034,7 +1035,7 @@ export default function PlatformAdmin() {
         searchInputRef.current?.select();
         return;
       }
-      if (!mod && e.key === "/" && !isTypingTarget(active) && !editorOpen && !showShortcuts && !showSignupModal && !composeMail && !legalOpen && !confirmDialog) {
+      if (!mod && e.key === "/" && !isTypingTarget(active) && !editorOpen && !showShortcuts && !showSignupModal && !requestsPageOpen && !composeMail && !legalOpen && !confirmDialog) {
         e.preventDefault();
         searchInputRef.current?.focus();
         return;
@@ -1049,6 +1050,7 @@ export default function PlatformAdmin() {
         if (confirmDialog) { setConfirmDialog(null); return; }
         if (composeMail) { setComposeMail(null); return; }
         if (showSignupModal) { setShowSignupModal(false); return; }
+        if (requestsPageOpen) { setRequestsPageOpen(false); return; }
         if (legalOpen) { setLegalOpen(false); return; }
         if (editorOpen) { closeEditor(); return; }
         if (searchQuery && active === searchInputRef.current) { setSearchQuery(""); return; }
@@ -1067,7 +1069,7 @@ export default function PlatformAdmin() {
         return;
       }
       const cards = document.querySelectorAll(".client-card");
-      if (!editorOpen && !showSignupModal && !composeMail && !legalOpen && cards.length > 0) {
+      if (!editorOpen && !showSignupModal && !requestsPageOpen && !composeMail && !legalOpen && cards.length > 0) {
         const inSearch = active === searchInputRef.current;
         const inList = active?.closest?.(".admin-client-list") != null;
         if ((inSearch || inList || !isTypingTarget(active)) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
@@ -1095,7 +1097,7 @@ export default function PlatformAdmin() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editorOpen, showShortcuts, showSignupModal, composeMail, legalOpen, confirmDialog, isCustomer, searchQuery, focusedClientIdx]);
+  }, [editorOpen, showShortcuts, showSignupModal, requestsPageOpen, composeMail, legalOpen, confirmDialog, isCustomer, searchQuery, focusedClientIdx]);
 
   if (!ready) {
     return <div className="admin-loading">Loading admin panel...</div>;
@@ -1158,7 +1160,7 @@ export default function PlatformAdmin() {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search name, ID, email…"
+                placeholder="Search name, ID, email..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setFocusedClientIdx(0); }}
                 onKeyDown={(e) => { if (e.key === "Escape") { (e.target as HTMLInputElement).blur(); } }}
@@ -1250,11 +1252,13 @@ export default function PlatformAdmin() {
                 <div className="sidebar-action-row">
                   <button
                     className="sidebar-action-btn"
-                    onClick={() => setShowSignupModal(true)}
+                    onClick={() => { setRequestsPageOpen(true); setEditorOpen(false); setLegalOpen(false); }}
+                    style={{ background: "rgba(196,74,16,0.14)", borderColor: "rgba(196,74,16,0.22)", color: "white" }}
+                    title="Lead inbox — full page"
                   >
                     <Icon.Users width={13} height={13} /> Requests
                     {(signupRequests?.length ?? 0) > 0 && (
-                      <span className="sidebar-badge">{signupRequests.length}</span>
+                      <span className="sidebar-badge" style={{ background: "var(--orange)", border: "1px solid rgba(255,255,255,0.18)" }}>{signupRequests.length}</span>
                     )}
                   </button>
                   <button
@@ -1285,7 +1289,61 @@ export default function PlatformAdmin() {
 
         {/* ─── MAIN PANEL ──────────────────────────────── */}
         <main className="admin-main">
-          {legalOpen ? (
+          {requestsPageOpen ? (
+            <div className="admin-editor" style={{ background: "var(--paper)" }}>
+              <div className="admin-editor-header" style={{ background: "var(--paper-warm)", borderBottom: "1px solid var(--line)" }}>
+                <div className="editor-client-info" style={{ marginBottom: 0 }}>
+                  <div className="editor-client-logo" style={{ background: "var(--white)" }}><Icon.Users width={22} height={22} /></div>
+                  <div className="editor-client-meta">
+                    <h2>Lead Inbox</h2>
+                    <div className="editor-client-desc">Every signup is a future client — convert in one click. <span style={{ background: "var(--white)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999, fontWeight: 700, fontSize: 11 }}>{(signupRequests || []).filter((r:any)=> r.status !== "archived").length} active</span> <span style={{ background: "var(--rust)", color: "white", padding: "3px 8px", borderRadius: 999, fontWeight: 700, fontSize: 11 }}>{(signupRequests || []).length} total</span></div>
+                  </div>
+                  <div className="editor-client-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setRequestsPageOpen(false)}><Icon.X /> Close</button>
+                    <button type="button" className="btn-secondary" onClick={() => setShowSignupModal(true)} title="Open as floating window">Pop-out</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+                  {(["active", "archived"] as const).map((v) => {
+                    const cnt = v === "active" ? (signupRequests||[]).filter((r:any)=> r.status !== "archived").length : (signupRequests||[]).filter((r:any)=> r.status === "archived").length;
+                    const active = signupView === v;
+                    return (
+                    <button key={v} onClick={() => setSignupView(v)} style={{ padding: "9px 16px", borderRadius: 999, border: "1.5px solid", fontSize: 13, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", background: active ? "var(--rust)" : "var(--white)", borderColor: active ? "transparent" : "var(--line-strong)", color: active ? "white" : "var(--t-muted)", boxShadow: active ? "var(--shadow-rust)" : "none", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      {v === "active" ? "Active Leads" : "Archived"} <span style={{ background: active ? "rgba(255,255,255,0.18)" : "var(--paper)", border: active ? "1px solid rgba(255,255,255,0.18)" : "1px solid var(--line)", padding: "2px 7px", borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{cnt}</span>
+                    </button>
+                  )})}
+                </div>
+              </div>
+              <div className="admin-editor-body">
+                {(() => {
+                  const filtered = (signupRequests || []).filter((r: any) => signupView === "archived" ? r.status === "archived" : r.status !== "archived");
+                  if (filtered.length === 0) {
+                    return <div className="empty-list" style={{ padding: "48px 16px", background: "var(--white)", border: "1px solid var(--line)", borderRadius: 14, textAlign: "center" }}>{signupView === "archived" ? "No archived requests." : "No active signup requests. Your next lead will appear here."}</div>;
+                  }
+                  return filtered.map((req: any) => {
+                    const cfg = req.config || {};
+                    const statusColor = signupStatusColor(req.status);
+                    const isArchived = req.status === "archived";
+                    return (
+                      <div key={req.id} style={{ border: "1.5px solid var(--line)", borderLeft: `4px solid ${statusColor}`, borderRadius: 14, padding: 16, marginBottom: 12, background: "var(--white)", boxShadow: "var(--shadow-xs)", opacity: isArchived ? 0.82 : 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                          <div><strong style={{ fontSize: 14 }}>{req.email}</strong><div style={{ color: "#475569", fontSize: 13 }}>{[req.name, req.phone].filter(Boolean).join(" · ")}</div></div>
+                          <span style={{ color: statusColor, fontWeight: 700, fontSize: 12, textTransform: "capitalize", flexShrink: 0, background: "var(--paper)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999 }}>{req.status}</span>
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}</div>
+                        {(cfg.companyName || cfg.city || cfg.gstNumber) && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}</div>}
+                        <div className="modal-actions" style={{ marginTop: 12, justifyContent: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                          {!isArchived && <><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => openCompose(req)}>Send Email</button><button className="btn-primary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setRequestsPageOpen(false); useSignupRequest(req); }}>Convert to Client</button><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px", marginLeft: "auto" }} onClick={() => archiveRequest(req)}><Icon.Archive style={{ marginRight: 6 }} /> Archive</button></>}
+                          {isArchived && <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}><Icon.Undo style={{ marginRight: 6 }} /> Restore</button>}
+                          <button className="btn-danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => deleteSignupRequest(req)}><Icon.Trash style={{ marginRight: 6 }} /> Delete</button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          ) : legalOpen ? (
             <div className="admin-editor legal-editor">
               <div className="admin-editor-header">
                 <div className="editor-client-info">
@@ -1773,34 +1831,53 @@ export default function PlatformAdmin() {
       )}
 
       {showSignupModal && (
-        <div className="modal" style={{ display: "flex" }}>
-          <div className="modal-content" style={{ maxWidth: 600, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
-            <h3>Signup Requests</h3>
-
-            {/* Tab switcher */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-              {(["active", "archived"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSignupView(v)}
-                  style={{
-                    padding: "6px 18px",
-                    borderRadius: "var(--radius-md)",
-                    border: "1.5px solid",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    fontFamily: "inherit",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    background: signupView === v ? "var(--primary)" : "var(--bg)",
-                    borderColor: signupView === v ? "var(--primary)" : "var(--border)",
-                    color: signupView === v ? "white" : "var(--text-mid)",
-                  }}
-                >
-                  {v === "active" ? "Active" : "Archive"}
-                </button>
-              ))}
+        <div className="modal" style={{ display: "flex", padding: 18 }} onClick={() => setShowSignupModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 860, width: "100%", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            {/* Header — lead system hero */}
+            <div style={{ padding: "26px 28px 18px", borderBottom: "1px solid var(--line)", background: "var(--paper-warm)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--white)", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--rust)", flexShrink: 0, boxShadow: "var(--shadow-xs)" }}><Icon.Users width={18} height={18} /></div>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <h3 style={{ margin: 0, fontSize: 20, letterSpacing: -0.3 }}>Lead Inbox</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--t-muted)", lineHeight: 1.5 }}>Your growth pipeline — every signup is a future client. Convert in one click.</p>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, background: "var(--white)", border: "1px solid var(--line)", padding: "6px 10px", borderRadius: 999, color: "var(--t-body)" }}>{(signupRequests || []).filter((r:any)=> r.status !== "archived").length} Active</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, background: "var(--rust)", color: "white", padding: "6px 12px", borderRadius: 999, boxShadow: "var(--shadow-rust)" }}>{(signupRequests || []).length} Total</span>
+                  <button className="btn-secondary" style={{ padding: "8px 12px", fontSize: 13 }} onClick={() => setShowSignupModal(false)}><Icon.X width={12} height={12} /> Close</button>
+                </div>
+              </div>
+              {/* Filter pills — large */}
+              <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+                {(["active", "archived"] as const).map((v) => {
+                  const cnt = v === "active" ? (signupRequests||[]).filter((r:any)=> r.status !== "archived").length : (signupRequests||[]).filter((r:any)=> r.status === "archived").length;
+                  const active = signupView === v;
+                  return (
+                  <button
+                    key={v}
+                    onClick={() => setSignupView(v)}
+                    style={{
+                      padding: "9px 16px",
+                      borderRadius: 999,
+                      border: "1.5px solid",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      background: active ? "var(--rust)" : "var(--white)",
+                      borderColor: active ? "transparent" : "var(--line-strong)",
+                      color: active ? "white" : "var(--t-muted)",
+                      boxShadow: active ? "var(--shadow-rust)" : "none",
+                      display: "inline-flex", alignItems: "center", gap: 8
+                    }}
+                  >
+                    {v === "active" ? "Active Leads" : "Archived"} <span style={{ background: active ? "rgba(255,255,255,0.18)" : "var(--paper)", border: active ? "1px solid rgba(255,255,255,0.18)" : "1px solid var(--line)", padding: "2px 7px", borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{cnt}</span>
+                  </button>
+                )})}
+              </div>
             </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 0" }}>
 
             {(() => {
               const filtered = (signupRequests || []).filter((r: any) =>
@@ -1818,7 +1895,7 @@ export default function PlatformAdmin() {
                 const statusColor = signupStatusColor(req.status);
                 const isArchived = req.status === "archived";
                 return (
-                  <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12, opacity: isArchived ? 0.8 : 1 }}>
+                  <div key={req.id} style={{ border: "1.5px solid var(--line)", borderLeft: `4px solid ${statusColor}`, borderRadius: 14, padding: 16, marginBottom: 12, background: "var(--white)", boxShadow: "var(--shadow-xs)", opacity: isArchived ? 0.82 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                       <div>
                         <strong>{req.email}</strong>
@@ -1875,8 +1952,8 @@ export default function PlatformAdmin() {
                 );
               });
             })()}
-
-            <div className="modal-actions" style={{ marginTop: 16 }}>
+            </div>
+            <div style={{ padding: "12px 18px", borderTop: "1px solid var(--line)", background: "var(--white)", flexShrink: 0, display: "flex", justifyContent: "flex-end" }}>
               <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
             </div>
           </div>
