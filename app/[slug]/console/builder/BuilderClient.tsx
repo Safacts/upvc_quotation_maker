@@ -20,6 +20,8 @@ import {
   STOCK_BAR_MM,
   type WindowConfig,
   type WindowType,
+  type BomResult,
+  type BomLine,
 } from "@/lib/bom-engine";
 import { WindowElevationSvg } from "@/lib/window-elevation";
 import { calculateRetailPrice } from "@/lib/eva-price-structure";
@@ -49,10 +51,10 @@ export default function BuilderClient() {
     hardwareTier: "standard",
   });
   const [qty, setQty] = useState(2);
-  const [offcuts, setOffcuts] = useState<string>("");
+  const [offcuts, setOffcuts] = useState<string>(""); // comma-separated "profileId:length,profileId:length"
   const [rateOptions, setRateOptions] = useState<Array<{ name: string; price: number }>>([]);
-  const [inventoryOffcuts, setInventoryOffcuts] = useState<number[]>([]);
-  const [activeTab, setActiveTab] = useState<"bom" | "glass" | "cuts">("bom");
+  const [inventoryOffcuts, setInventoryOffcuts] = useState<Array<{ profileId: string; lengthMm: number }>>([]);
+  const [activeTab, setActiveTab] = useState<"bom" | "glass" | "cuts" | "price">("bom");
 
   useEffect(() => {
     fetch("/api/console/products?page_size=50", { credentials: "same-origin" })
@@ -71,7 +73,7 @@ export default function BuilderClient() {
       .then((r) => r.json())
       .then((j) => {
         const rows = Array.isArray(j?.rows) ? j.rows : [];
-        setInventoryOffcuts(rows.map((r: any) => Number(r.length_mm)).filter((n: number) => Number.isFinite(n) && n > 0).slice(0, 20));
+        setInventoryOffcuts(rows.map((r: any) => ({ profileId: r.profile_code, lengthMm: Number(r.length_mm) })).filter((n: any) => n.profileId && Number.isFinite(n.lengthMm) && n.lengthMm > 0).slice(0, 50));
       })
       .catch(() => {});
   }, []);
@@ -82,33 +84,56 @@ export default function BuilderClient() {
   );
 
   const bom = useMemo(() => buildBom(cfg), [cfg]);
+  
+  // Use Eva-grade price breakdown from BOM if available, otherwise fall back to calculateRetailPrice
   const retailPrice = useMemo(() => {
+    if (bom.priceBreakdown) {
+      return bom.priceBreakdown;
+    }
     const profileCost = bom.totalProfileMm * 0.85;
     const riCost = bom.lines.filter((l) => l.kind === "reinforcement").reduce((s, l) => s + l.lengthMm * l.qty, 0) * 0.45;
     const hwCost = bom.price.hardware * qty;
     const glassCost = bom.glass.reduce((s, g) => s + (g.w * g.h) / 1e6 * 850, 0) * qty;
     return calculateRetailPrice({ profileCost, riCost, hwCost, glassCost, areaSqft: bom.sqft * qty });
   }, [bom, qty]);
-  const offcutNums = useMemo(() => {
-    const manual = offcuts
+
+  // Parse offcuts: "profileId:length,profileId:length" -> [{profileId, lengthMm}]
+  const manualOffcuts = useMemo(() => {
+    return offcuts
       .split(",")
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => Number.isFinite(n) && n > 0);
-    return [...inventoryOffcuts, ...manual];
-  }, [offcuts, inventoryOffcuts]);
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => {
+        const parts = s.split(":");
+        if (parts.length === 2) {
+          const len = parseInt(parts[1].trim(), 10);
+          return Number.isFinite(len) && len > 0 ? { profileId: parts[0].trim(), lengthMm: len } : null;
+        }
+        // Legacy: just a length, apply to all profiles
+        const len = parseInt(s, 10);
+        return Number.isFinite(len) && len > 0 ? { profileId: "ANY", lengthMm: len } : null;
+      })
+      .filter((x): x is { profileId: string; lengthMm: number } => x !== null);
+  }, [offcuts]);
+
+  const allOffcuts = useMemo(() => [...inventoryOffcuts, ...manualOffcuts], [inventoryOffcuts, manualOffcuts]);
+
+  // Scale cuts for quantity
   const scaledCuts = useMemo(
     () => bom.cuts.map((c) => ({ ...c, qty: c.qty * qty })),
     [bom.cuts, qty],
   );
+
+  // Run optimizer with profile-specific offcuts
   const opt = useMemo(
-    () => optimizeCuts(scaledCuts, STOCK_BAR_MM, offcutNums),
-    [scaledCuts, offcutNums],
+    () => optimizeCuts(scaledCuts, STOCK_BAR_MM, allOffcuts),
+    [scaledCuts, allOffcuts],
   );
 
   const barCost = 2850; // Rs per 6m bar
   const barsCost = opt.barsUsed * barCost;
   const wasteRs = (opt.wastePct / 100) * barsCost;
-  const savedBars = offcutNums.length ? opt.offcutReuse : 0;
+  const savedBars = allOffcuts.length ? opt.offcutReuse : 0;
   const marginGuard =
     (cfg.ratePerSqft ?? 0) < 420
       ? "Loss risk — rate below Rs. 420/sft"
@@ -196,8 +221,10 @@ export default function BuilderClient() {
     if (!w) return;
     const rows = opt.bars
       .map(
-        (b, i) =>
-          `<tr><td>Bar ${i + 1}</td><td>${b.cuts.join(" + ") || scaledCuts.map((c) => c.lengthMm).slice(i * 2, (i + 1) * 2).join(" + ")}</td><td style="text-align:right">${b.offcut} mm offcut</td><td style="text-align:right">${b.wastePct.toFixed(1)}%</td></tr>`,
+        (b, i) => {
+          const cutsStr = b.cuts.map(c => `${c.lengthMm}mm × ${c.qty}`).join(" + ") || "—";
+          return `<tr><td>Bar ${i + 1}</td><td>${cutsStr}</td><td style="text-align:right">${b.offcut} mm offcut</td><td style="text-align:right">${b.wastePct.toFixed(1)}%</td><td>${b.profileId}</td><td>Stock: ${b.stockMm}mm</td></tr>`;
+        }
       )
       .join("");
     const labels = scaledCuts
@@ -208,7 +235,7 @@ export default function BuilderClient() {
       })
       .join("");
     w.document.write(
-      `<html><head><title>Saw Sheet — ${currentType.label} ${cfg.width}×${cfg.height} mm (×${qty})</title><style>body{font-family:Inter,system-ui;padding:24px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #e5e7eb;padding:8px;font-size:13px} th{background:#f8fafc}</style></head><body><h2>Saw Sheet — ${currentType.label} ${cfg.width}×${cfg.height} mm × ${qty} nos</h2><p>Bars: ${opt.barsUsed} • Waste ${opt.wastePct.toFixed(1)}% • Stock ${STOCK_BAR_MM}mm • ${marginGuard}</p><table><thead><tr><th>Bar</th><th>Cuts</th><th>Offcut</th><th>Waste</th></tr></thead><tbody>${rows}</tbody></table><p>Glass: ${bom.glass.map((g) => `${g.qty * qty}× ${g.w}×${g.h} mm ${g.spec}`).join(", ")}</p><h3 style="margin-top:18px">Cutting Barcode Labels</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">${labels}</div><script>window.print()</script></body></html>`,
+      `<html><head><title>Saw Sheet — ${currentType.label} ${cfg.width}×${cfg.height} mm (×${qty})</title><style>body{font-family:Inter,system-ui;padding:24px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #e5e7eb;padding:8px;font-size:13px} th{background:#f8fafc}</style></head><body><h2>Saw Sheet — ${currentType.label} ${cfg.width}×${cfg.height} mm × ${qty} nos</h2><p>Bars: ${opt.barsUsed} • Waste ${opt.wastePct.toFixed(1)}% • Kerf: 3mm • Tolerance: 10mm • ${marginGuard}</p><table><thead><tr><th>Bar</th><th>Cuts</th><th>Offcut</th><th>Waste</th><th>Profile</th><th>Stock</th></tr></thead><tbody>${rows}</tbody></table><p>Glass: ${bom.glass.map((g) => `${g.qty * qty}× ${g.w}×${g.h} mm ${g.spec}`).join(", ")}</p><h3 style="margin-top:18px">Cutting Barcode Labels</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">${labels}</div><script>window.print()</script></body></html>`,
     );
     w.document.close();
   }
@@ -536,7 +563,7 @@ export default function BuilderClient() {
           </div>
         </div>
 
-        {/* Bottom Details Tabs Card: BOM, Glass Schedule, Cutting List */}
+        {/* Bottom Details Tabs Card: BOM, Glass Schedule, Cutting List, Price Breakdown */}
         <div className="vc-card">
           <div className="vc-card-head" style={{ padding: "4px 8px" }}>
             <div style={{ display: "flex", gap: 4 }}>
@@ -561,6 +588,13 @@ export default function BuilderClient() {
               >
                 <Scissors size={12} /> Cut List ({scaledCuts.length})
               </button>
+              <button
+                type="button"
+                className={`vc-btn vc-btn-sm ${activeTab === "price" ? "vc-btn-primary" : ""}`}
+                onClick={() => setActiveTab("price")}
+              >
+                <FileText size={12} /> Price Breakdown (20 steps)
+              </button>
             </div>
             <span style={{ fontSize: 11, color: "var(--vc-text-dim)", marginLeft: "auto" }}>
               Total Area: {formatSqft(bom.sqft * qty)} sq.ft
@@ -573,41 +607,65 @@ export default function BuilderClient() {
               <table className="vc-table" style={{ width: "100%" }}>
                 <thead>
                   <tr>
+                    <th>Kind</th>
                     <th>Item Description</th>
                     <th>Profile Code</th>
+                    <th>Stock Len</th>
                     <th className="vc-num">Cut Length</th>
                     <th className="vc-num">Qty (per unit)</th>
                     <th className="vc-num">Total Qty</th>
                     <th className="vc-num">Total Run</th>
+                    <th className="vc-num">Unit Cost</th>
+                    <th className="vc-num">Line Cost</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bom.lines.map((l, i) => {
+                    const isProfile = l.kind === "profile";
+                    const isReinforcement = l.kind === "reinforcement";
+                    const isBead = l.kind === "bead";
+                    const isGasket = l.kind === "gasket";
+                    const isHardware = l.kind === "hardware";
+                    const isMesh = l.kind === "mesh";
                     const unitQty = l.qty;
-                    const totalQty = l.qty * (l.kind === "profile" ? qty : 1);
-                    const totalRun = l.kind === "profile" ? (l.lengthMm * l.qty * qty) : 0;
+                    const totalQty = isProfile ? l.qty * qty : l.qty;
+                    const totalRun = isProfile || isReinforcement ? (l.lengthMm * l.qty * (isProfile ? qty : 1)) : 0;
+                    const unitCost = l.unitCost ?? 0;
+                    const lineCost = unitCost * totalQty * (isProfile || isReinforcement ? (l.lengthMm / 1000) : 1);
+                    const kindColors: Record<string, string> = {
+                      profile: "var(--vc-blue)",
+                      reinforcement: "var(--vc-orange, #f97316)",
+                      bead: "var(--vc-green)",
+                      gasket: "var(--vc-teal, #14b8a6)",
+                      hardware: "var(--vc-purple, #a855f7)",
+                      mesh: "var(--vc-pink, #ec4899)",
+                    };
                     return (
                       <tr key={i}>
+                        <td>
+                          <span className="vc-pill" style={{ fontSize: 9, padding: "1px 6px", background: kindColors[l.kind] + "20", color: kindColors[l.kind] }}>
+                            {l.kind.toUpperCase()}
+                          </span>
+                        </td>
                         <td style={{ fontWeight: 500 }}>{l.label}</td>
                         <td>
                           <span className="vc-pill" style={{ fontSize: 10, padding: "0 6px" }}>
                             {l.profileId}
                           </span>
-                          {(() => {
-                            const e = PROMINANCE_INVENTA_3T.find((p) => p.code === l.profileId);
-                            return e ? <span style={{ fontSize: 10, color: "var(--vc-text-dim)", marginLeft: 4 }}>{e.stockMm / 1000}m</span> : null;
-                          })()}
+                          {l.stockMm && <span style={{ fontSize: 10, color: "var(--vc-text-dim)", marginLeft: 4 }}>{l.stockMm / 1000}m</span>}
                         </td>
-                        <td className="vc-num">{l.lengthMm.toLocaleString("en-IN")} mm</td>
+                        <td className="vc-num">{isProfile || isReinforcement ? `${l.lengthMm.toLocaleString("en-IN")} mm` : "—"}</td>
                         <td className="vc-num">{unitQty}</td>
                         <td className="vc-num" style={{ fontWeight: 600 }}>{totalQty}</td>
                         <td className="vc-num">
-                          {l.kind === "profile"
+                          {isProfile || isReinforcement
                             ? `${(totalRun / 1000).toFixed(2)} m (${totalRun.toLocaleString("en-IN")} mm)`
-                            : l.kind === "hardware"
-                              ? `${totalQty} set`
-                              : `${l.lengthMm} mm`}
+                            : isHardware || isMesh
+                            ? `${totalQty} set`
+                            : "—"}
                         </td>
+                        <td className="vc-num">{unitCost > 0 ? formatMoney(unitCost) : "—"}</td>
+                        <td className="vc-num">{lineCost > 0 ? formatMoney(lineCost) : "—"}</td>
                       </tr>
                     );
                   })}
@@ -651,35 +709,62 @@ export default function BuilderClient() {
             </div>
           )}
 
-          {/* TAB 3: Cutting List */}
+          {/* TAB 3: Cutting List — Eva-grade per-bar layout */}
           {activeTab === "cuts" && (
+            <div style={{ overflowX: "auto" }}>
+              <div style={{ padding: "8px 10px", fontSize: 11, color: "var(--vc-text-dim)", borderBottom: "1px solid var(--vc-border)" }}>
+                Bars Used: <strong>{opt.barsUsed}</strong> • Waste: <strong>{opt.wastePct.toFixed(1)}%</strong> • Offcuts Reused: <strong>{opt.offcutReuse}</strong> • Kerf: 3mm • Tolerance: 10mm
+              </div>
+              {opt.bars.map((bar, barIdx) => (
+                <div key={barIdx} style={{ borderBottom: "1px solid var(--vc-border)", padding: "8px 10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11 }}>
+                    <strong>{bar.profileId}</strong>
+                    <span>Bar {barIdx + 1} • Stock {bar.stockMm}mm • Offcut {bar.offcut}mm ({bar.wastePct.toFixed(1)}%)</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {bar.cuts.length > 0 ? (
+                      bar.cuts.map((cut, ci) => (
+                        <span key={ci} style={{ background: "var(--vc-surface-2)", padding: "2px 8px", borderRadius: "var(--vc-radius)", fontSize: 10, fontFamily: "monospace" }}>
+                          {cut.lengthMm}mm × {cut.qty}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ color: "var(--vc-text-dim)", fontSize: 11 }}>No cuts on this bar</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {opt.bars.length === 0 && (
+                <div style={{ padding: "20px", textAlign: "center", color: "var(--vc-text-dim)" }}>
+                  No cutting data — enter window dimensions
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: Price Breakdown (Eva 20-step) */}
+          {activeTab === "price" && (
             <div style={{ overflowX: "auto" }}>
               <table className="vc-table" style={{ width: "100%" }}>
                 <thead>
                   <tr>
-                    <th>Profile Section</th>
-                    <th className="vc-num">Cut Length (mm)</th>
-                    <th className="vc-num">Scaled Pieces Required</th>
-                    <th className="vc-num">Total Run (m)</th>
+                    <th>#</th>
+                    <th>Cost Head</th>
+                    <th className="vc-num">Amount (₹)</th>
+                    <th className="vc-num">Per Sq.Ft</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {scaledCuts.map((c, i) => {
-                    const totalRunM = (c.lengthMm * c.qty) / 1000;
-                    return (
-                      <tr key={i}>
-                        <td style={{ fontWeight: 600 }}>
-                          <span className="vc-pill vc-pill-sent" style={{ marginRight: 6 }}>
-                            {c.profileId}
-                          </span>
-                          Profile {c.profileId}
-                        </td>
-                        <td className="vc-num">{c.lengthMm.toLocaleString("en-IN")} mm</td>
-                        <td className="vc-num" style={{ fontWeight: 700 }}>{c.qty} pcs</td>
-                        <td className="vc-num">{totalRunM.toFixed(2)} m</td>
-                      </tr>
-                    );
-                  })}
+                  {Object.entries(retailPrice).map(([k, v], idx) => (
+                    <tr key={k} style={{ background: k.includes("Total") || k.includes("Grand") ? "var(--vc-surface-2)" : "transparent" }}>
+                      <td className="vc-num" style={{ fontSize: 10 }}>{idx + 1}</td>
+                      <td style={{ fontWeight: 500, fontSize: 11 }}>{k}</td>
+                      <td className="vc-num" style={{ fontWeight: 600 }}>{formatMoney(v as number)}</td>
+                      <td className="vc-num" style={{ fontSize: 10, color: "var(--vc-text-dim)" }}>
+                        {bom.sqft > 0 ? formatMoney((v as number) / (bom.sqft * qty)) : "—"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
