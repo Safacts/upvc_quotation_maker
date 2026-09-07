@@ -36,12 +36,23 @@ void main() {
       // the envelope. This source assertion protects the failure path that is
       // difficult to drive without replacing the singleton Supabase client.
       final recovery = source('lib/services/quotation_recovery_service.dart');
-      expect(recovery, contains('if (result.state == RecoverySaveState.queued) return;'));
+      expect(
+        recovery,
+        contains('if (result.state == RecoverySaveState.queued) return;'),
+      );
       expect(recovery, contains('catch (error)'));
-      expect(recovery, contains("message: 'Saved on this device. Cloud backup will retry automatically.'"));
+      expect(
+        recovery,
+        contains(
+          "message: 'Saved on this device. Cloud backup will retry automatically.'",
+        ),
+      );
 
       expect(await service.pendingCount(clientId), 1);
-      expect((await service.pendingEnvelopes(clientId)).single['quotation_id'], quoteId);
+      expect(
+        (await service.pendingEnvelopes(clientId)).single['quotation_id'],
+        quoteId,
+      );
     });
   });
 
@@ -68,42 +79,43 @@ void main() {
     expect(api, contains('deleted,'));
     expect(api, contains('timestamp: new Date().toISOString()'));
 
-    expect(client, contains("final deleted = (json['deleted'] as List?) ?? const []"));
+    expect(
+      client,
+      contains("final deleted = (json['deleted'] as List?) ?? const []"),
+    );
     expect(client, contains("if (contentType == 'products')"));
     expect(client, contains("'soft_deleted': true"));
     expect(client, contains("'updated_at':"));
     expect(client, contains("json['timestamp']?.toString()"));
   });
 
-  testWidgets('offline state is one quiet banner, not repeated transient messages',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Column(
-          children: [
-            OfflineBanner(isOffline: true, pendingSyncCount: 2),
-          ],
+  testWidgets(
+    'offline state is one quiet banner, not repeated transient messages',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Column(
+            children: [OfflineBanner(isOffline: true, pendingSyncCount: 2)],
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byType(OfflineBanner), findsOneWidget);
-    expect(find.byIcon(Icons.wifi_off), findsOneWidget);
-    expect(find.byType(SnackBar), findsNothing);
+      expect(find.byType(OfflineBanner), findsOneWidget);
+      expect(find.byIcon(Icons.wifi_off), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Column(
-          children: [
-            OfflineBanner(isOffline: false, pendingSyncCount: 0),
-          ],
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Column(
+            children: [OfflineBanner(isOffline: false, pendingSyncCount: 0)],
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    expect(find.byType(OfflineBanner), findsOneWidget);
-    expect(find.textContaining('pending sync'), findsNothing);
-  });
+      );
+      await tester.pump();
+      expect(find.byType(OfflineBanner), findsOneWidget);
+      expect(find.textContaining('pending sync'), findsNothing);
+    },
+  );
 
   test('background sync paths do not emit SnackBars or banners', () {
     final engine = source('lib/services/sync_engine.dart');
@@ -111,9 +123,39 @@ void main() {
     final updateBanner = source('lib/widgets/update_banner.dart');
 
     expect(engine, isNot(contains('showSnackBar')));
-    final syncMethod = dashboard.substring(dashboard.indexOf('Future<void> _syncEverything()'));
-    expect(syncMethod.substring(0, syncMethod.indexOf('Future<void> _updateStatus')),
-        isNot(contains('showSnackBar')));
-    expect(updateBanner, contains('if (_phase == _BannerPhase.applying) return;'));
+    final syncMethod = dashboard.substring(
+      dashboard.indexOf('Future<void> _syncEverything()'),
+    );
+    expect(
+      syncMethod.substring(0, syncMethod.indexOf('Future<void> _updateStatus')),
+      isNot(contains('showSnackBar')),
+    );
+    expect(
+      updateBanner,
+      contains('if (_phase == _BannerPhase.applying) return;'),
+    );
+  });
+
+  test(
+    'compact sync indicator does not present an expired session as healthy',
+    () {
+      final indicator = source('lib/widgets/sync_indicator.dart');
+      expect(
+        indicator,
+        contains('final authRequired = status == SyncStatus.authRequired;'),
+      );
+      expect(indicator, contains("label = 'Sign in to sync';"));
+      expect(indicator, contains('else if (authRequired)'));
+    },
+  );
+
+  test('recovery center keeps sync feedback inline', () {
+    final recoveryCenter = source('lib/recovery_center_screen.dart');
+    final indicator = source('lib/widgets/offline_indicator.dart');
+
+    expect(recoveryCenter, isNot(contains('showSnackBar')));
+    expect(recoveryCenter, contains('_notice'));
+    expect(indicator, contains('Offline • your work is saved on this device'));
+    expect(indicator, isNot(contains('showSnackBar')));
   });
 }
