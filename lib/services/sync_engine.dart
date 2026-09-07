@@ -621,6 +621,32 @@ class SyncEngine {
         }
       }
 
+      // Apply server tombstones as hidden local rows. This preserves the
+      // server timestamp so the cursor moves forward and avoids re-fetching
+      // deleted products forever.
+      final deleted = (json['deleted'] as List?) ?? const [];
+      for (final group in deleted) {
+        if (group is! Map || group['content_type'] != contentType) continue;
+        final ids = (group['ids'] as List?) ?? const [];
+        if (contentType == 'products') {
+          final tombstones = ids
+              .map((id) => {
+                    'id': id.toString(),
+                    'name': '',
+                    'category': '',
+                    'description': '',
+                    'price': 0,
+                    'unit': 'SFT',
+                    'soft_deleted': true,
+                    'updated_at': json['timestamp']?.toString() ??
+                        DateTime.now().toUtc().toIso8601String(),
+                  })
+              .toList();
+          await _db.upsertProductRows(tombstones, clientId);
+          synced += tombstones.length;
+        }
+      }
+
       return SyncResult(
         success: true,
         itemsSynced: synced,

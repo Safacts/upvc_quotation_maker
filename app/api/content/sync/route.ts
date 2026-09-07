@@ -140,10 +140,13 @@ export async function GET(request: NextRequest) {
 
       switch (type) {
         case "products":
-          // Fetch products for this client
+          // Fetch only rows changed since the client's cursor. The previous
+          // route accepted `since` but ignored it here, turning every content
+          // refresh into a full catalogue download.
           data = await supaGet("products", {
             client_id: "eq." + clientId,
             soft_deleted: "eq.false",
+            ...(since ? { updated_at: "gt." + since } : {}),
             select: "id,name,category,description,price,unit,created_at,updated_at",
             order: "name.asc",
           });
@@ -192,11 +195,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Return product tombstones in the same response. Keeping a tombstone in
+    // the local cache lets the client advance its cursor without repeatedly
+    // downloading the same deleted row.
+    const deleted: Array<{ content_type: string; ids: string[] }> = [];
+    if ((!contentType || contentType === "products") && since) {
+      const deletedProducts = await supaGet("products", {
+        client_id: "eq." + clientId,
+        soft_deleted: "eq.true",
+        updated_at: "gt." + since,
+        select: "id",
+      });
+      const ids = (Array.isArray(deletedProducts) ? deletedProducts : [])
+        .map((row: any) => String(row?.id ?? ""))
+        .filter(Boolean);
+      if (ids.length > 0) deleted.push({ content_type: "products", ids });
+    }
+
     return NextResponse.json(
       {
         client_id: clientId,
         changes: changes,
-        deleted: [], // TODO: Implement soft-delete tracking
+        deleted,
         timestamp: new Date().toISOString(),
       },
       { headers: CORS_HEADERS },

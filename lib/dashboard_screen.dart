@@ -287,13 +287,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _syncEverything() async {
     final clientId =
         Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    // Never clear the outbox merely because a sync was attempted. A timeout,
+    // auth expiry, or partial RPC failure must leave the protected device copy
+    // available for the next retry/recovery visit.
     try {
       await QuotationRecoveryService.instance.flushPending(clientId);
-      await SyncEngine.instance.syncAll();
-    } catch (_) {}
-    final pending = await QuotationRecoveryService.instance.pendingEnvelopes(clientId);
-    if (pending.isNotEmpty) {
-      await QuotationRecoveryService.instance.clearAllPending(clientId);
+      await SyncEngine.instance.syncAll(clientId: clientId);
+    } catch (error) {
+      debugPrint('Dashboard sync failed; keeping recovery copies: $error');
     }
     await _refreshPendingSyncCount();
     await _fetchQuotations();
