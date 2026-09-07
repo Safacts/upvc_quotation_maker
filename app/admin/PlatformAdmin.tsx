@@ -1327,11 +1327,11 @@ export default function PlatformAdmin() {
                     return (
                       <div key={req.id} style={{ border: "1.5px solid var(--line)", borderLeft: `4px solid ${statusColor}`, borderRadius: 14, padding: 16, marginBottom: 12, background: "var(--white)", boxShadow: "var(--shadow-xs)", opacity: isArchived ? 0.82 : 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                          <div><strong style={{ fontSize: 14 }}>{req.email}</strong><div style={{ color: "#475569", fontSize: 13 }}>{[req.name, req.phone].filter(Boolean).join(" · ")}</div></div>
+                          <div><strong style={{ fontSize: 14 }}>{req.email}</strong><div style={{ color: "var(--t-muted)", fontSize: 13 }}>{[req.name, req.phone].filter(Boolean).join(" · ")}</div></div>
                           <span style={{ color: statusColor, fontWeight: 700, fontSize: 12, textTransform: "capitalize", flexShrink: 0, background: "var(--paper)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999 }}>{req.status}</span>
                         </div>
-                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}</div>
-                        {(cfg.companyName || cfg.city || cfg.gstNumber) && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}</div>}
+                        <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 6 }}>Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}</div>
+                        {(cfg.companyName || cfg.city || cfg.gstNumber) && <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>{[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}</div>}
                         <div className="modal-actions" style={{ marginTop: 12, justifyContent: "flex-start", flexWrap: "wrap", gap: 8 }}>
                           {!isArchived && <><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => openCompose(req)}>Send Email</button><button className="btn-primary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setRequestsPageOpen(false); useSignupRequest(req); }}>Convert to Client</button><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px", marginLeft: "auto" }} onClick={() => archiveRequest(req)}><Icon.Archive style={{ marginRight: 6 }} /> Archive</button></>}
                           {isArchived && <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}><Icon.Undo style={{ marginRight: 6 }} /> Restore</button>}
@@ -1395,8 +1395,8 @@ export default function PlatformAdmin() {
           ) : !editorOpen ? (
             <div className="admin-welcome">
               <div className="admin-welcome-icon"><Icon.Building width={38} height={38} style={{ color: 'var(--rust)' }} /></div>
-              <h2>Welcome back!</h2>
-              <p>Select a client from the sidebar to edit their configuration, or create a new client.</p>
+              <h2>Clients</h2>
+              <p>Pick a client to edit, or create a new one.</p>
               <div className="admin-stats">
                 <div className="admin-stat-card">
                   <div className="num">{clients.length}</div>
@@ -1466,7 +1466,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Identity</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Client ID {editingClient && <span style={{ color: "#94a3b8", fontWeight: 400 }}>(cannot be changed)</span>}</label>
+                        <label>Client ID {editingClient && <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(cannot be changed)</span>}</label>
                         <input
                           type="text"
                           value={form.id}
@@ -1603,7 +1603,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Portal Access</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Portal Password <span style={{ color: "#94a3b8", fontWeight: 400 }}>(leave blank to keep current)</span></label>
+                        <label>Portal Password <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(leave blank to keep current)</span></label>
                         <input
                           type="password"
                           value={form.portalPassword}
@@ -1723,7 +1723,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Content</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Services Offered <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <label>Services Offered <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma separated)</span></label>
                         <input type="text" value={form.services} placeholder="UPVC Windows, UPVC Doors, Glass Installation" onChange={(e) => setF("services", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
@@ -1735,7 +1735,7 @@ export default function PlatformAdmin() {
                         <textarea value={form.aboutText} rows={4} placeholder="Tell customers about your business..." onChange={(e) => setF("aboutText", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Portfolio Images <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma-separated URLs)</span></label>
+                        <label>Portfolio Images <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma-separated URLs)</span></label>
                         <textarea value={form.gallery} rows={3} placeholder="https://example.com/photo1.jpg, https://example.com/photo2.jpg" onChange={(e) => setF("gallery", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
@@ -1743,22 +1743,22 @@ export default function PlatformAdmin() {
                         <input type="url" value={form.mapUrl} placeholder="https://maps.google.com/maps?embed=..." onChange={(e) => setF("mapUrl", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label>Customer Reviews <span style={{ color: "#94a3b8", fontWeight: 400 }}>(JSON array)</span></label>
+                        <label>Customer Reviews <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(JSON array)</span></label>
                         <textarea value={form.testimonials} rows={4} placeholder={JSON.stringify([{ name: "Customer", text: "Great service!", role: "Homeowner" }], null, 2)} onChange={(e) => setF("testimonials", e.target.value)} />
                       </div>
                     </div>
                     <div className="form-section">
-                      <div className="form-section-title">Search Engine Optimization (SEO)</div>
+                      <div className="form-section-title">SEO</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>SEO Meta Title</label>
                         <input type="text" value={form.seoTitle} placeholder="e.g. Best UPVC Windows in Hyderabad | Venkateshwara" onChange={(e) => setF("seoTitle", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>SEO Meta Description</label>
-                        <textarea value={form.seoDescription} rows={3} placeholder="A short description of your business to show on Google search results." onChange={(e) => setF("seoDescription", e.target.value)} />
+                        <textarea value={form.seoDescription} rows={3} placeholder="Shown on Google. Keep under 155 characters." onChange={(e) => setF("seoDescription", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label>SEO Keywords <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <label>SEO Keywords <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma separated)</span></label>
                         <input type="text" value={form.seoKeywords} placeholder="upvc windows, upvc doors, interior" onChange={(e) => setF("seoKeywords", e.target.value)} />
                       </div>
                     </div>
@@ -1839,7 +1839,7 @@ export default function PlatformAdmin() {
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--white)", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--rust)", flexShrink: 0, boxShadow: "var(--shadow-xs)" }}><Icon.Users width={18} height={18} /></div>
                 <div style={{ flex: 1, minWidth: 220 }}>
                   <h3 style={{ margin: 0, fontSize: 20, letterSpacing: -0.3 }}>Lead Inbox</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--t-muted)", lineHeight: 1.5 }}>Your growth pipeline — every signup is a future client. Convert in one click.</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--t-muted)", lineHeight: 1.5 }}>New signups. Convert to clients.</p>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flexShrink: 0 }}>
                   <span style={{ fontSize: 12, fontWeight: 800, background: "var(--white)", border: "1px solid var(--line)", padding: "6px 10px", borderRadius: 999, color: "var(--t-body)" }}>{(signupRequests || []).filter((r:any)=> r.status !== "archived").length} Active</span>
@@ -1885,7 +1885,7 @@ export default function PlatformAdmin() {
               );
               if (filtered.length === 0) {
                 return (
-                  <p style={{ color: "#94a3b8", textAlign: "center", padding: "24px 0" }}>
+                  <p style={{ color: "var(--t-ghost)", textAlign: "center", padding: "24px 0" }}>
                     {signupView === "archived" ? "No archived requests." : "No active signup requests."}
                   </p>
                 );
@@ -1899,7 +1899,7 @@ export default function PlatformAdmin() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                       <div>
                         <strong>{req.email}</strong>
-                        <div style={{ color: "#475569", fontSize: 13 }}>
+                        <div style={{ color: "var(--t-muted)", fontSize: 13 }}>
                           {[req.name, req.phone].filter(Boolean).join(" · ")}
                         </div>
                       </div>
@@ -1907,11 +1907,11 @@ export default function PlatformAdmin() {
                         {req.status}
                       </span>
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>
                       Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
                     </div>
                     {(cfg.companyName || cfg.city || cfg.gstNumber) && (
-                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>
                         {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
                       </div>
                     )}
@@ -1964,7 +1964,7 @@ export default function PlatformAdmin() {
         <div className="modal" style={{ display: "flex" }} onClick={() => setShowShortcuts(false)}>
           <div className="modal-content" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ display: "flex", alignItems: "center", gap: 10 }}>Keyboard Shortcuts <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999, color: "var(--t-muted)" }}>Press ? to toggle</span></h3>
-            <p style={{ marginBottom: 18 }}>Fast, compatible on Mac (⌘) and Windows/Linux (Ctrl). Works anywhere unless you are typing.</p>
+            <p style={{ marginBottom: 18, color: "var(--t-muted)", fontSize: 13 }}>Works on Mac and Windows. Ignored while typing.</p>
             <div style={{ display: "grid", gap: 10 }}>
               {[
                 ["Focus search", "⌘ K  /  Ctrl K  or  /"],
