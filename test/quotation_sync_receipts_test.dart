@@ -33,7 +33,7 @@ void main() {
       expect(receipt.lastCloudBackup, isNull);
       expect(receipt.hasPending, isTrue);
       expect(receipt.hasConflict, isFalse);
-    expect(receipt.status, QuotationSyncReceiptStatus.pending);
+      expect(receipt.status, QuotationSyncReceiptStatus.pending);
       expect(await service.lastLocalSave(clientId, quoteId), isNotNull);
       expect(await service.hasPendingSync(clientId, quoteId), isTrue);
     },
