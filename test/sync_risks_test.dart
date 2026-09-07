@@ -71,7 +71,8 @@ void main() {
     expect(client, contains("final deleted = (json['deleted'] as List?) ?? const []"));
     expect(client, contains("if (contentType == 'products')"));
     expect(client, contains("'soft_deleted': true"));
-    expect(client, contains("'updated_at': json['timestamp']?.toString()"));
+    expect(client, contains("'updated_at':"));
+    expect(client, contains("json['timestamp']?.toString()"));
   });
 
   testWidgets('offline state is one quiet banner, not repeated transient messages',

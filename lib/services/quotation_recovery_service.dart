@@ -11,6 +11,38 @@ import 'connectivity_service.dart';
 
 enum RecoverySaveState { saved, queued, conflict }
 
+/// The durable, non-visual state of one quotation's recovery pipeline.
+///
+/// Pending and conflict are derived from the durable outbox/protected-copy
+/// records rather than from a transient widget or connectivity event. This
+/// lets callers inspect state after a restart without producing UI noise.
+enum QuotationSyncReceiptStatus { localOnly, pending, conflict, synced }
+
+class QuotationSyncReceipt {
+  const QuotationSyncReceipt({
+    required this.clientId,
+    required this.quotationId,
+    this.lastLocalSave,
+    this.lastCloudBackup,
+    this.hasPending = false,
+    this.hasConflict = false,
+  });
+
+  final String clientId;
+  final String quotationId;
+  final DateTime? lastLocalSave;
+  final DateTime? lastCloudBackup;
+  final bool hasPending;
+  final bool hasConflict;
+
+  QuotationSyncReceiptStatus get status {
+    if (hasConflict) return QuotationSyncReceiptStatus.conflict;
+    if (hasPending) return QuotationSyncReceiptStatus.pending;
+    if (lastCloudBackup != null) return QuotationSyncReceiptStatus.synced;
+    return QuotationSyncReceiptStatus.localOnly;
+  }
+}
+
 class RecoverySaveResult {
   const RecoverySaveResult({
     required this.state,
@@ -40,6 +72,7 @@ class QuotationRecoveryService {
   static const _draftPrefix = 'quotation_local_draft_';
   static const _deviceKey = 'quotation_recovery_device_id_v1';
   static const _lastBackupPrefix = 'quotation_recovery_last_cloud_v1_';
+  static const _receiptPrefix = 'quotation_recovery_receipts_v1_';
 
   StreamSubscription<bool>? _connectivitySub;
   Timer? _retryTimer;
@@ -105,6 +138,11 @@ class QuotationRecoveryService {
     final operationId = envelope['operation_id'] as String;
 
     await _enqueueLatest(clientId, envelope);
+    await _recordLocalSave(
+      clientId,
+      quoteId,
+      _parseTimestamp(envelope['created_at']) ?? DateTime.now().toLocal(),
+    );
     if (!ConnectivityService.instance.isOnline) {
       return RecoverySaveResult(
         state: RecoverySaveState.queued,
@@ -152,19 +190,27 @@ class QuotationRecoveryService {
     Map<String, dynamic> envelope,
   ) async {
     final rawOpId = (envelope['operation_id'] ?? '').toString().trim();
-    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-    final operationId = uuidRegex.hasMatch(rawOpId) ? rawOpId : const Uuid().v4();
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+    final operationId =
+        uuidRegex.hasMatch(rawOpId) ? rawOpId : const Uuid().v4();
     try {
       if (clientId.isNotEmpty) {
         SupabaseConfig.client.headers['x-client-id'] = clientId;
       }
-      final snapshot = Map<String, dynamic>.from(envelope['snapshot'] as Map? ?? {});
-      
-      final quote = Map<String, dynamic>.from(snapshot['quotation'] as Map? ?? {});
+      final snapshot = Map<String, dynamic>.from(
+        envelope['snapshot'] as Map? ?? {},
+      );
+
+      final quote = Map<String, dynamic>.from(
+        snapshot['quotation'] as Map? ?? {},
+      );
       final mItems = snapshot['measured_items'] as List? ?? [];
       final umItems = snapshot['unmeasured_items'] as List? ?? [];
-      
-      final isEmptyGhost = (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
+
+      final isEmptyGhost =
+          (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
           (quote['reference']?.toString().trim() ?? '').isEmpty &&
           (quote['contact_no']?.toString().trim() ?? '').isEmpty &&
           (quote['address']?.toString().trim() ?? '').isEmpty &&
@@ -172,7 +218,9 @@ class QuotationRecoveryService {
           umItems.isEmpty;
 
       if (isEmptyGhost) {
-        debugPrint('QuotationRecoveryService: Discarding empty ghost quotation from queue.');
+        debugPrint(
+          'QuotationRecoveryService: Discarding empty ghost quotation from queue.',
+        );
         await _removeOperation(clientId, rawOpId);
         await _removeOperation(clientId, operationId);
         return RecoverySaveResult(
@@ -218,6 +266,10 @@ class QuotationRecoveryService {
           '$_lastBackupPrefix$clientId',
           DateTime.now().toUtc().toIso8601String(),
         );
+        await _recordCloudBackup(
+          clientId,
+          (envelope['quotation_id'] ?? '').toString(),
+        );
         return RecoverySaveResult(
           state: RecoverySaveState.saved,
           serverVersion: version,
@@ -241,8 +293,13 @@ class QuotationRecoveryService {
       debugPrint('QuotationRecoveryService: queued $operationId: $error');
       final errStr = error.toString().toLowerCase();
       // If server rejected with a permanent syntax/schema error, purge the corrupt envelope
-      if (errStr.contains('22p02') || errStr.contains('42501') || errStr.contains('22023') || errStr.contains('invalid input syntax')) {
-        debugPrint('QuotationRecoveryService: purging permanently unsendable envelope $operationId');
+      if (errStr.contains('22p02') ||
+          errStr.contains('42501') ||
+          errStr.contains('22023') ||
+          errStr.contains('invalid input syntax')) {
+        debugPrint(
+          'QuotationRecoveryService: purging permanently unsendable envelope $operationId',
+        );
         await _removeOperation(clientId, rawOpId);
         await _removeOperation(clientId, operationId);
         return RecoverySaveResult(
@@ -272,24 +329,30 @@ class QuotationRecoveryService {
       final prefs = await SharedPreferences.getInstance();
       // 1. Remove local draft
       await prefs.remove('$_draftPrefix${clientId}_$quoteId');
-      
+
       // 2. Remove from pending queue
       final queueKey = '$_queuePrefix$clientId';
       final queue = _decodeList(prefs.getString(queueKey));
       final initQueueLen = queue.length;
-      queue.removeWhere((item) => (item['quotation_id'] ?? '').toString() == quoteId);
+      queue.removeWhere(
+        (item) => (item['quotation_id'] ?? '').toString() == quoteId,
+      );
       if (queue.length != initQueueLen) {
         await prefs.setString(queueKey, jsonEncode(queue));
       }
-      
+
       // 3. Remove from conflicts
       final conflictKey = '$_conflictPrefix$clientId';
       final conflicts = _decodeList(prefs.getString(conflictKey));
       final initConfLen = conflicts.length;
-      conflicts.removeWhere((item) => (item['quotation_id'] ?? '').toString() == quoteId);
+      conflicts.removeWhere(
+        (item) => (item['quotation_id'] ?? '').toString() == quoteId,
+      );
       if (conflicts.length != initConfLen) {
         await prefs.setString(conflictKey, jsonEncode(conflicts));
       }
+
+      await _removeReceiptLocked(prefs, clientId, quoteId);
     });
   }
 
@@ -321,7 +384,8 @@ class QuotationRecoveryService {
         final quote = snapshot['quotation'] as Map<String, dynamic>? ?? {};
         final mItems = snapshot['measured_items'] as List? ?? [];
         final umItems = snapshot['unmeasured_items'] as List? ?? [];
-        final isEmptyGhost = (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
+        final isEmptyGhost =
+            (quote['customer_name']?.toString().trim() ?? '').isEmpty &&
             (quote['reference']?.toString().trim() ?? '').isEmpty &&
             (quote['contact_no']?.toString().trim() ?? '').isEmpty &&
             (quote['address']?.toString().trim() ?? '').isEmpty &&
@@ -422,6 +486,13 @@ class QuotationRecoveryService {
         continue;
       }
       await _enqueueLatest(clientId, envelope);
+      await _recordLocalSave(
+        clientId,
+        quoteId,
+        _parseTimestamp(draft['updated_at']) ??
+            _parseTimestamp(envelope['created_at']) ??
+            DateTime.now().toLocal(),
+      );
       pendingByQuote[quoteId] = envelope;
       queued++;
     }
@@ -452,11 +523,77 @@ class QuotationRecoveryService {
   Future<int> pendingCount(String clientId) async =>
       (await pendingEnvelopes(clientId)).length;
 
-  Future<DateTime?> lastCloudBackup(String clientId) async {
+  /// Returns the last cloud backup for [quotationId].
+  ///
+  /// The optional quotation id preserves the existing tenant-wide API for
+  /// callers that only need the old aggregate timestamp.
+  Future<DateTime?> lastCloudBackup(
+    String clientId, {
+    String? quotationId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
+    if (quotationId != null && quotationId.isNotEmpty) {
+      final row = await _receiptRow(clientId, quotationId);
+      return _parseTimestamp(row?['last_cloud_backup']);
+    }
     final raw = prefs.getString('$_lastBackupPrefix$clientId');
     return raw == null ? null : DateTime.tryParse(raw)?.toLocal();
   }
+
+  /// Returns the last durable local save for one quotation.
+  Future<DateTime?> lastLocalSave(String clientId, String quotationId) async {
+    if (clientId.isEmpty || quotationId.isEmpty) return null;
+    final row = await _receiptRow(clientId, quotationId);
+    var latest = _parseTimestamp(row?['last_local_save']);
+
+    // Read legacy/current drafts and queue envelopes as a compatibility
+    // fallback. Drafts may have been written directly by quotation_screen
+    // before this receipt API was introduced.
+    final prefs = await SharedPreferences.getInstance();
+    final draft = _decodeMap(
+      prefs.getString('$_draftPrefix${clientId}_$quotationId'),
+    );
+    latest = _later(latest, _parseTimestamp(draft['updated_at']));
+    for (final envelope in await pendingEnvelopes(clientId)) {
+      if ((envelope['quotation_id'] ?? '').toString() == quotationId) {
+        latest = _later(latest, _parseTimestamp(envelope['created_at']));
+      }
+    }
+    return latest;
+  }
+
+  /// Returns a restart-safe receipt without showing a banner or sending an
+  /// automatic notification. Missing history is represented by a local-only
+  /// receipt so callers do not need null checks before rendering passively.
+  Future<QuotationSyncReceipt> syncReceipt(
+    String clientId,
+    String quotationId,
+  ) async {
+    if (clientId.isEmpty || quotationId.isEmpty) {
+      return QuotationSyncReceipt(clientId: clientId, quotationId: quotationId);
+    }
+    final row = await _receiptRow(clientId, quotationId);
+    final localSave = await lastLocalSave(clientId, quotationId);
+    final pending = await _hasPendingForQuotation(clientId, quotationId);
+    final conflict = (await conflicts(
+      clientId,
+    )).any((item) => (item['quotation_id'] ?? '').toString() == quotationId);
+    return QuotationSyncReceipt(
+      clientId: clientId,
+      quotationId: quotationId,
+      lastLocalSave: localSave ?? _parseTimestamp(row?['last_local_save']),
+      lastCloudBackup: _parseTimestamp(row?['last_cloud_backup']),
+      hasPending: pending,
+      hasConflict: conflict,
+    );
+  }
+
+  /// Convenience status queries for callers that do not need the timestamps.
+  Future<bool> hasPendingSync(String clientId, String quotationId) async =>
+      (await syncReceipt(clientId, quotationId)).hasPending;
+
+  Future<bool> hasSyncConflict(String clientId, String quotationId) async =>
+      (await syncReceipt(clientId, quotationId)).hasConflict;
 
   Future<List<Map<String, dynamic>>> cloudSnapshots(String clientId) async {
     if (clientId.isEmpty || !ConnectivityService.instance.isOnline) {
@@ -634,6 +771,11 @@ class QuotationRecoveryService {
         throw StateError('The device could not store a recovery draft.');
       await prefs.setString('last_active_draft_$clientId', key);
     });
+    await _recordLocalSave(
+      clientId,
+      quotation['id'].toString(),
+      _parseTimestamp(draft['updated_at']) ?? DateTime.now().toLocal(),
+    );
   }
 
   Future<void> _enqueueLatest(
@@ -792,6 +934,108 @@ class QuotationRecoveryService {
     });
   }
 
+  String _receiptKey(String clientId) => '$_receiptPrefix$clientId';
+
+  Future<Map<String, dynamic>?> _receiptRow(
+    String clientId,
+    String quotationId,
+  ) async {
+    return _withStorageLock(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final rows = _decodeMap(prefs.getString(_receiptKey(clientId)));
+      final row = rows[quotationId];
+      return row is Map ? Map<String, dynamic>.from(row) : null;
+    });
+  }
+
+  Future<void> _recordLocalSave(
+    String clientId,
+    String quotationId,
+    DateTime timestamp,
+  ) async {
+    if (clientId.isEmpty || quotationId.isEmpty) return;
+    await _updateReceipt(
+      clientId,
+      quotationId,
+      'last_local_save',
+      timestamp.toUtc().toIso8601String(),
+    );
+  }
+
+  Future<void> _recordCloudBackup(String clientId, String quotationId) async {
+    if (clientId.isEmpty || quotationId.isEmpty) return;
+    await _updateReceipt(
+      clientId,
+      quotationId,
+      'last_cloud_backup',
+      DateTime.now().toUtc().toIso8601String(),
+    );
+  }
+
+  Future<void> _updateReceipt(
+    String clientId,
+    String quotationId,
+    String field,
+    String value,
+  ) async {
+    await _withStorageLock(() async {
+      final prefs = await SharedPreferences.getInstance();
+      final rows = _decodeMap(prefs.getString(_receiptKey(clientId)));
+      final current =
+          rows[quotationId] is Map
+              ? Map<String, dynamic>.from(rows[quotationId] as Map)
+              : <String, dynamic>{};
+      current[field] = value;
+      current['client_id'] = clientId;
+      current['quotation_id'] = quotationId;
+      rows[quotationId] = current;
+      final saved = await prefs.setString(
+        _receiptKey(clientId),
+        jsonEncode(rows),
+      );
+      if (!saved) {
+        throw StateError(
+          'The device could not store the quotation sync receipt.',
+        );
+      }
+    });
+  }
+
+  Future<void> _removeReceiptLocked(
+    SharedPreferences prefs,
+    String clientId,
+    String quotationId,
+  ) async {
+    final rows = _decodeMap(prefs.getString(_receiptKey(clientId)));
+    if (rows.remove(quotationId) != null) {
+      final saved = await prefs.setString(
+        _receiptKey(clientId),
+        jsonEncode(rows),
+      );
+      if (!saved) {
+        throw StateError(
+          'The device could not remove the quotation sync receipt.',
+        );
+      }
+    }
+  }
+
+  Future<bool> _hasPendingForQuotation(
+    String clientId,
+    String quotationId,
+  ) async {
+    if ((await pendingEnvelopes(
+      clientId,
+    )).any((row) => (row['quotation_id'] ?? '').toString() == quotationId)) {
+      return true;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final draft = _decodeMap(
+      prefs.getString('$_draftPrefix${clientId}_$quotationId'),
+    );
+    return draft['needs_sync'] == true;
+  }
+
   List<Map<String, dynamic>> _decodeList(String? raw) {
     if (raw == null || raw.isEmpty) return <Map<String, dynamic>>[];
     try {
@@ -804,6 +1048,29 @@ class QuotationRecoveryService {
     } catch (_) {
       return <Map<String, dynamic>>[];
     }
+  }
+
+  Map<String, dynamic> _decodeMap(String? raw) {
+    if (raw == null || raw.isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return <String, dynamic>{};
+      return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  DateTime? _parseTimestamp(Object? raw) {
+    final value = raw?.toString();
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value)?.toLocal();
+  }
+
+  DateTime? _later(DateTime? left, DateTime? right) {
+    if (left == null) return right;
+    if (right == null) return left;
+    return right.isAfter(left) ? right : left;
   }
 
   Future<String> _deviceId() async {

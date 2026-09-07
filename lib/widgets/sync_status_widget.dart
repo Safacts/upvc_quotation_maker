@@ -23,12 +23,13 @@ class SyncStatusWidget extends StatelessWidget {
         final status = snapshot.data ?? SyncStatus.idle;
         final isSyncing = status == SyncStatus.syncing;
         final hasError = status == SyncStatus.error;
+        final authRequired = status == SyncStatus.authRequired;
 
         if (compact) {
-          return _buildCompactIcon(context, isSyncing, hasError);
+          return _buildCompactIcon(context, isSyncing, hasError, authRequired);
         }
 
-        return _buildFullWidget(context, isSyncing, hasError);
+        return _buildFullWidget(context, isSyncing, hasError, authRequired);
       },
     );
   }
@@ -37,11 +38,14 @@ class SyncStatusWidget extends StatelessWidget {
     BuildContext context,
     bool isSyncing,
     bool hasError,
+    bool authRequired,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final label =
         isSyncing
             ? 'Syncing'
+            : authRequired
+            ? 'Sign in again to finish syncing.'
             : hasError
             ? 'Sync needs attention. Tap to retry.'
             : 'Sync status. Tap to sync now.';
@@ -60,8 +64,12 @@ class SyncStatusWidget extends StatelessWidget {
                   ),
                 )
                 : Icon(
-                  hasError ? Icons.sync_problem : Icons.sync,
-                  color: hasError ? colorScheme.error : null,
+                  authRequired
+                      ? Icons.lock_outline
+                      : hasError
+                      ? Icons.sync_problem
+                      : Icons.sync,
+                  color: authRequired || hasError ? colorScheme.error : null,
                 ),
         onPressed: isSyncing ? null : () => SyncEngine.instance.syncAll(),
         tooltip: label,
@@ -69,11 +77,18 @@ class SyncStatusWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFullWidget(BuildContext context, bool isSyncing, bool hasError) {
+  Widget _buildFullWidget(
+    BuildContext context,
+    bool isSyncing,
+    bool hasError,
+    bool authRequired,
+  ) {
     final lastSync = SyncEngine.instance.lastSyncTime;
     String subtitle;
     if (isSyncing) {
       subtitle = 'Syncing...';
+    } else if (authRequired) {
+      subtitle = 'Sign in again to continue';
     } else if (hasError) {
       subtitle = 'Sync failed';
     } else if (lastSync != null) {
@@ -122,6 +137,8 @@ class SyncStatusWidget extends StatelessWidget {
                 Text(
                   isSyncing
                       ? 'Syncing'
+                      : authRequired
+                      ? 'Sign in required'
                       : hasError
                       ? 'Needs attention'
                       : 'Synced',
@@ -129,7 +146,7 @@ class SyncStatusWidget extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color:
-                        hasError
+                        authRequired || hasError
                             ? Theme.of(context).colorScheme.error
                             : Colors.grey.shade700,
                   ),
