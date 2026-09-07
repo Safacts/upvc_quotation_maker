@@ -6,11 +6,7 @@ import '../services/sync_engine.dart';
 /// Shows a small indicator in the app bar or elsewhere that displays
 /// whether a sync is in progress, the last sync time, or any errors.
 class SyncStatusWidget extends StatelessWidget {
-  const SyncStatusWidget({
-    super.key,
-    this.compact = false,
-    this.onTap,
-  });
+  const SyncStatusWidget({super.key, this.compact = false, this.onTap});
 
   /// Whether to show a compact version (just the icon).
   final bool compact;
@@ -29,7 +25,7 @@ class SyncStatusWidget extends StatelessWidget {
         final hasError = status == SyncStatus.error;
 
         if (compact) {
-          return _buildCompactIcon(isSyncing, hasError);
+          return _buildCompactIcon(context, isSyncing, hasError);
         }
 
         return _buildFullWidget(context, isSyncing, hasError);
@@ -37,27 +33,39 @@ class SyncStatusWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactIcon(bool isSyncing, bool hasError) {
-    return IconButton(
-      icon: isSyncing
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : Icon(
-              hasError ? Icons.sync_problem : Icons.sync,
-              color: hasError ? Colors.red : null,
-            ),
-      onPressed: isSyncing ? null : () => SyncEngine.instance.syncAll(),
-      tooltip: isSyncing
-          ? 'Syncing...'
-          : hasError
-              ? 'Sync failed. Tap to retry.'
-              : 'Sync now',
+  Widget _buildCompactIcon(
+    BuildContext context,
+    bool isSyncing,
+    bool hasError,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final label =
+        isSyncing
+            ? 'Syncing'
+            : hasError
+            ? 'Sync needs attention. Tap to retry.'
+            : 'Sync status. Tap to sync now.';
+    return Semantics(
+      button: true,
+      label: label,
+      child: IconButton(
+        icon:
+            isSyncing
+                ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                : Icon(
+                  hasError ? Icons.sync_problem : Icons.sync,
+                  color: hasError ? colorScheme.error : null,
+                ),
+        onPressed: isSyncing ? null : () => SyncEngine.instance.syncAll(),
+        tooltip: label,
+      ),
     );
   }
 
@@ -112,19 +120,23 @@ class SyncStatusWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isSyncing ? 'Syncing' : hasError ? 'Sync Error' : 'Synced',
+                  isSyncing
+                      ? 'Syncing'
+                      : hasError
+                      ? 'Needs attention'
+                      : 'Synced',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: hasError ? Colors.red : Colors.grey.shade700,
+                    color:
+                        hasError
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.grey.shade700,
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                 ),
               ],
             ),
@@ -160,19 +172,20 @@ class SyncFloatingButton extends StatelessWidget {
     return FloatingActionButton.small(
       onPressed: isSyncing ? null : onPressed,
       backgroundColor: isSyncing ? Colors.blue : Colors.orange,
-      child: isSyncing
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      child:
+          isSyncing
+              ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+              : Badge(
+                label: Text('$pendingCount'),
+                child: const Icon(Icons.sync, color: Colors.white),
               ),
-            )
-          : Badge(
-              label: Text('$pendingCount'),
-              child: const Icon(Icons.sync, color: Colors.white),
-            ),
     );
   }
 }

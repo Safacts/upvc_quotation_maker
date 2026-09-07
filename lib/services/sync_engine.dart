@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
 import '../models_sync.dart';
@@ -32,7 +33,7 @@ import 'connectivity_service.dart';
 /// [OfflineDatabase] has no persistent store in a browser, so the push queue
 /// is empty by construction and the pull only warms an in-memory cache. Sync
 /// stays a no-op-ish background refresh and must never throw into startup.
-class SyncEngine {
+class SyncEngine with WidgetsBindingObserver {
   SyncEngine._();
   static final SyncEngine instance = SyncEngine._();
 
@@ -72,6 +73,7 @@ class SyncEngine {
   StreamSubscription<bool>? _connectivitySub;
 
   bool _disposed = false;
+  bool _lifecycleRegistered = false;
 
   /// Initialize the sync engine. Never throws: a sync failure must not be able
   /// to take down app startup.
@@ -89,6 +91,10 @@ class SyncEngine {
 
       _startPeriodicSync();
       _listenForReconnect();
+      if (!_lifecycleRegistered) {
+        WidgetsBinding.instance.addObserver(this);
+        _lifecycleRegistered = true;
+      }
       debugPrint('SyncEngine initialized (persistent=${_db.isPersistent})');
     } catch (e, st) {
       debugPrint('SyncEngine: initialize failed (non-fatal): $e\n$st');
@@ -865,6 +871,21 @@ class SyncEngine {
     stopPeriodicSync();
     await _connectivitySub?.cancel();
     _connectivitySub = null;
+    if (_lifecycleRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _lifecycleRegistered = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _disposed) return;
+    // Android may suspend timers/network callbacks while backgrounded. A
+    // single resume-triggered attempt is enough; the in-flight guard prevents
+    // duplicate work when connectivity and lifecycle events arrive together.
+    unawaited(syncIfOnline().catchError((Object error) {
+      debugPrint('SyncEngine: resume sync error: $error');
+    }));
   }
 
   /// Full teardown — also closes the status stream.
