@@ -17,6 +17,7 @@ class SyncIndicator extends StatelessWidget {
         final status = snapshot.data ?? SyncStatus.idle;
         final isSyncing = status == SyncStatus.syncing;
         final hasError = status == SyncStatus.error;
+        final authRequired = status == SyncStatus.authRequired;
         final lastSync = SyncEngine.instance.lastSyncTime;
 
         String label;
@@ -25,6 +26,12 @@ class SyncIndicator extends StatelessWidget {
         if (isSyncing) {
           label = 'Syncing...';
           dotColor = Colors.amber;
+        } else if (authRequired) {
+          // Do not make an expired session look healthy (or repeatedly retry
+          // it in the background). Keep this as a quiet, actionable state;
+          // tapping still gives the host app a chance to refresh auth.
+          label = 'Sign in to sync';
+          dotColor = Colors.red;
         } else if (hasError) {
           label = 'Sync error';
           dotColor = Colors.red;
@@ -67,7 +74,10 @@ class SyncIndicator extends StatelessWidget {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 const SizedBox(width: 6),
                 Text(

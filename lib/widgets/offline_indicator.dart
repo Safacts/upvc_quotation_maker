@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// An indicator widget that shows the current offline/online status.
 ///
-/// Displays a small banner at the top of the screen when the device is offline.
+/// Displays a quiet, passive status row when the device is offline.
 /// Automatically hides when online.
 class OfflineIndicator extends StatelessWidget {
   const OfflineIndicator({
@@ -23,19 +23,22 @@ class OfflineIndicator extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.orange.shade700,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Row(
         children: [
-          const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+          Icon(
+            Icons.wifi_off,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -45,7 +48,7 @@ class OfflineIndicator extends StatelessWidget {
   }
 }
 
-/// A banner-style offline indicator with more prominence.
+/// A compact offline/pending row. It only offers a retry action when useful.
 class OfflineBanner extends StatelessWidget {
   const OfflineBanner({
     super.key,
@@ -75,14 +78,16 @@ class OfflineBanner extends StatelessWidget {
     IconData icon;
 
     if (isOfflineMode) {
-      message = hasPendingSync
-          ? 'Offline • $pendingSyncCount items pending sync'
-          : 'You are offline';
-      bgColor = Colors.orange.shade700;
+      message =
+          hasPendingSync
+              ? 'Saved here • $pendingSyncCount waiting for internet'
+              : 'Offline • your work is saved on this device';
+      bgColor = Theme.of(context).colorScheme.surfaceContainerHighest;
       icon = Icons.wifi_off;
     } else if (hasPendingSync) {
-      message = '$pendingSyncCount items pending sync';
-      bgColor = Colors.blue.shade700;
+      message =
+          '$pendingSyncCount item${pendingSyncCount == 1 ? '' : 's'} waiting to sync';
+      bgColor = Theme.of(context).colorScheme.surfaceContainerHighest;
       icon = Icons.sync;
     } else {
       return const SizedBox.shrink();
@@ -90,38 +95,29 @@ class OfflineBanner extends StatelessWidget {
 
     return Material(
       color: bgColor,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13,
                 ),
               ),
-              if (hasPendingSync && !isOfflineMode)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-              if (hasPendingSync && isOfflineMode)
-                const Icon(Icons.cloud_off, color: Colors.white, size: 16),
-            ],
-          ),
+            ),
+            if (hasPendingSync && !isOfflineMode && onTap != null)
+              TextButton(onPressed: onTap, child: const Text('Retry')),
+          ],
         ),
       ),
     );

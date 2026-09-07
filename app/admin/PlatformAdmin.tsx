@@ -7,6 +7,92 @@ import { slugify } from "@/lib/slug";
 import "./admin.css";
 import LegalDocFiller from "./LegalDocFiller";
 
+// ── Lightweight inline icon set (no external deps, stroke = currentColor) ──
+const Icon = {
+  Search: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+  ),
+  Building: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" {...p}>
+      <rect x="4" y="2" width="16" height="20" rx="1.5" />
+      <path d="M9 22V12h6v10M9 7h.01M12 7h.01M15 7h.01M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15h.01" strokeWidth="1.9" />
+    </svg>
+  ),
+  FileText: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M10 13H8M16 17H8M13 13h3" />
+    </svg>
+  ),
+  Mail: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m2 7 10 7 10-7" />
+    </svg>
+  ),
+  Bot: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="3" y="11" width="18" height="10" rx="2" />
+      <path d="M12 11V9a3 3 0 1 0-3 3h6a3 3 0 1 0-3-3" />
+      <circle cx="9" cy="16" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="16" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  Upload: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M17 8l-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  ),
+  Plus: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" {...p}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  ),
+  X: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="14" height="14" {...p}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  ),
+  Trash: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  ),
+  Archive: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <rect x="2" y="4" width="20" height="5" rx="1" />
+      <path d="M4 9v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" />
+      <path d="M10 13h4" />
+    </svg>
+  ),
+  Undo: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M9 8H5V4" />
+      <path d="M5 8a7 7 0 1 1 7 7H5" />
+    </svg>
+  ),
+  Check: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="14" height="14" {...p}>
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  Users: (p: any) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" {...p}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+};
+
 // LIVE Supabase project (Mumbai, jqjxhhgfwdzckijnnede) via client-safe config.
 // Anon key is PUBLIC by design — safe in client bundles; RLS is the boundary.
 import { SUPABASE_PUBLIC_URL as API_BASE, SUPABASE_PUBLIC_ANON_KEY as KEY } from "@/lib/supabase-public";
@@ -243,6 +329,9 @@ export default function PlatformAdmin() {
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [focusedClientIdx, setFocusedClientIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -263,6 +352,7 @@ export default function PlatformAdmin() {
   const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
   const [signupRequests, setSignupRequests] = useState<any[]>([]);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [requestsPageOpen, setRequestsPageOpen] = useState(false);
   const [composeMail, setComposeMail] = useState<{ req: any; to: string; subject: string; body: string } | null>(null);
   const [sendingMail, setSendingMail] = useState(false);
   const [signupView, setSignupView] = useState<"active" | "archived">("active");
@@ -928,6 +1018,87 @@ export default function PlatformAdmin() {
     }
   }
 
+
+  // ── Global shortcuts: Cmd/Ctrl+K, /, Esc, Cmd/Ctrl+N, Cmd/Ctrl+S, ?, arrows ──
+  useEffect(() => {
+    function isTypingTarget(el: Element | null) {
+      if (!el) return false;
+      const tag = (el as HTMLElement).tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as HTMLElement).isContentEditable;
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      const active = document.activeElement;
+      if (mod && (e.key.toLowerCase() === "k" || e.key === "/")) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+      if (!mod && e.key === "/" && !isTypingTarget(active) && !editorOpen && !showShortcuts && !showSignupModal && !requestsPageOpen && !composeMail && !legalOpen && !confirmDialog) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (!mod && e.key === "?" && !isTypingTarget(active)) {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+        return;
+      }
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (confirmDialog) { setConfirmDialog(null); return; }
+        if (composeMail) { setComposeMail(null); return; }
+        if (showSignupModal) { setShowSignupModal(false); return; }
+        if (requestsPageOpen) { setRequestsPageOpen(false); return; }
+        if (legalOpen) { setLegalOpen(false); return; }
+        if (editorOpen) { closeEditor(); return; }
+        if (searchQuery && active === searchInputRef.current) { setSearchQuery(""); return; }
+        (active as HTMLElement)?.blur?.();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "n" && !isCustomer) {
+        e.preventDefault();
+        if (!editorOpen && !legalOpen) openEditor(null);
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "s" && editorOpen) {
+        e.preventDefault();
+        const formEl = document.querySelector(".admin-editor") as HTMLFormElement | null;
+        if (formEl) formEl.requestSubmit();
+        return;
+      }
+      const cards = document.querySelectorAll(".client-card");
+      if (!editorOpen && !showSignupModal && !requestsPageOpen && !composeMail && !legalOpen && cards.length > 0) {
+        const inSearch = active === searchInputRef.current;
+        const inList = active?.closest?.(".admin-client-list") != null;
+        if ((inSearch || inList || !isTypingTarget(active)) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+          e.preventDefault();
+          setFocusedClientIdx(idx => {
+            const len = document.querySelectorAll(".client-card").length;
+            const next = e.key === "ArrowDown" ? Math.min(len - 1, idx + 1) : Math.max(0, idx - 1);
+            setTimeout(() => {
+              const el = document.querySelectorAll(".client-card")[next] as HTMLElement | undefined;
+              el?.scrollIntoView({ block: "nearest" });
+            }, 0);
+            return next;
+          });
+          return;
+        }
+        if (e.key === "Enter" && (inSearch || inList || !isTypingTarget(active))) {
+          if (cards.length > 0 && focusedClientIdx >= 0 && focusedClientIdx < cards.length) {
+            const el = cards[focusedClientIdx] as HTMLElement;
+            e.preventDefault();
+            el.click();
+          }
+          return;
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editorOpen, showShortcuts, showSignupModal, requestsPageOpen, composeMail, legalOpen, confirmDialog, isCustomer, searchQuery, focusedClientIdx]);
+
   if (!ready) {
     return <div className="admin-loading">Loading admin panel...</div>;
   }
@@ -936,10 +1107,18 @@ export default function PlatformAdmin() {
     const statusOk =
       statusFilter === "all" || (statusFilter === "active") === !!c.is_active;
     if (!statusOk) return false;
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    const name = (c.config?.companyName || c.id).toLowerCase();
-    return name.includes(q) || c.id.toLowerCase().includes(q);
+    const cfg = c.config || {};
+    const hay = [
+      cfg.companyName || "",
+      c.id || "",
+      cfg.companyEmail || "",
+      cfg.companyContact || "",
+      cfg.companyAddress || "",
+      cfg.companyProprietor || "",
+    ].join(" ").toLowerCase();
+    return hay.includes(q);
   });
 
   const activeCount = clients.filter((c) => c.is_active).length;
@@ -952,9 +1131,11 @@ export default function PlatformAdmin() {
   return (
     <>
       {toast && (
-        <div className={`toast ${toast.type}`}>
-          <span>{toast.type === "success" ? "✓" : "✕"}</span>
-          {toast.msg}
+        <div className={`toast-container`}>
+          <div className={`toast ${toast.type}`}>
+            <span style={{ display: 'inline-flex' }}>{toast.type === "success" ? <Icon.Check /> : <Icon.X />}</span>
+            {toast.msg}
+          </div>
         </div>
       )}
 
@@ -975,14 +1156,35 @@ export default function PlatformAdmin() {
               </div>
             </div>
             <div className="admin-search">
-              <span className="admin-search-icon">⌕</span>
+              <span className="admin-search-icon"><Icon.Search width={14} height={14} /></span>
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search clients..."
+                placeholder="Search name, ID, email..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setFocusedClientIdx(0); }}
+                onKeyDown={(e) => { if (e.key === "Escape") { (e.target as HTMLInputElement).blur(); } }}
+                aria-label="Search clients"
               />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="admin-search-clear"
+                  aria-label="Clear search"
+                  onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+                >
+                  <Icon.X width={12} height={12} />
+                </button>
+              ) : (
+                <span className="admin-search-kbd" title="Press / or Ctrl+K to focus">/</span>
+              )}
             </div>
+            {searchQuery && (
+              <div className="admin-search-meta">
+                <span>{filteredClients.length} match{filteredClients.length !== 1 ? "es" : ""}</span>
+                <button type="button" className="admin-search-meta-clear" onClick={() => setSearchQuery("")}>Clear</button>
+              </div>
+            )}
             <div className="admin-status-filter">
               {(["active", "inactive", "all"] as const).map((f) => (
                 <button
@@ -1008,18 +1210,22 @@ export default function PlatformAdmin() {
                 {statusFilter === "active" ? "Active" : statusFilter === "inactive" ? "Inactive" : "All"} Clients ({filteredClients.length})
               </div>
             )}
-            {filteredClients.map((client) => {
+            {filteredClients.map((client, idx) => {
               const config = client.config || {};
               const isActive = client.is_active;
               const trialDate = client.trial_expires_at ? new Date(client.trial_expires_at) : null;
               const trialExpired = !!trialDate && new Date() > trialDate;
               const isSelected = editingClient?.id === client.id;
+              const isFocused = idx === focusedClientIdx;
               const initials = (config.companyName || client.id).slice(0, 2).toUpperCase();
               return (
                 <div
                   key={client.id}
-                  className={`client-card${isSelected ? " active" : ""}`}
+                  className={`client-card${isSelected ? " active" : ""}${isFocused ? " focused" : ""}`}
                   onClick={() => openEditor(client)}
+                  onMouseEnter={() => setFocusedClientIdx(idx)}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") openEditor(client); }}
                 >
                   <div className="client-avatar">
                     {config.logoUrl
@@ -1040,39 +1246,42 @@ export default function PlatformAdmin() {
           <div className="admin-sidebar-footer">
             {!isCustomer && (
               <>
-                <button className="add-client-btn" onClick={() => openEditor(null)}>
-                  <span>+</span> New Client
+                <button className="add-client-btn" onClick={() => openEditor(null)} title="New client (⌘ N)">
+                  <Icon.Plus /> New Client
                 </button>
                 <div className="sidebar-action-row">
                   <button
                     className="sidebar-action-btn"
-                    onClick={() => setShowSignupModal(true)}
+                    onClick={() => { setRequestsPageOpen(true); setEditorOpen(false); setLegalOpen(false); }}
+                    style={{ background: "rgba(196,74,16,0.14)", borderColor: "rgba(196,74,16,0.22)", color: "white" }}
+                    title="Lead inbox — full page"
                   >
-                    Requests
+                    <Icon.Users width={13} height={13} /> Requests
                     {(signupRequests?.length ?? 0) > 0 && (
-                      <span className="sidebar-badge">{signupRequests.length}</span>
+                      <span className="sidebar-badge" style={{ background: "var(--orange)", border: "1px solid rgba(255,255,255,0.18)" }}>{signupRequests.length}</span>
                     )}
                   </button>
                   <button
                     className="sidebar-action-btn"
                     onClick={() => setComposeMail({ req: null, to: "", subject: "", body: "" })}
                   >
-                    ✉ Compose
+                    <Icon.Mail width={13} height={13} /> Compose
                   </button>
                   <button
                     className="sidebar-action-btn"
                     onClick={() => router.push("/admin/agent")}
                   >
-                    🤖 AI Agent
+                    <Icon.Bot width={13} height={13} /> AI Agent
                   </button>
                   <button className="sidebar-action-btn" onClick={openLegalDocuments}>
-                    📄 Legal Docs
+                    <Icon.FileText width={13} height={13} /> Legal Docs
                   </button>
                 </div>
               </>
             )}
             <div className="sidebar-meta">
               <span className="sidebar-user">{currentUser}{isCustomer ? " (customer)" : ""}</span>
+              <button className="sidebar-kbd-help" onClick={() => setShowShortcuts(true)} title="Shortcuts (?)">?</button>
               <button className="sidebar-logout" onClick={handleLogout}>Sign out</button>
             </div>
           </div>
@@ -1080,17 +1289,71 @@ export default function PlatformAdmin() {
 
         {/* ─── MAIN PANEL ──────────────────────────────── */}
         <main className="admin-main">
-          {legalOpen ? (
+          {requestsPageOpen ? (
+            <div className="admin-editor" style={{ background: "var(--paper)" }}>
+              <div className="admin-editor-header" style={{ background: "var(--paper-warm)", borderBottom: "1px solid var(--line)" }}>
+                <div className="editor-client-info" style={{ marginBottom: 0 }}>
+                  <div className="editor-client-logo" style={{ background: "var(--white)" }}><Icon.Users width={22} height={22} /></div>
+                  <div className="editor-client-meta">
+                    <h2>Lead Inbox</h2>
+                    <div className="editor-client-desc">Every signup is a future client — convert in one click. <span style={{ background: "var(--white)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999, fontWeight: 700, fontSize: 11 }}>{(signupRequests || []).filter((r:any)=> r.status !== "archived").length} active</span> <span style={{ background: "var(--rust)", color: "white", padding: "3px 8px", borderRadius: 999, fontWeight: 700, fontSize: 11 }}>{(signupRequests || []).length} total</span></div>
+                  </div>
+                  <div className="editor-client-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setRequestsPageOpen(false)}><Icon.X /> Close</button>
+                    <button type="button" className="btn-secondary" onClick={() => setShowSignupModal(true)} title="Open as floating window">Pop-out</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+                  {(["active", "archived"] as const).map((v) => {
+                    const cnt = v === "active" ? (signupRequests||[]).filter((r:any)=> r.status !== "archived").length : (signupRequests||[]).filter((r:any)=> r.status === "archived").length;
+                    const active = signupView === v;
+                    return (
+                    <button key={v} onClick={() => setSignupView(v)} style={{ padding: "9px 16px", borderRadius: 999, border: "1.5px solid", fontSize: 13, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", background: active ? "var(--rust)" : "var(--white)", borderColor: active ? "transparent" : "var(--line-strong)", color: active ? "white" : "var(--t-muted)", boxShadow: active ? "var(--shadow-rust)" : "none", display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      {v === "active" ? "Active Leads" : "Archived"} <span style={{ background: active ? "rgba(255,255,255,0.18)" : "var(--paper)", border: active ? "1px solid rgba(255,255,255,0.18)" : "1px solid var(--line)", padding: "2px 7px", borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{cnt}</span>
+                    </button>
+                  )})}
+                </div>
+              </div>
+              <div className="admin-editor-body">
+                {(() => {
+                  const filtered = (signupRequests || []).filter((r: any) => signupView === "archived" ? r.status === "archived" : r.status !== "archived");
+                  if (filtered.length === 0) {
+                    return <div className="empty-list" style={{ padding: "48px 16px", background: "var(--white)", border: "1px solid var(--line)", borderRadius: 14, textAlign: "center" }}>{signupView === "archived" ? "No archived requests." : "No active signup requests. Your next lead will appear here."}</div>;
+                  }
+                  return filtered.map((req: any) => {
+                    const cfg = req.config || {};
+                    const statusColor = signupStatusColor(req.status);
+                    const isArchived = req.status === "archived";
+                    return (
+                      <div key={req.id} style={{ border: "1.5px solid var(--line)", borderLeft: `4px solid ${statusColor}`, borderRadius: 14, padding: 16, marginBottom: 12, background: "var(--white)", boxShadow: "var(--shadow-xs)", opacity: isArchived ? 0.82 : 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                          <div><strong style={{ fontSize: 14 }}>{req.email}</strong><div style={{ color: "var(--t-muted)", fontSize: 13 }}>{[req.name, req.phone].filter(Boolean).join(" · ")}</div></div>
+                          <span style={{ color: statusColor, fontWeight: 700, fontSize: 12, textTransform: "capitalize", flexShrink: 0, background: "var(--paper)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999 }}>{req.status}</span>
+                        </div>
+                        <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 6 }}>Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}</div>
+                        {(cfg.companyName || cfg.city || cfg.gstNumber) && <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>{[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}</div>}
+                        <div className="modal-actions" style={{ marginTop: 12, justifyContent: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                          {!isArchived && <><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => openCompose(req)}>Send Email</button><button className="btn-primary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => { setRequestsPageOpen(false); useSignupRequest(req); }}>Convert to Client</button><button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px", marginLeft: "auto" }} onClick={() => archiveRequest(req)}><Icon.Archive style={{ marginRight: 6 }} /> Archive</button></>}
+                          {isArchived && <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}><Icon.Undo style={{ marginRight: 6 }} /> Restore</button>}
+                          <button className="btn-danger" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => deleteSignupRequest(req)}><Icon.Trash style={{ marginRight: 6 }} /> Delete</button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          ) : legalOpen ? (
             <div className="admin-editor legal-editor">
               <div className="admin-editor-header">
                 <div className="editor-client-info">
-                  <div className="editor-client-logo">📄</div>
+                  <div className="editor-client-logo"><Icon.FileText width={22} height={22} /></div>
                   <div className="editor-client-meta">
                     <h2>Legal Documents</h2>
                     <div className="editor-client-desc">Edit client-ready policies and agreements</div>
                   </div>
                   <div className="editor-client-actions">
-                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={() => setLegalOpen(false)}><Icon.X /> Close</button>
                   </div>
                 </div>
               </div>
@@ -1131,9 +1394,9 @@ export default function PlatformAdmin() {
             </div>
           ) : !editorOpen ? (
             <div className="admin-welcome">
-              <div className="admin-welcome-icon">🏢</div>
-              <h2>Welcome back!</h2>
-              <p>Select a client from the sidebar to edit their configuration, or create a new client.</p>
+              <div className="admin-welcome-icon"><Icon.Building width={38} height={38} style={{ color: 'var(--rust)' }} /></div>
+              <h2>Clients</h2>
+              <p>Pick a client to edit, or create a new one.</p>
               <div className="admin-stats">
                 <div className="admin-stat-card">
                   <div className="num">{clients.length}</div>
@@ -1175,7 +1438,7 @@ export default function PlatformAdmin() {
                     <span className={`badge ${form.active ? "active" : "inactive"}`}>
                       {form.active ? "Active" : "Inactive"}
                     </span>
-                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}>✕ Close</button>
+                    <button type="button" className="btn-secondary" onClick={closeEditor} style={{ padding: "8px 14px", fontSize: 13 }}><Icon.X style={{ marginRight: 6 }} /> Close</button>
                   </div>
                 </div>
 
@@ -1203,7 +1466,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Identity</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Client ID {editingClient && <span style={{ color: "#94a3b8", fontWeight: 400 }}>(cannot be changed)</span>}</label>
+                        <label>Client ID {editingClient && <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(cannot be changed)</span>}</label>
                         <input
                           type="text"
                           value={form.id}
@@ -1244,7 +1507,7 @@ export default function PlatformAdmin() {
                         <label>Company Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Logo
+                            <Icon.Upload /> Upload Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1280,7 +1543,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Top Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Top Logo
+                            <Icon.Upload /> Upload Top Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1299,7 +1562,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceTopLogoUrl} placeholder="https://example.com/invoice-top-logo.png" onChange={(e) => onInvoiceTopUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceTopLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceTopLogoUrl", ""); setInvoiceTopPreviewSrc(null); if (invoiceTopFileRef.current) invoiceTopFileRef.current.value = ""; }} className="btn-danger" style={{ padding: '8px 14px', fontSize: 13, whiteSpace: 'nowrap' }}><Icon.X style={{ marginRight: 6 }} /> Remove</button>
                           )}
                         </div>
                       </div>
@@ -1307,7 +1570,7 @@ export default function PlatformAdmin() {
                         <label>Invoice Background Watermark Logo</label>
                         <div className="upload-row">
                           <label className="upload-btn-label">
-                            <span>📁</span> Upload Background Logo
+                            <Icon.Upload /> Upload Background Logo
                             <input
                               type="file"
                               accept="image/*"
@@ -1326,7 +1589,7 @@ export default function PlatformAdmin() {
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <input type="url" value={form.invoiceBackgroundLogoUrl} placeholder="https://example.com/invoice-bg-logo.png" onChange={(e) => onInvoiceBgUrlChange(e.target.value)} style={{ flex: 1 }} />
                           {form.invoiceBackgroundLogoUrl && (
-                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>✕ Remove</button>
+                            <button type="button" onClick={() => { setF("invoiceBackgroundLogoUrl", ""); setInvoiceBgPreviewSrc(null); if (invoiceBgFileRef.current) invoiceBgFileRef.current.value = ""; }} className="btn-danger" style={{ padding: '8px 14px', fontSize: 13, whiteSpace: 'nowrap' }}><Icon.X style={{ marginRight: 6 }} /> Remove</button>
                           )}
                         </div>
                       </div>
@@ -1340,7 +1603,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Portal Access</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Portal Password <span style={{ color: "#94a3b8", fontWeight: 400 }}>(leave blank to keep current)</span></label>
+                        <label>Portal Password <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(leave blank to keep current)</span></label>
                         <input
                           type="password"
                           value={form.portalPassword}
@@ -1444,7 +1707,7 @@ export default function PlatformAdmin() {
                         <input type="url" value={form.heroImage} placeholder="https://example.com/hero.jpg" onChange={(e) => onHeroImageUrlChange(e.target.value)} />
                       </div>
                       <label className="upload-btn-label" style={{ display: "inline-flex", marginBottom: 12 }}>
-                        <span>📁</span> Upload Hero Image
+                        <Icon.Upload /> Upload Hero Image
                         <input
                           type="file"
                           accept="image/*"
@@ -1460,7 +1723,7 @@ export default function PlatformAdmin() {
                     <div className="form-section">
                       <div className="form-section-title">Content</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Services Offered <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <label>Services Offered <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma separated)</span></label>
                         <input type="text" value={form.services} placeholder="UPVC Windows, UPVC Doors, Glass Installation" onChange={(e) => setF("services", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
@@ -1472,7 +1735,7 @@ export default function PlatformAdmin() {
                         <textarea value={form.aboutText} rows={4} placeholder="Tell customers about your business..." onChange={(e) => setF("aboutText", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
-                        <label>Portfolio Images <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma-separated URLs)</span></label>
+                        <label>Portfolio Images <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma-separated URLs)</span></label>
                         <textarea value={form.gallery} rows={3} placeholder="https://example.com/photo1.jpg, https://example.com/photo2.jpg" onChange={(e) => setF("gallery", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
@@ -1480,22 +1743,22 @@ export default function PlatformAdmin() {
                         <input type="url" value={form.mapUrl} placeholder="https://maps.google.com/maps?embed=..." onChange={(e) => setF("mapUrl", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label>Customer Reviews <span style={{ color: "#94a3b8", fontWeight: 400 }}>(JSON array)</span></label>
+                        <label>Customer Reviews <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(JSON array)</span></label>
                         <textarea value={form.testimonials} rows={4} placeholder={JSON.stringify([{ name: "Customer", text: "Great service!", role: "Homeowner" }], null, 2)} onChange={(e) => setF("testimonials", e.target.value)} />
                       </div>
                     </div>
                     <div className="form-section">
-                      <div className="form-section-title">Search Engine Optimization (SEO)</div>
+                      <div className="form-section-title">SEO</div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>SEO Meta Title</label>
                         <input type="text" value={form.seoTitle} placeholder="e.g. Best UPVC Windows in Hyderabad | Venkateshwara" onChange={(e) => setF("seoTitle", e.target.value)} />
                       </div>
                       <div className="form-group" style={{ marginBottom: 16 }}>
                         <label>SEO Meta Description</label>
-                        <textarea value={form.seoDescription} rows={3} placeholder="A short description of your business to show on Google search results." onChange={(e) => setF("seoDescription", e.target.value)} />
+                        <textarea value={form.seoDescription} rows={3} placeholder="Shown on Google. Keep under 155 characters." onChange={(e) => setF("seoDescription", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label>SEO Keywords <span style={{ color: "#94a3b8", fontWeight: 400 }}>(comma separated)</span></label>
+                        <label>SEO Keywords <span style={{ color: "var(--t-ghost)", fontWeight: 400 }}>(comma separated)</span></label>
                         <input type="text" value={form.seoKeywords} placeholder="upvc windows, upvc doors, interior" onChange={(e) => setF("seoKeywords", e.target.value)} />
                       </div>
                     </div>
@@ -1541,7 +1804,7 @@ export default function PlatformAdmin() {
                 </button>
                 {editingClient && !isCustomer && (
                   <button type="button" className="btn-danger" onClick={() => deleteClient()}>
-                    🗑 Delete Client
+                    <Icon.Trash /> Delete Client
                   </button>
                 )}
                 <div style={{ flex: 1 }} />
@@ -1568,34 +1831,53 @@ export default function PlatformAdmin() {
       )}
 
       {showSignupModal && (
-        <div className="modal" style={{ display: "flex" }}>
-          <div className="modal-content" style={{ maxWidth: 600, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
-            <h3>Signup Requests</h3>
-
-            {/* Tab switcher */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-              {(["active", "archived"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setSignupView(v)}
-                  style={{
-                    padding: "6px 18px",
-                    borderRadius: "var(--radius-md)",
-                    border: "1.5px solid",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    fontFamily: "inherit",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    background: signupView === v ? "var(--primary)" : "var(--bg)",
-                    borderColor: signupView === v ? "var(--primary)" : "var(--border)",
-                    color: signupView === v ? "white" : "var(--text-mid)",
-                  }}
-                >
-                  {v === "active" ? "Active" : "🗄 Archive"}
-                </button>
-              ))}
+        <div className="modal" style={{ display: "flex", padding: 18 }} onClick={() => setShowSignupModal(false)}>
+          <div className="modal-content" style={{ maxWidth: 860, width: "100%", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            {/* Header — lead system hero */}
+            <div style={{ padding: "26px 28px 18px", borderBottom: "1px solid var(--line)", background: "var(--paper-warm)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--white)", border: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--rust)", flexShrink: 0, boxShadow: "var(--shadow-xs)" }}><Icon.Users width={18} height={18} /></div>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <h3 style={{ margin: 0, fontSize: 20, letterSpacing: -0.3 }}>Lead Inbox</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--t-muted)", lineHeight: 1.5 }}>New signups. Convert to clients.</p>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flexShrink: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, background: "var(--white)", border: "1px solid var(--line)", padding: "6px 10px", borderRadius: 999, color: "var(--t-body)" }}>{(signupRequests || []).filter((r:any)=> r.status !== "archived").length} Active</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, background: "var(--rust)", color: "white", padding: "6px 12px", borderRadius: 999, boxShadow: "var(--shadow-rust)" }}>{(signupRequests || []).length} Total</span>
+                  <button className="btn-secondary" style={{ padding: "8px 12px", fontSize: 13 }} onClick={() => setShowSignupModal(false)}><Icon.X width={12} height={12} /> Close</button>
+                </div>
+              </div>
+              {/* Filter pills — large */}
+              <div style={{ display: "flex", gap: 8, marginTop: 18, flexWrap: "wrap" }}>
+                {(["active", "archived"] as const).map((v) => {
+                  const cnt = v === "active" ? (signupRequests||[]).filter((r:any)=> r.status !== "archived").length : (signupRequests||[]).filter((r:any)=> r.status === "archived").length;
+                  const active = signupView === v;
+                  return (
+                  <button
+                    key={v}
+                    onClick={() => setSignupView(v)}
+                    style={{
+                      padding: "9px 16px",
+                      borderRadius: 999,
+                      border: "1.5px solid",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      background: active ? "var(--rust)" : "var(--white)",
+                      borderColor: active ? "transparent" : "var(--line-strong)",
+                      color: active ? "white" : "var(--t-muted)",
+                      boxShadow: active ? "var(--shadow-rust)" : "none",
+                      display: "inline-flex", alignItems: "center", gap: 8
+                    }}
+                  >
+                    {v === "active" ? "Active Leads" : "Archived"} <span style={{ background: active ? "rgba(255,255,255,0.18)" : "var(--paper)", border: active ? "1px solid rgba(255,255,255,0.18)" : "1px solid var(--line)", padding: "2px 7px", borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{cnt}</span>
+                  </button>
+                )})}
+              </div>
             </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 0" }}>
 
             {(() => {
               const filtered = (signupRequests || []).filter((r: any) =>
@@ -1603,7 +1885,7 @@ export default function PlatformAdmin() {
               );
               if (filtered.length === 0) {
                 return (
-                  <p style={{ color: "#94a3b8", textAlign: "center", padding: "24px 0" }}>
+                  <p style={{ color: "var(--t-ghost)", textAlign: "center", padding: "24px 0" }}>
                     {signupView === "archived" ? "No archived requests." : "No active signup requests."}
                   </p>
                 );
@@ -1613,11 +1895,11 @@ export default function PlatformAdmin() {
                 const statusColor = signupStatusColor(req.status);
                 const isArchived = req.status === "archived";
                 return (
-                  <div key={req.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 12, opacity: isArchived ? 0.8 : 1 }}>
+                  <div key={req.id} style={{ border: "1.5px solid var(--line)", borderLeft: `4px solid ${statusColor}`, borderRadius: 14, padding: 16, marginBottom: 12, background: "var(--white)", boxShadow: "var(--shadow-xs)", opacity: isArchived ? 0.82 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                       <div>
                         <strong>{req.email}</strong>
-                        <div style={{ color: "#475569", fontSize: 13 }}>
+                        <div style={{ color: "var(--t-muted)", fontSize: 13 }}>
                           {[req.name, req.phone].filter(Boolean).join(" · ")}
                         </div>
                       </div>
@@ -1625,11 +1907,11 @@ export default function PlatformAdmin() {
                         {req.status}
                       </span>
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>
                       Created {req.created_at ? new Date(req.created_at).toLocaleString() : ""}
                     </div>
                     {(cfg.companyName || cfg.city || cfg.gstNumber) && (
-                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: "var(--t-muted)", fontSize: 12, marginTop: 4 }}>
                         {[cfg.companyName, cfg.city, cfg.gstNumber ? "GST: " + cfg.gstNumber : ""].filter(Boolean).join(" · ")}
                       </div>
                     )}
@@ -1648,13 +1930,13 @@ export default function PlatformAdmin() {
                             title="Move to archive — data is preserved"
                             onClick={() => archiveRequest(req)}
                           >
-                            🗄 Archive
+                            <Icon.Archive style={{ marginRight: 6 }} /> Archive
                           </button>
                         </>
                       )}
                       {isArchived && (
                         <button className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }} onClick={() => archiveRequest({ ...req, _restore: true })}>
-                          ↩ Restore
+                          <Icon.Undo style={{ marginRight: 6 }} /> Restore
                         </button>
                       )}
                       <button
@@ -1663,16 +1945,44 @@ export default function PlatformAdmin() {
                         title="Permanently delete — cannot be undone"
                         onClick={() => deleteSignupRequest(req)}
                       >
-                        🗑 Delete
+                        <Icon.Trash style={{ marginRight: 6 }} /> Delete
                       </button>
                     </div>
                   </div>
                 );
               });
             })()}
-
-            <div className="modal-actions" style={{ marginTop: 16 }}>
+            </div>
+            <div style={{ padding: "12px 18px", borderTop: "1px solid var(--line)", background: "var(--white)", flexShrink: 0, display: "flex", justifyContent: "flex-end" }}>
               <button className="btn-secondary" onClick={() => setShowSignupModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShortcuts && (
+        <div className="modal" style={{ display: "flex" }} onClick={() => setShowShortcuts(false)}>
+          <div className="modal-content" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 10 }}>Keyboard Shortcuts <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "4px 8px", borderRadius: 999, color: "var(--t-muted)" }}>Press ? to toggle</span></h3>
+            <p style={{ marginBottom: 18, color: "var(--t-muted)", fontSize: 13 }}>Works on Mac and Windows. Ignored while typing.</p>
+            <div style={{ display: "grid", gap: 10 }}>
+              {[
+                ["Focus search", "⌘ K  /  Ctrl K  or  /"],
+                ["Clear search / Close", "Esc"],
+                ["New client", "⌘ N  /  Ctrl N"],
+                ["Save client", "⌘ S  /  Ctrl S"],
+                ["Navigate list", "↑  ↓  then Enter"],
+                ["Toggle this help", "?"],
+                ["Quick filter", "Click Active / Inactive / All"],
+              ].map(([a,b]) => (
+                <div key={a} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--t-body)" }}>{a}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, background: "var(--white)", border: "1px solid var(--line-strong)", padding: "4px 8px", borderRadius: 8, color: "var(--t-muted)", fontFamily: "ui-monospace, monospace" }}>{b}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions" style={{ marginTop: 18 }}>
+              <button className="btn-secondary" onClick={() => setShowShortcuts(false)}>Close</button>
             </div>
           </div>
         </div>
@@ -1681,7 +1991,7 @@ export default function PlatformAdmin() {
       {composeMail && (
         <div className="modal" style={{ display: "flex" }}>
           <div className="modal-content" style={{ maxWidth: 560, width: "100%", maxHeight: "88vh", overflowY: "auto" }}>
-            <h3>✉ Compose Email</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon.Mail /> Compose Email</h3>
             {composeMail.req && (
               <p className="modal-hint">
                 Replying to <strong>{composeMail.req.email}</strong> — status: {composeMail.req.status}

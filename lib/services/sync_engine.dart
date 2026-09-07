@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
 import '../models_sync.dart';
@@ -32,7 +33,7 @@ import 'connectivity_service.dart';
 /// [OfflineDatabase] has no persistent store in a browser, so the push queue
 /// is empty by construction and the pull only warms an in-memory cache. Sync
 /// stays a no-op-ish background refresh and must never throw into startup.
-class SyncEngine {
+class SyncEngine with WidgetsBindingObserver {
   SyncEngine._();
   static final SyncEngine instance = SyncEngine._();
 
@@ -72,6 +73,8 @@ class SyncEngine {
   StreamSubscription<bool>? _connectivitySub;
 
   bool _disposed = false;
+  bool _lifecycleRegistered = false;
+  bool _authFailureThisRun = false;
 
   /// Initialize the sync engine. Never throws: a sync failure must not be able
   /// to take down app startup.
@@ -89,6 +92,10 @@ class SyncEngine {
 
       _startPeriodicSync();
       _listenForReconnect();
+      if (!_lifecycleRegistered) {
+        WidgetsBinding.instance.addObserver(this);
+        _lifecycleRegistered = true;
+      }
       debugPrint('SyncEngine initialized (persistent=${_db.isPersistent})');
     } catch (e, st) {
       debugPrint('SyncEngine: initialize failed (non-fatal): $e\n$st');
@@ -101,9 +108,11 @@ class SyncEngine {
     _periodicSyncTimer = Timer.periodic(_syncInterval, (_) {
       // Fire-and-forget, but swallow errors so an unhandled rejection cannot
       // escape the timer callback.
-      unawaited(syncIfOnline().catchError((Object e) {
-        debugPrint('SyncEngine: periodic sync error: $e');
-      }));
+      unawaited(
+        syncIfOnline().catchError((Object e) {
+          debugPrint('SyncEngine: periodic sync error: $e');
+        }),
+      );
     });
   }
 
@@ -114,10 +123,12 @@ class SyncEngine {
     _connectivitySub = _connectivity.connectivityStream.listen(
       (online) {
         if (!online || _disposed) return;
-        unawaited(syncAll().catchError((Object e) {
-          debugPrint('SyncEngine: reconnect sync error: $e');
-          return SyncResult(success: false, errorMessage: e.toString());
-        }));
+        unawaited(
+          syncAll().catchError((Object e) {
+            debugPrint('SyncEngine: reconnect sync error: $e');
+            return SyncResult(success: false, errorMessage: e.toString());
+          }),
+        );
       },
       onError: (Object e) => debugPrint('SyncEngine: connectivity error: $e'),
       cancelOnError: false,
@@ -159,6 +170,7 @@ class SyncEngine {
 
   Future<SyncResult> _runSync({String? clientId}) async {
     _isSyncing = true;
+    _authFailureThisRun = false;
     _setStatus(SyncStatus.syncing);
 
     final stopwatch = Stopwatch()..start();
@@ -193,9 +205,10 @@ class SyncEngine {
       itemsSynced += pullResult.itemsSynced;
       itemsFailed += pullResult.itemsFailed;
       if (pullResult.errorMessage.isNotEmpty) {
-        errorMessage = errorMessage.isEmpty
-            ? pullResult.errorMessage
-            : '$errorMessage; ${pullResult.errorMessage}';
+        errorMessage =
+            errorMessage.isEmpty
+                ? pullResult.errorMessage
+                : '$errorMessage; ${pullResult.errorMessage}';
       }
 
       // Step 3: Sync feature flags (best effort)
@@ -215,7 +228,11 @@ class SyncEngine {
         errorMessage: errorMessage,
       );
 
-      _setStatus(itemsFailed == 0 ? SyncStatus.idle : SyncStatus.error);
+      _setStatus(
+        _authFailureThisRun
+            ? SyncStatus.authRequired
+            : (itemsFailed == 0 ? SyncStatus.idle : SyncStatus.error),
+      );
 
       return SyncResult(
         success: itemsFailed == 0,
@@ -431,7 +448,8 @@ class SyncEngine {
       for (final entry in manifest.entries) {
         final contentType = entry.key;
         final serverVersion = _asInt(entry.value['version']) ?? 0;
-        final localVersion = _asInt(localManifest[contentType]?['version']) ?? 0;
+        final localVersion =
+            _asInt(localManifest[contentType]?['version']) ?? 0;
 
         if (serverVersion <= localVersion) continue;
 
@@ -483,10 +501,9 @@ class SyncEngine {
   Future<Map<String, Map<String, dynamic>>> _fetchContentManifest(
     String clientId,
   ) async {
-    final json = await _getJson(
-      '/api/content/manifest',
-      {'client_id': clientId},
-    );
+    final json = await _getJson('/api/content/manifest', {
+      'client_id': clientId,
+    });
     if (json == null) return {};
 
     final manifestList = (json['manifest'] as List?) ?? const [];
@@ -519,7 +536,11 @@ class SyncEngine {
         // Rewind by a minute: server clocks and `updated_at` writes are not
         // perfectly ordered, and an exact-boundary `gt` silently drops rows
         // written in the same second as the previous sync.
-        since = last?.subtract(const Duration(minutes: 1)).toUtc().toIso8601String();
+        since =
+            last
+                ?.subtract(const Duration(minutes: 1))
+                .toUtc()
+                .toIso8601String();
       }
 
       final json = await _getJson('/api/content/sync', {
@@ -560,10 +581,11 @@ class SyncEngine {
           case 'products':
             // Raw rows, NOT Product objects: Product drops `updated_at`, which
             // is the delta cursor for the next pull.
-            final rows = data
-                .whereType<Map>()
-                .map((e) => e.cast<String, dynamic>())
-                .toList();
+            final rows =
+                data
+                    .whereType<Map>()
+                    .map((e) => e.cast<String, dynamic>())
+                    .toList();
             // Products are a read-only server cache — no local pending path,
             // so server-wins applies unconditionally.
             await _db.upsertProductRows(rows, clientId);
@@ -571,12 +593,16 @@ class SyncEngine {
             break;
 
           case 'customers':
-            final rows = data
-                .whereType<Map>()
-                .map((e) => e.cast<String, dynamic>())
-                .toList();
-            final kept =
-                await _withoutPending('offline_customers', rows, clientId);
+            final rows =
+                data
+                    .whereType<Map>()
+                    .map((e) => e.cast<String, dynamic>())
+                    .toList();
+            final kept = await _withoutPending(
+              'offline_customers',
+              rows,
+              clientId,
+            );
             for (final item in kept) {
               await _db.upsertCustomer(item, clientId);
             }
@@ -584,12 +610,16 @@ class SyncEngine {
             break;
 
           case 'payments':
-            final rows = data
-                .whereType<Map>()
-                .map((e) => e.cast<String, dynamic>())
-                .toList();
-            final kept =
-                await _withoutPending('offline_payments', rows, clientId);
+            final rows =
+                data
+                    .whereType<Map>()
+                    .map((e) => e.cast<String, dynamic>())
+                    .toList();
+            final kept = await _withoutPending(
+              'offline_payments',
+              rows,
+              clientId,
+            );
             for (final item in kept) {
               await _db.upsertPayment(item, clientId);
             }
@@ -597,12 +627,16 @@ class SyncEngine {
             break;
 
           case 'quotations':
-            final rows = data
-                .whereType<Map>()
-                .map((e) => e.cast<String, dynamic>())
-                .toList();
-            final kept =
-                await _withoutPending('offline_quotations', rows, clientId);
+            final rows =
+                data
+                    .whereType<Map>()
+                    .map((e) => e.cast<String, dynamic>())
+                    .toList();
+            final kept = await _withoutPending(
+              'offline_quotations',
+              rows,
+              clientId,
+            );
             for (final item in kept) {
               await _db.upsertQuotation(item, clientId);
             }
@@ -621,11 +655,37 @@ class SyncEngine {
         }
       }
 
-      return SyncResult(
-        success: true,
-        itemsSynced: synced,
-        syncType: 'pull',
-      );
+      // Apply server tombstones as hidden local rows. This preserves the
+      // server timestamp so the cursor moves forward and avoids re-fetching
+      // deleted products forever.
+      final deleted = (json['deleted'] as List?) ?? const [];
+      for (final group in deleted) {
+        if (group is! Map || group['content_type'] != contentType) continue;
+        final ids = (group['ids'] as List?) ?? const [];
+        if (contentType == 'products') {
+          final tombstones =
+              ids
+                  .map(
+                    (id) => {
+                      'id': id.toString(),
+                      'name': '',
+                      'category': '',
+                      'description': '',
+                      'price': 0,
+                      'unit': 'SFT',
+                      'soft_deleted': true,
+                      'updated_at':
+                          json['timestamp']?.toString() ??
+                          DateTime.now().toUtc().toIso8601String(),
+                    },
+                  )
+                  .toList();
+          await _db.upsertProductRows(tombstones, clientId);
+          synced += tombstones.length;
+        }
+      }
+
+      return SyncResult(success: true, itemsSynced: synced, syncType: 'pull');
     } catch (e) {
       debugPrint('SyncEngine: fetch delta failed for $contentType: $e');
       return SyncResult(
@@ -651,9 +711,10 @@ class SyncEngine {
     if (rows.isEmpty || !_db.isPersistent) return rows;
     final pending = await _db.getPendingIds(table, clientId);
     if (pending.isEmpty) return rows;
-    final kept = rows
-        .where((r) => !pending.contains((r['id'] ?? '').toString()))
-        .toList();
+    final kept =
+        rows
+            .where((r) => !pending.contains((r['id'] ?? '').toString()))
+            .toList();
     final dropped = rows.length - kept.length;
     if (dropped > 0) {
       debugPrint(
@@ -671,7 +732,9 @@ class SyncEngine {
   /// Sync feature flags from the server.
   Future<void> _syncFeatureFlags(String clientId) async {
     try {
-      final json = await _getJson('/api/feature-flags', {'client_id': clientId});
+      final json = await _getJson('/api/feature-flags', {
+        'client_id': clientId,
+      });
       if (json == null) return;
 
       final raw = (json['flags'] as Map?) ?? const {};
@@ -720,17 +783,20 @@ class SyncEngine {
   ) async {
     try {
       // Relative on web so custom domains and localhost both work.
-      final base = kIsWeb ? Uri.base.resolve(path) : Uri.parse('$_apiOrigin$path');
-      final uri = base.replace(queryParameters: {
-        ...base.queryParameters,
-        ...query,
-      });
+      final base =
+          kIsWeb ? Uri.base.resolve(path) : Uri.parse('$_apiOrigin$path');
+      final uri = base.replace(
+        queryParameters: {...base.queryParameters, ...query},
+      );
 
       final response = await http
           .get(uri, headers: const {'Accept': 'application/json'})
           .timeout(_httpTimeout);
 
       if (response.statusCode != 200) {
+        if (response.statusCode == 401 || response.statusCode == 403) {
+          _authFailureThisRun = true;
+        }
         debugPrint('SyncEngine: GET $path -> ${response.statusCode}');
         return null;
       }
@@ -739,7 +805,9 @@ class SyncEngine {
       debugPrint('SyncEngine: GET $path returned non-object JSON');
       return null;
     } on TimeoutException {
-      debugPrint('SyncEngine: GET $path timed out after ${_httpTimeout.inSeconds}s');
+      debugPrint(
+        'SyncEngine: GET $path timed out after ${_httpTimeout.inSeconds}s',
+      );
       return null;
     } catch (e) {
       debugPrint('SyncEngine: GET $path failed: $e');
@@ -767,15 +835,17 @@ class SyncEngine {
         'client_id': clientId,
         'device_id': await _getDeviceId(),
         'sync_type': 'bidirectional',
-        'status': itemsFailed == 0
-            ? 'success'
-            : (itemsSynced > 0 ? 'partial' : 'failed'),
+        'status':
+            itemsFailed == 0
+                ? 'success'
+                : (itemsSynced > 0 ? 'partial' : 'failed'),
         'items_synced': itemsSynced,
         'items_failed': itemsFailed,
         // Postgres text column; keep it bounded.
-        'error_message': errorMessage.length > 500
-            ? errorMessage.substring(0, 500)
-            : errorMessage,
+        'error_message':
+            errorMessage.length > 500
+                ? errorMessage.substring(0, 500)
+                : errorMessage,
         'sync_duration_ms': durationMs,
       });
     } catch (e) {
@@ -839,6 +909,23 @@ class SyncEngine {
     stopPeriodicSync();
     await _connectivitySub?.cancel();
     _connectivitySub = null;
+    if (_lifecycleRegistered) {
+      WidgetsBinding.instance.removeObserver(this);
+      _lifecycleRegistered = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _disposed) return;
+    // Android may suspend timers/network callbacks while backgrounded. A
+    // single resume-triggered attempt is enough; the in-flight guard prevents
+    // duplicate work when connectivity and lifecycle events arrive together.
+    unawaited(
+      syncIfOnline().catchError((Object error) {
+        debugPrint('SyncEngine: resume sync error: $error');
+      }),
+    );
   }
 
   /// Full teardown — also closes the status stream.
@@ -851,8 +938,4 @@ class SyncEngine {
 }
 
 /// Sync status enum.
-enum SyncStatus {
-  idle,
-  syncing,
-  error,
-}
+enum SyncStatus { idle, syncing, error, authRequired }
