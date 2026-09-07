@@ -36,12 +36,22 @@ export async function POST(request: NextRequest) {
     const code = String(body?.opening_code || "01").trim().slice(0, 20);
     const window_json = body?.window_json;
     const bom_json = body?.bom_json || null;
+    const quotationId = String(body?.quotation_id || "").trim();
     if (!project || !window_json) return consoleJson({ error: "project_name and window_json required" }, 400);
+    if (quotationId) {
+      const owner = await supaGet("quotations", {
+        id: "eq." + quotationId,
+        client_id: "eq." + gate.clientId,
+        select: "id",
+        limit: 1,
+      });
+      if (!Array.isArray(owner) || owner.length === 0) return consoleJson({ error: "Quotation not found" }, 404);
+    }
     const inserted = await supaPost("project_openings", {
       client_id: gate.clientId,
       project_name: project,
       opening_code: code,
-      quotation_id: body?.quotation_id || null,
+      quotation_id: quotationId || null,
       window_json,
       bom_json,
     });
