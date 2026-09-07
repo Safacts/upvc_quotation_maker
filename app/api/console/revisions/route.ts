@@ -14,6 +14,13 @@ export async function GET(request: NextRequest) {
     if (!gate.ok) return gate.error;
     const qid = new URL(request.url).searchParams.get("quotation_id")?.trim();
     if (!qid) return consoleJson({ error: "quotation_id required" }, 400);
+    const owner = await supaGet("quotations", {
+      id: "eq." + qid,
+      client_id: "eq." + gate.clientId,
+      select: "id",
+      limit: 1,
+    });
+    if (!Array.isArray(owner) || owner.length === 0) return consoleJson({ error: "Not found" }, 404);
     const rows = await supaGet("quotation_revisions", {
       quotation_id: "eq." + qid,
       select: "id,revision_number,created_at",
@@ -32,6 +39,13 @@ export async function POST(request: NextRequest) {
     const qid = String(body?.quotation_id || "").trim();
     const snapshot = body?.snapshot;
     if (!qid || !snapshot) return consoleJson({ error: "quotation_id and snapshot required" }, 400);
+    const owner = await supaGet("quotations", {
+      id: "eq." + qid,
+      client_id: "eq." + gate.clientId,
+      select: "id",
+      limit: 1,
+    });
+    if (!Array.isArray(owner) || owner.length === 0) return consoleJson({ error: "Not found" }, 404);
     const existing = await supaGet("quotation_revisions", { quotation_id: "eq." + qid, select: "revision_number", order: "revision_number.desc", limit: 1 });
     const nextNum = Array.isArray(existing) && existing[0]?.revision_number ? Number(existing[0].revision_number) + 1 : 1;
     const inserted = await supaPost("quotation_revisions", {

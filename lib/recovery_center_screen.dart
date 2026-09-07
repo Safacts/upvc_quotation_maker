@@ -25,6 +25,7 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
   DateTime? _lastBackup;
   List<Map<String, dynamic>> _cloud = const [];
   List<Map<String, dynamic>> _conflictRows = const [];
+  String? _notice;
 
   String get _clientId => context.read<AppState>().clientConfig.clientId;
 
@@ -66,9 +67,9 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
           _pending == 0
               ? 'Everything on this device is backed up.'
               : 'Your work is safe here. $_pending item${_pending == 1 ? '' : 's'} will retry automatically.';
-      _show(message);
+      _setNotice(message);
     } catch (_) {
-      _show(
+      _setNotice(
         'The backup could not finish, but your existing device copies were not removed.',
       );
     } finally {
@@ -95,7 +96,7 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
         ),
       );
     } catch (_) {
-      _show('Could not export right now. No recovery data was removed.');
+      _setNotice('Could not export right now. No recovery data was removed.');
     }
   }
 
@@ -103,7 +104,7 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
     final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
     final raw = clipboard?.text?.trim() ?? '';
     if (raw.isEmpty) {
-      _show('Copy the recovery backup text first, then tap Import again.');
+      _setNotice('Copy the recovery backup text first, then tap Import again.');
       return;
     }
     try {
@@ -115,11 +116,13 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
         await QuotationRecoveryService.instance.flushPending(_clientId);
       }
       await _refresh();
-      _show('$count recovery item${count == 1 ? '' : 's'} imported safely.');
+      _setNotice(
+        '$count recovery item${count == 1 ? '' : 's'} imported safely.',
+      );
     } on FormatException catch (error) {
-      _show(error.message);
+      _setNotice(error.message);
     } catch (_) {
-      _show(
+      _setNotice(
         'Could not read this backup. The existing device data was not changed.',
       );
     }
@@ -130,13 +133,15 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
       final ok = await QuotationRecoveryService.instance
           .resolveConflictWithDeviceVersion(_clientId, operationId);
       await _refresh();
-      _show(
+      _setNotice(
         ok
             ? 'This device version is protected and queued for cloud backup.'
             : 'That protected version is no longer available.',
       );
     } catch (_) {
-      _show('Could not apply that version. Both protected copies remain safe.');
+      _setNotice(
+        'Could not apply that version. Both protected copies remain safe.',
+      );
     }
   }
 
@@ -167,21 +172,21 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
       final ok = await QuotationRecoveryService.instance
           .resolveConflictKeepingCloud(_clientId, operationId);
       await _refresh();
-      _show(
+      _setNotice(
         ok
             ? 'Cloud version kept.'
             : 'That protected version is no longer available.',
       );
     } catch (_) {
-      _show('Could not finish that choice. Both protected copies remain safe.');
+      _setNotice(
+        'Could not finish that choice. Both protected copies remain safe.',
+      );
     }
   }
 
-  void _show(String message) {
+  void _setNotice(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    setState(() => _notice = message);
   }
 
   String _relative(DateTime? value) {
@@ -292,6 +297,34 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
                       icon: const Icon(Icons.content_paste),
                       label: const Text('Import Backup from Clipboard'),
                     ),
+                    if (_notice != null) ...[
+                      const SizedBox(height: 8),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        color:
+                            Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(_notice!)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     if (_conflictRows.isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Text(
@@ -430,7 +463,7 @@ class _RecoveryCenterScreenState extends State<RecoveryCenterScreen> {
                                 await Clipboard.setData(
                                   ClipboardData(text: jsonEncode(row)),
                                 );
-                                _show('Recovery data copied for support.');
+                                _setNotice('Recovery data copied for support.');
                               },
                             ),
                           ),

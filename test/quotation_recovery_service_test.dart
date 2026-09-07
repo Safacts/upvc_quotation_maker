@@ -52,6 +52,29 @@ void main() {
     expect(quotation['customer_name'], 'Latest Customer');
   });
 
+  test('exposes durable per-quotation save receipt and pending state', () async {
+    final service = QuotationRecoveryService.instance;
+    const clientId = 'kprupvc';
+    const quoteId = '77777777-7777-4777-8777-777777777777';
+
+    await service.saveBundle(
+      clientId: clientId,
+      quotation: quote(quoteId),
+      measuredItems: const [],
+      unmeasuredItems: const [],
+    );
+
+    final receipt = await service.syncReceipt(clientId, quoteId);
+    expect(receipt.clientId, clientId);
+    expect(receipt.quotationId, quoteId);
+    expect(receipt.lastLocalSave, isNotNull);
+    expect(receipt.hasPending, isTrue);
+    expect(receipt.hasConflict, isFalse);
+    expect(receipt.status, QuotationSyncReceiptStatus.pending);
+    expect(await service.lastLocalSave(clientId, quoteId), isNotNull);
+    expect(await service.lastLocalSave('venkateshwara', quoteId), isNull);
+  });
+
   test('exports and imports a tenant-scoped emergency bundle', () async {
     final service = QuotationRecoveryService.instance;
     await service.saveBundle(

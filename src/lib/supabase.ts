@@ -12,6 +12,33 @@ const AUTH_HEADERS = {
   Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
 };
 
+/**
+ * Keep backend calls shorter than the function's wall-clock budget. A fetch
+ * that waits until the platform kills the request is indistinguishable from a
+ * broken sync to the app and gives it no useful retry signal.
+ */
+const SUPABASE_TIMEOUT_MS = (() => {
+  const value = Number(process.env.SUPABASE_TIMEOUT_MS || 8000);
+  return Number.isFinite(value) && value >= 1000 && value <= 15000 ? value : 8000;
+})();
+
+export type SupabaseFailureKind = "timeout" | "server_unreachable" | "http" | "invalid_json";
+
+/** A stable, non-sensitive error contract for callers such as content sync. */
+export class SupabaseRequestError extends Error {
+  readonly kind: SupabaseFailureKind;
+  readonly status?: number;
+  readonly retryable: boolean;
+
+  constructor(kind: SupabaseFailureKind, message: string, status?: number) {
+    super(message);
+    this.name = "SupabaseRequestError";
+    this.kind = kind;
+    this.status = status;
+    this.retryable = kind === "timeout" || kind === "server_unreachable" || (status !== undefined && status >= 500);
+  }
+}
+
 type QsValue = string | number | boolean;
 
 function qv(v: QsValue): string {
@@ -36,13 +63,32 @@ function buildUrl(path: string, qs: Record<string, QsValue>): string {
 async function parseResponse(res: Response): Promise<any> {
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Supabase HTTP ${res.status}: ${text.slice(0, 500)}`);
+    const kind: SupabaseFailureKind = res.status >= 500 ? "server_unreachable" : "http";
+    const message = kind === "server_unreachable"
+      ? "Sync service is temporarily unavailable. Please try again shortly."
+      : "Sync request was rejected by the server. Please try again.";
+    throw new SupabaseRequestError(kind, message, res.status);
   }
   if (!text.trim()) return [];
   try {
     return JSON.parse(text);
-  } catch (e: any) {
-    throw new Error(`Supabase invalid JSON: ${e.message} body[:200]=${text.slice(0, 200)}`);
+  } catch {
+    throw new SupabaseRequestError("invalid_json", "Sync service returned an invalid response. Please try again.");
+  }
+}
+
+async function fetchSupabase(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SUPABASE_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new SupabaseRequestError("timeout", "Sync service did not respond in time. Please try again.");
+    }
+    throw new SupabaseRequestError("server_unreachable", "Sync service is unreachable. Please try again when connected.");
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -50,7 +96,7 @@ export async function supaGet(
   path: string,
   qs: Record<string, QsValue> = {},
 ): Promise<any> {
-  const res = await fetch(buildUrl(path, qs), { headers: AUTH_HEADERS });
+  const res = await fetchSupabase(buildUrl(path, qs), { headers: AUTH_HEADERS });
   return parseResponse(res);
 }
 
@@ -70,12 +116,18 @@ export async function supaCount(
   path: string,
   qs: Record<string, QsValue> = {},
 ): Promise<number> {
-  const res = await fetch(buildUrl(path, { ...qs, select: "id", limit: 1 }), {
+  const res = await fetchSupabase(buildUrl(path, { ...qs, select: "id", limit: 1 }), {
     headers: { ...AUTH_HEADERS, Prefer: "count=exact" },
   });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Supabase HTTP ${res.status}: ${text.slice(0, 500)}`);
+    const kind: SupabaseFailureKind = res.status >= 500 ? "server_unreachable" : "http";
+    throw new SupabaseRequestError(
+      kind,
+      kind === "server_unreachable"
+        ? "Sync service is temporarily unavailable. Please try again shortly."
+        : "Sync request was rejected by the server. Please try again.",
+      res.status,
+    );
   }
   const range = res.headers.get("content-range") || "";
   const total = range.split("/")[1];
@@ -136,7 +188,7 @@ export async function supaPatch(
   qs: Record<string, QsValue>,
   body: Record<string, any>,
 ): Promise<any> {
-  const res = await fetch(buildUrl(path, qs), {
+  const res = await fetchSupabase(buildUrl(path, qs), {
     method: "PATCH",
     headers: { ...AUTH_HEADERS, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -148,7 +200,7 @@ export async function supaPost(
   path: string,
   body: Record<string, any>,
 ): Promise<any> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const res = await fetchSupabase(`${SUPABASE_URL}/rest/v1/${path}`, {
     method: "POST",
     headers: {
       ...AUTH_HEADERS,
@@ -164,7 +216,7 @@ export async function supaDelete(
   path: string,
   qs: Record<string, QsValue>,
 ): Promise<any> {
-  const res = await fetch(buildUrl(path, qs), {
+  const res = await fetchSupabase(buildUrl(path, qs), {
     method: "DELETE",
     headers: AUTH_HEADERS,
   });
@@ -178,21 +230,27 @@ export async function uploadToStorage(
 ): Promise<string> {
   const buf = Buffer.from(binary);
   const url = `${SUPABASE_URL}/storage/v1/object/assets/${filename}`;
-  let res = await fetch(url, {
+  let res = await fetchSupabase(url, {
     method: "POST",
     headers: { ...AUTH_HEADERS, "Content-Type": mime },
     body: buf,
   });
   if (res.status === 409) {
-    res = await fetch(url, {
+    res = await fetchSupabase(url, {
       method: "PUT",
       headers: { ...AUTH_HEADERS, "Content-Type": mime },
       body: buf,
     });
   }
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Storage upload ${res.status}: ${body.slice(0, 300)}`);
+    const kind: SupabaseFailureKind = res.status >= 500 ? "server_unreachable" : "http";
+    throw new SupabaseRequestError(
+      kind,
+      kind === "server_unreachable"
+        ? "Sync service is temporarily unavailable. Please try again shortly."
+        : "Upload request was rejected by the server. Please try again.",
+      res.status,
+    );
   }
   return `${SUPABASE_URL}/storage/v1/object/public/assets/${filename}`;
 }
@@ -254,7 +312,7 @@ export function uploadLogoFile(
  * yet applied) or propagate.
  */
 export async function supabaseRpc(name: string, params: Record<string, any> = {}): Promise<any> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+  const res = await fetchSupabase(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: "POST",
     headers: {
       ...AUTH_HEADERS,
