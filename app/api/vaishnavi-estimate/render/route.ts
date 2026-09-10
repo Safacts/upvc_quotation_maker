@@ -57,8 +57,14 @@ export async function POST(request: NextRequest) {
       page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
     }
 
-    // 4. Append CAD - identical engine to KPR/generic (drawWindowElevationCard), after purple SVG. Include 0x0 items with fallback so Vaishnavi never loses CAD pages like before.
-    const cadItems = (quote.items || []).filter((it: any) => String(it.description || "").trim() !== "");
+    // 4. Append CAD - identical to KPR (drawWindowElevationCard) after purple SVG. Only windows (not materials), with 0x0 fallback + sw handling so CAD always appears like rest.
+    const isWindowDesc = (s: string) => /sw|sliding|window|door|ventilator|vent|casement|fixed|track/i.test(s);
+    const cadItems = (quote.items || []).filter((it: any) => {
+      const d = String(it.description || "").trim(); if (!d) return false;
+      const w = Number(it.width) || 0, h = Number(it.height) || 0;
+      if (w > 0 && h > 0) return true;
+      return isWindowDesc(d);
+    });
     if (cadItems.length > 0) {
       const reg = await pdf.embedFont(StandardFonts.Helvetica);
       const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
