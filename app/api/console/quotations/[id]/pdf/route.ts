@@ -4,23 +4,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireConsoleSession, consoleJson } from "@/lib/console-auth";
 import { supaGet } from "@/lib/supabase";
 import { measuredLineSqft, measuredLineTotal, quotationTotals } from "@/lib/pricing";
-import { buildQuotationPdf, type QuotationPdfData, drawWindowElevationCard } from "@/lib/quotation-pdf";
+import { buildQuotationPdf, type QuotationPdfData } from "@/lib/quotation-pdf";
 import type { ClientConfig } from "@/lib/types";
 import { Resvg } from "@resvg/resvg-js";
 import { injectVaishnaviSvg, type VaishnaviQuote } from "@/lib/vaishnavi-svg-inject";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/console/quotations/[id]/pdf - generate the uPVC quotation PDF.
+ * GET /api/console/quotations/[id]/pdf — generate the uPVC quotation PDF.
  *
  * Returns the customer-facing PDF as a binary download. The document is
  * generated server-side from the SAME `src/lib/pricing.ts` the editor and the
  * Flutter app use, so the numbers match the on-screen preview exactly.
  *
- * Ownership is enforced by the `[id]` GET route we delegate the fetch to - we
+ * Ownership is enforced by the `[id]` GET route we delegate the fetch to — we
  * read the row by primary key AND client_id, so a cross-tenant id returns 404
  * (never a 403 that would confirm the id exists for someone else).
  */
@@ -124,30 +124,43 @@ export async function GET(
       const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
       const pdf = await PDFDocument.create();
       for(const png of pngs){ const img=await pdf.embedPng(png); const page=pdf.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
-      // Vaishnavi CAD - identical engine to generic, but keep purple header; include 0x0 items with fallback so CAD never disappears like PDF 2 (was 0 pages vs KPR's 1).
-      const cadItems = measured.filter((m: any) => String(m.description || "").trim() !== "");
-      if (cadItems.length > 0) {
+      // Append CAD elevations for Vaishnavi — keep her 2-page purple estimate, add 2-per-page scaled elevations (typology-aware)
+      const validMeasured = measured.filter((m: any) => m.width > 0 && m.height > 0);
+      if (validMeasured.length > 0) {
         const { rgb } = await import("pdf-lib");
         const { hexToRgb } = await import("@/lib/brand");
-        const reg = await pdf.embedFont(StandardFonts.Helvetica);
-        const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-        const A4_W = 595.28; const A4_H = 841.89; const M = 30; const contentW = A4_W - M * 2; const cardH = 355;
-        for (let i = 0; i < cadItems.length; i += 2) {
+        const frameColor = rgb(...hexToRgb("#0B1E3B"));
+        const glassColor = rgb(...hexToRgb("#E8F0FF"));
+        const A4_W = 595.28; const A4_H = 841.89; const M = 30; const contentW = A4_W - M * 2;
+        for (let i = 0; i < validMeasured.length; i += 2) {
           const page = pdf.addPage([A4_W, A4_H]);
-          const headerColor = rgb(...hexToRgb("#0B1E3B"));
-          page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
+          const chunk = validMeasured.slice(i, i + 2);
+          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
-          const chunk = cadItems.slice(i, i + 2);
-          chunk.forEach((raw: any, idx: number) => {
-            const globalIdx = i + idx + 1;
-            const cardTopY = A4_H - M - 10 - idx * (cardH + 10);
-            const rawW = Number(raw.width) || 0; const rawH = Number(raw.height) || 0;
-            const w = rawW > 0 ? rawW : 1000; const h = rawH > 0 ? rawH : 1200;
-            const isExtreme = rawW > 6000 || rawH > 6000 || rawW < 200 || rawH < 200 || rawW===0 || rawH===0;
-            let cw = w, ch = h; if (cw / Math.max(ch, 1) < 0.3) cw = ch * 0.3; if (cw / Math.max(ch, 1) > 3) cw = ch * 3;
-            if (isExtreme) page.drawText(`! Check dimensions - not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
-            drawWindowElevationCard(page, { code: String(raw.code || ""), description: String(raw.description || ""), glass: String(raw.glass || ""), width: cw, height: ch, units: Number(raw.units) || 1, rate: Number(raw.rate) || 0 }, globalIdx, M, cardTopY, contentW, cardH - 10, { reg, bold });
-            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}x${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+          chunk.forEach((item: any, idx: number) => {
+            const yBase = 700 - idx * 350;
+            const wMm = Number(item.width) || 0; const hMm = Number(item.height) || 0;
+            const fx = 100, fy = yBase - 220, fw = 180, fh = 220;
+            const desc = String(item.description || "").toLowerCase();
+            let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
+            page.drawRectangle({ x: fx, y: fy, width: fw, height: fh, borderColor: frameColor, borderWidth: 2, color: glassColor });
+            page.drawRectangle({ x: fx + 5, y: fy + 5, width: fw - 10, height: fh - 10, borderColor: frameColor, borderWidth: 1 });
+            const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;
+            let drawAspect = wMm / Math.max(hMm, 1); if (drawAspect < 0.3) drawAspect = 0.3; if (drawAspect > 3) drawAspect = 3;
+            const maxDrawW = contentW - 70; const maxDrawH = 220 - 40;
+            let drawW = fw - 10, drawH = fh - 10; if (drawAspect >= maxDrawW / maxDrawH) { drawW = maxDrawW; drawH = maxDrawW / drawAspect; } else { drawH = maxDrawH; drawW = maxDrawH * drawAspect; }
+            drawW = Math.max(40, drawW); drawH = Math.max(60, drawH);
+            const originX = fx + (fw - drawW) / 2; const originY = fy + (fh - drawH) / 2 + 5;
+            if (drawW > 20 && drawH > 20) {
+              page.drawRectangle({ x: originX, y: originY, width: drawW, height: drawH, color: frameColor, borderColor: frameColor, borderWidth: 1.2 });
+              const gw = drawW - 8, gh = drawH - 8; if (gw > 4 && gh > 4) page.drawRectangle({ x: originX + 4, y: originY + 4, width: gw, height: gh, color: glassColor, borderColor: rgb(...hexToRgb("#93A4C8")), borderWidth: 1 });
+              if (typeTitle.includes("Sliding")) { const midX = originX + drawW / 2; const splits = typeTitle.includes("3-Track") ? 2 : 1; for (let s = 1; s <= splits; s++) { const x = originX + (drawW / (splits + 1)) * s; page.drawLine({ start: { x, y: originY }, end: { x, y: originY + drawH }, thickness: 1.2, color: rgb(...hexToRgb("#475569")) }); } }
+            }
+            page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
+            page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
+            page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });
           });
         }
       }
