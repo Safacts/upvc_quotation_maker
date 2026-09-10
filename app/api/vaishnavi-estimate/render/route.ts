@@ -78,9 +78,12 @@ export async function POST(request: NextRequest) {
           const desc = String(item.description || "").toLowerCase();
           // Typology hint for subtitle
           let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
-          // scaled drawing area (preserve aspect)
-          const maxDrawW = contentW - 70; const maxDrawH = 220 - 40; const aspect = wMm / Math.max(hMm, 1);
-          let drawW = fw - 10, drawH = fh - 10; if (aspect >= maxDrawW / maxDrawH) { drawW = maxDrawW; drawH = maxDrawW / aspect; } else { drawH = maxDrawH; drawW = maxDrawH * aspect; }
+          // Guard absurd dimensions (e.g. 90000 mm = 90m) — clamp draw aspect so CAD doesn't collapse to a sliver, but keep label truthful
+          const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;
+          let drawAspect = wMm / Math.max(hMm, 1);
+          if (drawAspect < 0.3) drawAspect = 0.3; if (drawAspect > 3) drawAspect = 3;
+          const maxDrawW = contentW - 70; const maxDrawH = 220 - 40;
+          let drawW = fw - 10, drawH = fh - 10; if (drawAspect >= maxDrawW / maxDrawH) { drawW = maxDrawW; drawH = maxDrawW / drawAspect; } else { drawH = maxDrawH; drawW = maxDrawH * drawAspect; }
           drawW = Math.max(40, drawW); drawH = Math.max(60, drawH);
           const originX = fx + (fw - drawW) / 2; const originY = fy + (fh - drawH) / 2 + 5;
           // Elevation frame + glass sheen
@@ -97,6 +100,7 @@ export async function POST(request: NextRequest) {
             }
           }
           page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+          if (isExtreme) page.drawText(`⚠ Check dimensions — drawing not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
           page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
           page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
           page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });
