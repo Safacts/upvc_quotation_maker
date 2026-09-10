@@ -142,7 +142,7 @@ export async function GET(
             const wMm = Number(item.width) || 0; const hMm = Number(item.height) || 0;
             const fx = 100, fy = yBase - 220, fw = 180, fh = 220;
             const desc = String(item.description || "").toLowerCase();
-            let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
+            let typeTitle = "Window"; if (desc.includes("3sw") || desc.includes("3 track") || desc.includes("3-track") || desc.includes("3track")) typeTitle = "3-Track Sliding"; else if (desc.includes("2sw") || desc.includes("sliding") || desc.includes("slider") || desc.includes("2 track") || desc.includes("2-track")) typeTitle = "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
             page.drawRectangle({ x: fx, y: fy, width: fw, height: fh, borderColor: frameColor, borderWidth: 2, color: glassColor });
             page.drawRectangle({ x: fx + 5, y: fy + 5, width: fw - 10, height: fh - 10, borderColor: frameColor, borderWidth: 1 });
             const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;

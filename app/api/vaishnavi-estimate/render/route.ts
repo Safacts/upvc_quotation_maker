@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
           const fx = 100, fy = yBase - 220, fw = 180, fh = 220;
           const desc = String(item.description || "").toLowerCase();
           // Typology hint for subtitle
-          let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
+          let typeTitle = "Window"; if (desc.includes("3sw") || desc.includes("3 track") || desc.includes("3-track") || desc.includes("3track")) typeTitle = "3-Track Sliding"; else if (desc.includes("2sw") || desc.includes("sliding") || desc.includes("slider") || desc.includes("2 track") || desc.includes("2-track")) typeTitle = "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
           // Guard absurd dimensions (e.g. 90000 mm = 90m) - clamp draw aspect so CAD doesn't collapse to a sliver, but keep label truthful
           const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;
           let drawAspect = wMm / Math.max(hMm, 1);
