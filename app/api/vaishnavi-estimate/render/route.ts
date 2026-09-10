@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Page two carries no live data; render the template as-is.
     const injected2 = page2Template;
 
-    // 2. Rasterize both pages (resvg is a self-contained native binary — no
+    // 2. Rasterize both pages (resvg is a self-contained native binary - no
     // headless Chrome, so this works inside Vercel serverless functions).
     const pngs = [injected1, injected2].map(
       (svg) =>
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         }).render().asPng(),
     );
 
-    // 3. Assemble the A4 PDF (2-page Vaishnavi estimate — must stay exactly as designed).
+    // 3. Assemble the A4 PDF (2-page Vaishnavi estimate - must stay exactly as designed).
     const pdf = await PDFDocument.create();
     for (const png of pngs) {
       const image = await pdf.embedPng(png);
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
     }
 
-    // 4. Append CAD Window Elevations — Vaishnavi was missing this entirely (generic PDFs already had it).
+    // 4. Append CAD Window Elevations - Vaishnavi was missing this entirely (generic PDFs already had it).
     // Keep her purple OASIS estimate intact (steps 1-3 above); CAD is extra pages 3+ (2 elevations per A4).
     const validMeasured = (quote.items || []).filter((it: any) => Number(it.width) > 0 && Number(it.height) > 0);
     if (validMeasured.length > 0) {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         const page = pdf.addPage([A4_W, A4_H]);
         const chunk = validMeasured.slice(i, i + 2);
         // Page header like console/public PDFs
-        page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
+        page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
         page.drawText(`Customer: ${String((quote as any).customerName || "").slice(0, 40)}  •  Estimate: ${String((quote as any).quotationNo || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
         chunk.forEach((item: any, idx: number) => {
           const yBase = 700 - idx * 350;
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           const desc = String(item.description || "").toLowerCase();
           // Typology hint for subtitle
           let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
-          // Guard absurd dimensions (e.g. 90000 mm = 90m) — clamp draw aspect so CAD doesn't collapse to a sliver, but keep label truthful
+          // Guard absurd dimensions (e.g. 90000 mm = 90m) - clamp draw aspect so CAD doesn't collapse to a sliver, but keep label truthful
           const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;
           let drawAspect = wMm / Math.max(hMm, 1);
           if (drawAspect < 0.3) drawAspect = 0.3; if (drawAspect > 3) drawAspect = 3;
@@ -99,8 +99,8 @@ export async function POST(request: NextRequest) {
               for (let s = 1; s <= splits; s++) { const x = originX + (drawW / (splits + 1)) * s; page.drawLine({ start: { x, y: originY }, end: { x, y: originY + drawH }, thickness: 1.2, color: rgb(...hexToRgb("#475569")) }); }
             }
           }
-          page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
-          if (isExtreme) page.drawText(`⚠ Check dimensions — drawing not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
+          page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} - ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+          if (isExtreme) page.drawText(`! Check dimensions - drawing not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
           page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
           page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
           page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });

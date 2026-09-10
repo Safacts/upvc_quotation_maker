@@ -14,13 +14,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/console/quotations/[id]/pdf — generate the uPVC quotation PDF.
+ * GET /api/console/quotations/[id]/pdf - generate the uPVC quotation PDF.
  *
  * Returns the customer-facing PDF as a binary download. The document is
  * generated server-side from the SAME `src/lib/pricing.ts` the editor and the
  * Flutter app use, so the numbers match the on-screen preview exactly.
  *
- * Ownership is enforced by the `[id]` GET route we delegate the fetch to — we
+ * Ownership is enforced by the `[id]` GET route we delegate the fetch to - we
  * read the row by primary key AND client_id, so a cross-tenant id returns 404
  * (never a 403 that would confirm the id exists for someone else).
  */
@@ -124,7 +124,7 @@ export async function GET(
       const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
       const pdf = await PDFDocument.create();
       for(const png of pngs){ const img=await pdf.embedPng(png); const page=pdf.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
-      // Append CAD elevations for Vaishnavi — keep her 2-page purple estimate, add 2-per-page scaled elevations (typology-aware)
+      // Append CAD elevations for Vaishnavi - keep her 2-page purple estimate, add 2-per-page scaled elevations (typology-aware)
       const validMeasured = measured.filter((m: any) => m.width > 0 && m.height > 0);
       if (validMeasured.length > 0) {
         const { rgb } = await import("pdf-lib");
@@ -135,7 +135,7 @@ export async function GET(
         for (let i = 0; i < validMeasured.length; i += 2) {
           const page = pdf.addPage([A4_W, A4_H]);
           const chunk = validMeasured.slice(i, i + 2);
-          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
+          page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
           chunk.forEach((item: any, idx: number) => {
             const yBase = 700 - idx * 350;
@@ -156,8 +156,8 @@ export async function GET(
               const gw = drawW - 8, gh = drawH - 8; if (gw > 4 && gh > 4) page.drawRectangle({ x: originX + 4, y: originY + 4, width: gw, height: gh, color: glassColor, borderColor: rgb(...hexToRgb("#93A4C8")), borderWidth: 1 });
               if (typeTitle.includes("Sliding")) { const midX = originX + drawW / 2; const splits = typeTitle.includes("3-Track") ? 2 : 1; for (let s = 1; s <= splits; s++) { const x = originX + (drawW / (splits + 1)) * s; page.drawLine({ start: { x, y: originY }, end: { x, y: originY + drawH }, thickness: 1.2, color: rgb(...hexToRgb("#475569")) }); } }
             }
-            page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
-            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} - ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+            if (isExtreme) page.drawText(`! Check dimensions - not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
             page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
             page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
             page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });

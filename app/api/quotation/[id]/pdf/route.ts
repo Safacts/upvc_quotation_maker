@@ -9,13 +9,13 @@ import { Resvg } from "@resvg/resvg-js";
 import { injectVaishnaviSvg, type VaishnaviQuote } from "@/lib/vaishnavi-svg-inject";
 import { PDFDocument } from "pdf-lib";
 
-// pdf-lib will NOT run on Edge — same constraint as /api/invoice/[id].
+// pdf-lib will NOT run on Edge - same constraint as /api/invoice/[id].
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 
 /**
- * GET /api/quotation/[id]/pdf?token=<hmac> — PUBLIC quotation PDF download.
+ * GET /api/quotation/[id]/pdf?token=<hmac> - PUBLIC quotation PDF download.
  *
  * This is the customer-facing twin of
  * `/api/console/quotations/[id]/pdf` (which is behind the console session).
@@ -23,13 +23,13 @@ export const dynamic = "force-dynamic";
  * downloads is byte-for-byte the document the fabricator sees.
  *
  * WHY THIS EXISTS: the public quote page's "Download / Print PDF" button used
- * to call `window.print()`. That opens the browser's print dialog — it does not
+ * to call `window.print()`. That opens the browser's print dialog - it does not
  * produce a .pdf file. On mobile Chrome/WhatsApp's in-app browser (which is how
  * essentially every one of these links is opened) the result ranges from a
  * mangled screenshot of the DOM to nothing happening at all. The customer could
  * never actually obtain the quotation document.
  *
- * AUTH: the same opaque stored bearer token that gates the JSON route. No session —
+ * AUTH: the same opaque stored bearer token that gates the JSON route. No session -
  * by design, the recipient of a WhatsApp link has no account. The token is
  * verified in CONSTANT TIME and BEFORE any database read, so an invalid token
  * cannot be used to probe which quotation ids exist.
@@ -129,7 +129,7 @@ export async function GET(
     const config: Record<string, any> =
       typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw || {});
 
-    // Money from pricing.ts ONLY — never inline (w/304.8)*(h/304.8).
+    // Money from pricing.ts ONLY - never inline (w/304.8)*(h/304.8).
     const totals = quotationTotals(q, measured, unmeasured);
 
     // Vaishnavi follows Flutter's purple OASIS estimate + CAD (client-specific)
@@ -180,7 +180,7 @@ export async function GET(
         for (let i = 0; i < validMeasured.length; i += 2) {
           const page = pdfVaish.addPage([A4_W, A4_H]);
           const chunk = validMeasured.slice(i, i + 2);
-          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
+          page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: frameColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
           chunk.forEach((item: any, idx: number) => {
             const yBase = 700 - idx * 350;
@@ -201,8 +201,8 @@ export async function GET(
               const gw = drawW - 8, gh = drawH - 8; if (gw > 4 && gh > 4) page.drawRectangle({ x: originX + 4, y: originY + 4, width: gw, height: gh, color: glassColor, borderColor: rgb(...hexToRgb("#93A4C8")), borderWidth: 1 });
               if (typeTitle.includes("Sliding")) { const splits = typeTitle.includes("3-Track") ? 2 : 1; for (let s = 1; s <= splits; s++) { const x = originX + (drawW / (splits + 1)) * s; page.drawLine({ start: { x, y: originY }, end: { x, y: originY + drawH }, thickness: 1.2, color: rgb(...hexToRgb("#475569")) }); } }
             }
-            page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
-            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} - ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+            if (isExtreme) page.drawText(`! Check dimensions - not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
             page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
             page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
             page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });
