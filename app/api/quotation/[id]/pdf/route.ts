@@ -170,27 +170,28 @@ export async function GET(
       const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
       const pdfVaish = await PDFDocument.create();
       for(const png of pngs){ const img=await pdfVaish.embedPng(png); const page=pdfVaish.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
-      // Vaishnavi CAD — unified with generic (drawWindowElevationCard) — identical visuals to KPR/Venkateshwara now. 2 per page.
-      const validMeasured = measured.filter((m: any) => m.width > 0 && m.height > 0);
-      if (validMeasured.length > 0) {
+      // Vaishnavi CAD — identical to KPR (drawWindowElevationCard) but keep purple header; include 0×0 so CAD never disappears.
+      const cadItems = measured.filter((m: any) => String(m.description || "").trim() !== "");
+      if (cadItems.length > 0) {
         const reg = await pdfVaish.embedFont(StandardFonts.Helvetica);
         const bold = await pdfVaish.embedFont(StandardFonts.HelveticaBold);
         const A4_W = 595.28; const A4_H = 841.89; const M = 30; const contentW = A4_W - M * 2; const cardH = 355;
-        for (let i = 0; i < validMeasured.length; i += 2) {
+        for (let i = 0; i < cadItems.length; i += 2) {
           const page = pdfVaish.addPage([A4_W, A4_H]);
           const headerColor = rgb(0.05, 0.12, 0.23);
-          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
+          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(0.29, 0.33, 0.42) });
-          const chunk = validMeasured.slice(i, i + 2);
+          const chunk = cadItems.slice(i, i + 2);
           chunk.forEach((raw: any, idx: number) => {
             const globalIdx = i + idx + 1;
             const cardTopY = A4_H - M - 10 - idx * (cardH + 10);
-            const w = Number(raw.width) || 0; const h = Number(raw.height) || 0;
-            const isExtreme = w > 6000 || h > 6000 || w < 200 || h < 200;
+            const rawW = Number(raw.width) || 0; const rawH = Number(raw.height) || 0;
+            const w = rawW > 0 ? rawW : 1000; const h = rawH > 0 ? rawH : 1200;
+            const isExtreme = rawW > 6000 || rawH > 6000 || rawW < 200 || rawH < 200 || rawW===0 || rawH===0;
             let cw = w, ch = h; if (cw / Math.max(ch, 1) < 0.3) cw = ch * 0.3; if (cw / Math.max(ch, 1) > 3) cw = ch * 3;
             if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
             drawWindowElevationCard(page, { code: String(raw.code || ""), description: String(raw.description || ""), glass: String(raw.glass || ""), width: cw, height: ch, units: Number(raw.units) || 1, rate: Number(raw.rate) || 0 }, globalIdx, M, cardTopY, contentW, cardH - 10, { reg, bold });
-            if (isExtreme) page.drawText(`Actual: ${Math.round(w)}×${Math.round(h)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}×${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
           });
         }
       }

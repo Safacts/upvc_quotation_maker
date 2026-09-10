@@ -57,32 +57,29 @@ export async function POST(request: NextRequest) {
       page.drawImage(image, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
     }
 
-    // 4. Append CAD Window Elevations — now IDENTICAL to generic clients (src/lib/quotation-pdf.ts drawWindowElevationCard).
-    // Keep her 2-page purple OASIS estimate intact; CAD is extra pages 3+ (2 per A4, typology-aware, dimensioned).
-    const validMeasured = (quote.items || []).filter((it: any) => Number(it.width) > 0 && Number(it.height) > 0);
-    if (validMeasured.length > 0) {
+    // 4. Append CAD — identical engine to KPR/generic (drawWindowElevationCard), after purple SVG. Include 0×0 items with fallback so Vaishnavi never loses CAD pages like before.
+    const cadItems = (quote.items || []).filter((it: any) => String(it.description || "").trim() !== "");
+    if (cadItems.length > 0) {
       const reg = await pdf.embedFont(StandardFonts.Helvetica);
       const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
       const A4_W = 595.28; const A4_H = 841.89; const M = 30; const contentW = A4_W - M * 2;
       const itemsPerPage = 2; const cardH = 355;
-      for (let i = 0; i < validMeasured.length; i += itemsPerPage) {
+      for (let i = 0; i < cadItems.length; i += itemsPerPage) {
         const page = pdf.addPage([A4_W, A4_H]);
-        // Page header — same as console/public
         const headerColor = rgb(...hexToRgb("#0B1E3B"));
-        page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, validMeasured.length)} of ${validMeasured.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
+        page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
         page.drawText(`Customer: ${String((quote as any).customerName || "").slice(0, 40)}  •  Estimate: ${String((quote as any).quotationNo || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
-        const chunk = validMeasured.slice(i, i + itemsPerPage);
+        const chunk = cadItems.slice(i, i + itemsPerPage);
         chunk.forEach((raw: any, idx: number) => {
           const globalIdx = i + idx + 1;
           const cardTopY = A4_H - M - 10 - idx * (cardH + 10);
-          // Clamp absurd dims for drawing (e.g. 9985 mm) but keep label truthful — drawWindowElevationCard handles typology/dim lines internally
-          const w = Number(raw.width) || 0; const h = Number(raw.height) || 0;
-          const isExtreme = w > 6000 || h > 6000 || w < 200 || h < 200;
+          const rawW = Number(raw.width) || 0; const rawH = Number(raw.height) || 0;
+          const w = rawW > 0 ? rawW : 1000; const h = rawH > 0 ? rawH : 1200;
+          const isExtreme = rawW > 6000 || rawH > 6000 || rawW < 200 || rawH < 200 || rawW===0 || rawH===0;
           let cw = w, ch = h; if (cw / Math.max(ch, 1) < 0.3) cw = ch * 0.3; if (cw / Math.max(ch, 1) > 3) cw = ch * 3;
           if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
           drawWindowElevationCard(page, { code: String(raw.code || ""), description: String(raw.description || ""), glass: String(raw.glass || ""), width: cw, height: ch, units: Number(raw.units) || 1, rate: Number(raw.rate) || 0 }, globalIdx, M, cardTopY, contentW, cardH - 10, { reg, bold });
-          // Overlay true dimensions if clamped
-          if (isExtreme) page.drawText(`Actual: ${Math.round(w)}×${Math.round(h)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+          if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}×${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
         });
       }
     }
