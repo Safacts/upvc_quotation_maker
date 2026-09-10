@@ -190,8 +190,10 @@ export async function GET(
             let typeTitle = "Window"; if (desc.includes("sliding")) typeTitle = desc.includes("3 track") ? "3-Track Sliding" : "2-Track Sliding"; else if (desc.includes("door")) typeTitle = "Door"; else if (desc.includes("casement")) typeTitle = "Casement"; else if (desc.includes("ventilator") || desc.includes("vent")) typeTitle = "Ventilator";
             page.drawRectangle({ x: fx, y: fy, width: fw, height: fh, borderColor: frameColor, borderWidth: 2, color: glassColor });
             page.drawRectangle({ x: fx + 5, y: fy + 5, width: fw - 10, height: fh - 10, borderColor: frameColor, borderWidth: 1 });
-            const maxDrawW = contentW - 70; const maxDrawH = 220 - 40; const aspect = wMm / Math.max(hMm, 1);
-            let drawW = fw - 10, drawH = fh - 10; if (aspect >= maxDrawW / maxDrawH) { drawW = maxDrawW; drawH = maxDrawW / aspect; } else { drawH = maxDrawH; drawW = maxDrawH * aspect; }
+            const isExtreme = wMm > 6000 || hMm > 6000 || wMm < 200 || hMm < 200;
+            let drawAspect = wMm / Math.max(hMm, 1); if (drawAspect < 0.3) drawAspect = 0.3; if (drawAspect > 3) drawAspect = 3;
+            const maxDrawW = contentW - 70; const maxDrawH = 220 - 40;
+            let drawW = fw - 10, drawH = fh - 10; if (drawAspect >= maxDrawW / maxDrawH) { drawW = maxDrawW; drawH = maxDrawW / drawAspect; } else { drawH = maxDrawH; drawW = maxDrawH * drawAspect; }
             drawW = Math.max(40, drawW); drawH = Math.max(60, drawH);
             const originX = fx + (fw - drawW) / 2; const originY = fy + (fh - drawH) / 2 + 5;
             if (drawW > 20 && drawH > 20) {
@@ -200,6 +202,7 @@ export async function GET(
               if (typeTitle.includes("Sliding")) { const splits = typeTitle.includes("3-Track") ? 2 : 1; for (let s = 1; s <= splits; s++) { const x = originX + (drawW / (splits + 1)) * s; page.drawLine({ start: { x, y: originY }, end: { x, y: originY + drawH }, thickness: 1.2, color: rgb(...hexToRgb("#475569")) }); } }
             }
             page.drawText(`Item ${i + idx + 1}: ${String(item.description).slice(0, 28)} — ${typeTitle}`, { x: fx, y: fy + fh + 12, size: 8, color: frameColor });
+            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: fx, y: fy + fh + 2, size: 6, color: rgb(0.85, 0.2, 0.2) });
             page.drawText(`${Math.round(wMm)} x ${Math.round(hMm)} mm  Qty:${item.units}  Rate:Rs ${item.rate}`, { x: fx, y: fy - 14, size: 7, color: frameColor });
             page.drawLine({ start: { x: fx, y: fy - 6 }, end: { x: fx + fw, y: fy - 6 }, thickness: 0.8, color: frameColor });
             page.drawLine({ start: { x: fx + fw + 6, y: fy }, end: { x: fx + fw + 6, y: fy + fh }, thickness: 0.8, color: frameColor });
