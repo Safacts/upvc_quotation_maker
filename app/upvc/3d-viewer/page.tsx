@@ -150,6 +150,12 @@ function ViewerContent() {
   const [configType, setConfigType] = useState<string>('fixed');
   const [autoRotate, setAutoRotate] = useState(true);
   const [errorDetails, setErrorDetails] = useState<string>('');
+  const [isLocal, setIsLocal] = useState(true);
+
+  useEffect(() => {
+    const h = window.location.hostname;
+    setIsLocal(h === 'localhost' || h === '127.0.0.1' || h === '::1' || h.endsWith('.local'));
+  }, []);
 
   useEffect(() => {
     if (!designId && !fromQuotation) {
@@ -286,6 +292,57 @@ function ViewerContent() {
         gap: '16px'
       }}>
         <div style={{ fontSize: '15px', color: '#94a3b8', fontWeight: 500 }}>Loading 3D Visualizer...</div>
+      </div>
+    );
+  }
+
+  if (!isLocal) {
+    return (
+      <div style={{
+        height: '100vh',
+        width: '100vw',
+        background: '#090d16',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+      }}>
+        <div style={{
+          maxWidth: '480px',
+          width: '100%',
+          background: 'rgba(30, 41, 59, 0.7)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '20px',
+          padding: '40px 28px',
+          textAlign: 'center',
+          color: '#f8fafc',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            background: 'rgba(234, 88, 12, 0.15)',
+            border: '1px solid rgba(234, 88, 12, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px auto',
+            color: '#f97316'
+          }}>
+            <Box size={28} />
+          </div>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#f97316', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '8px' }}>Coming Soon</div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 10px 0', color: '#ffffff' }}>3D Viewer — Coming Soon</h2>
+          <p style={{ fontSize: '14px', color: '#94a3b8', lineHeight: 1.6, margin: '0 0 24px 0' }}>
+            The interactive 3D visualizer is currently available only on local development.<br/>It will be enabled on staging and production in a future release.
+          </p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', background: 'rgba(15, 23, 42, 0.85)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontSize: '12px', fontWeight: 600 }}>
+            <Sparkles size={14} color="#f97316" /> Stay tuned
+          </div>
+        </div>
       </div>
     );
   }
