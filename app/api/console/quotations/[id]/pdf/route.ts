@@ -14,13 +14,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/console/quotations/[id]/pdf — generate the uPVC quotation PDF.
+ * GET /api/console/quotations/[id]/pdf - generate the uPVC quotation PDF.
  *
  * Returns the customer-facing PDF as a binary download. The document is
  * generated server-side from the SAME `src/lib/pricing.ts` the editor and the
  * Flutter app use, so the numbers match the on-screen preview exactly.
  *
- * Ownership is enforced by the `[id]` GET route we delegate the fetch to — we
+ * Ownership is enforced by the `[id]` GET route we delegate the fetch to - we
  * read the row by primary key AND client_id, so a cross-tenant id returns 404
  * (never a 403 that would confirm the id exists for someone else).
  */
@@ -124,7 +124,7 @@ export async function GET(
       const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
       const pdf = await PDFDocument.create();
       for(const png of pngs){ const img=await pdf.embedPng(png); const page=pdf.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
-      // Vaishnavi CAD — identical engine to generic, but keep purple header; include 0×0 items with fallback so CAD never disappears like PDF 2 (was 0 pages vs KPR's 1).
+      // Vaishnavi CAD - identical engine to generic, but keep purple header; include 0x0 items with fallback so CAD never disappears like PDF 2 (was 0 pages vs KPR's 1).
       const cadItems = measured.filter((m: any) => String(m.description || "").trim() !== "");
       if (cadItems.length > 0) {
         const { rgb } = await import("pdf-lib");
@@ -135,7 +135,7 @@ export async function GET(
         for (let i = 0; i < cadItems.length; i += 2) {
           const page = pdf.addPage([A4_W, A4_H]);
           const headerColor = rgb(...hexToRgb("#0B1E3B"));
-          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
+          page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(...hexToRgb("#475569")) });
           const chunk = cadItems.slice(i, i + 2);
           chunk.forEach((raw: any, idx: number) => {
@@ -145,9 +145,9 @@ export async function GET(
             const w = rawW > 0 ? rawW : 1000; const h = rawH > 0 ? rawH : 1200;
             const isExtreme = rawW > 6000 || rawH > 6000 || rawW < 200 || rawH < 200 || rawW===0 || rawH===0;
             let cw = w, ch = h; if (cw / Math.max(ch, 1) < 0.3) cw = ch * 0.3; if (cw / Math.max(ch, 1) > 3) cw = ch * 3;
-            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            if (isExtreme) page.drawText(`! Check dimensions - not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
             drawWindowElevationCard(page, { code: String(raw.code || ""), description: String(raw.description || ""), glass: String(raw.glass || ""), width: cw, height: ch, units: Number(raw.units) || 1, rate: Number(raw.rate) || 0 }, globalIdx, M, cardTopY, contentW, cardH - 10, { reg, bold });
-            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}×${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}x${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
           });
         }
       }

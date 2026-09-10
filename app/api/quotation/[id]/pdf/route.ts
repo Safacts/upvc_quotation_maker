@@ -9,13 +9,13 @@ import { Resvg } from "@resvg/resvg-js";
 import { injectVaishnaviSvg, type VaishnaviQuote } from "@/lib/vaishnavi-svg-inject";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
-// pdf-lib will NOT run on Edge — same constraint as /api/invoice/[id].
+// pdf-lib will NOT run on Edge - same constraint as /api/invoice/[id].
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 
 /**
- * GET /api/quotation/[id]/pdf?token=<hmac> — PUBLIC quotation PDF download.
+ * GET /api/quotation/[id]/pdf?token=<hmac> - PUBLIC quotation PDF download.
  *
  * This is the customer-facing twin of
  * `/api/console/quotations/[id]/pdf` (which is behind the console session).
@@ -23,13 +23,13 @@ export const dynamic = "force-dynamic";
  * downloads is byte-for-byte the document the fabricator sees.
  *
  * WHY THIS EXISTS: the public quote page's "Download / Print PDF" button used
- * to call `window.print()`. That opens the browser's print dialog — it does not
+ * to call `window.print()`. That opens the browser's print dialog - it does not
  * produce a .pdf file. On mobile Chrome/WhatsApp's in-app browser (which is how
  * essentially every one of these links is opened) the result ranges from a
  * mangled screenshot of the DOM to nothing happening at all. The customer could
  * never actually obtain the quotation document.
  *
- * AUTH: the same opaque stored bearer token that gates the JSON route. No session —
+ * AUTH: the same opaque stored bearer token that gates the JSON route. No session -
  * by design, the recipient of a WhatsApp link has no account. The token is
  * verified in CONSTANT TIME and BEFORE any database read, so an invalid token
  * cannot be used to probe which quotation ids exist.
@@ -129,7 +129,7 @@ export async function GET(
     const config: Record<string, any> =
       typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return {}; } })() : (raw || {});
 
-    // Money from pricing.ts ONLY — never inline (w/304.8)*(h/304.8).
+    // Money from pricing.ts ONLY - never inline (w/304.8)*(h/304.8).
     const totals = quotationTotals(q, measured, unmeasured);
 
     // Vaishnavi follows Flutter's purple OASIS estimate + CAD (client-specific)
@@ -170,7 +170,7 @@ export async function GET(
       const pngs = [injected1, injected2].map(svg=> new Resvg(svg,{ fitTo:{mode:"width",value:1240}, font:{fontFiles:FONTS,loadSystemFonts:false,defaultFontFamily:"Arimo"}}).render().asPng());
       const pdfVaish = await PDFDocument.create();
       for(const png of pngs){ const img=await pdfVaish.embedPng(png); const page=pdfVaish.addPage([595.28,841.89]); page.drawImage(img,{x:0,y:0,width:page.getWidth(),height:page.getHeight()}); }
-      // Vaishnavi CAD — identical to KPR (drawWindowElevationCard) but keep purple header; include 0×0 so CAD never disappears.
+      // Vaishnavi CAD - identical to KPR (drawWindowElevationCard) but keep purple header; include 0x0 so CAD never disappears.
       const cadItems = measured.filter((m: any) => String(m.description || "").trim() !== "");
       if (cadItems.length > 0) {
         const reg = await pdfVaish.embedFont(StandardFonts.Helvetica);
@@ -179,7 +179,7 @@ export async function GET(
         for (let i = 0; i < cadItems.length; i += 2) {
           const page = pdfVaish.addPage([A4_W, A4_H]);
           const headerColor = rgb(0.05, 0.12, 0.23);
-          page.drawText(`VAISHNAVI — CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
+          page.drawText(`VAISHNAVI - CAD Window Elevations ${i + 1}-${Math.min(i + 2, cadItems.length)} of ${cadItems.length}`, { x: 30, y: A4_H - 30, size: 7, color: headerColor });
           page.drawText(`Customer: ${String(q.customer_name || "").slice(0, 40)}  •  Estimate: ${String(q.quote_no || "")}`, { x: 30, y: A4_H - 42, size: 6, color: rgb(0.29, 0.33, 0.42) });
           const chunk = cadItems.slice(i, i + 2);
           chunk.forEach((raw: any, idx: number) => {
@@ -189,9 +189,9 @@ export async function GET(
             const w = rawW > 0 ? rawW : 1000; const h = rawH > 0 ? rawH : 1200;
             const isExtreme = rawW > 6000 || rawH > 6000 || rawW < 200 || rawH < 200 || rawW===0 || rawH===0;
             let cw = w, ch = h; if (cw / Math.max(ch, 1) < 0.3) cw = ch * 0.3; if (cw / Math.max(ch, 1) > 3) cw = ch * 3;
-            if (isExtreme) page.drawText(`⚠ Check dimensions — not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            if (isExtreme) page.drawText(`! Check dimensions - not to scale`, { x: M, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
             drawWindowElevationCard(page, { code: String(raw.code || ""), description: String(raw.description || ""), glass: String(raw.glass || ""), width: cw, height: ch, units: Number(raw.units) || 1, rate: Number(raw.rate) || 0 }, globalIdx, M, cardTopY, contentW, cardH - 10, { reg, bold });
-            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}×${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
+            if (isExtreme) page.drawText(`Actual: ${Math.round(rawW)}x${Math.round(rawH)} mm`, { x: M + contentW - 90, y: cardTopY - 14, size: 6, color: rgb(0.85, 0.2, 0.2) });
           });
         }
       }
