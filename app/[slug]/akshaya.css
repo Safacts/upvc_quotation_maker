@@ -376,4 +376,4 @@
   .akshaya-root .ak-price strong { font-size: 22px; }
 }
 
-.akshaya-root .ak-brand-logo { width: 46px; height: 46px; object-fit: contain; background: #fff; }
+.akshaya-root .ak-brand-logo { width: 46px; height: 46px; object-fit: contain; background: #fff; border-radius: 12px; box-shadow: 0 6px 16px rgba(10,45,47,.14); }

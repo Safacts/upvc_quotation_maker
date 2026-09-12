@@ -7,6 +7,14 @@ const client = { id: "akshaya upvc", config: { companyName: "Akshaya", companyCo
 beforeEach(() => { vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reviews: [] }) })); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("Akshaya market page", () => {
+  it("renders the local Akshaya logo mark instead of the monogram fallback", () => {
+    render(<Page client={client} slug="akshaya-upvc" />);
+    const logos = screen.getAllByRole("img", { name: "Akshaya logo" });
+    expect(logos.length).toBe(2);
+    expect(logos[0].getAttribute("src")).toBe("/akshaya/images/logo-mark.svg");
+    expect(document.querySelector(".ak-brand-mark")).toBeNull();
+  });
+
   it("updates estimates and encodes real message line breaks", () => {
     render(<Page client={client} slug="akshaya-upvc" />);
     const link = screen.getByRole("link", { name: /Send this to Akshaya/ });
