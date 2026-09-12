@@ -7,6 +7,7 @@ import { parseClientConfig } from "@/lib/types";
 import MarketPage from "./MarketPage";
 import VaishnaviMarketPage from "./VaishnaviMarketPage";
 import EshanyaMarketPage from "./EshanyaMarketPage";
+import AkshayaMarketPage from "./AkshayaMarketPage";
 import ClientSeoContent from "./ClientSeoContent";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,13 @@ const VENKATESHWARA_SLUG = "venkateshwara";
 const KPR_INDEX_PATH = join(process.cwd(), "public", KPR_SLUG, "index.html");
 const ESHANYA_SLUG = "eshanya_trade_links";
 const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLUG, "index.html");
+const AKSHAYA_SLUG = "akshaya-upvc";
+
+function isAkshayaClient(client: { id?: string }, slug: string) {
+  return (client.id || "").toLowerCase().includes("akshaya") ||
+    slug.toLowerCase().includes("akshaya") ||
+    slug.toLowerCase().includes("akshaa");
+}
 
 // Only these config keys may reach the browser on PUBLIC market pages.
 // The full row (bank details, admin emails, trial state, updater fields,
@@ -116,6 +124,11 @@ export default async function MarketPageRoute({
     const html = readStaticHtml(KPR_INDEX_PATH);
     if (html)
       return <><ClientSeoContent client={client} slug={KPR_SLUG} /><div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: buildShell(html) }} /></>;
+  }
+
+  if (isAkshayaClient(client, slug)) {
+    if (slug !== AKSHAYA_SLUG) redirect("/" + AKSHAYA_SLUG + "/");
+    return <><ClientSeoContent client={client} slug={AKSHAYA_SLUG} /><AkshayaMarketPage client={client} slug={AKSHAYA_SLUG} /></>;
   }
 
   if (client.id === ESHANYA_SLUG) {
@@ -225,6 +238,30 @@ export async function generateMetadata({
       },
       twitter: { card: "summary_large_image", title, description },
       alternates: { canonical: `https://app.vitharn.com/${KPR_SLUG}/` },
+    };
+  }
+  if (isAkshayaClient(client, slug)) {
+    const cfg = parseClientConfig(client.config || {}, client.id);
+    const brand = cfg.companyName || "Akshaya";
+    const city = cityFromAddress(cfg.companyAddress) || "Hyderabad";
+    const title = cfg.seoTitle || brand + " UPVC Windows & Doors | " + city;
+    const description = cfg.seoDescription || "Explore premium UPVC windows, doors, sound-control glass and mosquito mesh options from " + brand + ". Get a clear estimate and free site measurement in " + city + ".";
+    return {
+      title,
+      description,
+      keywords: cfg.seoKeywords || brand + " UPVC, UPVC Windows " + city + ", UPVC Doors " + city + ", Sliding Windows, Casement Windows, French Doors, Free Site Measurement",
+      icons: { icon: [{ url: "/api/favicon/" + encodeURIComponent(client.id), type: "image/png", sizes: "48x48" }] },
+      openGraph: {
+        title,
+        description,
+        url: "https://app.vitharn.com/" + AKSHAYA_SLUG + "/",
+        siteName: brand,
+        type: "website",
+        locale: "en_IN",
+        images: [{ url: "/akshaya/images/hero.webp", width: 1536, height: 1024, alt: brand + " UPVC windows and doors" }],
+      },
+      twitter: { card: "summary_large_image", title, description, images: ["/akshaya/images/hero.webp"] },
+      alternates: { canonical: "https://app.vitharn.com/" + AKSHAYA_SLUG + "/" },
     };
   }
   if (client.id === ESHANYA_SLUG) {
