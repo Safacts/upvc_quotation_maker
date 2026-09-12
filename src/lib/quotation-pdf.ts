@@ -768,7 +768,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   return doc.save();
 }
 
-export function drawWindowElevationCard(
+function drawWindowElevationCard(
   page: PDFPage,
   item: QuotationPdfMeasured,
   itemIndex: number,
