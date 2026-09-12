@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'dashboard_screen.dart';
 import 'executive_tasks_screen.dart';
+import 'fabricator_switch_screen.dart';
 import 'leads_screen.dart';
 import 'quotation_screen.dart';
 import 'services/field_mode.dart';
@@ -48,6 +49,8 @@ class _FieldHomeScreenState extends State<FieldHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filingUnder =
+        Provider.of<AppState>(context).clientConfig.clientId;
     return Scaffold(
       appBar: AppBar(title: const Text('Vitharn Field')),
       body: RefreshIndicator(
@@ -55,6 +58,24 @@ class _FieldHomeScreenState extends State<FieldHomeScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.business_outlined),
+                title: Text('Filing under: $filingUnder'),
+                subtitle:
+                    const Text('Supplier exec — switch per fabricator'),
+                trailing: const Icon(Icons.swap_horiz),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const FabricatorSwitchScreen()),
+                  );
+                  _refresh();
+                },
+              ),
+            ),
             Card(
               child: ListTile(
                 leading: const Icon(Icons.assignment_outlined),
