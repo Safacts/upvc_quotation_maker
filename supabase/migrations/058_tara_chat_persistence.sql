@@ -44,6 +44,8 @@ BEGIN
 END;
 $$;
 
+ALTER FUNCTION public.set_tara_conversation_updated_at() SET search_path = public;
+
 DROP TRIGGER IF EXISTS set_tara_conversation_updated_at ON public.tara_conversations;
 CREATE TRIGGER set_tara_conversation_updated_at
   BEFORE UPDATE ON public.tara_conversations
