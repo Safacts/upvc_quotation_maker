@@ -78,7 +78,13 @@ async function getOwnedConversation(id: string, email: string) {
   return firstRow(rows);
 }
 
-async function createConversation(email: string, title: string, legacyId?: string, updatedAt?: string) {
+async function createConversation(
+  email: string,
+  title: string,
+  legacyId?: string,
+  updatedAt?: string,
+  ignoreDuplicate = false,
+) {
   const row: Record<string, any> = {
     admin_email: email,
     title: title || "New Chat",
@@ -88,7 +94,11 @@ async function createConversation(email: string, title: string, legacyId?: strin
     row.created_at = updatedAt;
     row.updated_at = updatedAt;
   }
-  const created = firstRow(await supaPost("tara_conversations", row));
+  const created = firstRow(await supaPost(
+    "tara_conversations",
+    row,
+    ignoreDuplicate ? "return=representation,resolution=ignore-duplicates" : undefined,
+  ));
   if (!created?.id || !isUuid(created.id)) {
     throw new Error("Tara conversation could not be created.");
   }
@@ -154,7 +164,22 @@ async function importLegacyConversations(email: string, rawConversations: unknow
     const updatedAt = localDate && !Number.isNaN(localDate.getTime())
       ? localDate.toISOString()
       : undefined;
-    const conversation = await createConversation(email, title, legacyId, updatedAt);
+    const conversation = await createConversation(email, title, legacyId, updatedAt, true).catch(async (error) => {
+      // A second tab may have won the unique legacy_id race between the
+      // existence check and insert. Re-read it instead of duplicating messages.
+      const concurrent = await supaGet("tara_conversations", {
+        admin_email: `eq.${email}`,
+        legacy_id: `eq.${legacyId}`,
+        select: "id",
+        limit: 1,
+      });
+      if (firstRow(concurrent)) return null;
+      throw error;
+    });
+    if (!conversation) {
+      skipped++;
+      continue;
+    }
     const rawMessages = Array.isArray(source.messages) ? source.messages : [];
     const messageRows = rawMessages
       .slice(0, MAX_IMPORTED_MESSAGES)

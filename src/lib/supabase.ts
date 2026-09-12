@@ -199,13 +199,14 @@ export async function supaPatch(
 export async function supaPost(
   path: string,
   body: Record<string, any> | Array<Record<string, any>>,
+  prefer = "return=representation",
 ): Promise<any> {
   const res = await fetchSupabase(`${SUPABASE_URL}/rest/v1/${path}`, {
     method: "POST",
     headers: {
       ...AUTH_HEADERS,
       "Content-Type": "application/json",
-      Prefer: "return=representation",
+      Prefer: prefer,
     },
     body: JSON.stringify(body),
   });
