@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Akshaya window mark</title>
+  <desc id="desc">A refined teal window arch with a copper sun and leaf detail.</desc>
+  <rect width="128" height="128" rx="30" fill="#0A2D2F"/>
+  <path d="M27 94V55.5C27 38.6553 40.6553 25 57.5 25H70.5C87.3447 25 101 38.6553 101 55.5V94" stroke="#F7F1E8" stroke-width="7" stroke-linecap="round"/>
+  <path d="M64 27V94M29 62H99" stroke="#F7F1E8" stroke-width="4" stroke-linecap="round" opacity=".86"/>
+  <path d="M82.5 35.5C89.9558 35.5 96 29.4558 96 22C88.5442 22 82.5 28.0442 82.5 35.5Z" fill="#E3A873"/>
+  <path d="M82.5 35.5C82.5 28.0442 88.5442 22 96 22" stroke="#E3A873" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M22 103H106" stroke="#E3A873" stroke-width="5" stroke-linecap="round"/>
+</svg>
