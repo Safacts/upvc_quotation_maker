@@ -32,6 +32,11 @@ const quarters = [
     note: "Shipped in the latest release — live on your system today.",
     items: [
       {
+        icon: MessageCircle,
+        title: "Tara remembers your work across devices",
+        desc: "Your Tara admin conversations now sync securely across browsers and devices, so you can pick up where you left off without losing context. Legacy browser chats are imported automatically.",
+      },
+      {
         icon: ShieldCheck,
         title: "Bank-grade protection for your business data",
         desc: "A full security audit hardened every door into your system: brute-force login lockouts, spam-proof signup, tamper-proof file storage, and strict tenant isolation — so your quotations, customer details, and invoices stay yours alone.",
