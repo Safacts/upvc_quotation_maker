@@ -32,6 +32,11 @@ const quarters = [
     note: "Shipped in the latest release — live on your system today.",
     items: [
       {
+        icon: Sparkles,
+        title: "A new digital showroom for Akshaya",
+        desc: "Explore window and door designs, compare illustrative estimates, browse design inspiration and read customer feedback in Akshaya's refreshed mobile-friendly website.",
+      },
+      {
         icon: MessageCircle,
         title: "Tara remembers your work across devices",
         desc: "Your Tara admin conversations now sync securely across browsers and devices, so you can pick up where you left off without losing context. Legacy browser chats are imported automatically.",
