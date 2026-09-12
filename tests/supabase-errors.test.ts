@@ -42,4 +42,17 @@ describe("Supabase sync failure classification", () => {
     expect(error.kind).toBe("timeout");
     expect(error.retryable).toBe(true);
   });
+
+  it("supports repeated PostgREST filters for bounded date windows", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("[]", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await supaGet("quotations", {
+      created_at: ["gte.2026-09-12T00:00:00.000Z", "lt.2026-09-13T00:00:00.000Z"],
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("created_at=gte.2026-09-12T00%3A00%3A00.000Z");
+    expect(url).toContain("created_at=lt.2026-09-13T00%3A00%3A00.000Z");
+  });
 });

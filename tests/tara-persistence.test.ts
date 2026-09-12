@@ -15,6 +15,8 @@ let conversationRows: any[] = [];
 let messageRows: any[] = [];
 let nextConversationId = "11111111-1111-4111-8111-111111111111";
 let failConversationPatch = false;
+let failMessagePost: Error | null = null;
+let failQuoteCount: Error | null = null;
 
 vi.mock("@/lib/session", () => ({
   getSession: async () => currentSession,
@@ -42,6 +44,7 @@ vi.mock("@/lib/supabase", () => ({
         updated_at: body.updated_at || "2026-09-12T00:00:00.000Z",
       }];
     }
+    if (table === "tara_messages" && failMessagePost) throw failMessagePost;
     return [];
   },
   supaPatch: async (table: string, qs: Record<string, unknown>, body: any) => {
@@ -53,7 +56,10 @@ vi.mock("@/lib/supabase", () => ({
     calls.push({ op: "delete", table, qs });
     return [];
   },
-  supaCount: async () => 0,
+  supaCount: async () => {
+    if (failQuoteCount) throw failQuoteCount;
+    return 0;
+  },
   supaGetAllPaged: async () => ({ rows: [], truncated: false }),
 }));
 
@@ -97,6 +103,8 @@ beforeEach(() => {
   messageRows = [];
   nextConversationId = conversation.id;
   failConversationPatch = false;
+  failMessagePost = null;
+  failQuoteCount = null;
   process.env.GROQ_API_KEY = "test-groq-key";
   vi.resetModules();
 });
@@ -150,6 +158,7 @@ describe("Tara persistent conversation API", () => {
       { role: "user", content: "server history" },
       { role: "user", content: "current question" },
     ]);
+    expect(JSON.stringify(groqInputs[0].messages)).not.toContain("forged browser history");
     const messagePosts = calls.filter((call) => call.op === "post" && call.table === "tara_messages");
     expect(messagePosts.map((call) => call.body)).toEqual([
       { conversation_id: conversation.id, role: "user", content: "current question" },
@@ -228,5 +237,72 @@ describe("Tara persistent conversation API", () => {
         admin_email: "eq.admin@example.com",
       },
     });
+  });
+
+  it("forces an exact India-time activity tool for daily quotation questions", async () => {
+    conversationRows = [conversation];
+    groqReplies = [
+      { choices: [{ message: { tool_calls: [{ id: "daily-1", function: { name: "get_quote_activity", arguments: "{}" } }] } }] },
+      { choices: [{ message: { content: "There were 0 quotations today." } }] },
+    ];
+    const { POST } = await import("../app/api/admin/agent/route");
+    const response = await POST(request("http://localhost/api/admin/agent", "POST", {
+      conversationId: conversation.id,
+      prompt: "How many quotations were made by all our clients today?",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(groqInputs[0].tool_choice).toEqual({ type: "function", function: { name: "get_quote_activity" } });
+    expect(groqInputs[1].messages.at(-2).content).toContain('"timezone":"Asia/Kolkata"');
+    expect(groqInputs[1].messages.at(-2).content).toContain('"exactCount":0');
+  });
+
+  it("uses a capability tool instead of a generic capability claim", async () => {
+    conversationRows = [conversation];
+    groqReplies = [
+      { choices: [{ message: { tool_calls: [{ id: "cap-1", function: { name: "get_capabilities", arguments: "{}" } }] } }] },
+      { choices: [{ message: { content: "I can inspect and manage approved platform operations." } }] },
+    ];
+    const { POST } = await import("../app/api/admin/agent/route");
+    const response = await POST(request("http://localhost/api/admin/agent", "POST", {
+      conversationId: conversation.id,
+      prompt: "What can you do as Tara?",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(groqInputs[0].tool_choice).toEqual({ type: "function", function: { name: "get_capabilities" } });
+    expect(groqInputs[1].messages.at(-2).content).toContain("cannot");
+    expect(groqInputs[1].messages.at(-2).content).not.toContain("password_hash");
+  });
+
+  it("sanitizes database details when a forced report fails", async () => {
+    conversationRows = [conversation];
+    failQuoteCount = Object.assign(new Error("PGRST116 internal database detail"), { retryable: true });
+    groqReplies = [
+      { choices: [{ message: { tool_calls: [{ id: "daily-2", function: { name: "get_quote_activity", arguments: "{}" } }] } }] },
+      { choices: [{ message: { content: "The daily quotation count could not be verified." } }] },
+    ];
+    const { POST } = await import("../app/api/admin/agent/route");
+    const response = await POST(request("http://localhost/api/admin/agent", "POST", {
+      conversationId: conversation.id,
+      prompt: "How many quotations were made today?",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(groqInputs[1].messages.at(-2).content).not.toContain("PGRST116");
+    expect(groqInputs[1].messages.at(-2).content).toContain("temporarily unavailable");
+  });
+
+  it("cleans up a newly created conversation when its first message cannot be saved", async () => {
+    conversationRows = [];
+    failMessagePost = new Error("message insert failed");
+    const { POST } = await import("../app/api/admin/agent/route");
+    const response = await POST(request("http://localhost/api/admin/agent", "POST", {
+      prompt: "Create this safely",
+    }));
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Tara could not complete that request. Please try again." });
+    expect(calls).toContainEqual(expect.objectContaining({ op: "delete", table: "tara_conversations" }));
   });
 });

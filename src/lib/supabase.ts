@@ -39,7 +39,7 @@ export class SupabaseRequestError extends Error {
   }
 }
 
-type QsValue = string | number | boolean;
+type QsValue = string | number | boolean | string[];
 
 function qv(v: QsValue): string {
   // PostgREST operator syntax: "eq.value", "ilike.%foo%" — only the part after
@@ -56,7 +56,10 @@ function qv(v: QsValue): string {
 }
 
 function buildUrl(path: string, qs: Record<string, QsValue>): string {
-  const parts = Object.entries(qs).map(([k, v]) => `${k}=${qv(v)}`);
+  const parts = Object.entries(qs).flatMap(([k, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    return values.map((value) => `${k}=${qv(value)}`);
+  });
   return `${SUPABASE_URL}/rest/v1/${path}${parts.length ? "?" + parts.join("&") : ""}`;
 }
 
