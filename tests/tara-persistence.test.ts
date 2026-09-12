@@ -14,6 +14,7 @@ let groqInputs: any[] = [];
 let conversationRows: any[] = [];
 let messageRows: any[] = [];
 let nextConversationId = "11111111-1111-4111-8111-111111111111";
+let failConversationPatch = false;
 
 vi.mock("@/lib/session", () => ({
   getSession: async () => currentSession,
@@ -45,6 +46,7 @@ vi.mock("@/lib/supabase", () => ({
   },
   supaPatch: async (table: string, qs: Record<string, unknown>, body: any) => {
     calls.push({ op: "patch", table, qs, body });
+    if (failConversationPatch) throw new Error("timestamp update unavailable");
     return [];
   },
   supaDelete: async (table: string, qs: Record<string, unknown>) => {
@@ -94,6 +96,7 @@ beforeEach(() => {
   conversationRows = [];
   messageRows = [];
   nextConversationId = conversation.id;
+  failConversationPatch = false;
   process.env.GROQ_API_KEY = "test-groq-key";
   vi.resetModules();
 });
@@ -152,6 +155,24 @@ describe("Tara persistent conversation API", () => {
       { conversation_id: conversation.id, role: "user", content: "current question" },
       { conversation_id: conversation.id, role: "assistant", content: "saved answer" },
     ]);
+  });
+
+  it("returns the completed response when the conversation timestamp update fails", async () => {
+    conversationRows = [conversation];
+    messageRows = [];
+    failConversationPatch = true;
+    groqReplies = [{ choices: [{ message: { content: "saved despite timestamp failure" } }] }];
+    const { POST } = await import("../app/api/admin/agent/route");
+    const response = await POST(request("http://localhost/api/admin/agent", "POST", {
+      conversationId: conversation.id,
+      prompt: "persist this safely",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: "saved despite timestamp failure",
+      conversationId: conversation.id,
+    });
   });
 
   it("imports local chats idempotently using the authenticated admin owner", async () => {
