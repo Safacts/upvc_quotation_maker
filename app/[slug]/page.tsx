@@ -20,9 +20,7 @@ const VENKATESHWARA_INDEX_PATH = join(process.cwd(), "public", VENKATESHWARA_SLU
 const AKSHAYA_SLUG = "akshaya-upvc";
 
 function isAkshayaClient(client: { id?: string }, slug: string) {
-  return (client.id || "").toLowerCase().includes("akshaya") ||
-    slug.toLowerCase().includes("akshaya") ||
-    slug.toLowerCase().includes("akshaa");
+  return ["akshaya upvc", "akshaya-upvc"].includes((client.id || "").toLowerCase().trim());
 }
 
 // Only these config keys may reach the browser on PUBLIC market pages.
@@ -243,13 +241,12 @@ export async function generateMetadata({
   if (isAkshayaClient(client, slug)) {
     const cfg = parseClientConfig(client.config || {}, client.id);
     const brand = cfg.companyName || "Akshaya";
-    const city = cityFromAddress(cfg.companyAddress) || "Hyderabad";
-    const title = cfg.seoTitle || brand + " UPVC Windows & Doors | " + city;
-    const description = cfg.seoDescription || "Explore premium UPVC windows, doors, sound-control glass and mosquito mesh options from " + brand + ". Get a clear estimate and free site measurement in " + city + ".";
+    const title = cfg.seoTitle || brand + " UPVC Windows & Doors";
+    const description = cfg.seoDescription || "Explore premium UPVC windows, doors, sound-control glass and mosquito mesh options from " + brand + ". Explore opening styles and request a site measurement.";
     return {
       title,
       description,
-      keywords: cfg.seoKeywords || brand + " UPVC, UPVC Windows " + city + ", UPVC Doors " + city + ", Sliding Windows, Casement Windows, French Doors, Free Site Measurement",
+      keywords: cfg.seoKeywords || brand + " UPVC, UPVC Windows, UPVC Doors, Sliding Windows, Casement Windows, French Doors",
       icons: { icon: [{ url: "/api/favicon/" + encodeURIComponent(client.id), type: "image/png", sizes: "48x48" }] },
       openGraph: {
         title,

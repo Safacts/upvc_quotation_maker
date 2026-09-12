@@ -1,7 +1,7 @@
 "use client";
 
 import "./akshaya.css";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -44,7 +44,7 @@ function cityFromAddress(address: string) {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
-  return parts.length > 1 ? parts[parts.length - 1].replace(/[0-9]/g, "").trim() : "Hyderabad";
+  return parts.length > 1 ? parts[parts.length - 1].replace(/[0-9]/g, "").trim() : "your area";
 }
 
 function digitsOnly(value: string) {
@@ -140,7 +140,9 @@ const process = [
 export default function AkshayaMarketPage({ client, slug }: Props) {
   const cfg = parseClientConfig(client.config || {}, client.id);
   const brandName = cfg.companyName && cfg.companyName.toLowerCase() === "akshaya" ? "Akshaya" : (cfg.companyName || "Akshaya");
-  const phone = cfg.companyContact || "";
+  const configuredPhone = cfg.companyContact || "";
+  const validContact = /^(?:91)?[6-9]\d{9}$/.test(digitsOnly(configuredPhone)) && !/^(?:91)?(\d)\1{9}$/.test(digitsOnly(configuredPhone));
+  const phone = validContact ? configuredPhone : "";
   const email = cfg.companyEmail || "";
   const address = cfg.companyAddress || "Eedama temple Hno:1-72";
   const city = cityFromAddress(address);
@@ -161,6 +163,9 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
   const [formArea, setFormArea] = useState("");
   const [formType, setFormType] = useState("Sliding windows");
   const [formSent, setFormSent] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [preparedMessage, setPreparedMessage] = useState("");
+  const [reviewsFailed, setReviewsFailed] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoaded, setReviewsLoaded] = useState(false);
 
@@ -173,12 +178,12 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
   useEffect(() => {
     let active = true;
     fetch("/api/reviews/" + encodeURIComponent(client.id))
-      .then((response) => response.ok ? response.json() : { reviews: [] })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Reviews unavailable")))
       .then((data) => {
         if (active) setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
       })
       .catch(() => {
-        if (active) setReviews([]);
+        if (active) { setReviews([]); setReviewsFailed(true); }
       })
       .finally(() => {
         if (active) setReviewsLoaded(true);
@@ -211,34 +216,43 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
   const maxTotal = Math.round(sqft * (pricePerSqft + 90));
   const selectedProduct = productCatalog.find((product) => product.id === calcType) || productCatalog[0];
   const glassLabel = calcGlass === "dgu" ? "12mm DGU sound-control glass" : calcGlass === "tinted" ? "Sun-control tinted / frosted glass" : "5mm toughened clear glass";
-  const WhatsAppLink = (message: string) => "https://wa.me/" + (whatsappTarget || "919999999999") + "?text=" + encodeURIComponent(message);
+  const WhatsAppLink = (message: string) => validContact ? "https://wa.me/" + whatsappTarget + "?text=" + encodeURIComponent(message) : "#contact";
   const estimateMessage =
-    "Hello " + brandName + "! I used your website estimate tool.\\n\\n" +
-    "Opening: " + selectedProduct.title + "\\n" +
-    "Dimensions: " + calcWidth + " ft x " + calcHeight + " ft (" + sqft + " sq.ft)\\n" +
-    "Glass: " + glassLabel + "\\n" +
-    "Mosquito mesh: " + (calcMesh ? "Included" : "Not required") + "\\n" +
-    "Indicative range: Rs." + minTotal.toLocaleString("en-IN") + " - Rs." + maxTotal.toLocaleString("en-IN") + "\\n\\n" +
+    "Hello " + brandName + "! I used your website estimate tool.\n\n" +
+    "Opening: " + selectedProduct.title + "\n" +
+    "Dimensions: " + calcWidth + " ft x " + calcHeight + " ft (" + sqft + " sq.ft)\n" +
+    "Glass: " + glassLabel + "\n" +
+    "Mosquito mesh: " + (calcMesh ? "Included" : "Not required") + "\n" +
+    "Indicative range: Rs." + minTotal.toLocaleString("en-IN") + " - Rs." + maxTotal.toLocaleString("en-IN") + "\n\n" +
     "Please arrange a free site measurement and final quotation.";
 
   const handleLeadSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formPhone.trim()) return;
+    setFormError("");
+    if (!validContact) { setFormError("The business contact number needs to be confirmed before enquiries can be sent."); return; }
+    if (!/^(?:91)?[6-9]\d{9}$/.test(digitsOnly(formPhone))) { setFormError("Please enter a valid Indian mobile number."); return; }
     const message =
-      "Hi " + brandName + "! I would like a free site measurement.\\n\\n" +
-      "Name: " + (formName || "Homeowner") + "\\n" +
-      "Phone: " + formPhone + "\\n" +
-      "Area: " + (formArea || city) + "\\n" +
-      "Requirement: " + formType + "\\n\\n" +
+      "Hi " + brandName + "! I would like a free site measurement.\n\n" +
+      "Name: " + (formName || "Homeowner") + "\n" +
+      "Phone: " + formPhone + "\n" +
+      "Area: " + (formArea || city) + "\n" +
+      "Requirement: " + formType + "\n\n" +
       "Please let me know a convenient time.";
+    setPreparedMessage(message);
     window.open(WhatsAppLink(message), "_blank", "noopener,noreferrer");
     setFormSent(true);
   };
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const closeMenu = () => setMenuOpen(false);
 
   return (
     <main className="akshaya-root" id="top">
+      <a className="ak-skip" href="#products">Skip to products</a>
       <div className="ak-announcement">
         <div className="ak-container ak-announcement-inner">
           <span><Sparkles size={14} /> Signature windows for better everyday living</span>
@@ -252,21 +266,21 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
       <header className={"ak-header " + (scrolled ? "is-scrolled" : "")}>
         <div className="ak-container ak-header-inner">
           <a href="#top" className="ak-brand" onClick={closeMenu}>
-            <span className="ak-brand-mark" aria-hidden="true">A</span>
+            {cfg.logoUrl && !cfg.logoUrl.includes("ftcdn.net") ? <img className="ak-brand-logo" src={cfg.logoUrl} alt={brandName + " logo"} /> : <span className="ak-brand-mark" aria-hidden="true">A</span>}
             <span><strong>{brandName}</strong><small>UPVC WINDOWS & DOORS</small></span>
           </a>
-          <nav className={"ak-nav " + (menuOpen ? "is-open" : "")}>
+          <nav aria-label="Main navigation" id="ak-navigation" className={"ak-nav " + (menuOpen ? "is-open" : "")}>
             <a href="#products" onClick={closeMenu}>Products</a>
             <a href="#calculator" onClick={closeMenu}>Estimator</a>
             <a href="#comfort" onClick={closeMenu}>Why UPVC</a>
             <a href="#process" onClick={closeMenu}>Process</a>
             <a href="#lookbook" onClick={closeMenu}>Lookbook</a>
             <a href="#reviews" onClick={closeMenu}>Reviews</a>
-            <a className="ak-nav-cta" href={WhatsAppLink("Hi " + brandName + "! I am exploring UPVC windows and doors for my home.")} target="_blank" rel="noreferrer" onClick={closeMenu}>
+            <a className="ak-nav-cta" href={WhatsAppLink("Hi " + brandName + "! I am exploring UPVC windows and doors for my home.")} target={validContact ? "_blank" : undefined} rel="noreferrer" onClick={closeMenu}>
               WhatsApp us <ArrowRight size={15} />
             </a>
           </nav>
-          <button type="button" className="ak-menu-button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+          <button type="button" className="ak-menu-button" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-controls="ak-navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
             {menuOpen ? <X size={22} /> : <span className="ak-menu-lines"><i /><i /></span>}
           </button>
         </div>
@@ -297,9 +311,9 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
 
       <section className="ak-proof-rail" aria-label="Akshaya benefits">
         <div className="ak-container ak-proof-grid">
-          <div><strong>10 yr</strong><span>profile warranty option</span></div>
+          <div><strong>Made to fit</strong><span>your measurements</span></div>
           <div><strong>01</strong><span>clear digital estimate</span></div>
-          <div><strong>0</strong><span>hidden measurement surprises</span></div>
+          <div><strong>Your choice</strong><span>glass and mesh options</span></div>
           <div><strong>∞</strong><span>ways to make it yours</span></div>
         </div>
       </section>
@@ -330,7 +344,7 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
               const Icon = product.icon;
               return <article className={"ak-product-card " + (index === 0 ? "is-featured" : "")} key={product.id}>
                 <div className="ak-product-image"><img src={product.image} alt={product.alt} loading={index === 0 ? "eager" : "lazy"} /><span className="ak-product-number">0{index + 1}</span></div>
-                <div className="ak-product-content"><div className="ak-product-meta"><span>{product.eyebrow}</span><Icon size={18} /></div><h3>{product.title}</h3><p>{product.description}</p><ul>{product.points.map((point) => <li key={point}><Check size={14} /> {point}</li>)}</ul><a href={WhatsAppLink("Hi " + brandName + ", I want to explore " + product.title + ". Please share the best options for my home.")} target="_blank" rel="noreferrer">Explore this system <ArrowRight size={15} /></a></div>
+                <div className="ak-product-content"><div className="ak-product-meta"><span>{product.eyebrow}</span><Icon size={18} /></div><h3>{product.title}</h3><p>{product.description}</p><ul>{product.points.map((point) => <li key={point}><Check size={14} /> {point}</li>)}</ul><a href={WhatsAppLink("Hi " + brandName + ", I want to explore " + product.title + ". Please share the best options for my home.")} target={validContact ? "_blank" : undefined} rel="noreferrer">Explore this system <ArrowRight size={15} /></a></div>
               </article>;
             })}
           </div>
@@ -346,7 +360,7 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
               <div className="ak-type-grid">
                 {productCatalog.map((product) => {
                   const Icon = product.icon;
-                  return <button type="button" key={product.id} className={"ak-type-button " + (calcType === product.id ? "is-active" : "")} onClick={() => setCalcType(product.id)}><Icon size={18} /><span>{product.title}</span></button>;
+                  return <button type="button" key={product.id} className={"ak-type-button " + (calcType === product.id ? "is-active" : "")} aria-pressed={calcType === product.id} onClick={() => setCalcType(product.id)}><Icon size={18} /><span>{product.title}</span></button>;
                 })}
               </div>
               <div className="ak-calc-step"><span>02</span><div><small>OPENING SIZE</small><strong>{calcWidth} ft wide × {calcHeight} ft high</strong></div></div>
@@ -361,11 +375,11 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
               </div>
             </div>
             <aside className="ak-calc-summary">
-              <div className="ak-summary-kicker"><CircleGauge size={17} /> LIVE ESTIMATE</div>
+              <div className="ak-summary-kicker"><CircleGauge size={17} /> ILLUSTRATIVE ESTIMATE</div>
               <p className="ak-summary-area">{sqft} <span>sq.ft</span></p>
               <dl><div><dt>Opening</dt><dd>{selectedProduct.title}</dd></div><div><dt>Glass</dt><dd>{calcGlass === "dgu" ? "DGU sound-control" : calcGlass === "tinted" ? "Sun-control" : "Toughened clear"}</dd></div><div><dt>Mesh</dt><dd>{calcMesh ? "Included" : "Not required"}</dd></div></dl>
-              <div className="ak-price"><small>INDICATIVE RANGE</small><strong>₹{minTotal.toLocaleString("en-IN")} — ₹{maxTotal.toLocaleString("en-IN")}</strong><span>Fabrication and installation to be confirmed after measurement.</span></div>
-              <a className="ak-button ak-button-teal" href={WhatsAppLink(estimateMessage)} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Send this to Akshaya <ArrowRight size={16} /></a>
+              <div className="ak-price"><small>INDICATIVE RANGE</small><strong>₹{minTotal.toLocaleString("en-IN")} — ₹{maxTotal.toLocaleString("en-IN")}</strong><span>Example pricing only, not an Akshaya rate card. Glass, hardware, taxes, delivery and installation must be confirmed in the final quotation.</span></div>
+              <a className="ak-button ak-button-teal" href={WhatsAppLink(estimateMessage)} target={validContact ? "_blank" : undefined} rel="noreferrer"><MessageCircle size={17} /> Send this to Akshaya <ArrowRight size={16} /></a>
             </aside>
           </div>
         </div>
@@ -387,20 +401,20 @@ export default function AkshayaMarketPage({ client, slug }: Props) {
       </section>
 
       <section id="lookbook" className="ak-section ak-lookbook">
-        <div className="ak-container"><div className="ak-section-heading ak-heading-split ak-heading-light"><div><p className="ak-eyebrow"><span className="ak-eyebrow-line" /> A little inspiration</p><h2>See the room<br /><em>before the room.</em></h2></div><p>Explore a few ways our systems can sit inside modern Indian homes. Bring us your opening—we will help you make the right call.</p></div><div className="ak-gallery-grid">{gallery.map((image, index) => <figure className={"ak-gallery-item gallery-" + index} key={image}><img src={image} alt={"UPVC window and door design inspiration " + (index + 1)} loading="lazy" /><figcaption><span>LOOKBOOK / 0{index + 1}</span><strong>{index === 0 ? "A room with a view" : index === 1 ? "The everyday slider" : index === 2 ? "Open to the morning" : index === 3 ? "A doorway to outside" : index === 4 ? "Villa-scale calm" : "Your next opening"}</strong></figcaption></figure>)}</div></div>
+        <div className="ak-container"><div className="ak-section-heading ak-heading-split ak-heading-light"><div><p className="ak-eyebrow"><span className="ak-eyebrow-line" /> A little inspiration</p><h2>See the room<br /><em>before the room.</em></h2></div><p>Explore a few ways our systems can sit inside modern Indian homes. Generated images are design inspiration, not photographs of completed Akshaya projects. Final products and specifications may differ.</p></div><div className="ak-gallery-grid">{gallery.map((image, index) => <figure className={"ak-gallery-item gallery-" + index} key={image}><img src={image} alt={"UPVC window and door design inspiration " + (index + 1)} loading="lazy" /><figcaption><span>LOOKBOOK / 0{index + 1}</span><strong>{index === 0 ? "A room with a view" : index === 1 ? "The everyday slider" : index === 2 ? "Open to the morning" : index === 3 ? "A doorway to outside" : index === 4 ? "Villa-scale calm" : "Your next opening"}</strong></figcaption></figure>)}</div></div>
       </section>
 
       <section id="reviews" className="ak-section ak-reviews">
-        <div className="ak-container"><div className="ak-section-heading ak-heading-split"><div><p className="ak-eyebrow ak-eyebrow-dark"><span className="ak-eyebrow-line" /> Your experience matters</p><h2>Good work<br /><em>travels far.</em></h2></div><div><p>Every visible review below comes from Akshaya's approved customer feedback. No reviews yet? Tell us what you need and be the first conversation.</p><a className="ak-text-link" href={"/" + slug + "/review"}>Leave a review <ArrowRight size={15} /></a></div></div>{reviewsLoaded && reviews.length > 0 ? <div className="ak-review-grid">{reviews.slice(0, 3).map((review, index) => <article className="ak-review-card" key={review.id || index}><div className="ak-stars">{Array.from({ length: 5 }).map((_, starIndex) => <Star key={starIndex} size={15} fill={starIndex < Math.round(Number(review.rating) || 5) ? "currentColor" : "none"} />)}</div><p>“{review.review_text || "A customer shared feedback about their experience with Akshaya."}”</p><footer><strong>{review.customer_name || "Akshaya customer"}</strong><span>{review.role || review.source || "Verified feedback"}</span></footer></article>)}</div> : <div className="ak-review-empty"><div className="ak-review-empty-icon"><Star size={22} /></div><div><strong>Customer stories are being curated.</strong><p>Want to talk through your project first? We are ready when you are.</p></div><a href={WhatsAppLink("Hi " + brandName + "! I would like to discuss a window or door project.")} target="_blank" rel="noreferrer">Start a conversation <ArrowRight size={15} /></a></div>}</div>
+        <div className="ak-container"><div className="ak-section-heading ak-heading-split"><div><p className="ak-eyebrow ak-eyebrow-dark"><span className="ak-eyebrow-line" /> Your experience matters</p><h2>Good work<br /><em>travels far.</em></h2></div><div><p>Every visible review below comes from Akshaya's approved customer feedback. Read customer feedback or share your own experience.</p><a className="ak-text-link" href={"/" + slug + "/review"}>Leave a review <ArrowRight size={15} /></a></div></div>{reviewsLoaded && reviews.length > 0 ? <div className="ak-review-grid">{reviews.slice(0, 3).map((review, index) => <article className="ak-review-card" key={review.id || index}><div className="ak-stars">{Array.from({ length: 5 }).map((_, starIndex) => <Star key={starIndex} size={15} fill={starIndex < Math.round(Math.max(0, Math.min(5, Number(review.rating) || 0))) ? "currentColor" : "none"} />)}</div><p>“{review.review_text || "A customer shared feedback about their experience with Akshaya."}”</p><footer><strong>{review.customer_name || "Akshaya customer"}</strong><span>{review.role || review.source || "Customer feedback"}</span></footer></article>)}</div> : <div className="ak-review-empty"><div className="ak-review-empty-icon"><Star size={22} /></div><div><strong>{!reviewsLoaded ? "Loading customer feedback…" : reviewsFailed ? "Customer feedback is temporarily unavailable." : "No published customer reviews yet."}</strong><p>Want to talk through your project first? We are ready when you are.</p></div><a href={WhatsAppLink("Hi " + brandName + "! I would like to discuss a window or door project.")} target={validContact ? "_blank" : undefined} rel="noreferrer">Start a conversation <ArrowRight size={15} /></a></div>}</div>
       </section>
 
       <section id="contact" className="ak-contact">
-        <div className="ak-container ak-contact-grid"><div className="ak-contact-copy"><p className="ak-eyebrow"><span className="ak-eyebrow-line" /> Your home, next</p><h2>Let’s make the<br /><em>opening count.</em></h2><p>Send us a few details. We will take it from there—with a real conversation, a careful measurement and a quote you can understand.</p><div className="ak-contact-facts"><a href={callTarget}><Phone size={18} /><span><small>Call</small><strong>{phone || "Talk to the team"}</strong></span></a><a href={WhatsAppLink("Hi " + brandName + "! I would like to plan a free site measurement.")} target="_blank" rel="noreferrer"><MessageCircle size={18} /><span><small>WhatsApp</small><strong>Message Akshaya</strong></span></a><div><MapPin size={18} /><span><small>Located at</small><strong>{address}</strong></span></div><div><Clock3 size={18} /><span><small>Best time to reach us</small><strong>We will coordinate a convenient visit</strong></span></div></div></div><div className="ak-form-card">{formSent ? <div className="ak-form-success"><div className="ak-success-icon"><Check size={26} /></div><h3>Message ready.</h3><p>Your WhatsApp conversation should be open. If it did not open, use the button below to try again.</p><a className="ak-button ak-button-teal" href={WhatsAppLink("Hi " + brandName + "! I would like a free site measurement.")} target="_blank" rel="noreferrer">Open WhatsApp <ArrowRight size={16} /></a></div> : <><div className="ak-form-kicker">FREE SITE MEASUREMENT</div><h3>Tell us what you are imagining.</h3><form onSubmit={handleLeadSubmit}><label>Name<input type="text" value={formName} onChange={(event) => setFormName(event.target.value)} placeholder="Your name" /></label><label>Phone <span>*</span><input type="tel" value={formPhone} onChange={(event) => setFormPhone(event.target.value)} placeholder="10-digit mobile number" required /></label><label>Area / location<input type="text" value={formArea} onChange={(event) => setFormArea(event.target.value)} placeholder={city} /></label><label>What are you planning?<select value={formType} onChange={(event) => setFormType(event.target.value)}><option>Sliding windows</option><option>Casement windows</option><option>French & patio doors</option><option>Villa glazing</option><option>Not sure yet</option></select></label><button className="ak-button ak-button-teal" type="submit">Request my measurement <ArrowRight size={16} /></button><small className="ak-form-note">We use these details only to start your enquiry on WhatsApp.</small></form></>}</div></div>
+        <div className="ak-container ak-contact-grid"><div className="ak-contact-copy"><p className="ak-eyebrow"><span className="ak-eyebrow-line" /> Your home, next</p><h2>Let’s make the<br /><em>opening count.</em></h2><p>Send us a few details. We will take it from there—with a real conversation, a careful measurement and a quote you can understand.</p><div className="ak-contact-facts"><a href={callTarget}><Phone size={18} /><span><small>Call</small><strong>{phone || "Talk to the team"}</strong></span></a><a href={WhatsAppLink("Hi " + brandName + "! I would like to plan a free site measurement.")} target={validContact ? "_blank" : undefined} rel="noreferrer"><MessageCircle size={18} /><span><small>WhatsApp</small><strong>Message Akshaya</strong></span></a><div><MapPin size={18} /><span><small>Located at</small><strong>{address}</strong></span></div><div><Clock3 size={18} /><span><small>Best time to reach us</small><strong>We will coordinate a convenient visit</strong></span></div></div></div><div className="ak-form-card">{formSent ? <div className="ak-form-success"><div className="ak-success-icon"><Check size={26} /></div><h3>Message ready.</h3><p>Your WhatsApp conversation should be open. If it did not open, use the button below to try again.</p><a className="ak-button ak-button-teal" href={WhatsAppLink(preparedMessage)} target={validContact ? "_blank" : undefined} rel="noreferrer">Open WhatsApp <ArrowRight size={16} /></a></div> : <><div className="ak-form-kicker">FREE SITE MEASUREMENT</div><h3>Tell us what you are imagining.</h3><form onSubmit={handleLeadSubmit}>{!validContact && <p className="ak-form-alert" role="status">The business phone number is awaiting confirmation. Online enquiries are not available yet.</p>}{formError && <p className="ak-form-alert" role="alert">{formError}</p>}<label>Name<input type="text" value={formName} onChange={(event) => setFormName(event.target.value)} placeholder="Your name" autoComplete="name" maxLength={100} /></label><label>Phone <span>*</span><input type="tel" value={formPhone} onChange={(event) => setFormPhone(event.target.value)} placeholder="10-digit mobile number" autoComplete="tel" inputMode="tel" maxLength={16} required /></label><label>Area / location<input type="text" value={formArea} onChange={(event) => setFormArea(event.target.value)} placeholder={city} /></label><label>What are you planning?<select value={formType} onChange={(event) => setFormType(event.target.value)}><option>Sliding windows</option><option>Casement windows</option><option>French & patio doors</option><option>Villa glazing</option><option>Not sure yet</option></select></label><button className="ak-button ak-button-teal" type="submit" disabled={!validContact}>Request my measurement <ArrowRight size={16} /></button><small className="ak-form-note">We use these details only to start your enquiry on WhatsApp.</small></form></>}</div></div>
       </section>
 
-      <footer className="ak-footer"><div className="ak-container ak-footer-main"><div className="ak-footer-brand"><a href="#top" className="ak-brand"><span className="ak-brand-mark" aria-hidden="true">A</span><span><strong>{brandName}</strong><small>UPVC WINDOWS & DOORS</small></span></a><p>Thoughtful openings for homes that value light, quiet and lasting ease.</p><a className="ak-footer-portal" href={"/" + slug + "/home"}>Open client portal <ArrowRight size={15} /></a></div><div><h4>Explore</h4><a href="#products">Products</a><a href="#calculator">Estimator</a><a href="#comfort">Why UPVC</a><a href="#process">Process</a></div><div><h4>Start here</h4><a href="#contact">Free measurement</a><a href={WhatsAppLink("Hi " + brandName + "! I would like a window and door consultation.")} target="_blank" rel="noreferrer">WhatsApp us</a><a href={callTarget}>Call the team</a>{cfg.appDownloadUrl ? <a href={cfg.appDownloadUrl} target="_blank" rel="noreferrer">Open mobile app</a> : null}</div><div><h4>Contact</h4><span>{address}</span>{email ? <a href={"mailto:" + email}>{email}</a> : null}</div></div><div className="ak-container ak-footer-bottom"><span>© {new Date().getFullYear()} {brandName}. Crafted for better living.</span><span>UPVC WINDOWS · DOORS · COMFORT</span></div></footer>
+      <footer className="ak-footer"><div className="ak-container ak-footer-main"><div className="ak-footer-brand"><a href="#top" className="ak-brand">{cfg.logoUrl && !cfg.logoUrl.includes("ftcdn.net") ? <img className="ak-brand-logo" src={cfg.logoUrl} alt={brandName + " logo"} /> : <span className="ak-brand-mark" aria-hidden="true">A</span>}<span><strong>{brandName}</strong><small>UPVC WINDOWS & DOORS</small></span></a><p>Thoughtful openings for homes that value light, quiet and lasting ease.</p><a className="ak-footer-portal" href={"/" + slug + "/home"}>Open client portal <ArrowRight size={15} /></a></div><div><h4>Explore</h4><a href="#products">Products</a><a href="#calculator">Estimator</a><a href="#comfort">Why UPVC</a><a href="#process">Process</a></div><div><h4>Start here</h4><a href="#contact">Free measurement</a><a href={WhatsAppLink("Hi " + brandName + "! I would like a window and door consultation.")} target={validContact ? "_blank" : undefined} rel="noreferrer">WhatsApp us</a><a href={callTarget}>Call the team</a>{cfg.appDownloadUrl ? <a href={cfg.appDownloadUrl} target={validContact ? "_blank" : undefined} rel="noreferrer">Open mobile app</a> : null}</div><div><h4>Contact</h4><span>{address}</span>{email ? <a href={"mailto:" + email}>{email}</a> : null}</div></div><div className="ak-container ak-footer-bottom"><span>© {new Date().getFullYear()} {brandName}. Crafted for better living.</span><span>UPVC WINDOWS · DOORS · COMFORT</span></div></footer>
 
-      <a className="ak-floating-whatsapp" href={WhatsAppLink("Hi " + brandName + "! I am looking for UPVC windows and doors.")} target="_blank" rel="noreferrer" aria-label="Chat with Akshaya on WhatsApp"><MessageCircle size={18} /><span>Chat with Akshaya</span></a>
+      <a className="ak-floating-whatsapp" href={WhatsAppLink("Hi " + brandName + "! I am looking for UPVC windows and doors.")} target={validContact ? "_blank" : undefined} rel="noreferrer" aria-label="Chat with Akshaya on WhatsApp"><MessageCircle size={18} /><span>Chat with Akshaya</span></a>
     </main>
   );
 }
