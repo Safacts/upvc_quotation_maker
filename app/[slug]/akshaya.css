@@ -31,7 +31,6 @@
 .ak-header.is-scrolled { box-shadow: 0 14px 35px rgba(12,41,42,.08); border-color: var(--ak-line); }
 .ak-header-inner { min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
 .ak-brand { display: inline-flex; align-items: center; gap: 11px; flex: 0 0 auto; }
-.ak-brand-mark { width: 37px; height: 37px; display: grid; place-items: center; border: 1px solid var(--ak-ink); color: var(--ak-ink); font-family: Georgia, serif; font-size: 21px; font-style: italic; transform: rotate(-8deg); }
 .ak-brand strong, .ak-brand small { display: block; }
 .ak-brand strong { font-family: Georgia, "Times New Roman", serif; font-size: 21px; letter-spacing: -.04em; }
 .ak-brand small { margin-top: 1px; font-size: 7px; letter-spacing: .2em; font-weight: 700; color: var(--ak-teal); }
@@ -246,7 +245,6 @@
 .ak-footer-main { display: grid; grid-template-columns: 1.4fr .65fr .75fr 1fr; gap: 55px; padding: 76px 0 65px; }
 .ak-footer-main > div { display: flex; flex-direction: column; align-items: flex-start; gap: 11px; color: rgba(255,255,255,.53); font-size: 11px; }
 .ak-footer-main .ak-footer-brand { gap: 18px; }
-.ak-footer-brand .ak-brand-mark { color: #fff; border-color: #fff; }
 .ak-footer-brand .ak-brand strong { color: #fff; }
 .ak-footer-brand .ak-brand small { color: #9bcab8; }
 .ak-footer-brand p { max-width: 300px; margin: 0; color: rgba(255,255,255,.45); font-size: 12px; line-height: 1.7; }
@@ -275,7 +273,6 @@
   .ak-announcement-right { display: none; }
   .ak-header-inner { min-height: 72px; }
   .ak-brand strong { font-size: 18px; }
-  .ak-brand-mark { width: 33px; height: 33px; font-size: 18px; }
   .ak-menu-button { display: block; }
   .ak-nav { position: absolute; top: 72px; right: 0; left: 0; display: none; flex-direction: column; align-items: stretch; gap: 0; padding: 13px 20px 24px; background: var(--ak-paper); border-bottom: 1px solid var(--ak-line); box-shadow: 0 20px 35px rgba(16,43,45,.1); }
   .ak-nav.is-open { display: flex; }
