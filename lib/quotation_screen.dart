@@ -982,6 +982,11 @@ $reviewCta
   Future<void> _generateAndProcessPdf() async {
     if (_isProcessingPdf) return;
     if (mounted) setState(() => _isProcessingPdf = true);
+    // Show full-screen spinner for Vaishnavi (SVG → Resvg → PDF takes ~15s) — generic is instant
+    final _isVaishnaviPdf = Provider.of<AppState>(context, listen: false).clientConfig.clientId.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').startsWith('vaishnavi');
+    if (_isVaishnaviPdf && mounted) {
+      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator(strokeWidth: 3)));
+    }
     try {
       umamiTrack('generate_pdf');
       // 1. Instant local persist (0ms) so no data is ever lost
@@ -1014,6 +1019,9 @@ $reviewCta
 
       // 4. Navigate to Confirmation Screen immediately
       if (!mounted) return;
+      if (_isVaishnaviPdf && Navigator.canPop(context)) {
+        try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+      }
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -1028,11 +1036,17 @@ $reviewCta
     } catch (e) {
       debugPrint('Generate PDF error: $e');
       if (mounted) {
+        if (_isVaishnaviPdf && Navigator.canPop(context)) {
+          try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_calmError(e, 'complete this quotation'))),
         );
       }
     } finally {
+      if (_isVaishnaviPdf && mounted && Navigator.canPop(context)) {
+        try { Navigator.of(context, rootNavigator: true).pop(); } catch (_) {}
+      }
       if (mounted) setState(() => _isProcessingPdf = false);
     }
   }

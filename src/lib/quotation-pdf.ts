@@ -788,10 +788,10 @@ function drawWindowElevationCard(
   if (lowerDesc.includes("door") || lowerDesc.includes("french")) {
     type = lowerDesc.includes("double") || lowerDesc.includes("2 sash") ? "doubleDoor" : "singleDoor";
     typeTitle = type === "doubleDoor" ? `Double Door: Item ${itemIndex}` : `Single Door: Item ${itemIndex}`;
-  } else if (lowerDesc.includes("3 track") || lowerDesc.includes("3-track") || lowerDesc.includes("3track")) {
+  } else if (lowerDesc.includes("3sw") || lowerDesc.includes("3 track") || lowerDesc.includes("3-track") || lowerDesc.includes("3track")) {
     type = "sliding3";
     typeTitle = `3-Track Sliding Window: Item ${itemIndex}`;
-  } else if (lowerDesc.includes("sliding") || lowerDesc.includes("slider") || lowerDesc.includes("2 track") || lowerDesc.includes("2-track")) {
+  } else if (lowerDesc.includes("2sw") || lowerDesc.includes("sliding") || lowerDesc.includes("slider") || lowerDesc.includes("2 track") || lowerDesc.includes("2-track")) {
     type = "sliding2";
     typeTitle = `2-Track Sliding Window: Item ${itemIndex}`;
   } else if (lowerDesc.includes("casement") || lowerDesc.includes("openable") || lowerDesc.includes("side hung")) {
