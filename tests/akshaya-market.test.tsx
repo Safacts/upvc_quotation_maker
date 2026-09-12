@@ -3,16 +3,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Page from "../app/[slug]/AkshayaMarketPage";
 
-const client = { id: "akshaya upvc", config: { companyName: "Akshaya", companyContact: "9876543210" } };
+const client = { id: "akshaya upvc", config: { companyName: "Akshaya", companyContact: "9876543210", logoUrl: "configured-client-logo" } };
 beforeEach(() => { vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ reviews: [] }) })); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("Akshaya market page", () => {
-  it("renders the local Akshaya logo mark instead of the monogram fallback", () => {
+  it("renders Akshaya's existing client logo in the header and footer", () => {
     render(<Page client={client} slug="akshaya-upvc" />);
     const logos = screen.getAllByRole("img", { name: "Akshaya logo" });
     expect(logos.length).toBe(2);
-    expect(logos[0].getAttribute("src")).toBe("/akshaya/images/logo-mark.svg");
+    expect(logos[0].getAttribute("src")).toBe(client.config.logoUrl);
     expect(document.querySelector(".ak-brand-mark")).toBeNull();
+  });
+
+  it("uses the latest client-configured logo when the market data changes", () => {
+    const { rerender } = render(<Page client={client} slug="akshaya-upvc" />);
+    const updatedLogoUrl = "/uploaded/akshaya-logo-v2.png";
+    rerender(<Page client={{ ...client, config: { ...client.config, logoUrl: updatedLogoUrl } }} slug="akshaya-upvc" />);
+    expect(screen.getAllByRole("img", { name: "Akshaya logo" }).map((logo) => logo.getAttribute("src"))).toEqual([updatedLogoUrl, updatedLogoUrl]);
   });
 
   it("updates estimates and encodes real message line breaks", () => {
