@@ -7,13 +7,19 @@ import crypto from "crypto";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://app.vitharn.com",
+  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 } as const;
 
 const MAX_PROMPT_CHARS = 4000;
 const MAX_HISTORY_MESSAGES = 12;
-const MAX_HISTORY_CHARS = 2500;
+const MAX_STORED_MESSAGES = 500;
+const MAX_STORED_MESSAGE_CHARS = 20_000;
+const MAX_IMPORTED_CONVERSATIONS = 50;
+const MAX_IMPORTED_MESSAGES = 500;
 const SAFE_UPDATE_KEYS = new Set([
   "companyName",
   "appName",
@@ -43,29 +49,150 @@ function sha256(str: string) {
   return crypto.createHash("sha256").update(str).digest("hex");
 }
 
+function adminEmail(session: any) {
+  return String(session?.email ?? "").trim().toLowerCase();
+}
+
+function firstRow(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value && typeof value === "object" ? value : null;
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function chatTitle(prompt: string) {
+  const compact = prompt.replace(/\s+/g, " ").trim();
+  return compact.slice(0, 80) + (compact.length > 80 ? "..." : "");
+}
+
+async function getOwnedConversation(id: string, email: string) {
+  const rows = await supaGet("tara_conversations", {
+    id: `eq.${id}`,
+    admin_email: `eq.${email}`,
+    select: "id,title,legacy_id,created_at,updated_at",
+    limit: 1,
+  });
+  return firstRow(rows);
+}
+
+async function createConversation(email: string, title: string, legacyId?: string, updatedAt?: string) {
+  const row: Record<string, any> = {
+    admin_email: email,
+    title: title || "New Chat",
+  };
+  if (legacyId) row.legacy_id = legacyId;
+  if (updatedAt) {
+    row.created_at = updatedAt;
+    row.updated_at = updatedAt;
+  }
+  const created = firstRow(await supaPost("tara_conversations", row));
+  if (!created?.id || !isUuid(created.id)) {
+    throw new Error("Tara conversation could not be created.");
+  }
+  return created;
+}
+
+async function saveMessage(
+  conversationId: string,
+  role: "user" | "assistant",
+  content: string,
+  logs?: string[],
+) {
+  await supaPost("tara_messages", {
+    conversation_id: conversationId,
+    role,
+    content: content.slice(0, MAX_STORED_MESSAGE_CHARS),
+    ...(logs && logs.length > 0 ? { tool_logs: logs } : {}),
+  });
+  await supaPatch(
+    "tara_conversations",
+    { id: `eq.${conversationId}` },
+    { updated_at: new Date().toISOString() },
+  );
+}
+
+async function importLegacyConversations(email: string, rawConversations: unknown) {
+  if (!Array.isArray(rawConversations)) {
+    return { imported: 0, skipped: 0 };
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  for (const raw of rawConversations.slice(0, MAX_IMPORTED_CONVERSATIONS)) {
+    if (!raw || typeof raw !== "object") {
+      skipped++;
+      continue;
+    }
+    const source = raw as any;
+    const legacyId = typeof source.id === "string" ? source.id.trim().slice(0, 120) : "";
+    if (!legacyId) {
+      skipped++;
+      continue;
+    }
+
+    const existing = await supaGet("tara_conversations", {
+      admin_email: `eq.${email}`,
+      legacy_id: `eq.${legacyId}`,
+      select: "id",
+      limit: 1,
+    });
+    if (firstRow(existing)) {
+      skipped++;
+      continue;
+    }
+
+    const title = typeof source.title === "string"
+      ? source.title.replace(/\s+/g, " ").trim().slice(0, 200) || "New Chat"
+      : "New Chat";
+    const localUpdatedAt = Number(source.updatedAt);
+    const localDate = Number.isFinite(localUpdatedAt) && localUpdatedAt > 0
+      ? new Date(localUpdatedAt)
+      : null;
+    const updatedAt = localDate && !Number.isNaN(localDate.getTime())
+      ? localDate.toISOString()
+      : undefined;
+    const conversation = await createConversation(email, title, legacyId, updatedAt);
+    const rawMessages = Array.isArray(source.messages) ? source.messages : [];
+    const messageRows = rawMessages
+      .slice(0, MAX_IMPORTED_MESSAGES)
+      .filter((message: any) => message && typeof message === "object")
+      .map((message: any) => {
+        const role = message.role === "agent" || message.role === "assistant"
+          ? "assistant"
+          : message.role === "user" ? "user" : null;
+        const content = typeof message.content === "string"
+          ? message.content.trim().slice(0, MAX_STORED_MESSAGE_CHARS)
+          : "";
+        if (!role || !content) return null;
+        const logs = Array.isArray(message.logs)
+          ? message.logs.filter((log: unknown): log is string => typeof log === "string").slice(0, 50)
+          : [];
+        return {
+          conversation_id: conversation.id,
+          role,
+          content,
+          ...(logs.length > 0 ? { tool_logs: logs } : {}),
+        };
+      })
+      .filter(Boolean) as Array<Record<string, any>>;
+    if (messageRows.length > 0) {
+      await supaPost("tara_messages", messageRows);
+    }
+    imported++;
+  }
+
+  return { imported, skipped };
+}
+
 function safeClientConfig(config: Record<string, any>) {
   const safe: Record<string, any> = {};
   for (const [key, value] of Object.entries(config ?? {})) {
     if (!SECRET_KEYS.has(key)) safe[key] = value;
   }
   return safe;
-}
-
-function cleanHistory(history: unknown) {
-  if (!Array.isArray(history)) return [];
-  return history
-    .filter((item): item is { role: string; content: unknown } =>
-      !!item && typeof item === "object" &&
-      ((item as any).role === "user" || (item as any).role === "assistant"),
-    )
-    .slice(-MAX_HISTORY_MESSAGES)
-    .map((item) => ({
-      role: item.role,
-      content: typeof item.content === "string"
-        ? item.content.slice(0, MAX_HISTORY_CHARS)
-        : "",
-    }))
-    .filter((item) => item.content.trim().length > 0);
 }
 
 const PROTECTED_CLIENTS = ["venkateshwara", "kprupvc"];
@@ -215,14 +342,83 @@ const tools = [
   },
 ];
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
+      return json({ error: "not authorized" }, 403);
+    }
+    const email = adminEmail(session);
+    const conversationId = new URL(request.url).searchParams.get("conversationId");
+
+    if (!conversationId) {
+      const conversations = await supaGet("tara_conversations", {
+        admin_email: `eq.${email}`,
+        select: "id,title,legacy_id,created_at,updated_at",
+        order: "updated_at.desc",
+        limit: MAX_IMPORTED_CONVERSATIONS,
+      });
+      return json({ conversations: Array.isArray(conversations) ? conversations : [] });
+    }
+    if (!isUuid(conversationId)) {
+      return json({ error: "invalid conversation id" }, 400);
+    }
+
+    const conversation = await getOwnedConversation(conversationId, email);
+    if (!conversation) return json({ error: "conversation not found" }, 404);
+    const rows = await supaGet("tara_messages", {
+      conversation_id: `eq.${conversationId}`,
+      select: "id,role,content,tool_logs,created_at",
+      order: "created_at.desc",
+      limit: MAX_STORED_MESSAGES,
+    });
+    const messages = Array.isArray(rows) ? [...rows].reverse() : [];
+    return json({ conversation, messages });
+  } catch (e: any) {
+    console.error("Tara conversation read error:", e);
+    return json({ error: "Unable to load Tara conversations right now." }, 503);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
+      return json({ error: "not authorized" }, 403);
+    }
+    const conversationId = new URL(request.url).searchParams.get("conversationId");
+    if (!isUuid(conversationId)) return json({ error: "invalid conversation id" }, 400);
+    const email = adminEmail(session);
+    if (!await getOwnedConversation(conversationId, email)) {
+      return json({ error: "conversation not found" }, 404);
+    }
+    await supaDelete("tara_conversations", {
+      id: `eq.${conversationId}`,
+      admin_email: `eq.${email}`,
+    });
+    return json({ ok: true });
+  } catch (e: any) {
+    console.error("Tara conversation delete error:", e);
+    return json({ error: "Unable to delete that Tara conversation right now." }, 503);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "admin") {
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
       return json({ error: "not authorized" }, 403);
     }
 
-    const rateKey = String(session.email ?? "admin");
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "invalid JSON body" }, 400);
+    }
+
+    const email = adminEmail(session);
+    const rateKey = email;
     const now = Date.now();
     const window = requestWindows.get(rateKey);
     if (!window || now - window.startedAt >= RATE_WINDOW_MS) {
@@ -236,7 +432,11 @@ export async function POST(request: NextRequest) {
       window.count += 1;
     }
 
-    const body = await request.json();
+    if (body?.action === "import") {
+      const result = await importLegacyConversations(email, body.conversations);
+      return json(result);
+    }
+
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) {
       return json({ error: "prompt is required" }, 400);
@@ -248,6 +448,27 @@ export async function POST(request: NextRequest) {
     if (!process.env.GROQ_API_KEY) {
       return json({ error: "GROQ_API_KEY is not configured on the server." }, 500);
     }
+
+    const requestedConversationId = body?.conversationId;
+    let conversation: any;
+    if (requestedConversationId === undefined || requestedConversationId === null || requestedConversationId === "") {
+      conversation = await createConversation(email, chatTitle(prompt));
+    } else {
+      if (!isUuid(requestedConversationId)) return json({ error: "invalid conversation id" }, 400);
+      conversation = await getOwnedConversation(requestedConversationId, email);
+      if (!conversation) return json({ error: "conversation not found" }, 404);
+    }
+
+    const storedRows = await supaGet("tara_messages", {
+      conversation_id: `eq.${conversation.id}`,
+      select: "role,content",
+      order: "created_at.desc",
+      limit: MAX_HISTORY_MESSAGES,
+    });
+    const storedHistory = (Array.isArray(storedRows) ? [...storedRows].reverse() : [])
+      .filter((item: any) => (item?.role === "user" || item?.role === "assistant") && typeof item.content === "string")
+      .map((item: any) => ({ role: item.role, content: item.content.slice(0, MAX_STORED_MESSAGE_CHARS) }));
+    await saveMessage(conversation.id, "user", prompt);
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -263,7 +484,7 @@ CRITICAL INSTRUCTIONS:
 2. BE SMART & AGENTIC: Use get_client and list_clients to look up previous clients. If the user asks for a setup "like Akshaya" or "standard setup", fetch that client's config first and use it as a template, merging the new details over it. 
 3. SECURITY: When deleting or updating a client, you MUST respect the "aiCanDelete" flag for deletions. Never try to modify or delete protected clients: venkateshwara, kprupvc. You are permitted to use get_client to read them to use as templates.`,
       },
-      ...cleanHistory(body?.history),
+      ...storedHistory,
       { role: "user", content: prompt },
     ];
 
@@ -608,13 +829,19 @@ CRITICAL INSTRUCTIONS:
         messages,
       });
 
+      const reply = String(secondResponse.choices[0].message.content ?? "");
+      await saveMessage(conversation.id, "assistant", reply, actionLogs);
+
       return json({ 
-        reply: secondResponse.choices[0].message.content,
-        logs: actionLogs 
+        reply,
+        logs: actionLogs,
+        conversationId: conversation.id,
       });
     }
 
-    return json({ reply: responseMessage.content, logs: actionLogs });
+    const reply = String(responseMessage.content ?? "");
+    await saveMessage(conversation.id, "assistant", reply, actionLogs);
+    return json({ reply, logs: actionLogs, conversationId: conversation.id });
   } catch (e: any) {
     console.error("Agent error:", e);
     return json({ error: String(e?.message ?? e) }, 500);

@@ -198,7 +198,7 @@ export async function supaPatch(
 
 export async function supaPost(
   path: string,
-  body: Record<string, any>,
+  body: Record<string, any> | Array<Record<string, any>>,
 ): Promise<any> {
   const res = await fetchSupabase(`${SUPABASE_URL}/rest/v1/${path}`, {
     method: "POST",

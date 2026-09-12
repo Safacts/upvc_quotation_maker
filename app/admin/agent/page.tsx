@@ -15,6 +15,88 @@ interface ChatSession {
   title: string;
   messages: Message[];
   updatedAt: number;
+  legacyId?: string;
+}
+
+interface ServerConversation {
+  id: string;
+  title: string;
+  legacy_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const LOCAL_CHATS_KEY = "tara_chats";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isServerConversationId(value: string | null): value is string {
+  return !!value && UUID_PATTERN.test(value);
+}
+
+function localTitle(messages: Message[], fallback = "New Chat") {
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  if (!firstUserMessage) return fallback;
+  const compact = firstUserMessage.content.replace(/\s+/g, " ").trim();
+  return compact.slice(0, 80) + (compact.length > 80 ? "..." : "");
+}
+
+function parseLocalChats(raw: string | null): ChatSession[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((session): session is Record<string, any> => !!session && typeof session === "object")
+      .map((session) => {
+        const messages: Message[] = Array.isArray(session.messages)
+          ? session.messages
+            .filter((message: any) => message && (message.role === "user" || message.role === "agent"))
+            .map((message: any) => ({
+              role: message.role,
+              content: typeof message.content === "string" ? message.content : "",
+              logs: Array.isArray(message.logs)
+                ? message.logs.filter((log: unknown): log is string => typeof log === "string").slice(0, 50)
+                : undefined,
+            }))
+            .filter((message: Message) => message.content.trim().length > 0)
+          : [];
+        const id = typeof session.id === "string" ? session.id : "";
+        if (!id) return null;
+        return {
+          id,
+          title: typeof session.title === "string" && session.title.trim()
+            ? session.title.trim().slice(0, 200)
+            : localTitle(messages),
+          messages,
+          updatedAt: Number.isFinite(Number(session.updatedAt)) ? Number(session.updatedAt) : Date.now(),
+        };
+      })
+      .filter((session): session is ChatSession => !!session);
+  } catch {
+    return [];
+  }
+}
+
+function mapServerConversation(conversation: ServerConversation): ChatSession {
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    messages: [],
+    updatedAt: Date.parse(conversation.updated_at) || Date.now(),
+    legacyId: conversation.legacy_id || undefined,
+  };
+}
+
+function mapServerMessages(rows: any[]): Message[] {
+  return rows
+    .filter((row) => row && (row.role === "user" || row.role === "assistant") && typeof row.content === "string")
+    .map((row) => ({
+      role: row.role === "assistant" ? "agent" as const : "user" as const,
+      content: row.content,
+      logs: Array.isArray(row.tool_logs)
+        ? row.tool_logs.filter((log: unknown): log is string => typeof log === "string")
+        : undefined,
+    }));
 }
 
 export default function AgentPage() {
@@ -24,67 +106,121 @@ export default function AgentPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  
+  const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const didLoadRef = useRef(false);
+  const conversationLoadRef = useRef(0);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Load from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem("tara_chats");
-    if (saved) {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+
+    const loadChats = async () => {
+      const localSessions = parseLocalChats(localStorage.getItem(LOCAL_CHATS_KEY));
+      const legacySessions = localSessions.filter((session) => !isServerConversationId(session.id));
       try {
-        const parsed = JSON.parse(saved);
-        setChatSessions(parsed);
-      } catch (e) {}
-    }
+        if (legacySessions.length > 0) {
+          const importResponse = await fetch("/api/admin/agent", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "import", conversations: legacySessions }),
+          });
+          if (!importResponse.ok) throw new Error("Local chat migration failed.");
+        }
+
+        const response = await fetch("/api/admin/agent", { credentials: "same-origin" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to load Tara conversations.");
+        setChatSessions((data.conversations || []).map(mapServerConversation));
+        setSyncError(null);
+      } catch (error: any) {
+        // Keep the old cache visible if the sync service is temporarily down;
+        // all writes still target the server and will retry on the next load.
+        setChatSessions(localSessions);
+        setSyncError(error?.message || "Tara conversations could not be synchronized.");
+      } finally {
+        setHydrated(true);
+      }
+    };
+
+    void loadChats();
   }, []);
 
-  // Save to localStorage when chatSessions change
   useEffect(() => {
-    localStorage.setItem("tara_chats", JSON.stringify(chatSessions));
-  }, [chatSessions]);
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(LOCAL_CHATS_KEY, JSON.stringify(chatSessions));
+    } catch {
+      // Local storage is only a cache; server persistence remains authoritative.
+    }
+  }, [chatSessions, hydrated]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const startNewChat = () => {
+    conversationLoadRef.current += 1;
     setMessages([]);
     setCurrentSessionId(null);
+    setSyncError(null);
   };
 
-  const selectChat = (id: string) => {
+  const selectChat = async (id: string) => {
     const session = chatSessions.find(c => c.id === id);
-    if (session) {
-      setMessages(session.messages);
-      setCurrentSessionId(id);
+    if (!session) return;
+    const loadId = conversationLoadRef.current + 1;
+    conversationLoadRef.current = loadId;
+    setCurrentSessionId(id);
+    setLoadingChatId(id);
+    setSyncError(null);
+    try {
+      if (!isServerConversationId(id)) {
+        // This path is only used while showing a legacy cache during an outage.
+        if (conversationLoadRef.current === loadId) setMessages(session.messages);
+        return;
+      }
+      const response = await fetch(`/api/admin/agent?conversationId=${encodeURIComponent(id)}`, {
+        credentials: "same-origin",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to load that conversation.");
+      if (conversationLoadRef.current === loadId) setMessages(mapServerMessages(data.messages || []));
+    } catch (error: any) {
+      if (conversationLoadRef.current === loadId) {
+        setMessages(session.messages);
+        setSyncError(error?.message || "That conversation could not be loaded.");
+      }
+    } finally {
+      if (conversationLoadRef.current === loadId) setLoadingChatId(null);
     }
   };
 
-  const deleteChat = (id: string, e: React.MouseEvent) => {
+  const deleteChat = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const previous = chatSessions;
+    const wasCurrent = currentSessionId === id;
+    if (wasCurrent) conversationLoadRef.current += 1;
     const updated = chatSessions.filter(c => c.id !== id);
     setChatSessions(updated);
-    if (currentSessionId === id) {
+    if (wasCurrent) {
       startNewChat();
     }
-  };
-
-  const updateSession = (newMessages: Message[]) => {
-    let id = currentSessionId;
-    let title = "New Chat";
-    
-    // Auto-generate a title based on the first user message
-    const firstUserMsg = newMessages.find(m => m.role === "user");
-    if (firstUserMsg) {
-      title = firstUserMsg.content.substring(0, 30) + (firstUserMsg.content.length > 30 ? "..." : "");
-    }
-
-    if (!id) {
-      id = Date.now().toString();
-      setCurrentSessionId(id);
-      setChatSessions(prev => [{ id: id!, title, messages: newMessages, updatedAt: Date.now() }, ...prev]);
-    } else {
-      setChatSessions(prev => prev.map(s => s.id === id ? { ...s, title, messages: newMessages, updatedAt: Date.now() } : s));
+    if (!isServerConversationId(id)) return;
+    try {
+      const response = await fetch(`/api/admin/agent?conversationId=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to delete that conversation.");
+      setSyncError(null);
+    } catch (error: any) {
+      setChatSessions(previous);
+      setSyncError(error?.message || "That conversation could not be deleted.");
     }
   };
 
@@ -95,21 +231,18 @@ export default function AgentPage() {
     const userMessage = prompt.trim();
     const newMessagesForState = [...messages, { role: "user" as const, content: userMessage }];
     setMessages(newMessagesForState);
-    updateSession(newMessagesForState);
     
     setPrompt("");
     setLoading(true);
 
     try {
-      const history = newMessagesForState.map(m => ({ 
-        role: m.role === "agent" ? "assistant" : m.role, 
-        content: m.content 
-      }));
-      
+      const requestBody: Record<string, string> = { prompt: userMessage };
+      if (isServerConversationId(currentSessionId)) requestBody.conversationId = currentSessionId;
       const res = await fetch("/api/admin/agent", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage, history }),
+        body: JSON.stringify(requestBody),
       });
       const data = await res.json();
       
@@ -119,14 +252,24 @@ export default function AgentPage() {
           { role: "agent" as const, content: data.reply, logs: data.logs }
         ];
         setMessages(finalMessages);
-        updateSession(finalMessages);
+        const serverId = typeof data.conversationId === "string" ? data.conversationId : currentSessionId;
+        if (isServerConversationId(serverId)) {
+          setCurrentSessionId(serverId);
+          setChatSessions(prev => [{
+            id: serverId,
+            title: localTitle(finalMessages),
+            messages: finalMessages,
+            updatedAt: Date.now(),
+          }, ...prev.filter((session) => session.id !== serverId)]);
+        }
+        setSyncError(null);
       } else {
         const errorMessages = [
           ...newMessagesForState, 
           { role: "agent" as const, content: `Error: ${data.error}` }
         ];
         setMessages(errorMessages);
-        updateSession(errorMessages);
+        setSyncError(data.error || "Tara could not complete that request.");
       }
     } catch (err: any) {
       const errorMessages = [
@@ -134,7 +277,7 @@ export default function AgentPage() {
         { role: "agent" as const, content: `Failed to connect to agent: ${err.message}` }
       ];
       setMessages(errorMessages);
-      updateSession(errorMessages);
+      setSyncError(err?.message || "Failed to connect to Tara.");
     } finally {
       setLoading(false);
     }
@@ -182,7 +325,8 @@ export default function AgentPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                transition: "background 0.2s"
+                transition: "background 0.2s",
+                opacity: loadingChatId === session.id ? 0.6 : 1,
               }}
               onMouseEnter={(e) => { if(currentSessionId !== session.id) e.currentTarget.style.background = "var(--bg)"; }}
               onMouseLeave={(e) => { if(currentSessionId !== session.id) e.currentTarget.style.background = "transparent"; }}
@@ -228,6 +372,11 @@ export default function AgentPage() {
               <div style={{ fontSize: "12px", color: "var(--text-ghost)", fontWeight: 500 }}>Powered by Groq Agentic Automation</div>
             </div>
           </div>
+          {syncError && (
+            <div role="alert" style={{ marginTop: "12px", color: "var(--danger)", fontSize: "13px" }}>
+              {syncError}
+            </div>
+          )}
         </div>
 
         {/* Chat Area */}
@@ -328,7 +477,7 @@ export default function AgentPage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Ask Tara to create a client or manage accounts..."
-              disabled={loading}
+              disabled={loading || !!loadingChatId}
               style={{
                 flex: 1,
                 padding: "16px 24px",
@@ -354,14 +503,14 @@ export default function AgentPage() {
             />
             <button 
               type="submit"
-              disabled={loading || !prompt.trim()}
+              disabled={loading || !!loadingChatId || !prompt.trim()}
               className="btn-primary"
               style={{ 
                 borderRadius: "var(--radius-xl)", 
                 padding: "0 28px",
                 fontSize: "15px",
-                opacity: (loading || !prompt.trim()) ? 0.6 : 1,
-                cursor: (loading || !prompt.trim()) ? "not-allowed" : "pointer"
+                opacity: (loading || !!loadingChatId || !prompt.trim()) ? 0.6 : 1,
+                cursor: (loading || !!loadingChatId || !prompt.trim()) ? "not-allowed" : "pointer"
               }}
             >
               Send
