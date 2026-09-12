@@ -202,6 +202,8 @@ export default function AgentPage() {
   const deleteChat = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const previous = chatSessions;
+    const previousMessages = messages;
+    const previousSessionId = currentSessionId;
     const wasCurrent = currentSessionId === id;
     if (wasCurrent) conversationLoadRef.current += 1;
     const updated = chatSessions.filter(c => c.id !== id);
@@ -220,6 +222,11 @@ export default function AgentPage() {
       setSyncError(null);
     } catch (error: any) {
       setChatSessions(previous);
+      if (wasCurrent) {
+        conversationLoadRef.current += 1;
+        setCurrentSessionId(previousSessionId);
+        setMessages(previousMessages);
+      }
       setSyncError(error?.message || "That conversation could not be deleted.");
     }
   };

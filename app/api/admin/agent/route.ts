@@ -117,11 +117,17 @@ async function saveMessage(
     content: content.slice(0, MAX_STORED_MESSAGE_CHARS),
     ...(logs && logs.length > 0 ? { tool_logs: logs } : {}),
   });
-  await supaPatch(
-    "tara_conversations",
-    { id: `eq.${conversationId}` },
-    { updated_at: new Date().toISOString() },
-  );
+  try {
+    await supaPatch(
+      "tara_conversations",
+      { id: `eq.${conversationId}` },
+      { updated_at: new Date().toISOString() },
+    );
+  } catch (error) {
+    // The message is already durable; a timestamp failure should not turn a
+    // successful Tara response into a misleading 503.
+    console.error("Tara conversation timestamp update error:", error);
+  }
 }
 
 async function importLegacyConversations(email: string, rawConversations: unknown) {
