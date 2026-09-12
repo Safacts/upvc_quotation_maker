@@ -22,6 +22,8 @@ import 'umami_tracker.dart';
 import 'quotation_export.dart' deferred as export_lib;
 import 'services/catalog_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/field_mode.dart';
+import 'services/field_task_service.dart';
 import 'services/quotation_recovery_service.dart';
 import 'widgets/site_photo_picker.dart';
 import 'utils/http_client.dart';
@@ -725,6 +727,42 @@ class _QuotationScreenState extends State<QuotationScreen>
     }
   }
 
+  /// FIELD-ONLY (additive 12-09-2026): create a follow-up task linked to this
+  /// saved quotation. The AppBar button is gated on `FieldMode.isFieldApp`,
+  /// so the owner APK UI is unchanged. Never touches pricing/save/PDF paths.
+  Future<void> _createFollowupFromQuote() async {
+    final qid = data.id;
+    if (qid == null || qid.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+                  Text('Save the quotation first, then create a follow-up.')),
+        );
+      }
+      return;
+    }
+    final clientId =
+        Provider.of<AppState>(context, listen: false).clientConfig.clientId;
+    final ok = await FieldTaskService.instance.createTask(
+      clientId: clientId,
+      task: FieldTask(
+        title: 'Follow up: ${data.customerName} (${data.quotationNo})',
+        description:
+            'Quote ${data.quotationNo} total Rs.${data.grandTotal.toStringAsFixed(0)}',
+        quotationId: qid,
+        status: 'pending',
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(ok
+              ? 'Follow-up task created.'
+              : 'Saved on device. Will sync when online.')),
+    );
+  }
+
   Future<void> _sendEmail(String targetEmail) async {
     try {
       final appState = Provider.of<AppState>(context, listen: false);
@@ -1253,6 +1291,12 @@ $reviewCta
             onPressed: _isSendingEmail ? null : _manualEmailPrompt,
             tooltip: 'Send to custom email',
           ),
+          if (FieldMode.isFieldApp)
+            IconButton(
+              icon: const Icon(Icons.assignment_add),
+              onPressed: _createFollowupFromQuote,
+              tooltip: 'Create follow-up task',
+            ),
         ],
       ),
       body: SingleChildScrollView(
