@@ -45,7 +45,7 @@ export async function GET(
       client_id: "eq." + gate.clientId,
       select:
         "id,quote_no,date,customer_name,contact_no,email,address,reference," +
-        "supplier_company,transport_cost,include_gst,gst_percentage,advance_paid,status," +
+        "supplier_company,transport_cost,include_gst,gst_percentage,is_interstate,advance_paid,status," +
         "measured_items(id,code,description,glass,width,height,units,rate)," +
         "unmeasured_items(id,description,units,rate)",
       limit: 1,
@@ -182,6 +182,7 @@ export async function GET(
       unmeasured,
       totals,
       clientId: String(clientId || ""),
+      isInterstate: q.is_interstate === true,
       companyName: String(config.companyName || config.appName || clientId),
       companyAddress: String(config.companyAddress || ""),
       companyProprietor: String(config.companyProprietor || ""),

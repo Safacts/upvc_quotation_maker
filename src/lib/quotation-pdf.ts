@@ -7,7 +7,7 @@ import {
   PDFPage,
 } from "pdf-lib";
 import { hexToRgb } from "./brand";
-import { quotationTotals, measuredLineSqft, sqft, measuredLineTotal, unmeasuredLineTotal } from "./pricing";
+import { quotationTotals, measuredLineSqft, sqft, measuredLineTotal, unmeasuredLineTotal, gstSplitDisplay } from "./pricing";
 import type { QuotationTotals } from "./pricing";
 
 // Server-side uPVC QUOTATION PDF.
@@ -67,6 +67,8 @@ export interface QuotationPdfData {
   unmeasured: QuotationPdfUnmeasured[];
   totals: QuotationTotals;
   clientId?: string;
+  /** Inter-state sale: tax renders IGST; otherwise CGST + SGST. Display only. */
+  isInterstate?: boolean;
   // Branding.
   companyName: string;
   companyAddress: string;
@@ -638,15 +640,32 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   rightText("Subtotal", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
   rightText(fmtMoney(data.totals.subtotal), M + contentW - 6, y - 12.5, { size: 10 });
   y -= 18;
-  // Row 2: Transport + value | IGST + value (if applicable)
+  // Row 2: Transport + value | tax split (if applicable). Inter-state renders
+  // a single IGST line; intra-state renders CGST + SGST (paisa-exact).
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   text("Transport", M + 6, y - 12.5, { size: 10, font: bold });
   text(fmtMoney(data.totals.transport), M + contentW / 2 + 6, y - 12.5, { size: 10 });
   if (data.totals.gstPercentage > 0) {
-    rightText(`IGST @ ${data.totals.gstPercentage}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
-    rightText(fmtMoney(data.totals.gstAmount), M + contentW - 6, y - 12.5, { size: 10 });
+    const split = gstSplitDisplay(data.totals.gstAmount, data.isInterstate === true);
+    const halfRate = (data.totals.gstPercentage / 2).toFixed(1);
+    if (data.isInterstate === true) {
+      rightText(`IGST @ ${data.totals.gstPercentage}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+      rightText(fmtMoney(split.igst), M + contentW - 6, y - 12.5, { size: 10 });
+    } else {
+      rightText(`CGST @ ${halfRate}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+      rightText(fmtMoney(split.cgst), M + contentW - 6, y - 12.5, { size: 10 });
+    }
   }
   y -= 18;
+  if (data.totals.gstPercentage > 0 && data.isInterstate !== true) {
+    const split = gstSplitDisplay(data.totals.gstAmount, false);
+    const halfRate = (data.totals.gstPercentage / 2).toFixed(1);
+    if (y < 150) { page = doc.addPage(A4); y = H - M - 10; }
+    page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
+    rightText(`SGST @ ${halfRate}%`, M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });
+    rightText(fmtMoney(split.sgst), M + contentW - 6, y - 12.5, { size: 10 });
+    y -= 18;
+  }
   // Row 3: empty | empty | Grand Total + value
   page.drawRectangle({ x: M, y: y - 18, width: contentW, height: 18, color: C.totalsBg });
   rightText("Grand Total", M + contentW * 3 / 4, y - 12.5, { size: 10, font: bold });

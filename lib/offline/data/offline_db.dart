@@ -90,7 +90,11 @@ class OfflineDb {
   /// v2 -> v3 (10-08-2026): the `payments` table — receipts against a
   /// quotation, backing the balance/outstanding figures and the customer
   /// ledger. See [_migrateV3].
-  static const int _dbVersion = 3;
+  ///
+  /// v3 -> v4 (24-09-2026): `is_interstate` on quotations — per-quotation
+  /// interstate flag so tax renders IGST (inter-state) or CGST + SGST
+  /// (intra-state). Display-only; amounts never change. See [_migrateV4].
+  static const int _dbVersion = 4;
 
   // Table names — referenced by the repositories so a rename is one edit.
   static const String tableQuotations = 'quotations';
@@ -281,6 +285,7 @@ class OfflineDb {
         transport_cost REAL NOT NULL DEFAULT 0,
         include_gst INTEGER NOT NULL DEFAULT 0,
         gst_percentage REAL NOT NULL DEFAULT 0,
+        is_interstate INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'draft',
         notes TEXT NOT NULL DEFAULT '',
         grand_total REAL NOT NULL DEFAULT 0,
@@ -692,6 +697,9 @@ class OfflineDb {
         case 3:
           await _migrateV3(db);
           break;
+        case 4:
+          await _migrateV4(db);
+          break;
         default:
           debugPrint(
             'OfflineDb: no migration branch for v$v — if the schema changed in '
@@ -774,6 +782,22 @@ class OfflineDb {
   Future<void> _migrateV3(Database db) async {
     await _createPaymentsTable(db);
     debugPrint('OfflineDb: v3 migration applied ($tablePayments + indexes)');
+  }
+
+  /// v3 -> v4 (24-09-2026): `is_interstate` on quotations.
+  ///
+  /// STRICTLY ADDITIVE and IDEMPOTENT. Existing rows take the DEFAULT 0
+  /// (intra-state), which matches how every old quotation was always rendered
+  /// (single tax line now correctly split CGST + SGST). Uses
+  /// [_addColumnIfMissing] so an interrupted re-run is a no-op.
+  Future<void> _migrateV4(Database db) async {
+    await _addColumnIfMissing(
+      db,
+      tableQuotations,
+      'is_interstate',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    debugPrint('OfflineDb: v4 migration applied (quotations.is_interstate)');
   }
 
   /// `ALTER TABLE <table> ADD COLUMN <column> <ddl>`, but only when the column

@@ -492,12 +492,33 @@ pw.Widget _buildUnmeasuredTable(QuotationData data, NumberFormat currency) {
   );
 }
 
+/// One tax line in the 4-column totals table: [pad, pad, label, value].
+pw.TableRow _buildTaxRow(String label, String amount) {
+  return pw.TableRow(
+    children: [
+      pw.SizedBox(),
+      pw.SizedBox(),
+      pw.Padding(
+        padding: const pw.EdgeInsets.all(6),
+        child: pw.Text(
+          label,
+          textAlign: pw.TextAlign.right,
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+        ),
+      ),
+      pw.Padding(
+        padding: const pw.EdgeInsets.all(6),
+        child: pw.Text(amount, style: const pw.TextStyle(fontSize: 10)),
+      ),
+    ],
+  );
+}
+
 pw.Widget _buildTotalsTable(
   QuotationData data,
   NumberFormat currency, {
   bool kprAdvance = false,
-}) {
-  return pw.Container(
+}) {  return pw.Container(
     color: PdfColor.fromHex('#FFFBF6'),
     child: pw.Table(
       border: pw.TableBorder.all(color: const PdfColor(0, 0, 0, 0)),
@@ -562,30 +583,27 @@ pw.Widget _buildTotalsTable(
                 style: const pw.TextStyle(fontSize: 10),
               ),
             ),
-            data.includeGst
-                ? pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    'IGST @ ${data.gstPercentage}%',
-                    textAlign: pw.TextAlign.right,
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-                )
-                : pw.SizedBox(),
-            data.includeGst
-                ? pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    currency.format(data.igst),
-                    style: const pw.TextStyle(fontSize: 10),
-                  ),
-                )
-                : pw.SizedBox(),
+            pw.SizedBox(),
+            pw.SizedBox(),
           ],
         ),
+        // Tax split: inter-state renders a single IGST line; intra-state
+        // renders CGST + SGST (paisa-exact, sums to the same total).
+        if (data.includeGst && data.isInterstate)
+          _buildTaxRow(
+            'IGST @ ${data.gstPercentage}%',
+            currency.format(data.igstAmount),
+          ),
+        if (data.includeGst && !data.isInterstate) ...[
+          _buildTaxRow(
+            'CGST @ ${(data.gstPercentage / 2).toStringAsFixed(1)}%',
+            currency.format(data.cgstAmount),
+          ),
+          _buildTaxRow(
+            'SGST @ ${(data.gstPercentage / 2).toStringAsFixed(1)}%',
+            currency.format(data.sgstAmount),
+          ),
+        ],
         pw.TableRow(
           children: [
             pw.SizedBox(),

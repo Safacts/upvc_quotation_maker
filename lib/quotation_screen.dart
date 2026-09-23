@@ -2409,29 +2409,51 @@ $reviewCta
                           top: 8.0,
                           bottom: 8.0,
                         ),
-                        child: TextFormField(
-                          focusNode: _gstFocus,
-                          initialValue:
-                              data.gstPercentage == 0.0
-                                  ? ''
-                                  : data.gstPercentage.toString(),
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*\.?\d*'),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              focusNode: _gstFocus,
+                              initialValue:
+                                  data.gstPercentage == 0.0
+                                      ? ''
+                                      : data.gstPercentage.toString(),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d*\.?\d*'),
+                                ),
+                              ],
+                              textInputAction: TextInputAction.done,
+                              decoration: const InputDecoration(
+                                labelText: 'GST Percentage (%)',
+                              ),
+                              onChanged: (val) {
+                                data.gstPercentage =
+                                    double.tryParse(val) ?? 0.0;
+                                setState(() {});
+                                _onDataChanged();
+                              },
+                            ),
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity:
+                                  ListTileControlAffinity.leading,
+                              title: const Text(
+                                'Interstate sale (IGST instead of CGST + SGST)',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                              value: data.isInterstate,
+                              onChanged: (val) {
+                                setState(() {
+                                  data.isInterstate = val ?? false;
+                                });
+                                _onDataChanged();
+                              },
                             ),
                           ],
-                          textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(
-                            labelText: 'GST Percentage (%)',
-                          ),
-                          onChanged: (val) {
-                            data.gstPercentage = double.tryParse(val) ?? 0.0;
-                            setState(() {});
-                            _onDataChanged();
-                          },
                         ),
                       ),
                     const Divider(),
@@ -2441,11 +2463,21 @@ $reviewCta
                       data.actualAmount,
                     ),
                     _buildComputationRow('Transport Cost', data.transport),
-                    if (data.includeGst)
+                    if (data.includeGst && data.isInterstate)
                       _buildComputationRow(
                         'IGST (${data.gstPercentage}%)',
-                        data.igst,
+                        data.igstAmount,
                       ),
+                    if (data.includeGst && !data.isInterstate) ...[
+                      _buildComputationRow(
+                        'CGST (${(data.gstPercentage / 2).toStringAsFixed(1)}%)',
+                        data.cgstAmount,
+                      ),
+                      _buildComputationRow(
+                        'SGST (${(data.gstPercentage / 2).toStringAsFixed(1)}%)',
+                        data.sgstAmount,
+                      ),
+                    ],
                     const Divider(thickness: 1.5),
                     _buildComputationRow(
                       'Grand Total',

@@ -39,7 +39,7 @@ export async function POST(
       client_id: "eq." + gate.clientId,
       select:
         "client_id,quote_no,date,customer_name,contact_no,email,address," +
-        "reference,supplier_company,transport_cost,include_gst,gst_percentage," +
+        "reference,supplier_company,transport_cost,include_gst,gst_percentage,is_interstate," +
         "measured_items(code,description,glass,width,height,units,rate,bom_config)," +
         "unmeasured_items(description,units,rate)",
       limit: 1,
@@ -62,6 +62,7 @@ export async function POST(
       status: "draft",
       transport_cost: num(src.transport_cost),
       include_gst: src.include_gst === true,
+      is_interstate: src.is_interstate === true,
       gst_percentage: num(src.gst_percentage),
     });
     const row = Array.isArray(inserted) ? inserted[0] : inserted;
