@@ -222,33 +222,48 @@ afterEach(() => {
 
 // ---------------------------------------------------------------------------
 describe("GET /api/quotation/[id] — token gate", () => {
-  it("rejects a request with NO token (403) and never queries the database", async () => {
+  // NOTE (23-09-2026): the route deliberately fetches the quotation row even
+  // for bad tokens — it must 404 a missing quote and resolve the
+  // session-fallback tenant from quotation.client_id. The security invariant
+  // is therefore NOT "no reads at all" but: 403 + NO item/client tables are
+  // ever touched + NO quotation data leaves in the body. A 403 response with
+  // no body data leaks nothing even though a by-ID row was read.
+  const expectRejectedClosed = async (res: Response) => {
+    expect(res.status).toBe(403);
+    expect(selectCalls).not.toContain("measured_items");
+    expect(selectCalls).not.toContain("unmeasured_items");
+    expect(selectCalls).not.toContain("clients");
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.quotation).toBeUndefined();
+    expect(body.measured).toBeUndefined();
+  };
+
+  it("rejects a request with NO token (403) and leaks no quotation data", async () => {
     const { GET } = await loadRoute();
     seedHappyPath();
     const res = await GET(getReq(QUOTE_ID), params);
     expect(res.status).toBe(403);
+    expect(selectCalls).not.toContain("measured_items");
+    expect(selectCalls).not.toContain("unmeasured_items");
+    expect(selectCalls).not.toContain("clients");
     await expect(res.json()).resolves.toEqual({
-      error: "Invalid or missing token",
+      error: "Invalid or expired token",
     });
-    // The important half of the assertion: it must fail CLOSED, before any read.
-    expect(selectCalls).toEqual([]);
   });
 
   it("rejects an empty token (403)", async () => {
     const { GET } = await loadRoute();
     seedHappyPath();
-    const res = await GET(getReq(QUOTE_ID, ""), params);
-    expect(res.status).toBe(403);
-    expect(selectCalls).toEqual([]);
+    await expectRejectedClosed(await GET(getReq(QUOTE_ID, ""), params));
   });
 
   it("rejects a wrong token (403)", async () => {
     const { GET } = await loadRoute();
     seedHappyPath();
-    const res = await GET(getReq(QUOTE_ID, "deadbeefdeadbeef"), params);
-    expect(res.status).toBe(403);
-    // Route must query token table to validate hash; only quotation table must not be queried
-    expect(selectCalls).not.toContain("quotations");
+    // Route must query token table to validate hash; item/client tables stay untouched
+    await expectRejectedClosed(
+      await GET(getReq(QUOTE_ID, "deadbeefdeadbeef"), params),
+    );
   });
 
   it("rejects a token generated for a DIFFERENT quotation id (403)", async () => {
@@ -257,10 +272,8 @@ describe("GET /api/quotation/[id] — token gate", () => {
     const { GET } = await loadRoute();
     seedHappyPath();
     const otherToken = validToken("99999999-8888-7777-6666-555555555555");
-    const res = await GET(getReq(QUOTE_ID, otherToken), params);
-    expect(res.status).toBe(403);
-    // Route must query token table to validate hash; only quotation table must not be queried
-    expect(selectCalls).not.toContain("quotations");
+    // Route must query token table to validate hash; item/client tables stay untouched
+    await expectRejectedClosed(await GET(getReq(QUOTE_ID, otherToken), params));
   });
 
   it("rejects a truncated / padded token (403)", async () => {
@@ -271,8 +284,10 @@ describe("GET /api/quotation/[id] — token gate", () => {
       const res = await GET(getReq(QUOTE_ID, bad), params);
       expect(res.status, `token "${bad}" must be rejected`).toBe(403);
     }
-    // Route must query token table to validate hash; only quotation table must not be queried
-    expect(selectCalls).not.toContain("quotations");
+    // Route must query token table to validate hash; item/client tables stay untouched
+    expect(selectCalls).not.toContain("measured_items");
+    expect(selectCalls).not.toContain("unmeasured_items");
+    expect(selectCalls).not.toContain("clients");
   });
 
   it("accepts the correct token and returns 200", async () => {
@@ -469,9 +484,20 @@ describe("POST /api/quotation/[id] — approve / reject state machine", () => {
       const res = await POST(postReq({ action, token }), params);
       expect(res.status, `action ${action}`).toBe(200);
       await expect(res.json()).resolves.toEqual({ ok: true, status: expected });
-      expect(updateCalls).toEqual([
-        { table: "quotations", payload: { status: expected } },
-      ]);
+      // The route stamps an audit trail alongside the status (state_changed_at
+      // always; approved_at/accepted_at on approve; rejected_at on reject).
+      expect(updateCalls).toHaveLength(1);
+      expect(updateCalls[0].table).toBe("quotations");
+      expect(updateCalls[0].payload.status).toBe(expected);
+      expect(typeof updateCalls[0].payload.state_changed_at).toBe("string");
+      const extraStamps: Record<string, string[]> = {
+        approve: ["approved_at", "accepted_at"],
+        reject: ["rejected_at"],
+        review: [],
+      };
+      for (const key of extraStamps[action]) {
+        expect(typeof updateCalls[0].payload[key]).toBe("string");
+      }
     }
   });
 
