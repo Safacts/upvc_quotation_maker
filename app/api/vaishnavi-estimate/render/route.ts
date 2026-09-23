@@ -58,8 +58,11 @@ export async function POST(request: NextRequest) {
 
     // 4. Append CAD Window Elevations — Vaishnavi was missing this entirely (generic PDFs already had it).
     // Keep her purple OASIS estimate intact (steps 1-3 above); CAD is extra pages 3+ (2 elevations per A4).
+    // The Flutter app passes its persisted "Include CAD diagrams" toggle as include_cad_diagrams
+    // (default true when absent so older app versions and other callers keep the old behaviour).
+    const includeCad = body?.include_cad_diagrams ?? body?.quote?.includeCadDiagrams ?? true;
     const validMeasured = (quote.items || []).filter((it: any) => Number(it.width) > 0 && Number(it.height) > 0);
-    if (validMeasured.length > 0) {
+    if (includeCad && validMeasured.length > 0) {
       const frameColor = rgb(...hexToRgb("#0B1E3B"));
       const glassColor = rgb(...hexToRgb("#E8F0FF"));
       const dimColor = rgb(0, 0, 0);

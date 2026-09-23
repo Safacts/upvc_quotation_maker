@@ -140,6 +140,7 @@ Future<Uint8List?> _tryGenerateVaishnaviSvgPdf(
   ];
   final payload = {
     'client_id': appState.clientConfig.clientId,
+    'include_cad_diagrams': appState.includeCadDiagrams,
     'quote': {
       'customerName': data.customerName,
       'quotationNo': data.quotationNo,
