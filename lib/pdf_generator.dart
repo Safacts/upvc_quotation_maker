@@ -131,9 +131,9 @@ Future<Uint8List> generatePdfBytes(
     ),
   );
 
-  // Append 2D Window Elevation & Measurement Schedule Pages
+  // Append 2D Window Elevation & Measurement Schedule Pages when enabled.
   final validMeasured = data.measuredItems.where((item) => item.width > 0 && item.height > 0).toList();
-  if (validMeasured.isNotEmpty) {
+  if (appState.includeCadDiagrams && validMeasured.isNotEmpty) {
     final elevationPages = WindowElevationEngine.buildElevationPages(
       measuredItems: validMeasured,
       pageFormat: PdfPageFormat.a4,
