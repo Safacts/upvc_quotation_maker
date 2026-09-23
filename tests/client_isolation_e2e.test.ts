@@ -326,6 +326,13 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
         single: vi.fn().mockResolvedValue({ data: mockQuotation, error: null }),
       });
 
+      // View telemetry: the route records viewed_at/view_count on every
+      // authorized read (update().eq()), consuming one mock before items.
+      supabaseAdmin.from.mockReturnValueOnce({
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      });
+
       supabaseAdmin.from.mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -371,6 +378,16 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
         is: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       });
+      // NOTE (23-09-2026): the route fetches the quotation row before the
+      // auth verdict (404 when the quote is gone, 403 when it exists but the
+      // token is bad). A bad token on an EXISTING quote must 403 with no data.
+      supabaseAdmin.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi
+          .fn()
+          .mockResolvedValue({ data: { id: "quote-1", client_id: "x" }, error: null }),
+      });
       const { GET } = await import("@/../app/api/quotation/[id]/route");
       const request = new NextRequest(
         "http://localhost/api/quotation/quote-1?token=invalid-token",
@@ -381,6 +398,8 @@ describe("Client Isolation - Cross-Tenant Data Leakage Tests", () => {
       });
 
       expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.quotation).toBeUndefined();
     });
   });
 

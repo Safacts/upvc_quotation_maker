@@ -84,8 +84,8 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: node scripts/verify-deployment-target.mjs
 
-      - name: Run tests
-        run: npx vitest run || true
+      - name: Run tests (blocking — suite is fully green, 675 tests)
+        run: npx vitest run
 
       - name: Build Next.js (branch-aware env)
         env:
