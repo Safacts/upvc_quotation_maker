@@ -7,13 +7,19 @@ import crypto from "crypto";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://app.vitharn.com",
+  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "private, no-store, max-age=0, must-revalidate",
 } as const;
 
 const MAX_PROMPT_CHARS = 4000;
 const MAX_HISTORY_MESSAGES = 12;
-const MAX_HISTORY_CHARS = 2500;
+const MAX_STORED_MESSAGES = 500;
+const MAX_STORED_MESSAGE_CHARS = 20_000;
+const MAX_IMPORTED_CONVERSATIONS = 50;
+const MAX_IMPORTED_MESSAGES = 500;
 const SAFE_UPDATE_KEYS = new Set([
   "companyName",
   "appName",
@@ -35,6 +41,78 @@ const requestWindows = new Map<string, { startedAt: number; count: number }>();
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 20;
 
+async function retrySupabase<T>(label: string, operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      const retryable = error?.retryable === true;
+      if (!retryable || attempt >= 2) throw error;
+      console.warn(`Tara ${label} failed; retrying`, { attempt: attempt + 1, kind: error?.kind });
+      await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+    }
+  }
+}
+
+function safeToolError(label: string, error: unknown, actionLogs: string[]) {
+  console.error(`Tara ${label} error:`, error);
+  const retryable = (error as any)?.retryable === true;
+  actionLogs.push(`Error: Could not ${label}`);
+  return retryable
+    ? `Error: Tara could not ${label} because the data service is temporarily unavailable. Please try again.`
+    : `Error: Tara could not ${label}. Please check the request and try again.`;
+}
+
+function indiaDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function dateWindow(dateInput: unknown) {
+  const requested = typeof dateInput === "string" ? dateInput.trim().toLowerCase() : "";
+  const date = requested === "yesterday"
+    ? indiaDateString(new Date(Date.now() - 86_400_000))
+    : requested && requested !== "today" ? requested : indiaDateString();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("date must use YYYY-MM-DD format");
+  }
+  const start = new Date(`${date}T00:00:00+05:30`);
+  if (Number.isNaN(start.getTime())) throw new Error("date is invalid");
+  return {
+    date,
+    start: start.toISOString(),
+    end: new Date(start.getTime() + 86_400_000).toISOString(),
+  };
+}
+
+function forcedToolForPrompt(prompt: string): string | null {
+  const p = prompt.toLowerCase();
+  const asksCapabilities = /\b(what can you do|what do you do|capabilit|available actions|available tools|how can you help|can you help)\b/.test(p);
+  if (asksCapabilities) return "get_capabilities";
+
+  const asksHealth = /\b(system|platform|database|server|infrastructure|service)\b/.test(p)
+    && /\b(health|healthy|status|condition|reachable|available|working|up|down|okay|ok)\b/.test(p);
+  if (asksHealth) return "get_system_health";
+
+  const asksDailyQuotes = /\b(today|yesterday|this day|daily)\b/.test(p)
+    && /\b(quote|quotes|quotation|quotations|estimate|estimates)\b/.test(p);
+  if (asksDailyQuotes) return "get_quote_activity";
+
+  const asksPlatformReport = /\b(conversion|conversions|which clients|all clients|actually using|platform report|business report|adoption|incomplete|suspicious|overall usage)\b/.test(p);
+  if (asksPlatformReport) return "get_platform_report";
+
+  const asksClientMetrics = /\b(active|activity|usage|performance|metrics|conversion|quotations|quotes|estimates)\b/.test(p)
+    && /\b(client|customer|fabricator|account)\b/.test(p);
+  if (asksClientMetrics) return "get_client_metrics";
+  return null;
+}
+
 function json(data: any, status = 200) {
   return NextResponse.json(data, { status, headers: CORS_HEADERS });
 }
@@ -43,29 +121,181 @@ function sha256(str: string) {
   return crypto.createHash("sha256").update(str).digest("hex");
 }
 
+function adminEmail(session: any) {
+  return String(session?.email ?? "").trim().toLowerCase();
+}
+
+function firstRow(value: any): any | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value && typeof value === "object" ? value : null;
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function chatTitle(prompt: string) {
+  const compact = prompt.replace(/\s+/g, " ").trim();
+  return compact.slice(0, 80) + (compact.length > 80 ? "..." : "");
+}
+
+async function getOwnedConversation(id: string, email: string) {
+  const rows = await retrySupabase("load conversation", () => supaGet("tara_conversations", {
+      id: `eq.${id}`,
+      admin_email: `eq.${email}`,
+      select: "id,title,legacy_id,created_at,updated_at",
+      limit: 1,
+    }));
+  return firstRow(rows);
+}
+
+async function createConversation(
+  email: string,
+  title: string,
+  legacyId?: string,
+  updatedAt?: string,
+  ignoreDuplicate = false,
+) {
+  const row: Record<string, any> = {
+    admin_email: email,
+    title: title || "New Chat",
+  };
+  if (legacyId) row.legacy_id = legacyId;
+  if (updatedAt) {
+    row.created_at = updatedAt;
+    row.updated_at = updatedAt;
+  }
+  const created = firstRow(await retrySupabase("create conversation", () => supaPost(
+      "tara_conversations",
+      row,
+      ignoreDuplicate ? "return=representation,resolution=ignore-duplicates" : undefined,
+    )));
+  if (!created?.id || !isUuid(created.id)) {
+    throw new Error("Tara conversation could not be created.");
+  }
+  return created;
+}
+
+async function saveMessage(
+  conversationId: string,
+  role: "user" | "assistant",
+  content: string,
+  logs?: string[],
+) {
+  await retrySupabase("save message", () => supaPost("tara_messages", {
+      conversation_id: conversationId,
+      role,
+      content: content.slice(0, MAX_STORED_MESSAGE_CHARS),
+      ...(logs && logs.length > 0 ? { tool_logs: logs } : {}),
+    }));
+  try {
+    await retrySupabase("update conversation timestamp", () => supaPatch(
+        "tara_conversations",
+        { id: `eq.${conversationId}` },
+        { updated_at: new Date().toISOString() },
+      ));
+  } catch (error) {
+    // The message is already durable; a timestamp failure should not turn a
+    // successful Tara response into a misleading 503.
+    console.error("Tara conversation timestamp update error:", error);
+  }
+}
+
+async function importLegacyConversations(email: string, rawConversations: unknown) {
+  if (!Array.isArray(rawConversations)) {
+    return { imported: 0, skipped: 0 };
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  for (const raw of rawConversations.slice(0, MAX_IMPORTED_CONVERSATIONS)) {
+    if (!raw || typeof raw !== "object") {
+      skipped++;
+      continue;
+    }
+    const source = raw as any;
+    const legacyId = typeof source.id === "string" ? source.id.trim().slice(0, 120) : "";
+    if (!legacyId) {
+      skipped++;
+      continue;
+    }
+
+    const existing = await supaGet("tara_conversations", {
+      admin_email: `eq.${email}`,
+      legacy_id: `eq.${legacyId}`,
+      select: "id",
+      limit: 1,
+    });
+    if (firstRow(existing)) {
+      skipped++;
+      continue;
+    }
+
+    const title = typeof source.title === "string"
+      ? source.title.replace(/\s+/g, " ").trim().slice(0, 200) || "New Chat"
+      : "New Chat";
+    const localUpdatedAt = Number(source.updatedAt);
+    const localDate = Number.isFinite(localUpdatedAt) && localUpdatedAt > 0
+      ? new Date(localUpdatedAt)
+      : null;
+    const updatedAt = localDate && !Number.isNaN(localDate.getTime())
+      ? localDate.toISOString()
+      : undefined;
+    const conversation = await createConversation(email, title, legacyId, updatedAt, true).catch(async (error) => {
+      // A second tab may have won the unique legacy_id race between the
+      // existence check and insert. Re-read it instead of duplicating messages.
+      const concurrent = await supaGet("tara_conversations", {
+        admin_email: `eq.${email}`,
+        legacy_id: `eq.${legacyId}`,
+        select: "id",
+        limit: 1,
+      });
+      if (firstRow(concurrent)) return null;
+      throw error;
+    });
+    if (!conversation) {
+      skipped++;
+      continue;
+    }
+    const rawMessages = Array.isArray(source.messages) ? source.messages : [];
+    const messageRows = rawMessages
+      .slice(0, MAX_IMPORTED_MESSAGES)
+      .filter((message: any) => message && typeof message === "object")
+      .map((message: any) => {
+        const role = message.role === "agent" || message.role === "assistant"
+          ? "assistant"
+          : message.role === "user" ? "user" : null;
+        const content = typeof message.content === "string"
+          ? message.content.trim().slice(0, MAX_STORED_MESSAGE_CHARS)
+          : "";
+        if (!role || !content) return null;
+        const logs = Array.isArray(message.logs)
+          ? message.logs.filter((log: unknown): log is string => typeof log === "string").slice(0, 50)
+          : [];
+        return {
+          conversation_id: conversation.id,
+          role,
+          content,
+          ...(logs.length > 0 ? { tool_logs: logs } : {}),
+        };
+      })
+      .filter(Boolean) as Array<Record<string, any>>;
+    if (messageRows.length > 0) {
+      await supaPost("tara_messages", messageRows);
+    }
+    imported++;
+  }
+
+  return { imported, skipped };
+}
+
 function safeClientConfig(config: Record<string, any>) {
   const safe: Record<string, any> = {};
   for (const [key, value] of Object.entries(config ?? {})) {
     if (!SECRET_KEYS.has(key)) safe[key] = value;
   }
   return safe;
-}
-
-function cleanHistory(history: unknown) {
-  if (!Array.isArray(history)) return [];
-  return history
-    .filter((item): item is { role: string; content: unknown } =>
-      !!item && typeof item === "object" &&
-      ((item as any).role === "user" || (item as any).role === "assistant"),
-    )
-    .slice(-MAX_HISTORY_MESSAGES)
-    .map((item) => ({
-      role: item.role,
-      content: typeof item.content === "string"
-        ? item.content.slice(0, MAX_HISTORY_CHARS)
-        : "",
-    }))
-    .filter((item) => item.content.trim().length > 0);
 }
 
 const PROTECTED_CLIENTS = ["venkateshwara", "kprupvc"];
@@ -195,6 +425,20 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "get_quote_activity",
+      description: "Returns an exact quotation count for a calendar day in India time, grouped by client when possible. Use this for questions about today's or yesterday's quotations across all clients or for one client.",
+      parameters: {
+        type: "object",
+        properties: {
+          date: { type: "string", description: "Optional YYYY-MM-DD date in India time. The default is today; 'yesterday' is also accepted." },
+          clientId: { type: "string", description: "Optional client ID. Omit this to report across all clients." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_platform_report",
       description: "Produces a bounded platform-wide research snapshot for the admin: client adoption, quotation volume, status mix, monetary totals, recent activity, and data-quality warnings.",
       parameters: {
@@ -208,6 +452,14 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "get_capabilities",
+      description: "Returns Tara's exact supported actions and safety boundaries. Use this instead of describing capabilities from memory.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_system_health",
       description: "Checks current server-side system condition without exposing secrets: database reachability/latency, table counts, required environment-variable presence, and deployment metadata.",
       parameters: { type: "object", properties: {} },
@@ -215,14 +467,83 @@ const tools = [
   },
 ];
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
+      return json({ error: "not authorized" }, 403);
+    }
+    const email = adminEmail(session);
+    const conversationId = new URL(request.url).searchParams.get("conversationId");
+
+    if (!conversationId) {
+      const conversations = await retrySupabase("list conversations", () => supaGet("tara_conversations", {
+          admin_email: `eq.${email}`,
+          select: "id,title,legacy_id,created_at,updated_at",
+          order: "updated_at.desc",
+          limit: MAX_IMPORTED_CONVERSATIONS,
+        }));
+      return json({ conversations: Array.isArray(conversations) ? conversations : [] });
+    }
+    if (!isUuid(conversationId)) {
+      return json({ error: "invalid conversation id" }, 400);
+    }
+
+    const conversation = await getOwnedConversation(conversationId, email);
+    if (!conversation) return json({ error: "conversation not found" }, 404);
+    const rows = await retrySupabase("load conversation messages", () => supaGet("tara_messages", {
+        conversation_id: `eq.${conversationId}`,
+        select: "id,role,content,tool_logs,created_at",
+        order: "created_at.desc",
+        limit: MAX_STORED_MESSAGES,
+      }));
+    const messages = Array.isArray(rows) ? [...rows].reverse() : [];
+    return json({ conversation, messages });
+  } catch (e: any) {
+    console.error("Tara conversation read error:", e);
+    return json({ error: "Unable to load Tara conversations right now." }, 503);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
+      return json({ error: "not authorized" }, 403);
+    }
+    const conversationId = new URL(request.url).searchParams.get("conversationId");
+    if (!isUuid(conversationId)) return json({ error: "invalid conversation id" }, 400);
+    const email = adminEmail(session);
+    if (!await getOwnedConversation(conversationId, email)) {
+      return json({ error: "conversation not found" }, 404);
+    }
+    await retrySupabase("delete conversation", () => supaDelete("tara_conversations", {
+        id: `eq.${conversationId}`,
+        admin_email: `eq.${email}`,
+      }));
+    return json({ ok: true });
+  } catch (e: any) {
+    console.error("Tara conversation delete error:", e);
+    return json({ error: "Unable to delete that Tara conversation right now." }, 503);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "admin") {
+    if (!session || session.role !== "admin" || !adminEmail(session)) {
       return json({ error: "not authorized" }, 403);
     }
 
-    const rateKey = String(session.email ?? "admin");
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "invalid JSON body" }, 400);
+    }
+
+    const email = adminEmail(session);
+    const rateKey = email;
     const now = Date.now();
     const window = requestWindows.get(rateKey);
     if (!window || now - window.startedAt >= RATE_WINDOW_MS) {
@@ -236,7 +557,11 @@ export async function POST(request: NextRequest) {
       window.count += 1;
     }
 
-    const body = await request.json();
+    if (body?.action === "import") {
+      const result = await importLegacyConversations(email, body.conversations);
+      return json(result);
+    }
+
     const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
     if (!prompt) {
       return json({ error: "prompt is required" }, 400);
@@ -249,44 +574,70 @@ export async function POST(request: NextRequest) {
       return json({ error: "GROQ_API_KEY is not configured on the server." }, 500);
     }
 
+    const requestedConversationId = body?.conversationId;
+    let conversation: any;
+    if (requestedConversationId === undefined || requestedConversationId === null || requestedConversationId === "") {
+      conversation = await createConversation(email, chatTitle(prompt));
+    } else {
+      if (!isUuid(requestedConversationId)) return json({ error: "invalid conversation id" }, 400);
+      conversation = await getOwnedConversation(requestedConversationId, email);
+      if (!conversation) return json({ error: "conversation not found" }, 404);
+    }
+
+    const storedRows = await retrySupabase("load conversation history", () => supaGet("tara_messages", {
+        conversation_id: `eq.${conversation.id}`,
+        select: "role,content",
+        order: "created_at.desc",
+        limit: MAX_HISTORY_MESSAGES,
+      }));
+    const storedHistory = (Array.isArray(storedRows) ? [...storedRows].reverse() : [])
+      .filter((item: any) => (item?.role === "user" || item?.role === "assistant") && typeof item.content === "string")
+      .map((item: any) => ({ role: item.role, content: item.content.slice(0, MAX_STORED_MESSAGE_CHARS) }));
+    try {
+      await saveMessage(conversation.id, "user", prompt);
+    } catch (error) {
+      if (requestedConversationId === undefined || requestedConversationId === null || requestedConversationId === "") {
+        try {
+          await retrySupabase("remove incomplete conversation", () => supaDelete("tara_conversations", {
+              id: `eq.${conversation.id}`,
+              admin_email: `eq.${email}`,
+            }));
+        } catch (cleanupError) {
+          console.error("Tara incomplete conversation cleanup error:", cleanupError);
+        }
+      }
+      throw error;
+    }
+
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const messages: any[] = [
       {
         role: "system",
         content: `You are Tara, an AI assistant for the Vitharn UPVC Quotation Maker platform admin.
-Your job is to help the admin automatically create client accounts, read existing clients as templates, delete clients, and send emails.
-You can inspect usage with list_quotes, detailed client performance with get_client_metrics, platform research with get_platform_report, and current infrastructure condition with get_system_health. When asked for a number or current condition, call the relevant tool first; never claim that data is unavailable before trying it. Clearly label exact database facts, bounded/partial samples, and inferences.
+You can create, read, list, update, and delete client accounts within the safety rules, send emails, inspect client quotations, produce client and platform usage reports, answer exact daily quotation-count questions, check system health, and explain your supported capabilities.
+When asked for a number, report, date-specific activity, capability, or current condition, call the relevant tool first; never answer from the client list or memory. Clearly label exact database facts, bounded/partial samples, and inferences. If a required tool fails, say that the result could not be verified instead of giving a generic capability answer.
 
 CRITICAL INSTRUCTIONS:
 1. NEVER INVENT DUMMY DATA: If the user says "create a client" but doesn't provide all the necessary details (company name, app name, email, password, etc.), DO NOT call the create_client tool with made-up information. Instead, ask the user follow-up questions to gather the missing details. Only execute the tool when you have all the facts.
 2. BE SMART & AGENTIC: Use get_client and list_clients to look up previous clients. If the user asks for a setup "like Akshaya" or "standard setup", fetch that client's config first and use it as a template, merging the new details over it. 
-3. SECURITY: When deleting or updating a client, you MUST respect the "aiCanDelete" flag for deletions. Never try to modify or delete protected clients: venkateshwara, kprupvc. You are permitted to use get_client to read them to use as templates.`,
+3. SECURITY: When deleting or updating a client, you MUST respect the "aiCanDelete" flag for deletions. Never try to modify or delete protected clients: venkateshwara, kprupvc. You are permitted to use get_client to read them to use as templates.
+4. CAPABILITY HONESTY: Tara cannot expose passwords or secrets, cannot change protected security fields, and cannot claim that a database-backed answer is verified unless the corresponding tool returned evidence.`,
       },
-      ...cleanHistory(body?.history),
+      ...storedHistory,
       { role: "user", content: prompt },
     ];
 
+    const forcedTool = forcedToolForPrompt(prompt);
     const runner = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages,
       tools: tools as any,
       // Do not let the model answer evidence questions from the client list alone.
       // Force the corresponding database-backed report for the common admin intents.
-      tool_choice: (() => {
-        const p = String(prompt).toLowerCase();
-        const hasSpecificClient = /kprupvc|venkateshwara|akshaya|vaishnavi|instant/.test(p);
-        const forced = p.includes("conversion") || p.includes("which clients") || p.includes("actually using")
-          ? "get_platform_report"
-          : p.includes("system healthy") || p.includes("system health") || p.includes("current condition")
-            ? "get_system_health"
-            : p.includes("incomplete") || p.includes("suspicious") || p.includes("which clients") || p.includes("actually using")
-              ? "get_platform_report"
-              : (p.includes("how active") || p.includes("usage")) && hasSpecificClient
-                ? "get_client_metrics"
-              : null;
-        return forced ? { type: "function", function: { name: forced } } : "auto";
-      })(),
+      tool_choice: forcedTool
+        ? { type: "function", function: { name: forcedTool } }
+        : "auto",
     });
 
     const responseMessage = runner.choices[0].message;
@@ -357,7 +708,7 @@ CRITICAL INSTRUCTIONS:
                   result = `Success: Deleted client ${clientId}.`;
                   actionLogs.push(`Deleted client: ${clientId}`);
                 } catch (e: any) {
-                  result = "DB Error: " + String(e.message);
+                  result = safeToolError(`delete client ${clientId}`, e, actionLogs);
                 }
               }
             }
@@ -400,7 +751,7 @@ CRITICAL INSTRUCTIONS:
                 result = `Success: Created client ${clientId} with email ${email}.`;
                 actionLogs.push(`Created client: ${companyName} (${clientId})`);
               } catch (e: any) {
-                result = "DB Error: " + String(e.message);
+                result = safeToolError(`create client ${clientId}`, e, actionLogs);
               }
             }
           }
@@ -410,7 +761,7 @@ CRITICAL INSTRUCTIONS:
             result = "Success: Email sent.";
             actionLogs.push(`Sent email to: ${args.to}`);
           } catch (e: any) {
-            result = "Mail Error: " + String(e.message);
+            result = safeToolError(`send the email to ${String(args.to || "the requested recipient")}`, e, actionLogs);
           }
         } else if (functionName === "update_client") {
           const { clientId, updates } = args;
@@ -443,7 +794,7 @@ CRITICAL INSTRUCTIONS:
                 result = `Success: Updated client ${clientId}.`;
                 actionLogs.push(`Updated config for client: ${clientId}`);
               } catch (e: any) {
-                result = "DB Error: " + String(e.message);
+                result = safeToolError(`update client ${clientId}`, e, actionLogs);
               }
             }
           }
@@ -476,8 +827,44 @@ CRITICAL INSTRUCTIONS:
               }
               actionLogs.push(`Read quotation usage: ${clientId} (${count})`);
             } catch (e: any) {
-              result = "DB Error: " + String(e.message);
+              result = safeToolError(`read quotation usage for ${clientId}`, e, actionLogs);
             }
+          }
+        } else if (functionName === "get_quote_activity") {
+          try {
+            const window = dateWindow(args.date);
+            const clientId = typeof args.clientId === "string" ? args.clientId.trim() : "";
+            const filters = {
+              ...(clientId ? { client_id: "eq." + clientId } : {}),
+              created_at: ["gte." + window.start, "lt." + window.end],
+            };
+            const exactCount = await retrySupabase("count daily quotations", () => supaCount("quotations", filters));
+            const sample = await retrySupabase("read daily quotations", () => supaGetAllPaged("quotations", {
+              ...filters,
+              select: "id,client_id,quote_no,status,grand_total,created_at",
+              order: "created_at.desc",
+            }, 500, 5000));
+            const byClient: Record<string, number> = {};
+            const statuses: Record<string, number> = {};
+            for (const quotation of sample.rows) {
+              const id = String(quotation.client_id || "unknown");
+              const status = String(quotation.status || "unknown").toLowerCase();
+              byClient[id] = (byClient[id] || 0) + 1;
+              statuses[status] = (statuses[status] || 0) + 1;
+            }
+            result = JSON.stringify({
+              date: window.date,
+              timezone: "Asia/Kolkata",
+              clientId: clientId || null,
+              exactCount,
+              analyzedRows: sample.rows.length,
+              sampleTruncated: sample.truncated,
+              byClient,
+              statuses,
+            });
+            actionLogs.push(`Counted quotations for ${window.date} (${exactCount})`);
+          } catch (e: any) {
+            result = safeToolError("read daily quotation activity", e, actionLogs);
           }
         } else if (functionName === "get_client_metrics") {
           const clientId = String(args.clientId || "").trim();
@@ -517,7 +904,7 @@ CRITICAL INSTRUCTIONS:
                 actionLogs.push(`Built client metrics: ${clientId}`);
               }
             } catch (e: any) {
-              result = "DB Error: " + String(e.message);
+              result = safeToolError(`build metrics for ${clientId}`, e, actionLogs);
             }
           }
         } else if (functionName === "get_platform_report") {
@@ -567,15 +954,35 @@ CRITICAL INSTRUCTIONS:
             });
             actionLogs.push("Built platform research report");
           } catch (e: any) {
-            result = "DB Error: " + String(e.message);
+            result = safeToolError("build the platform report", e, actionLogs);
           }
+        } else if (functionName === "get_capabilities") {
+          result = JSON.stringify({
+            can: [
+              "create a client account when all required details are provided",
+              "read and list client configurations without exposing passwords",
+              "update approved client configuration fields",
+              "delete non-protected clients when aiCanDelete is not false",
+              "send emails",
+              "count quotations and inspect client or platform usage",
+              "check database and runtime health",
+            ],
+            cannot: [
+              "invent missing client details",
+              "expose passwords, hashes, or secrets",
+              "modify or delete protected clients venkateshwara and kprupvc",
+              "change protected security or billing fields",
+              "claim a database-backed fact without tool evidence",
+            ],
+          });
+          actionLogs.push("Explained Tara capabilities and safety boundaries");
         } else if (functionName === "get_system_health") {
           const started = Date.now();
           const requiredEnv = ["GROQ_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "JWT_SECRET"];
           try {
             const [clientCount, quoteCount] = await Promise.all([
-              supaCount("clients"),
-              supaCount("quotations"),
+              retrySupabase("check client count", () => supaCount("clients")),
+              retrySupabase("check quotation count", () => supaCount("quotations")),
             ]);
             result = JSON.stringify({
               checkedAt: new Date().toISOString(),
@@ -585,8 +992,9 @@ CRITICAL INSTRUCTIONS:
             });
             actionLogs.push("Checked system health");
           } catch (e: any) {
-            result = JSON.stringify({ checkedAt: new Date().toISOString(), database: { reachable: false, latencyMs: Date.now() - started, error: String(e.message).slice(0, 300) }, configuration: Object.fromEntries(requiredEnv.map((key) => [key, Boolean(process.env[key])])) });
-            actionLogs.push("System health detected a database error");
+            console.error("Tara system health error:", e);
+            result = JSON.stringify({ checkedAt: new Date().toISOString(), database: { reachable: false, latencyMs: Date.now() - started, error: "The database health check failed." }, configuration: Object.fromEntries(requiredEnv.map((key) => [key, Boolean(process.env[key])])) });
+            actionLogs.push("Error: System health database check failed");
           }
         }
 
@@ -608,16 +1016,28 @@ CRITICAL INSTRUCTIONS:
         messages,
       });
 
+      const reply = String(secondResponse.choices[0].message.content ?? "");
+      await saveMessage(conversation.id, "assistant", reply, actionLogs);
+
       return json({ 
-        reply: secondResponse.choices[0].message.content,
-        logs: actionLogs 
+        reply,
+        logs: actionLogs,
+        conversationId: conversation.id,
       });
     }
 
-    return json({ reply: responseMessage.content, logs: actionLogs });
+    const reply = forcedTool
+      ? "I could not complete the required verification, so I do not have a reliable answer yet. Please try again."
+      : String(responseMessage.content ?? "");
+    await saveMessage(conversation.id, "assistant", reply, actionLogs);
+    return json({ reply, logs: actionLogs, conversationId: conversation.id });
   } catch (e: any) {
     console.error("Agent error:", e);
-    return json({ error: String(e?.message ?? e) }, 500);
+    return json({
+      error: e?.retryable === true
+        ? "Tara could not reach the data service right now. Please try again in a moment."
+        : "Tara could not complete that request. Please try again.",
+    }, e?.retryable === true ? 503 : 500);
   }
 }
 

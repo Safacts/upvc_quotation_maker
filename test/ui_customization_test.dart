@@ -108,6 +108,47 @@ void main() {
     });
   });
 
+  group('CAD diagram preference', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('defaults to including CAD diagrams', () {
+      expect(AppState().includeCadDiagrams, isTrue);
+    });
+
+    test('updates and persists CAD diagram preference', () async {
+      final appState = AppState();
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      await appState.setIncludeCadDiagrams(false);
+
+      expect(appState.includeCadDiagrams, isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('include_cad_diagrams'), isFalse);
+
+      final restoredState = AppState();
+      await Future.delayed(const Duration(milliseconds: 50));
+      expect(restoredState.includeCadDiagrams, isFalse);
+    });
+
+    testWidgets('settings screen exposes the CAD diagram switch', (tester) async {
+      final appState = AppState();
+      await tester.pumpWidget(_wrapWithAppState(appState, const SettingsScreen()));
+      await tester.pumpAndSettle();
+
+      // The Quotation Maker section sits far below the fold — fling the list
+      // to the end before interacting with the switch.
+      await tester.drag(find.byType(ListView), const Offset(0, -4000));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Include CAD diagrams'), findsOneWidget);
+      await tester.tap(find.byType(SwitchListTile).last);
+      await tester.pumpAndSettle();
+      expect(appState.includeCadDiagrams, isFalse);
+    });
+  });
+
   group('Theme font scaling helper', () {
     test('_scaleTextTheme scales non-null font sizes', () {
       final base = TextTheme(

@@ -301,6 +301,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     activeThumbColor: Theme.of(context).colorScheme.primary,
                     onChanged: (val) => appState.setEnablePdfLink(val),
                   ),
+                  SwitchListTile(
+                    title: const Text('Include CAD diagrams'),
+                    subtitle: const Text('Add window elevation diagrams to quotation PDFs'),
+                    value: appState.includeCadDiagrams,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) => appState.setIncludeCadDiagrams(val),
+                  ),
                 ],
               ),
             ),

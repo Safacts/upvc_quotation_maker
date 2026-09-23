@@ -62,6 +62,7 @@ class AppState extends ChangeNotifier {
   // Feature toggles (persisted locally)
   bool _enableSitePhotos = true;
   bool _enablePdfLink = true; // true = PDF, false = Link for quotation sharing
+  bool _includeCadDiagrams = true;
 
   // Trial expiry warning state
   String _trialWarning = ''; // '', 'TRIAL_EXPIRING_SOON', 'TRIAL_EXPIRED'
@@ -136,6 +137,9 @@ class AppState extends ChangeNotifier {
   /// Whether to use PDF (true) or Link (false) for quotation sharing (local toggle, persisted in SharedPreferences).
   bool get enablePdfLink => _enablePdfLink;
 
+  /// Whether generated quotation PDFs include CAD elevation pages.
+  bool get includeCadDiagrams => _includeCadDiagrams;
+
   /// Toggle site photos visibility in Quotation Maker.
   Future<void> setEnableSitePhotos(bool value) async {
     _enableSitePhotos = value;
@@ -149,6 +153,14 @@ class AppState extends ChangeNotifier {
     _enablePdfLink = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enable_pdf_link', value);
+    notifyListeners();
+  }
+
+  /// Toggle CAD elevation pages in generated quotation PDFs.
+  Future<void> setIncludeCadDiagrams(bool value) async {
+    _includeCadDiagrams = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('include_cad_diagrams', value);
     notifyListeners();
   }
 
@@ -265,6 +277,7 @@ class AppState extends ChangeNotifier {
     // Feature toggles (persisted locally)
     _enableSitePhotos = prefs.getBool('enable_site_photos') ?? true;
     _enablePdfLink = prefs.getBool('enable_pdf_link') ?? true;
+    _includeCadDiagrams = prefs.getBool('include_cad_diagrams') ?? true;
     // BUGFIX: Only apply loaded values if no explicit update has been made
     // since the constructor fired _loadSettings. Without this guard, a late-
     // completing _loadSettings could overwrite user changes made via
