@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import "../admin.css";
 
 interface Message {
+  id?: string;
   role: "user" | "agent";
   content: string;
   logs?: string[];
@@ -15,6 +16,111 @@ interface ChatSession {
   title: string;
   messages: Message[];
   updatedAt: number;
+  legacyId?: string;
+}
+
+interface ServerConversation {
+  id: string;
+  title: string;
+  legacy_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const LOCAL_CHATS_KEY = "tara_chats";
+const MAX_LOCAL_CHATS = 50;
+const MAX_PROMPT_CHARS = 4000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const QUICK_PROMPTS = [
+  "How many quotations were made by all clients today?",
+  "Can you check if the system is healthy?",
+  "List all active clients and their quotation usage.",
+  "What can you do as Tara?",
+];
+
+function isServerConversationId(value: string | null): value is string {
+  return !!value && UUID_PATTERN.test(value);
+}
+
+function localTitle(messages: Message[], fallback = "New Chat") {
+  const firstUserMessage = messages.find((message) => message.role === "user");
+  if (!firstUserMessage) return fallback;
+  const compact = firstUserMessage.content.replace(/\s+/g, " ").trim();
+  return compact.slice(0, 80) + (compact.length > 80 ? "..." : "");
+}
+
+function parseLocalChats(raw: string | null): ChatSession[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const seen = new Set<string>();
+    return parsed
+      .filter((session): session is Record<string, any> => !!session && typeof session === "object")
+      .map((session) => {
+        const id = typeof session.id === "string" ? session.id.trim() : "";
+        if (!id || seen.has(id)) return null;
+        seen.add(id);
+        const messages: Message[] = Array.isArray(session.messages)
+          ? session.messages
+            .filter((message: any) => message && (message.role === "user" || message.role === "agent"))
+            .map((message: any) => ({
+              id: typeof message.id === "string" ? message.id : undefined,
+              role: message.role,
+              content: typeof message.content === "string" ? message.content : "",
+              logs: Array.isArray(message.logs)
+                ? message.logs.filter((log: unknown): log is string => typeof log === "string").slice(0, 50)
+                : undefined,
+            }))
+            .filter((message: Message) => message.content.trim().length > 0)
+          : [];
+        return {
+          id,
+          title: typeof session.title === "string" && session.title.trim()
+            ? session.title.trim().slice(0, 200)
+            : localTitle(messages),
+          messages,
+          updatedAt: Number.isFinite(Number(session.updatedAt)) ? Number(session.updatedAt) : Date.now(),
+          legacyId: typeof session.legacyId === "string" ? session.legacyId : undefined,
+        };
+      })
+      .filter((session) => !!session)
+      .map((session) => session as ChatSession)
+      .slice(0, MAX_LOCAL_CHATS);
+  } catch {
+    return [];
+  }
+}
+
+function mapServerConversation(conversation: ServerConversation): ChatSession {
+  return {
+    id: conversation.id,
+    title: conversation.title || "New Chat",
+    messages: [],
+    updatedAt: Date.parse(conversation.updated_at) || Date.now(),
+    legacyId: conversation.legacy_id || undefined,
+  };
+}
+
+function mapServerMessages(rows: any[]): Message[] {
+  return rows
+    .filter((row) => row && (row.role === "user" || row.role === "assistant") && typeof row.content === "string")
+    .map((row) => ({
+      id: typeof row.id === "string" ? row.id : undefined,
+      role: row.role === "assistant" ? "agent" as const : "user" as const,
+      content: row.content,
+      logs: Array.isArray(row.tool_logs)
+        ? row.tool_logs.filter((log: unknown): log is string => typeof log === "string")
+        : undefined,
+    }));
+}
+
+function formatUpdatedAt(timestamp: number) {
+  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(new Date(timestamp));
+}
+
+function responseError(data: any, fallback: string) {
+  return typeof data?.error === "string" && data.error.trim() ? data.error : fallback;
 }
 
 export default function AgentPage() {
@@ -24,351 +130,421 @@ export default function AgentPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  
+  const [loadingChatId, setLoadingChatId] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [lastFailedPrompt, setLastFailedPrompt] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [loadingChats, setLoadingChats] = useState(true);
+  const [retryingSync, setRetryingSync] = useState(false);
+  const didLoadRef = useRef(false);
+  const conversationLoadRef = useRef(0);
   const endRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const storageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("tara_chats");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setChatSessions(parsed);
-      } catch (e) {}
-    }
-  }, []);
-
-  // Save to localStorage when chatSessions change
-  useEffect(() => {
-    localStorage.setItem("tara_chats", JSON.stringify(chatSessions));
-  }, [chatSessions]);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const startNewChat = () => {
-    setMessages([]);
-    setCurrentSessionId(null);
-  };
-
-  const selectChat = (id: string) => {
-    const session = chatSessions.find(c => c.id === id);
-    if (session) {
-      setMessages(session.messages);
-      setCurrentSessionId(id);
-    }
-  };
-
-  const deleteChat = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = chatSessions.filter(c => c.id !== id);
-    setChatSessions(updated);
-    if (currentSessionId === id) {
-      startNewChat();
-    }
-  };
-
-  const updateSession = (newMessages: Message[]) => {
-    let id = currentSessionId;
-    let title = "New Chat";
-    
-    // Auto-generate a title based on the first user message
-    const firstUserMsg = newMessages.find(m => m.role === "user");
-    if (firstUserMsg) {
-      title = firstUserMsg.content.substring(0, 30) + (firstUserMsg.content.length > 30 ? "..." : "");
-    }
-
-    if (!id) {
-      id = Date.now().toString();
-      setCurrentSessionId(id);
-      setChatSessions(prev => [{ id: id!, title, messages: newMessages, updatedAt: Date.now() }, ...prev]);
-    } else {
-      setChatSessions(prev => prev.map(s => s.id === id ? { ...s, title, messages: newMessages, updatedAt: Date.now() } : s));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prompt.trim()) return;
-
-    const userMessage = prompt.trim();
-    const newMessagesForState = [...messages, { role: "user" as const, content: userMessage }];
-    setMessages(newMessagesForState);
-    updateSession(newMessagesForState);
-    
-    setPrompt("");
-    setLoading(true);
+  const loadChats = async (isRetry = false) => {
+    if (isRetry) setRetryingSync(true);
+    setLoadingChats(true);
+    const localSessions = parseLocalChats(localStorage.getItem(LOCAL_CHATS_KEY));
+    const legacySessions = localSessions.filter((session) => !isServerConversationId(session.id));
+    let migrationError: string | null = null;
 
     try {
-      const history = newMessagesForState.map(m => ({ 
-        role: m.role === "agent" ? "assistant" : m.role, 
-        content: m.content 
-      }));
-      
-      const res = await fetch("/api/admin/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage, history }),
-      });
-      const data = await res.json();
-      
-      if (res.ok) {
-        const finalMessages = [
-          ...newMessagesForState, 
-          { role: "agent" as const, content: data.reply, logs: data.logs }
-        ];
-        setMessages(finalMessages);
-        updateSession(finalMessages);
-      } else {
-        const errorMessages = [
-          ...newMessagesForState, 
-          { role: "agent" as const, content: `Error: ${data.error}` }
-        ];
-        setMessages(errorMessages);
-        updateSession(errorMessages);
+      if (legacySessions.length > 0) {
+        try {
+          const importResponse = await fetch("/api/admin/agent", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "import", conversations: legacySessions }),
+          });
+          if (!importResponse.ok) {
+            const importData = await importResponse.json().catch(() => null);
+            throw new Error(responseError(importData, "Older chats could not be imported."));
+          }
+        } catch (error: any) {
+          migrationError = error?.message || "Older chats could not be imported.";
+        }
       }
-    } catch (err: any) {
-      const errorMessages = [
-        ...newMessagesForState, 
-        { role: "agent" as const, content: `Failed to connect to agent: ${err.message}` }
+
+      const response = await fetch("/api/admin/agent", { credentials: "same-origin" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(responseError(data, "Unable to load Tara conversations."));
+      setChatSessions((data?.conversations || []).map(mapServerConversation));
+      setSyncError(migrationError);
+    } catch (error: any) {
+      setChatSessions(localSessions);
+      setSyncError(error?.message || "Tara is offline. Showing cached chats.");
+    } finally {
+      setHydrated(true);
+      setLoadingChats(false);
+      setRetryingSync(false);
+    }
+  };
+
+  useEffect(() => {
+    if (didLoadRef.current) return;
+    didLoadRef.current = true;
+    void loadChats();
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (storageTimerRef.current) clearTimeout(storageTimerRef.current);
+    storageTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(LOCAL_CHATS_KEY, JSON.stringify(chatSessions.slice(0, MAX_LOCAL_CHATS)));
+      } catch {
+        // Local storage is only a cache; server persistence remains authoritative.
+      }
+    }, 150);
+    return () => {
+      if (storageTimerRef.current) clearTimeout(storageTimerRef.current);
+    };
+  }, [chatSessions, hydrated]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, loading]);
+
+  const focusComposer = () => {
+    window.requestAnimationFrame(() => composerRef.current?.focus());
+  };
+
+  const startNewChat = () => {
+    conversationLoadRef.current += 1;
+    setMessages([]);
+    setCurrentSessionId(null);
+    setLoadingChatId(null);
+    setRequestError(null);
+    setLastFailedPrompt(null);
+    focusComposer();
+  };
+
+  const selectChat = async (id: string) => {
+    const session = chatSessions.find((chat) => chat.id === id);
+    if (!session || loading || loadingChatId === id) return;
+    const loadId = conversationLoadRef.current + 1;
+    conversationLoadRef.current = loadId;
+    setCurrentSessionId(id);
+    setLoadingChatId(id);
+    setMessages([]);
+    setRequestError(null);
+    try {
+      if (!isServerConversationId(id)) {
+        if (conversationLoadRef.current === loadId) setMessages(session.messages);
+        return;
+      }
+      const response = await fetch(`/api/admin/agent?conversationId=${encodeURIComponent(id)}`, {
+        credentials: "same-origin",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(responseError(data, "Unable to load that conversation."));
+      if (conversationLoadRef.current === loadId) setMessages(mapServerMessages(data?.messages || []));
+    } catch (error: any) {
+      if (conversationLoadRef.current === loadId) {
+        setMessages(session.messages);
+        setSyncError(error?.message || "That conversation could not be loaded.");
+      }
+    } finally {
+      if (conversationLoadRef.current === loadId) setLoadingChatId(null);
+    }
+  };
+
+  const deleteChat = async (id: string, event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const session = chatSessions.find((chat) => chat.id === id);
+    if (!session || !window.confirm(`Delete the chat "${session.title}"?`)) return;
+    const previous = chatSessions;
+    const previousMessages = messages;
+    const previousSessionId = currentSessionId;
+    const wasCurrent = currentSessionId === id;
+    if (wasCurrent) conversationLoadRef.current += 1;
+    setChatSessions(chatSessions.filter((chat) => chat.id !== id));
+    if (wasCurrent) startNewChat();
+    if (!isServerConversationId(id)) return;
+    try {
+      const response = await fetch(`/api/admin/agent?conversationId=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(responseError(data, "Unable to delete that conversation."));
+      setSyncError(null);
+    } catch (error: any) {
+      setChatSessions(previous);
+      if (wasCurrent) {
+        conversationLoadRef.current += 1;
+        setCurrentSessionId(previousSessionId);
+        setMessages(previousMessages);
+      }
+      setSyncError(error?.message || "That conversation could not be deleted.");
+    }
+  };
+
+  const sendPrompt = async (userMessage: string, appendUserMessage = true) => {
+    const trimmed = userMessage.trim();
+    if (!trimmed || loading || loadingChatId) return;
+    const nextMessages = appendUserMessage
+      ? [...messages, { role: "user" as const, content: trimmed }]
+      : messages;
+    if (appendUserMessage) setMessages(nextMessages);
+    setPrompt("");
+    setLoading(true);
+    setRequestError(null);
+    setLastFailedPrompt(null);
+
+    try {
+      const requestBody: Record<string, string> = { prompt: trimmed };
+      if (isServerConversationId(currentSessionId)) requestBody.conversationId = currentSessionId;
+      const response = await fetch("/api/admin/agent", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(responseError(data, "Tara could not complete that request."));
+      const reply = typeof data?.reply === "string" && data.reply.trim()
+        ? data.reply
+        : "Tara completed the request without a readable response. Please check the action log.";
+      const finalMessages = [
+        ...nextMessages,
+        { role: "agent" as const, content: reply, logs: Array.isArray(data?.logs) ? data.logs : undefined },
       ];
-      setMessages(errorMessages);
-      updateSession(errorMessages);
+      setMessages(finalMessages);
+      const serverId = typeof data?.conversationId === "string" ? data.conversationId : currentSessionId;
+      if (isServerConversationId(serverId)) {
+        setCurrentSessionId(serverId);
+        setChatSessions((previous) => {
+          const existing = previous.find((session) => session.id === serverId);
+          const updated: ChatSession = {
+            id: serverId,
+            title: existing?.title && existing.title !== "New Chat" ? existing.title : localTitle(finalMessages),
+            messages: finalMessages,
+            updatedAt: Date.now(),
+          };
+          return [updated, ...previous.filter((session) => session.id !== serverId)];
+        });
+      }
+      setSyncError(null);
+    } catch (error: any) {
+      const message = error?.message || "Tara could not be reached.";
+      setRequestError(message);
+      setLastFailedPrompt(trimmed);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void sendPrompt(prompt);
+  };
+
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      setRequestError(null);
+      setSyncError(null);
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
+  const selectedChat = chatSessions.find((session) => session.id === currentSessionId);
+
   return (
-    <div className="admin-shell" style={{ display: "flex", height: "100vh", background: "var(--bg-light)" }}>
-      
-      {/* Sidebar for History */}
-      <div style={{
-        width: "280px",
-        background: "white",
-        borderRight: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0
-      }}>
-        <div style={{ padding: "20px", borderBottom: "1px solid var(--border)" }}>
-          <button 
-            onClick={startNewChat}
-            className="btn-primary"
-            style={{ width: "100%", padding: "10px", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "center", gap: "8px" }}
-          >
-            <span>+</span> New Chat
+    <div className="admin-shell tara-shell">
+      <aside className="tara-sidebar" aria-label="Tara conversation history">
+        <div className="tara-sidebar-top">
+          <div className="tara-brand">
+            <div className="tara-avatar" aria-hidden="true">T</div>
+            <div>
+              <div className="tara-brand-name">Tara</div>
+              <div className="tara-brand-subtitle">Admin operations agent</div>
+            </div>
+          </div>
+          <button type="button" onClick={startNewChat} className="tara-new-chat">
+            <span aria-hidden="true">+</span>
+            New chat
           </button>
         </div>
-        
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "var(--text-ghost)", marginBottom: "12px", paddingLeft: "8px" }}>Recent Chats</div>
-          
-          {chatSessions.length === 0 && (
-            <div style={{ padding: "8px", fontSize: "13px", color: "var(--text-ghost)", textAlign: "center", marginTop: "20px" }}>No past chats</div>
-          )}
 
+        <div className="tara-history-header">
+          <span>Recent chats</span>
+          {chatSessions.length > 0 && <span className="tara-count">{chatSessions.length}</span>}
+        </div>
+        <div className="tara-chat-list" aria-busy={loadingChats}>
+          {loadingChats && chatSessions.length === 0 && (
+            <div className="tara-list-state" aria-label="Loading chat history">Loading history...</div>
+          )}
+          {!loadingChats && chatSessions.length === 0 && (
+            <div className="tara-list-state">No past chats yet. Start with a question below.</div>
+          )}
           {chatSessions.map((session) => (
-            <div 
-              key={session.id}
-              onClick={() => selectChat(session.id)}
-              style={{
-                padding: "12px",
-                borderRadius: "var(--radius-md)",
-                background: currentSessionId === session.id ? "var(--bg)" : "transparent",
-                cursor: "pointer",
-                marginBottom: "4px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                transition: "background 0.2s"
-              }}
-              onMouseEnter={(e) => { if(currentSessionId !== session.id) e.currentTarget.style.background = "var(--bg)"; }}
-              onMouseLeave={(e) => { if(currentSessionId !== session.id) e.currentTarget.style.background = "transparent"; }}
-            >
-              <div style={{ 
-                fontSize: "14px", 
-                fontWeight: currentSessionId === session.id ? 600 : 500,
-                color: currentSessionId === session.id ? "var(--primary)" : "var(--text-dark)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                flex: 1
-              }}>
-                {session.title}
-              </div>
-              <div 
-                onClick={(e) => deleteChat(session.id, e)}
-                style={{ fontSize: "12px", color: "var(--text-ghost)", padding: "4px", opacity: 0.7 }}
+            <div className={`tara-chat-item${currentSessionId === session.id ? " active" : ""}`} key={session.id}>
+              <button
+                type="button"
+                className="tara-chat-select"
+                onClick={() => void selectChat(session.id)}
+                aria-current={currentSessionId === session.id ? "page" : undefined}
+                aria-label={`Open chat ${session.title}`}
+                disabled={!!loadingChatId}
+              >
+                <span className="tara-chat-title">{session.title}</span>
+                <time dateTime={new Date(session.updatedAt).toISOString()}>{formatUpdatedAt(session.updatedAt)}</time>
+              </button>
+              <button
+                type="button"
+                className="tara-chat-delete"
+                onClick={(event) => void deleteChat(session.id, event)}
+                aria-label={`Delete chat ${session.title}`}
                 title="Delete chat"
               >
-                ✕
-              </div>
+                x
+              </button>
             </div>
           ))}
         </div>
-        
-        <div style={{ padding: "20px", borderTop: "1px solid var(--border)", textAlign: "center" }}>
-           <button onClick={() => router.push("/admin")} className="btn-secondary" style={{ width: "100%", padding: "10px" }}>
-             ← Exit to Dashboard
-           </button>
-        </div>
-      </div>
 
-      {/* Main Chat Area */}
-      <main className="admin-main" style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        
-        {/* Header */}
-        <div className="admin-editor-header" style={{ padding: "20px 30px", borderBottom: "1px solid var(--border)", background: "white", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div className="admin-brand-icon" style={{ width: 38, height: 38, fontSize: 20 }}>✨</div>
-            <div>
-              <h2 style={{ fontSize: "18px", fontWeight: 700, margin: 0, color: "var(--text-dark)" }}>Tara - AI Client Manager</h2>
-              <div style={{ fontSize: "12px", color: "var(--text-ghost)", fontWeight: 500 }}>Powered by Groq Agentic Automation</div>
-            </div>
+        <div className="tara-sidebar-bottom">
+          <div className="tara-sidebar-note">
+            <span className="tara-online-dot" aria-hidden="true" />
+            <span>Server history is authoritative</span>
           </div>
+          <button type="button" onClick={() => router.push("/admin")} className="tara-exit">
+            Back to dashboard
+          </button>
         </div>
+      </aside>
 
-        {/* Chat Area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "30px", display: "flex", flexDirection: "column", gap: "20px" }}>
-          {messages.length === 0 && (
-            <div className="admin-welcome" style={{ height: "100%", justifyContent: "center" }}>
-              <div className="admin-welcome-icon" style={{ fontSize: 48, background: "transparent", boxShadow: "none", marginBottom: 10 }}>✨</div>
-              <h2 style={{ fontSize: 24, fontWeight: 700, color: "var(--text-dark)", marginBottom: 8 }}>Hi, I'm Tara!</h2>
-              <p style={{ maxWidth: 500, margin: "0 auto", color: "var(--text-mid)", lineHeight: 1.6 }}>
-                I'm your AI Assistant. I can help you create client accounts, configure them, delete test accounts, and send credential emails automatically. 
-                <br/><br/>
-                Try asking: <br/><strong>"Create a client account for ABC Windows, email abc@example.com with password Pass@123"</strong>
-              </p>
+      <main className="admin-main tara-main">
+        <header className="tara-header">
+          <div>
+            <div className="tara-eyebrow">Vitharn operations</div>
+            <h1>{selectedChat?.title || "Tara workspace"}</h1>
+            <p>Ask Tara to inspect data, run a protected action, or explain what happened.</p>
+          </div>
+          <div className={`tara-status ${syncError ? "cached" : "ready"}`} aria-label={syncError ? "Showing cached history" : "Connected to server history"}>
+            <span className="tara-status-dot" aria-hidden="true" />
+            {syncError ? "Cached history" : "Ready"}
+          </div>
+        </header>
+
+        {syncError && (
+          <div className="tara-alert" role="alert">
+            <div>
+              <strong>{syncError.includes("offline") || syncError.includes("unavailable") ? "Sync is temporarily unavailable" : "Some chats need attention"}</strong>
+              <span>{syncError}. Your new messages will still be sent to the server.</span>
             </div>
+            <button type="button" onClick={() => void loadChats(true)} disabled={retryingSync}>
+              {retryingSync ? "Retrying..." : "Retry sync"}
+            </button>
+          </div>
+        )}
+
+        <div className="tara-transcript" role="log" aria-live="polite" aria-busy={loading} aria-label="Tara conversation">
+          {messages.length === 0 && !loadingChatId && (
+            <section className="tara-welcome" aria-labelledby="tara-welcome-title">
+              <div className="tara-welcome-mark" aria-hidden="true">T</div>
+              <div className="tara-eyebrow">Your operations co-pilot</div>
+              <h2 id="tara-welcome-title">What should we verify?</h2>
+              <p>Tara can look up live platform data, execute allowed client operations, and show the evidence behind each answer.</p>
+              <div className="tara-capability-row" aria-label="Tara capabilities">
+                <span>Client operations</span>
+                <span>Usage reports</span>
+                <span>System health</span>
+              </div>
+              <div className="tara-quick-prompts">
+                {QUICK_PROMPTS.map((quickPrompt) => (
+                  <button type="button" key={quickPrompt} onClick={() => { setPrompt(quickPrompt); focusComposer(); }}>
+                    {quickPrompt}
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
-          
-          {messages.map((msg, idx) => (
-            <div key={idx} style={{ 
-              display: "flex", 
-              justifyContent: msg.role === "user" ? "flex-end" : "flex-start" 
-            }}>
-              <div style={{
-                maxWidth: "75%",
-                padding: "16px 22px",
-                borderRadius: "var(--radius-lg)",
-                background: msg.role === "user" ? "var(--primary)" : "white",
-                color: msg.role === "user" ? "white" : "var(--text-dark)",
-                boxShadow: msg.role === "user" ? "var(--shadow-primary)" : "var(--shadow-sm)",
-                border: msg.role === "user" ? "none" : "1px solid var(--border)",
-                borderBottomRightRadius: msg.role === "user" ? "4px" : "var(--radius-lg)",
-                borderBottomLeftRadius: msg.role === "agent" ? "4px" : "var(--radius-lg)",
-              }}>
-                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: "15px" }}>{msg.content}</div>
-                
-                {msg.logs && msg.logs.length > 0 && (
-                  <div style={{ 
-                    marginTop: "16px", 
-                    paddingTop: "12px", 
-                    borderTop: `1px solid ${msg.role === "user" ? "rgba(255,255,255,0.2)" : "var(--border)"}` 
-                  }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px", color: "var(--text-ghost)" }}>
-                      Automated Actions
-                    </div>
-                    {msg.logs.map((log, i) => {
-                      const isError = log.toLowerCase().includes("error");
-                      return (
-                        <div key={i} style={{ 
-                          fontSize: "13px", 
-                          background: isError ? "var(--danger)" : "var(--bg)", 
-                          color: isError ? "white" : "var(--text-mid)",
-                          padding: "8px 12px", 
-                          borderRadius: "var(--radius-sm)",
-                          marginBottom: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          fontWeight: 500
-                        }}>
-                          <span>{isError ? "✕" : "✓"}</span>
-                          <span>{log}</span>
+
+          {loadingChatId && (
+            <div className="tara-loading-history" role="status">Loading this conversation...</div>
+          )}
+
+          {messages.map((message, index) => (
+            <div className={`tara-message-row ${message.role}`} key={message.id || `${message.role}-${index}-${message.content.slice(0, 12)}`}>
+              <div className="tara-message-meta">{message.role === "user" ? "You" : "Tara"}</div>
+              <div className={`tara-message-bubble ${message.role}`}>
+                <div className="tara-message-content">{message.content}</div>
+                {message.logs && message.logs.length > 0 && (
+                  <details className="tara-action-log">
+                    <summary>Automated actions ({message.logs.length})</summary>
+                    <div>
+                      {message.logs.map((log, actionIndex) => (
+                        <div className={log.toLowerCase().includes("error") ? "error" : "success"} key={`${log}-${actionIndex}`}>
+                          <span aria-hidden="true">{log.toLowerCase().includes("error") ? "!" : "ok"}</span>
+                          {log}
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  </details>
                 )}
               </div>
             </div>
           ))}
-          
+
+          {requestError && (
+            <div className="tara-request-error" role="alert">
+              <div>
+                <strong>Tara could not finish that request.</strong>
+                <span>{requestError}</span>
+              </div>
+              <div className="tara-error-actions">
+                {lastFailedPrompt && <button type="button" onClick={() => void sendPrompt(lastFailedPrompt, false)} disabled={loading}>Retry request</button>}
+                <button type="button" className="quiet" onClick={() => setRequestError(null)}>Dismiss</button>
+              </div>
+            </div>
+          )}
+
           {loading && (
-            <div style={{ display: "flex", justifyContent: "flex-start" }}>
-              <div style={{
-                padding: "16px 22px",
-                borderRadius: "var(--radius-lg)",
-                borderBottomLeftRadius: "4px",
-                background: "white",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-                color: "var(--text-ghost)",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                fontSize: "14px",
-                fontWeight: 500
-              }}>
-                <div className="admin-loading" style={{ height: "auto", minHeight: "auto", display: "inline-block", background: "transparent", padding: 0 }}>Processing...</div>
+            <div className="tara-message-row agent" role="status" aria-label="Tara is processing">
+              <div className="tara-message-meta">Tara</div>
+              <div className="tara-message-bubble agent tara-processing">
+                <span className="tara-spinner" aria-hidden="true" />
+                Checking data and running the requested action...
               </div>
             </div>
           )}
           <div ref={endRef} />
         </div>
 
-        {/* Input Area */}
-        <div style={{ padding: "20px 30px", background: "white", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
-          <form onSubmit={handleSubmit} style={{ display: "flex", gap: "12px", maxWidth: "900px", margin: "0 auto" }}>
-            <input
-              type="text"
+        <footer className="tara-composer-wrap">
+          <form onSubmit={handleSubmit} className="tara-composer">
+            <label htmlFor="tara-prompt" className="tara-sr-only">Ask Tara</label>
+            <textarea
+              id="tara-prompt"
+              ref={composerRef}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask Tara to create a client or manage accounts..."
+              onChange={(event) => setPrompt(event.target.value.slice(0, MAX_PROMPT_CHARS))}
+              onKeyDown={handleComposerKeyDown}
+              placeholder="Ask about clients, quotations, health, or an operation..."
+              maxLength={MAX_PROMPT_CHARS}
+              rows={1}
               disabled={loading}
-              style={{
-                flex: 1,
-                padding: "16px 24px",
-                borderRadius: "var(--radius-xl)",
-                border: "1.5px solid var(--border)",
-                background: "var(--bg)",
-                fontSize: "15px",
-                outline: "none",
-                fontFamily: "inherit",
-                color: "var(--text-dark)",
-                transition: "all var(--transition-fast)"
-              }}
-              onFocus={(e) => {
-                e.target.style.background = "white";
-                e.target.style.borderColor = "var(--primary)";
-                e.target.style.boxShadow = "0 0 0 3px rgba(99,102,241,0.1)";
-              }}
-              onBlur={(e) => {
-                e.target.style.background = "var(--bg)";
-                e.target.style.borderColor = "var(--border)";
-                e.target.style.boxShadow = "none";
-              }}
+              aria-describedby="tara-composer-help tara-composer-error"
             />
-            <button 
-              type="submit"
-              disabled={loading || !prompt.trim()}
-              className="btn-primary"
-              style={{ 
-                borderRadius: "var(--radius-xl)", 
-                padding: "0 28px",
-                fontSize: "15px",
-                opacity: (loading || !prompt.trim()) ? 0.6 : 1,
-                cursor: (loading || !prompt.trim()) ? "not-allowed" : "pointer"
-              }}
-            >
-              Send
+            <button type="submit" className="tara-send" disabled={loading || !!loadingChatId || !prompt.trim()}>
+              {loading ? "Working..." : "Send"}
             </button>
           </form>
-        </div>
-
+          <div className="tara-composer-meta" id="tara-composer-help">
+            <span>Enter to send. Shift + Enter for a new line.</span>
+            <span>{prompt.length}/{MAX_PROMPT_CHARS}</span>
+          </div>
+          <span id="tara-composer-error" className="tara-sr-only">{requestError || syncError || ""}</span>
+        </footer>
       </main>
     </div>
   );
