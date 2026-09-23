@@ -38,6 +38,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
+      - name: Validate Vercel cron schedules (Hobby plan)
+        run: node scripts/validate-vercel-crons.mjs
+
       - name: Install dependencies
         run: npm ci
 
