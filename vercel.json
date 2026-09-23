@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/dispatch-reminders",
-      "schedule": "*/5 * * * *"
+      "schedule": "30 2 * * *"
     }
   ]
 }
