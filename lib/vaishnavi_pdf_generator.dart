@@ -53,7 +53,7 @@ Future<Uint8List> generateVaishnaviPdfBytes(
   );
   // CAD elevations like rest clients — Vaishnavi was missing, now added (client-specific)
   final validMeasured = data.measuredItems.where((e) => e.width > 0 && e.height > 0).toList();
-  if (validMeasured.isNotEmpty) {
+  if (appState.includeCadDiagrams && validMeasured.isNotEmpty) {
     for (var i = 0; i < validMeasured.length; i += 2) {
       final chunk = validMeasured.skip(i).take(2).toList();
       pdf.addPage(
