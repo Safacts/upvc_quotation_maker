@@ -358,6 +358,11 @@ class _LoginScreenState extends State<LoginScreen> {
           umamiTrack('login_success');
           await _writeSession('true');
           await _writeSessionPasswordHash(localHash);
+          // Re-bind branding to the authenticated tenant even though the
+          // credentials matched locally: the in-memory config may have drifted
+          // (stale prefs race), and a login must never cement the wrong
+          // tenant's letterhead. Falls back to cached config when offline.
+          await _applyTenant(appState.clientConfig.clientId);
           await _writeSessionClientId(appState.clientConfig.clientId);
           if (!mounted) return;
           Navigator.pushReplacement(
