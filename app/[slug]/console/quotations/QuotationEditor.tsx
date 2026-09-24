@@ -115,6 +115,7 @@ export interface QuotationHeader {
   roundoff: string;
   include_gst: boolean;
   gst_percentage: string;
+  is_interstate: boolean;
   customer_id: string | null;
 }
 
@@ -165,6 +166,7 @@ export function blankHeader(gstPercentage = 18): QuotationHeader {
     roundoff: "0",
     include_gst: false,
     gst_percentage: String(gstPercentage),
+    is_interstate: false,
     customer_id: null,
   };
 }
@@ -265,6 +267,7 @@ export default function QuotationEditor({
           transport_cost: header.transport_cost,
           include_gst: header.include_gst,
           gst_percentage: header.gst_percentage,
+          is_interstate: header.is_interstate,
           advance_paid: header.advance_paid,
           discount_amount: header.discount_amount,
           discount_percentage: header.discount_percentage,
@@ -277,6 +280,7 @@ export default function QuotationEditor({
       header.transport_cost,
       header.include_gst,
       header.gst_percentage,
+      header.is_interstate,
       header.advance_paid,
       header.discount_amount,
       header.discount_percentage,
@@ -1537,6 +1541,16 @@ export default function QuotationEditor({
                   inputMode="decimal"
                   data-calc="off"
                 />
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={header.is_interstate}
+                    onChange={(e) => setHeaderField("is_interstate", e.target.checked)}
+                    disabled={!header.include_gst}
+                    title="Inter-state sale: IGST instead of CGST + SGST"
+                  />
+                  <span style={{ fontSize: 11 }}>IGST</span>
+                </span>
                 <span className="vc-total-value">{formatAmount(totals.gstAmount)}</span>
               </span>
             </div>

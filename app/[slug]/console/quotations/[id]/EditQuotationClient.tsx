@@ -116,6 +116,7 @@ export default function EditQuotationClient({
             roundoff: toStr(q.roundoff, "0"),
             include_gst: q.include_gst === true,
             gst_percentage: toStr(q.gst_percentage, "0"),
+            is_interstate: q.is_interstate === true,
             customer_id: q.customer_id || null,
           },
           measured,

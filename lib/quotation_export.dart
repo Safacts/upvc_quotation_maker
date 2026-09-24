@@ -46,10 +46,21 @@ Uint8List buildXlsx(QuotationData data, AppState appState) {
   summary.appendRow([TextCellValue('')]);
   summary.appendRow([TextCellValue('Subtotal (Items)'), DoubleCellValue(data.actualAmount)]);
   summary.appendRow([TextCellValue('Transport'), DoubleCellValue(data.transport)]);
-  summary.appendRow([
-    TextCellValue('GST (${data.gstPercentage.toStringAsFixed(2)}%)'),
-    DoubleCellValue(data.igst),
-  ]);
+  if (data.includeGst && data.isInterstate) {
+    summary.appendRow([
+      TextCellValue('IGST (${data.gstPercentage.toStringAsFixed(2)}%)'),
+      DoubleCellValue(data.igstAmount),
+    ]);
+  } else if (data.includeGst) {
+    summary.appendRow([
+      TextCellValue('CGST (${(data.gstPercentage / 2).toStringAsFixed(2)}%)'),
+      DoubleCellValue(data.cgstAmount),
+    ]);
+    summary.appendRow([
+      TextCellValue('SGST (${(data.gstPercentage / 2).toStringAsFixed(2)}%)'),
+      DoubleCellValue(data.sgstAmount),
+    ]);
+  }
   summary.appendRow([TextCellValue('Grand Total'), DoubleCellValue(data.grandTotal)]);
   summary.appendRow([TextCellValue('Total Sft'), DoubleCellValue(data.totalSft)]);
   summary.appendRow([TextCellValue('')]);
@@ -149,7 +160,12 @@ String buildCsv(QuotationData data, AppState appState) {
   row([]);
   row(['Subtotal (Items)', data.actualAmount]);
   row(['Transport', data.transport]);
-  row(['GST (${data.gstPercentage.toStringAsFixed(2)}%)', data.igst]);
+  if (data.includeGst && data.isInterstate) {
+    row(['IGST (${data.gstPercentage.toStringAsFixed(2)}%)', data.igstAmount]);
+  } else if (data.includeGst) {
+    row(['CGST (${(data.gstPercentage / 2).toStringAsFixed(2)}%)', data.cgstAmount]);
+    row(['SGST (${(data.gstPercentage / 2).toStringAsFixed(2)}%)', data.sgstAmount]);
+  }
   row(['Grand Total', data.grandTotal]);
   row(['Total Sft', data.totalSft]);
   row([]);

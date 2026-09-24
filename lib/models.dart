@@ -74,6 +74,11 @@ class QuotationData {
 
   bool includeGst = false;
   double gstPercentage = 0.0;
+
+  /// True when the buyer is in another state: tax renders as a single IGST
+  /// line. False (default) renders CGST + SGST. Amounts never change — only
+  /// the display split. Persisted per quotation (`is_interstate`).
+  bool isInterstate = false;
   String supplierCompany = '';
 
   // Logic to handle continuous numbering via Supabase RPC + Offline fallback
@@ -125,6 +130,27 @@ class QuotationData {
       measuredItems.fold(0, (sum, item) => sum + item.totalSft);
   double get igst =>
       includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
+
+  /// Round to 2 decimals (paisa-level). Used only for DISPLAY splits below —
+  /// [igst] itself keeps full precision so [grandTotal] is bit-identical.
+  static double _round2(double x) => (x * 100).roundToDouble() / 100;
+
+  /// CGST leg for intra-state sales. Paisa-exact floor half so that
+  /// CGST + SGST == [igst] always (mirrors GstInvoiceData + server gstSplit).
+  double get cgstAmount {
+    if (!includeGst || isInterstate) return 0.0;
+    return ((igst * 100).round() ~/ 2) / 100;
+  }
+
+  /// SGST leg for intra-state sales (the remainder after [cgstAmount]).
+  double get sgstAmount {
+    if (!includeGst || isInterstate) return 0.0;
+    return _round2(igst - cgstAmount);
+  }
+
+  /// IGST leg, non-zero only for inter-state sales.
+  double get igstAmount => !includeGst || !isInterstate ? 0.0 : igst;
+
   double get grandTotal =>
       actualAmount + transport + igst; // Grand Total includes IGST
   double get balanceDue =>
@@ -223,6 +249,7 @@ class QuotationData {
       'advance_paid': advancePaid,
       'include_gst': includeGst,
       'gst_percentage': gstPercentage,
+      'is_interstate': isInterstate,
       if (includeStatus) 'status': status.value,
       'supplier_company': supplierCompany,
       'sync_version': syncVersion,
@@ -248,6 +275,7 @@ class QuotationData {
             : DateTime.now();
     q.includeGst = map['include_gst'] ?? false;
     q.gstPercentage = (map['gst_percentage'] ?? 0.0).toDouble();
+    q.isInterstate = map['is_interstate'] ?? false;
     q.status = QuotationStatusX.fromString(map['status']);
     q.syncVersion = (map['sync_version'] as num?)?.toInt() ?? 0;
     q.supplierCompany = map['supplier_company'] ?? '';
@@ -288,7 +316,10 @@ class QuotationData {
 ///
 /// If you change `sft`, `totalSft`, `total`, `igst` or `grandTotal` here, you MUST
 /// make the identical change in `src/lib/pricing.ts` in the SAME commit, and re-run
-/// the parity fixtures (`PRICING_PARITY_FIXTURES` in that file). Preserve the
+/// the parity fixtures (`PRICING_PARITY_FIXTURES` in that file). The DISPLAY-ONLY
+/// split getters (`cgstAmount`/`sgstAmount`/`igstAmount`) and the `isInterstate`
+/// flag intentionally live outside the parity contract: they never change a
+/// total (CGST + SGST == IGST to the paisa). Preserve the
 /// multiplication ORDER exactly — float multiplication is not associative, and a
 /// reordering can move the result by a paisa. The mobile PDF and the web dashboard
 /// disagreeing on a total is a trust-killer with the client.

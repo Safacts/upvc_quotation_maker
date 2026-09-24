@@ -44,7 +44,7 @@ async function loadOwner(id: string): Promise<{ id: string; client_id: string } 
 
 const DETAIL_SELECT =
   "id,quote_no,date,customer_name,contact_no,email,address,reference," +
-  "supplier_company,status,transport_cost,include_gst,gst_percentage,advance_paid," +
+  "supplier_company,status,transport_cost,include_gst,gst_percentage,is_interstate,advance_paid," +
   "created_at,client_id,customer_id," +
   "measured_items(id,code,description,glass,width,height,units,rate,bom_config,created_at)," +
   "unmeasured_items(id,description,units,rate,created_at)";
@@ -246,6 +246,7 @@ export async function PATCH(
         advance_paid: data.advance_paid,
         include_gst: data.include_gst,
         gst_percentage: data.gst_percentage,
+        is_interstate: data.is_interstate ?? false,
         customer_id: data.customer_id,
       },
     );

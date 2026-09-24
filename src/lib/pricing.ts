@@ -67,6 +67,8 @@ export interface QuotationLike {
   transport_cost?: number | string | null;
   include_gst?: boolean | null;
   gst_percentage?: number | string | null;
+  /** Inter-state flag (display split only; never changes a total). */
+  is_interstate?: boolean | null;
   advance_paid?: number | string | null;
   discount_percentage?: number | string | null;
   discount_amount?: number | string | null;
@@ -146,6 +148,28 @@ export function measuredLineSqft(item: MeasuredItemLike): number {
  */
 export function measuredLineTotal(item: MeasuredItemLike): number {
   return measuredLineSqft(item) * num(item?.rate);
+}
+
+/**
+ * DISPLAY-ONLY CGST/SGST/IGST split of an already-computed GST amount.
+ *
+ * Mirrors Dart `cgstAmount`/`sgstAmount`/`igstAmount` (lib/models.dart).
+ * Deliberately OUTSIDE the money parity contract: it never changes a total
+ * (cgst + sgst + igst === gstAmount to the last paisa). Intra-state puts the
+ * paisa-exact floor half on CGST and the remainder on SGST; inter-state puts
+ * everything on IGST.
+ */
+export function gstSplitDisplay(
+  gstAmount: number,
+  isInterstate: boolean,
+): { cgst: number; sgst: number; igst: number } {
+  const total = num(gstAmount);
+  if (!(total > 0)) return { cgst: 0, sgst: 0, igst: 0 };
+  if (isInterstate) return { cgst: 0, sgst: 0, igst: total };
+  const paisa = Math.round(total * 100);
+  const cgst = Math.floor(paisa / 2) / 100;
+  const sgst = Math.round((total - cgst) * 100) / 100;
+  return { cgst, sgst, igst: 0 };
 }
 
 /**

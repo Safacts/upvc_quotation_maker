@@ -28,6 +28,7 @@ import {
   measuredLineTotal,
   unmeasuredLineTotal,
   quotationTotals,
+  gstSplitDisplay,
   PRICING_PARITY_FIXTURES,
 } from "@/lib/pricing";
 
@@ -373,5 +374,31 @@ describe("PRICING_PARITY_FIXTURES — Dart <-> TypeScript contract", () => {
       const b = quotationTotals(f.quotation, f.measured, f.unmeasured);
       expect(a).toEqual(b);
     }
+  });
+});
+
+describe("gstSplitDisplay() — display-only CGST/SGST/IGST split", () => {
+  it("puts everything on IGST for inter-state sales", () => {
+    // Hand-computed, not implementation-derived.
+    expect(gstSplitDisplay(1800, true)).toEqual({ cgst: 0, sgst: 0, igst: 1800 });
+  });
+
+  it("splits intra-state evenly with paisa-exact reconciliation", () => {
+    // Hand-computed: 1800.00 -> 900.00 + 900.00.
+    expect(gstSplitDisplay(1800, false)).toEqual({ cgst: 900, sgst: 900, igst: 0 });
+  });
+
+  it("puts the odd paisa on SGST so the legs sum exactly", () => {
+    // Hand-computed: 100.01 -> floor(10001/2)/100 = 50.00, remainder 50.01.
+    const s = gstSplitDisplay(100.01, false);
+    expect(s.cgst).toBe(50);
+    expect(s.sgst).toBe(50.01);
+    expect(Math.round((s.cgst + s.sgst + s.igst) * 100) / 100).toBe(100.01);
+  });
+
+  it("returns zeros when GST is off or zero", () => {
+    expect(gstSplitDisplay(0, false)).toEqual({ cgst: 0, sgst: 0, igst: 0 });
+    expect(gstSplitDisplay(0, true)).toEqual({ cgst: 0, sgst: 0, igst: 0 });
+    expect(gstSplitDisplay(-5, false)).toEqual({ cgst: 0, sgst: 0, igst: 0 });
   });
 });

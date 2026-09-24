@@ -238,6 +238,10 @@ class OfflineQuotation {
   bool includeGst;
   double gstPercentage;
 
+  /// Interstate sale (IGST) vs intra-state (CGST + SGST). Display-only split;
+  /// amounts never change. Mirrors lib/models.dart.
+  bool isInterstate;
+
   OfflineQuotation({
     this.id,
     this.quotationNo = '',
@@ -257,6 +261,7 @@ class OfflineQuotation {
     this.transport = 0.0,
     this.includeGst = false,
     this.gstPercentage = 0.0,
+    this.isInterstate = false,
   })  : date = date ?? DateTime.now(),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now(),
@@ -277,6 +282,23 @@ class OfflineQuotation {
 
   double get igst =>
       includeGst ? (actualAmount + transport) * (gstPercentage / 100.0) : 0.0;
+
+  static double _round2(double x) => (x * 100).roundToDouble() / 100;
+
+  /// CGST leg for intra-state sales (paisa-exact floor half).
+  double get cgstAmount {
+    if (!includeGst || isInterstate) return 0.0;
+    return ((igst * 100).round() ~/ 2) / 100;
+  }
+
+  /// SGST leg for intra-state sales (remainder).
+  double get sgstAmount {
+    if (!includeGst || isInterstate) return 0.0;
+    return _round2(igst - cgstAmount);
+  }
+
+  /// IGST leg, non-zero only for inter-state sales.
+  double get igstAmount => !includeGst || !isInterstate ? 0.0 : igst;
 
   double get grandTotal => actualAmount + transport + igst;
 
@@ -343,6 +365,7 @@ class OfflineQuotation {
         'transport_cost': transport,
         'include_gst': boolToDb(includeGst),
         'gst_percentage': gstPercentage,
+        'is_interstate': boolToDb(isInterstate),
         'status': status.value,
         'notes': notes,
         // Denormalised so the list screen never has to join or recompute.
@@ -368,6 +391,7 @@ class OfflineQuotation {
         transport: asDouble(m['transport_cost']),
         includeGst: asBool(m['include_gst']),
         gstPercentage: asDouble(m['gst_percentage']),
+        isInterstate: asBool(m['is_interstate']),
       );
 
   /// Value stored in the denormalised `grand_total` column. Used by the list

@@ -1272,6 +1272,18 @@ class _QuotationEditorScreenState extends State<QuotationEditorScreen> {
                 _onEdited();
               },
             ),
+          if (_quotation.includeGst)
+            SwitchListTile(
+              value: _quotation.isInterstate,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Interstate sale (IGST)'),
+              subtitle: const Text('Off = CGST + SGST.'),
+              onChanged: (v) {
+                setState(() => _quotation.isInterstate = v);
+                _dirty = true;
+                _totalsTick.value++;
+              },
+            ),
         ],
       ),
     );
@@ -1328,7 +1340,11 @@ class _QuotationEditorScreenState extends State<QuotationEditorScreen> {
                       _totalChip(theme, 'Transport', formatInr(q.transport)),
                       _totalChip(
                         theme,
-                        q.includeGst ? 'GST ${_pct(q.gstPercentage)}%' : 'GST',
+                        q.includeGst
+                            ? (q.isInterstate
+                                ? 'IGST ${_pct(q.gstPercentage)}%'
+                                : 'CGST+SGST ${_pct(q.gstPercentage)}%')
+                            : 'GST',
                         formatInr(q.igst),
                       ),
                     ],

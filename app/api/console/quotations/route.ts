@@ -349,6 +349,7 @@ export async function POST(request: NextRequest) {
       advance_paid: data.advance_paid,
       include_gst: data.include_gst,
       gst_percentage: data.gst_percentage,
+      is_interstate: data.is_interstate ?? false,
       customer_id: data.customer_id,
     });
 
