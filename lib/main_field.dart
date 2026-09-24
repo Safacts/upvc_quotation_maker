@@ -74,6 +74,8 @@ void main() async {
   }
 
   final appState = AppState();
+  // Same ordering gate as main.dart: prefs before tenant apply.
+  await appState.settingsReady;
   if (initialConfig != null) {
     SupabaseConfig.client.headers['x-client-id'] = initialConfig.clientId;
     appState.applyClientConfig(initialConfig);

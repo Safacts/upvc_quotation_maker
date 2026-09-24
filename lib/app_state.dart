@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,28 @@ class AppState extends ChangeNotifier {
   double _fontScale = 1.0;
   ElementDensity _elementDensity = ElementDensity.comfortable;
   bool _loaded = false;
+
+  /// Completes when the constructor-fired [_loadSettings] finishes reading
+  /// per-device SharedPreferences.
+  ///
+  /// WHY THIS EXISTS (tenant-brand race, found 24-09-2026): [_loadSettings]
+  /// is async fire-and-forget, while `main()` calls [applyClientConfig]
+  /// synchronously right after construction. On a slow first prefs read, the
+  /// config apply lands FIRST and the stale per-device prefs (e.g. a previous
+  /// tenant's company name / bank / GSTIN) land SECOND, clobbering the live
+  /// tenant's branding — a KPR quotation then prints another company's
+  /// letterhead. Every boot entry MUST `await settingsReady` before
+  /// [applyClientConfig] so prefs always land first and config wins.
+  final Completer<void> _settingsReady = Completer<void>();
+
+  /// See [_settingsReady].
+  Future<void> get settingsReady => _settingsReady.future;
+
+  /// True once [applyClientConfig] has installed an authoritative tenant.
+  /// A late [_loadSettings] skips the business block below when set.
+  /// Toggles + UI prefs still always load: they are per-device, and skipping
+  /// them would drop the user's saved choices.
+  bool _configApplied = false;
 
   // Feature toggles (persisted locally)
   bool _enableSitePhotos = true;
@@ -235,6 +258,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> applyClientConfig(ClientConfig config) async {
     _clientConfig = config;
+    // Marks that an authoritative tenant config has landed. A still-flying
+    // [_loadSettings] must not overwrite the business fields below with stale
+    // per-device prefs afterwards (defense in depth; boot entries additionally
+    // await [settingsReady] so the race cannot happen in the first place).
+    _configApplied = true;
 
     // Source of truth is the client config (per-client branding/settings).
     // Always overwrite the in-memory values so each client sees its OWN
@@ -259,9 +287,12 @@ class AppState extends ChangeNotifier {
   }
 
   void _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    _companyName = prefs.getString('companyName') ?? '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Business identity block: skipped when a tenant config already landed
+      // (see _configApplied) — stale per-device prefs must never overwrite it.
+      if (!_configApplied) {
+        _companyName = prefs.getString('companyName') ?? '';
     _companyAddress = prefs.getString('companyAddress') ?? '';
     _companyContact = prefs.getString('companyContact') ?? '';
     _companyEmail = prefs.getString('companyEmail') ?? '';
@@ -274,6 +305,7 @@ class AppState extends ChangeNotifier {
     _companyProprietor = prefs.getString('companyProprietor') ?? '';
     _gstNumber = prefs.getString('gstNumber') ?? '';
     _supplierCompanies = prefs.getStringList('supplierCompanies') ?? [];
+      } // end !_configApplied business block
     // Feature toggles (persisted locally)
     _enableSitePhotos = prefs.getBool('enable_site_photos') ?? true;
     _enablePdfLink = prefs.getBool('enable_pdf_link') ?? true;
@@ -291,6 +323,9 @@ class AppState extends ChangeNotifier {
       );
       _loaded = true;
       notifyListeners();
+    }
+    } finally {
+      if (!_settingsReady.isCompleted) _settingsReady.complete();
     }
   }
 

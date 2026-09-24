@@ -63,6 +63,10 @@ void main() async {
   }
 
   final appState = AppState();
+  // Ordering gate: prefs must land BEFORE the tenant config is applied, or a
+  // slow first prefs read clobbers live branding with a previous tenant's
+  // stored company block (KPR quote on Vaishnavi letterhead, 24-09-2026).
+  await appState.settingsReady;
   // Database-level tenant isolation: every data request is scoped by this header,
   // enforced by Postgres Row Level Security on quotations/items/sent_emails.
   if (initialConfig != null) {
