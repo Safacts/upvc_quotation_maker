@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { measuredLineSqft, measuredLineTotal, unmeasuredLineTotal } from "@/lib/pricing";
+import { measuredLineSqft, measuredLineTotal, unmeasuredLineTotal, gstSplitDisplay } from "@/lib/pricing";
 import type { QuotationTotals } from "@/lib/pricing";
 import { formatAmount, formatDate, formatMoney, formatSqft } from "@/lib/console-format";
 import {
@@ -39,6 +39,7 @@ interface PreviewHeader {
   reference: string;
   include_gst: boolean;
   gst_percentage: string;
+  is_interstate?: boolean;
 }
 
 function useDebounced<T>(value: T, delay = 200): T {
@@ -262,12 +263,29 @@ export function LivePreview({
                   <td>{formatAmount(view.totals.transport)}</td>
                 </tr>
               )}
-              {view.totals.gstPercentage > 0 && (
-                <tr>
-                  <td>GST @ {view.totals.gstPercentage}%</td>
-                  <td>{formatAmount(view.totals.gstAmount)}</td>
-                </tr>
-              )}
+              {view.totals.gstPercentage > 0 &&
+                (() => {
+                  const split = gstSplitDisplay(
+                    view.totals.gstAmount,
+                    view.header.is_interstate === true,
+                  );
+                  const half = (view.totals.gstPercentage / 2).toFixed(1);
+                  const legs =
+                    view.header.is_interstate === true
+                      ? [
+                          [`IGST @ ${view.totals.gstPercentage}%`, split.igst],
+                        ]
+                      : [
+                          [`CGST @ ${half}%`, split.cgst],
+                          [`SGST @ ${half}%`, split.sgst],
+                        ];
+                  return legs.map(([label, amount]) => (
+                    <tr key={label as string}>
+                      <td>{label}</td>
+                      <td>{formatAmount(amount as number)}</td>
+                    </tr>
+                  ));
+                })()}
               {view.totals.roundoff !== 0 && (
                 <tr>
                   <td>Round Off</td>

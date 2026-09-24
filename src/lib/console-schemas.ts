@@ -165,6 +165,10 @@ export const quotationWriteSchema = z.object({
   include_gst: z
     .union([z.boolean(), z.string(), z.number(), z.null(), z.undefined()])
     .transform((v) => v === true || v === "true" || v === 1 || v === "1"),
+  is_interstate: z
+    .union([z.boolean(), z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => v === true || v === "true" || v === 1 || v === "1")
+    .default(false),
   gst_percentage: numberish(0).refine((n) => n >= 0 && n <= 100, {
     message: "GST must be between 0 and 100",
   }),

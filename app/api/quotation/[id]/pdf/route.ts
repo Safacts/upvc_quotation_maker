@@ -78,7 +78,7 @@ export async function GET(
       .from("quotations")
       .select(
         "id,quote_no,date,customer_name,reference,address,contact_no,email," +
-          "supplier_company,transport_cost,include_gst,gst_percentage,status,client_id",
+          "supplier_company,transport_cost,include_gst,gst_percentage,is_interstate,status,client_id",
       )
       .eq("id", id)
       .eq("deleted", false)
@@ -231,6 +231,7 @@ export async function GET(
       unmeasured,
       totals,
       clientId: String(q.client_id || ""),
+      isInterstate: q.is_interstate === true,
       companyName: String(config.companyName || config.appName || q.client_id),
       companyAddress: String(config.companyAddress || ""),
       companyProprietor: String(config.companyProprietor || ""),

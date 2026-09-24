@@ -63,6 +63,7 @@ export interface QuotationHeader {
   roundoff: string;
   include_gst: boolean;
   gst_percentage: string;
+  is_interstate: boolean;
   customer_id: string | null;
 }
 
@@ -113,6 +114,7 @@ export function blankHeader(gstPercentage = 18): QuotationHeader {
     roundoff: "0",
     include_gst: false,
     gst_percentage: String(gstPercentage),
+    is_interstate: false,
     customer_id: null,
   };
 }

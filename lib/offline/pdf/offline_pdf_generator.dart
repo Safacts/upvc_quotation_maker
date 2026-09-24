@@ -738,11 +738,21 @@ class OfflinePdfGenerator {
               line('Amount (Rs.)', formatAmount(quotation.actualAmount)),
               if (quotation.transport != 0)
                 line('Transport (Rs.)', formatAmount(quotation.transport)),
-              if (quotation.includeGst)
+              if (quotation.includeGst && quotation.isInterstate)
                 line(
-                  'GST @ ${_percent(quotation.gstPercentage)}% (Rs.)',
-                  formatAmount(quotation.igst),
+                  'IGST @ ${_percent(quotation.gstPercentage)}% (Rs.)',
+                  formatAmount(quotation.igstAmount),
                 ),
+              if (quotation.includeGst && !quotation.isInterstate) ...[
+                line(
+                  'CGST @ ${_percent(quotation.gstPercentage / 2)}% (Rs.)',
+                  formatAmount(quotation.cgstAmount),
+                ),
+                line(
+                  'SGST @ ${_percent(quotation.gstPercentage / 2)}% (Rs.)',
+                  formatAmount(quotation.sgstAmount),
+                ),
+              ],
               pw.Container(
                 margin: const pw.EdgeInsets.symmetric(vertical: 4),
                 height: 1,

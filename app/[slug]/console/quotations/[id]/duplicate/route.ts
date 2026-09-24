@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 
 const DETAIL_SELECT =
   "id,quote_no,date,customer_name,contact_no,email,address,reference," +
-  "supplier_company,status,transport_cost,include_gst,gst_percentage," +
+  "supplier_company,status,transport_cost,include_gst,gst_percentage,is_interstate," +
   "client_id,customer_id," +
   "measured_items(id,code,description,glass,width,height,units,rate,bom_config,created_at)," +
   "unmeasured_items(id,description,units,rate,created_at)";
@@ -136,6 +136,7 @@ export async function POST(
       status: "draft",
       transport_cost: q.transport_cost != null ? q.transport_cost : "0",
       include_gst: !!q.include_gst,
+      is_interstate: q.is_interstate === true,
       gst_percentage: q.gst_percentage != null ? q.gst_percentage : "18",
       customer_id: q.customer_id || null,
     });

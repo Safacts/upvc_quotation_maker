@@ -42,7 +42,9 @@ class OfflineDatabase {
   /// had a single-column primary key (`config_key` / `feature_key`), which let
   /// one tenant's config overwrite and be read back by another tenant on the
   /// same install. Both are now keyed by (client_id, key).
-  static const int _dbVersion = 2;
+  /// v2 -> v3 (24-09-2026): `is_interstate` on `offline_quotations` (IGST vs
+  /// CGST + SGST display split; amounts unchanged).
+  static const int _dbVersion = 3;
 
   /// Valid values for the `sync_status` column on every local table.
   static const String statusSynced = 'synced';
@@ -264,6 +266,7 @@ class OfflineDatabase {
         transport_cost REAL NOT NULL DEFAULT 0,
         include_gst INTEGER NOT NULL DEFAULT 0,
         gst_percentage REAL NOT NULL DEFAULT 0,
+        is_interstate INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'draft',
         supplier_company TEXT NOT NULL DEFAULT '',
         viewed_at TEXT,
@@ -485,6 +488,13 @@ class OfflineDatabase {
           ON $table (client_id, sync_status)
         ''');
       }
+    }
+
+    if (oldVersion < 3) {
+      // v2 -> v3: per-quotation interstate flag (display-only split).
+      // Existing rows take DEFAULT 0 (intra-state). Additive + idempotent.
+      await _addColumnIfMissing(db, 'offline_quotations', 'is_interstate',
+          'INTEGER NOT NULL DEFAULT 0');
     }
   }
 
@@ -783,6 +793,7 @@ class OfflineDatabase {
       'transport_cost': (quotation['transport_cost'] as num?)?.toDouble() ?? 0,
       'include_gst': (quotation['include_gst'] == true) ? 1 : 0,
       'gst_percentage': (quotation['gst_percentage'] as num?)?.toDouble() ?? 0,
+      'is_interstate': (quotation['is_interstate'] == true) ? 1 : 0,
       'status': (quotation['status'] ?? 'draft').toString(),
       'supplier_company': (quotation['supplier_company'] ?? '').toString(),
       'viewed_at': quotation['viewed_at'],
