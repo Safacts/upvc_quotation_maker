@@ -84,6 +84,8 @@ export interface QuotationPdfData {
   // Optional logo URL. Downloaded at request time; skipped if it fails.
   logoUrl?: string;
   watermarkUrl?: string;
+  // Whether to render 2D CAD Window Elevation schedule pages (defaults to true)
+  includeCad?: boolean;
   // Eva-grade fabrication data (optional)
   bomLines?: Array<{
     kind: string;
@@ -726,7 +728,10 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   rightText("Customer Signature", W - M, y - 12, { size: 10, font: bold });
 
   // ---- Window Elevation & CAD Measurement Schedule Pages ----
-  const validMeasured = (data.measured || []).filter((item) => item.width > 0 && item.height > 0);
+  const shouldDrawCad = data.includeCad !== false;
+  const validMeasured = shouldDrawCad
+    ? (data.measured || []).filter((item) => item.width > 0 && item.height > 0)
+    : [];
   if (validMeasured.length > 0) {
     const itemsPerPage = 2;
     for (let i = 0; i < validMeasured.length; i += itemsPerPage) {
@@ -787,7 +792,7 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
   return doc.save();
 }
 
-function drawWindowElevationCard(
+export function drawWindowElevationCard(
   page: PDFPage,
   item: QuotationPdfMeasured,
   itemIndex: number,

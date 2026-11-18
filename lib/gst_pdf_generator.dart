@@ -168,28 +168,36 @@ pw.Widget _buildSupplierBuyer(GstInvoiceData data, AppState appState) {
 
 pw.Widget _buildItemsTable(GstInvoiceData data, NumberFormat currency) {
   return pw.TableHelper.fromTextArray(
-    headers: ['S.No', 'HSN', 'Description', 'Qty', 'Unit', 'Rate', 'Taxable Value'],
-    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+    headers: ['S.No', 'HSN', 'Description', 'W (MM)', 'H (MM)', 'Units', 'Qty', 'Unit', 'Rate', 'Taxable Value'],
+    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
     headerDecoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF3E6')),
-    cellStyle: pw.TextStyle(fontSize: 9),
+    cellStyle: pw.TextStyle(fontSize: 8),
     cellAlignment: pw.Alignment.center,
     border: pw.TableBorder.all(color: PdfColors.grey800),
     columnWidths: {
-      0: const pw.FlexColumnWidth(0.8),
-      1: const pw.FlexColumnWidth(1.2),
-      2: const pw.FlexColumnWidth(4),
+      0: const pw.FlexColumnWidth(0.6),
+      1: const pw.FlexColumnWidth(1),
+      2: const pw.FlexColumnWidth(3),
       3: const pw.FlexColumnWidth(1),
       4: const pw.FlexColumnWidth(1),
-      5: const pw.FlexColumnWidth(2),
-      6: const pw.FlexColumnWidth(2),
+      5: const pw.FlexColumnWidth(0.8),
+      6: const pw.FlexColumnWidth(1),
+      7: const pw.FlexColumnWidth(0.8),
+      8: const pw.FlexColumnWidth(1.5),
+      9: const pw.FlexColumnWidth(2),
     },
     data: List<List<String>>.generate(data.items.length, (index) {
       final item = data.items[index];
+      final w = item.width == 0 ? '' : item.width.toStringAsFixed(0);
+      final h = item.height == 0 ? '' : item.height.toStringAsFixed(0);
       return [
         '${index + 1}',
         item.hsnCode,
         item.description,
-        item.quantity.toStringAsFixed(0),
+        w,
+        h,
+        item.units.toString(),
+        item.totalSft.toStringAsFixed(2),
         item.unit,
         currency.format(item.rate),
         currency.format(item.taxableValue),

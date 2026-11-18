@@ -3,6 +3,7 @@ import { getSession, type SessionPayload } from "@/lib/session";
 import { resolveTenant, type TenantResolution } from "@/lib/tenant";
 import { isServiceKeyConfigured, supaGet } from "@/lib/supabase";
 import { requireTier, hasFeature, type Feature, type Tier } from "@/lib/tiers";
+import { findClientBySlug, getCachedClients } from "@/lib/slug";
 
 /**
  * console-auth.ts — THE ENTRY GATE FOR EVERY `/api/console/*` ROUTE.
@@ -173,6 +174,15 @@ export async function requireConsoleSession(
       }
       if (!requested && session?.client_id) {
         requested = session.client_id;
+      }
+      if (requested) {
+        try {
+          const clientRows = await getCachedClients();
+          const matched = findClientBySlug(clientRows, requested);
+          if (matched?.id) {
+            requested = matched.id;
+          }
+        } catch (_) {}
       }
     } catch {
       requested = null;
