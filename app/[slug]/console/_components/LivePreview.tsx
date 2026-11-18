@@ -61,6 +61,8 @@ export function LivePreview({
   companyContact,
   gstNumber,
   focusedIndex,
+  includeCad = true,
+  onToggleIncludeCad,
 }: {
   header: PreviewHeader;
   measured: PreviewMeasured[];
@@ -71,6 +73,8 @@ export function LivePreview({
   companyContact?: string;
   gstNumber?: string;
   focusedIndex?: number | null;
+  includeCad?: boolean;
+  onToggleIncludeCad?: (include: boolean) => void;
 }) {
   const [viewMode, setViewMode] = useState<"doc" | "cad" | "both">("both");
   const view = useDebounced({ header, measured, unmeasured, totals }, 200);
@@ -315,113 +319,143 @@ export function LivePreview({
 
       {/* 2D CAD ELEVATION SCHEDULE (Visible in 'cad' or 'both' view) */}
       {(viewMode === "cad" || viewMode === "both") && elevationItems.length > 0 && (
-        <div
-          style={{
-            marginTop: viewMode === "both" ? 14 : 4,
-            paddingTop: viewMode === "both" ? 12 : 4,
-            borderTop: viewMode === "both" ? "2px dashed #cbd5e0" : "none",
-          }}
-        >
+        includeCad ? (
           <div
             style={{
+              marginTop: viewMode === "both" ? 14 : 4,
+              paddingTop: viewMode === "both" ? 12 : 4,
+              borderTop: viewMode === "both" ? "2px dashed #cbd5e0" : "none",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a202c" }}>
+                📐 2D CAD Window Elevation Schedule
+              </div>
+              <div style={{ fontSize: 10, color: "#718096" }}>
+                {elevationItems.length} window unit{elevationItems.length > 1 ? "s" : ""}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {elevationItems.map((item) => {
+                const type = detectWindowElevationType(item.description);
+                const title = getWindowElevationTitle(type, item.origIndex);
+                const wMm = Number(item.width) || 0;
+                const hMm = Number(item.height) || 0;
+                const itemSqft = measuredLineSqft({
+                  width: item.width,
+                  height: item.height,
+                  units: item.units,
+                });
+
+                return (
+                  <div
+                    key={item.key}
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 6,
+                      padding: 8,
+                      background: "#ffffff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "100%",
+                        textAlign: "center",
+                        borderBottom: "1px solid #edf2f7",
+                        paddingBottom: 6,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 11, color: "#2d3748" }}>{title}</div>
+                      <div style={{ fontSize: 9.5, color: "#718096" }}>
+                        {wMm} × {hMm} mm · {formatSqft(itemSqft)} sqft · Qty: {item.units || 1}
+                      </div>
+                      {item.glass && (
+                        <div
+                          style={{
+                            fontSize: 8.5,
+                            color: "#4a5568",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.glass}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Standalone Vector SVG Drawing */}
+                    <div
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        padding: "4px 0",
+                      }}
+                    >
+                      <WindowElevationSvg
+                        widthMm={wMm}
+                        heightMm={hMm}
+                        description={item.description}
+                        itemIndex={item.origIndex}
+                        targetWidth={210}
+                        targetHeight={220}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              marginTop: viewMode === "both" ? 14 : 4,
+              padding: "12px 16px",
+              background: "#f8fafc",
+              border: "1px dashed #cbd5e1",
+              borderRadius: 6,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: 10,
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#1a202c" }}>
-              📐 2D CAD Window Elevation Schedule
-            </div>
-            <div style={{ fontSize: 10, color: "#718096" }}>
-              {elevationItems.length} window unit{elevationItems.length > 1 ? "s" : ""}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
               gap: 12,
             }}
           >
-            {elevationItems.map((item) => {
-              const type = detectWindowElevationType(item.description);
-              const title = getWindowElevationTitle(type, item.origIndex);
-              const wMm = Number(item.width) || 0;
-              const hMm = Number(item.height) || 0;
-              const itemSqft = measuredLineSqft({
-                width: item.width,
-                height: item.height,
-                units: item.units,
-              });
-
-              return (
-                <div
-                  key={item.key}
-                  style={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 6,
-                    padding: 8,
-                    background: "#ffffff",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "100%",
-                      textAlign: "center",
-                      borderBottom: "1px solid #edf2f7",
-                      paddingBottom: 6,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, fontSize: 11, color: "#2d3748" }}>{title}</div>
-                    <div style={{ fontSize: 9.5, color: "#718096" }}>
-                      {wMm} × {hMm} mm · {formatSqft(itemSqft)} sqft · Qty: {item.units || 1}
-                    </div>
-                    {item.glass && (
-                      <div
-                        style={{
-                          fontSize: 8.5,
-                          color: "#4a5568",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {item.glass}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Standalone Vector SVG Drawing */}
-                  <div
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      padding: "4px 0",
-                    }}
-                  >
-                    <WindowElevationSvg
-                      widthMm={wMm}
-                      heightMm={hMm}
-                      description={item.description}
-                      itemIndex={item.origIndex}
-                      targetWidth={210}
-                      targetHeight={220}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            <div style={{ fontSize: 11, color: "#64748b" }}>
+              📐 2D CAD elevation diagrams are <b>hidden</b> and excluded from the quotation PDF.
+            </div>
+            {onToggleIncludeCad && (
+              <button
+                type="button"
+                className="vc-btn vc-btn-sm"
+                onClick={() => onToggleIncludeCad(true)}
+                style={{ fontSize: 11, padding: "3px 8px" }}
+              >
+                Unhide CAD
+              </button>
+            )}
           </div>
-        </div>
+        )
       )}
 
       <div style={{ marginTop: 10, fontSize: 9.5, color: "#8a94a1", lineHeight: 1.5 }}>

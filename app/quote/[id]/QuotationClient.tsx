@@ -142,7 +142,8 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
     if (!quotation || downloading) return;
     setDownloading(true);
     setDownloadError("");
-    const href = `/api/quotation/${quotation.id}/pdf?token=${encodeURIComponent(token)}`;
+    const cadParam = viewMode === "doc" ? "&cad=0" : "";
+    const href = `/api/quotation/${quotation.id}/pdf?token=${encodeURIComponent(token)}${cadParam}`;
     const filename = `Quotation_${(quotation.quote_no || quotation.id).replace(/[^A-Za-z0-9._-]/g, "_")}.pdf`;
     try {
       const res = await fetch(href);

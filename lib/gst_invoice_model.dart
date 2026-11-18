@@ -29,9 +29,14 @@ class GstInvoiceItem {
   int sno;
   String hsnCode;
   String description;
-  double quantity;
+  double width;
+  double height;
+  int units;
   String unit;
   double rate;
+  double get sft => (width / 304.8) * (height / 304.8);
+  double get totalSft => sft * units;
+  double get quantity => totalSft;
   double get taxableValue => quantity * rate;
 
   GstInvoiceItem({
@@ -39,7 +44,9 @@ class GstInvoiceItem {
     this.sno = 1,
     this.hsnCode = '3925',
     this.description = '',
-    this.quantity = 1,
+    this.width = 0,
+    this.height = 0,
+    this.units = 1,
     this.unit = 'SFT',
     this.rate = 0,
   });
@@ -52,7 +59,9 @@ class GstInvoiceItem {
       'sno': sno,
       'hsn_code': hsnCode,
       'description': description,
-      'quantity': quantity,
+      'width': width,
+      'height': height,
+      'units': units,
       'unit': unit,
       'rate': rate,
       'taxable_value': taxableValue,
@@ -64,7 +73,9 @@ class GstInvoiceItem {
     sno: m['sno'] ?? 1,
     hsnCode: m['hsn_code'] ?? '3925',
     description: m['description'] ?? '',
-    quantity: (m['quantity'] ?? 1).toDouble(),
+    width: (m['width'] ?? 0).toDouble(),
+    height: (m['height'] ?? 0).toDouble(),
+    units: m['units'] ?? 1,
     unit: m['unit'] ?? 'SFT',
     rate: (m['rate'] ?? 0).toDouble(),
   );
