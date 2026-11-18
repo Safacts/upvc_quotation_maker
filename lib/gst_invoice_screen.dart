@@ -83,7 +83,9 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
         sno: sno++,
         hsnCode: '3925',
         description: item.description.isNotEmpty ? item.description : item.code,
-        quantity: item.totalSft,
+        width: item.width,
+        height: item.height,
+        units: item.units,
         unit: 'SFT',
         rate: item.rate,
       ));
@@ -93,7 +95,9 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
         sno: sno++,
         hsnCode: '3925',
         description: item.description,
-        quantity: item.units.toDouble(),
+        width: 0,
+        height: 0,
+        units: item.units,
         unit: 'NOS',
         rate: item.rate,
       ));
@@ -550,17 +554,49 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                       Row(children: [
                         Expanded(
                           child: TextFormField(
-                            focusNode: _node('i_${index}_qty'),
-                            initialValue: item.quantity == 0 ? '' : item.quantity.toString(),
+                            focusNode: _node('i_${index}_width'),
+                            initialValue: item.width == 0 ? '' : item.width.toString(),
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            ],
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(labelText: 'Qty'),
-                            onChanged: (val) { item.quantity = double.tryParse(val) ?? 0; setState(() {}); _onDataChanged(); },
+                            decoration: const InputDecoration(labelText: 'W (MM)'),
+                            onChanged: (val) { item.width = double.tryParse(val) ?? 0; setState(() {}); _onDataChanged(); },
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 80,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            focusNode: _node('i_${index}_height'),
+                            initialValue: item.height == 0 ? '' : item.height.toString(),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            ],
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(labelText: 'H (MM)'),
+                            onChanged: (val) { item.height = double.tryParse(val) ?? 0; setState(() {}); _onDataChanged(); },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            focusNode: _node('i_${index}_units'),
+                            initialValue: item.units.toString(),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(labelText: 'Units'),
+                            onChanged: (val) { item.units = int.tryParse(val) ?? 1; setState(() {}); _onDataChanged(); },
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(
                           child: TextFormField(
                             focusNode: _node('i_${index}_unit'),
                             initialValue: item.unit,
@@ -575,6 +611,9 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                             focusNode: _node('i_${index}_rate'),
                             initialValue: item.rate == 0 ? '' : item.rate.toString(),
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            ],
                             textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(labelText: 'Rate'),
                             onChanged: (val) { item.rate = double.tryParse(val) ?? 0; setState(() {}); _onDataChanged(); },
@@ -584,7 +623,7 @@ class _GstInvoiceScreenState extends State<GstInvoiceScreen> {
                       const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Text('Taxable: ₹${item.taxableValue.toStringAsFixed(2)}',
+                        child: Text('Qty: ${item.totalSft.toStringAsFixed(2)} ${item.unit}  |  Taxable: ₹${item.taxableValue.toStringAsFixed(2)}',
                           style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
                       ),
                     ],

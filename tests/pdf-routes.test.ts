@@ -290,6 +290,29 @@ describe("/api/console/quotations/[id]/pdf — uPVC quotation PDF", () => {
     const res = await GET(await nextReq("http://x/api/console/quotations/q9/pdf"), params("q9"));
     expect(res.status).toBe(404);
   });
+
+  it("supports cad=0 to omit CAD elevation schedule pages", async () => {
+    loginAs(customerA);
+    fixtures.quotations = [
+      {
+        id: "q1",
+        client_id: TENANT_A,
+        quote_no: "Q-1",
+        customer_name: "Test",
+        transport_cost: 0,
+        include_gst: false,
+        gst_percentage: 0,
+        measured_items: [
+          { code: "W1", description: "2 Track Sliding", width: 1200, height: 1500, units: 1, rate: 500 },
+        ],
+        unmeasured_items: [],
+      },
+    ];
+    const { GET } = await import("../app/api/console/quotations/[id]/pdf/route");
+    const res = await GET(await nextReq("http://x/api/console/quotations/q1/pdf?cad=0"), params("q1"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+  });
 });
 
 // ===========================================================================

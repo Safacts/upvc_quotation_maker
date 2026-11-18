@@ -205,6 +205,8 @@ export default function QuotationEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
   const [showElevationPreview, setShowElevationPreview] = useState(true);
+  const [includeCadInPdf, setIncludeCadInPdf] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(quotationId);
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
@@ -640,9 +642,9 @@ export default function QuotationEditor({
   }, [openQuickCreate, header.customer_name, markDirty]);
 
   // ---- PDF download --------------------------------------------------------
-  // Opens the PDF route in a new tab. The route re-reads the stored row, so the
+  // Downloads the customer-facing PDF directly. The route re-reads the stored row, so the
   // download always reflects the last saved state — never the unsaved draft.
-  const downloadPdf = useCallback(() => {
+  const downloadPdf = useCallback(async (includeCadOverride?: boolean) => {
     if (dirty || saveInFlight.current) {
       toast("Save your latest changes before downloading the PDF.", "info");
       return;
@@ -651,9 +653,42 @@ export default function QuotationEditor({
       toast("Save the quotation first to generate a PDF", "info");
       return;
     }
-    const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
-    window.open(`/api/console/quotations/${savedId}/pdf${cParam}`, "_blank", "noopener,noreferrer");
-  }, [dirty, savedId, slug, clientId, toast]);
+    const cadFlag = includeCadOverride !== undefined ? includeCadOverride : includeCadInPdf;
+    setDownloadingPdf(true);
+    try {
+      const params = new URLSearchParams();
+      if (clientId) params.set("client_id", clientId);
+      params.set("cad", cadFlag ? "1" : "0");
+
+      const res = await fetch(`/api/console/quotations/${savedId}/pdf?${params.toString()}`, {
+        credentials: "same-origin",
+      });
+      if (!res.ok) {
+        let errMsg = "Could not generate PDF — please save changes first";
+        try {
+          const errData = await res.json();
+          if (errData?.error) errMsg = errData.error;
+        } catch (_) {}
+        toast(errMsg, "err");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cleanQuoteNo = (header.quote_no || savedId).replace(/[^A-Za-z0-9._-]/g, "_");
+      a.download = `quotation_${cleanQuoteNo}${cadFlag ? "" : "_no_cad"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(cadFlag ? "Quotation PDF downloaded (with CAD)" : "Quotation PDF downloaded (without CAD)", "ok");
+    } catch (e: any) {
+      toast("Download failed: " + String(e?.message ?? e), "err");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }, [dirty, savedId, clientId, includeCadInPdf, header.quote_no, toast]);
 
   // ---- Email the quotation -------------------------------------------------
   // Sends the customer-facing PDF as an attachment via /api/send_email. The
@@ -676,8 +711,10 @@ export default function QuotationEditor({
     emailInFlight.current = true;
     setSendingEmail(true);
     try {
-      const cParam = clientId ? `?client_id=${encodeURIComponent(clientId)}` : "";
-      const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf${cParam}`, {
+      const params = new URLSearchParams();
+      if (clientId) params.set("client_id", clientId);
+      params.set("cad", includeCadInPdf ? "1" : "0");
+      const pdfRes = await fetch(`/api/console/quotations/${savedId}/pdf?${params.toString()}`, {
         credentials: "same-origin",
       });
       if (!pdfRes.ok) {
@@ -754,7 +791,8 @@ export default function QuotationEditor({
       toast("Share link copied to clipboard!", "ok");
 
       if (openWhatsApp) {
-        const text = `*QUOTATION — ${header.quote_no || "UPVC Quote"}*\n\nDear ${header.customer_name || "Customer"},\nPlease review your quotation and 2D CAD window elevation diagrams here:\n🔗 ${shareUrl}\n\nThank you,\n${companyName || clientId}`;
+        const cadText = includeCadInPdf ? " and 2D CAD window elevation diagrams" : "";
+        const text = `*QUOTATION — ${header.quote_no || "UPVC Quote"}*\n\nDear ${header.customer_name || "Customer"},\nPlease review your quotation${cadText} here:\n🔗 ${shareUrl}\n\nThank you,\n${companyName || clientId}`;
         const phone = (header.contact_no || "").replace(/[^0-9]/g, "");
         const waUrl = phone
           ? `https://wa.me/${phone.length === 10 ? "91" + phone : phone}?text=${encodeURIComponent(text)}`
@@ -766,7 +804,7 @@ export default function QuotationEditor({
     } finally {
       setSharing(false);
     }
-  }, [savedId, clientId, header.quote_no, header.customer_name, header.contact_no, companyName, toast]);
+  }, [savedId, clientId, includeCadInPdf, header.quote_no, header.customer_name, header.contact_no, companyName, toast]);
 
   // ---- Wire into the shell's global key map -------------------------------
   useConsoleAction("save", save);
@@ -1001,13 +1039,45 @@ export default function QuotationEditor({
               >
                 <WhatsAppIcon size={13} /> WhatsApp
               </button>
+              <label
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 11,
+                  padding: "4px 8px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  userSelect: "none",
+                  border: `1px solid ${includeCadInPdf ? "#86efac" : "#cbd5e1"}`,
+                  background: includeCadInPdf ? "#f0fdf4" : "#f8fafc",
+                  color: includeCadInPdf ? "#166534" : "#64748b",
+                  fontWeight: 600,
+                }}
+                title={includeCadInPdf ? "2D CAD drawings included in PDF. Click to hide/exclude from PDF." : "CAD drawings hidden from PDF. Click to include."}
+              >
+                <input
+                  type="checkbox"
+                  checked={includeCadInPdf}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIncludeCadInPdf(checked);
+                    toast(checked ? "2D CAD diagrams will be included in PDF" : "2D CAD diagrams excluded from PDF", "info");
+                  }}
+                  style={{ cursor: "pointer", margin: 0 }}
+                />
+                <Compass size={12} />
+                <span>{includeCadInPdf ? "CAD: On" : "CAD: Off"}</span>
+              </label>
               <button
                 type="button"
                 className="vc-btn vc-btn-sm"
                 onClick={() => void downloadPdf()}
+                disabled={downloadingPdf}
                 title="Download as PDF (Ctrl+E)"
               >
-                <Download size={12} /> PDF <span className="vc-kbd">Ctrl E</span>
+                {downloadingPdf ? <span className="vc-spinner" /> : <Download size={12} />} PDF{" "}
+                <span className="vc-kbd">Ctrl E</span>
               </button>
               <button
                 type="button"
@@ -1591,6 +1661,8 @@ export default function QuotationEditor({
           companyContact={companyContact}
           gstNumber={gstNumber}
           focusedIndex={focusedMeasured}
+          includeCad={includeCadInPdf}
+          onToggleIncludeCad={setIncludeCadInPdf}
         />
       </div>
     </div>
