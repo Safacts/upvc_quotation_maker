@@ -400,7 +400,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
                             <td className="highlight" style={{ textAlign: "center" }}>{i + 1}</td>
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                                <strong>{item.description || getWindowElevationTitle(elevType, i + 1)}</strong>
+                                <strong style={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>{item.description || getWindowElevationTitle(elevType, i + 1)}</strong>
                                 {item.code && (
                                   <span style={{ fontSize: "10.5px", background: "#f1f5f9", padding: "1px 6px", borderRadius: "4px", color: "#475569" }}>
                                     Code: {item.code}
@@ -589,7 +589,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
                     {unmeasured.map((item, i) => (
                       <tr key={i}>
                         <td className="highlight" style={{ textAlign: "center" }}>{i + 1}</td>
-                        <td className="highlight">{item.description}</td>
+                        <td className="highlight" style={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>{item.description}</td>
                         <td className="col-center">{item.units}</td>
                         <td className="col-center">₹{Number(item.rate).toLocaleString("en-IN")}</td>
                         <td className="col-right amount">₹{(item.units * item.rate).toLocaleString("en-IN")}</td>

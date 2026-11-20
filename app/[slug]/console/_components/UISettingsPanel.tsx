@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Settings, Type, Maximize2, RotateCcw, X } from "lucide-react";
+import { Settings, Type, Maximize2, RotateCcw, X, Rows3 } from "lucide-react";
 import { useUI, type FontSize, type ElementSize } from "@/lib/hooks/useUI";
 
 /**
@@ -24,7 +24,15 @@ const ELEMENT_OPTIONS: Array<{ value: ElementSize; label: string; desc: string }
 ];
 
 export function UISettingsPanel() {
-  const { fontSize, elementSize, setFontSize, setElementSize, reset } = useUI();
+  const {
+    fontSize,
+    elementSize,
+    autoExpandDescription,
+    setFontSize,
+    setElementSize,
+    setAutoExpandDescription,
+    reset,
+  } = useUI();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +114,32 @@ export function UISettingsPanel() {
                   <span className="vc-ui-seg-desc">{opt.desc}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Auto-expand Item Description */}
+          <div className="vc-ui-group">
+            <div className="vc-ui-group-label">
+              <Rows3 size={12} />
+              Auto-expand Item Description
+            </div>
+            <div className="vc-ui-seg">
+              <button
+                type="button"
+                className={"vc-ui-seg-btn" + (autoExpandDescription ? " vc-ui-seg-active" : "")}
+                onClick={() => setAutoExpandDescription(true)}
+              >
+                <span className="vc-ui-seg-label">On</span>
+                <span className="vc-ui-seg-desc">Expand as typed</span>
+              </button>
+              <button
+                type="button"
+                className={"vc-ui-seg-btn" + (!autoExpandDescription ? " vc-ui-seg-active" : "")}
+                onClick={() => setAutoExpandDescription(false)}
+              >
+                <span className="vc-ui-seg-label">Off</span>
+                <span className="vc-ui-seg-desc">Fixed height</span>
+              </button>
             </div>
           </div>
 

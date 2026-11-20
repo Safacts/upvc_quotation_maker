@@ -861,6 +861,7 @@ textarea.vc-cell-input {
   min-height: 32px;
   line-height: 1.4;
   font-family: inherit;
+  transition: height 0.1s ease-out;
 }
 
 .vc-cell-input:focus {

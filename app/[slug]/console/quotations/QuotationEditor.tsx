@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, Trash2, Save, ArrowLeft, Printer, UserPlus, Download, Mail, FileText,
-  ChevronLeft, ChevronRight, Cuboid, Compass, Share2,
+  ChevronLeft, ChevronRight, Cuboid, Compass, Share2, ChevronsUpDown,
 } from "lucide-react";
 import { useConsole, useConsoleStatus, useConsoleAction } from "../ConsoleShell";
+import { useUI } from "@/lib/hooks/useUI";
 
 function WhatsAppIcon({ size = 12 }: { size?: number }) {
   return (
@@ -20,6 +21,65 @@ function WhatsAppIcon({ size = 12 }: { size?: number }) {
     >
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
     </svg>
+  );
+}
+
+function AutoExpandingTextarea({
+  value,
+  autoExpand,
+  className,
+  onFocus,
+  onChange,
+  onKeyDown,
+  ...props
+}: {
+  value: string;
+  autoExpand: boolean;
+  className?: string;
+  onFocus?: () => void;
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  [key: string]: any;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    if (autoExpand) {
+      el.style.height = "auto";
+      const scrollH = el.scrollHeight;
+      el.style.height = `${Math.max(32, scrollH)}px`;
+      el.style.overflowY = "hidden";
+    } else {
+      el.style.height = "32px";
+      el.style.overflowY = "auto";
+    }
+  }, [autoExpand]);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value, autoExpand, adjustHeight]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className={className}
+      value={value}
+      rows={1}
+      style={
+        autoExpand
+          ? { resize: "none", overflowY: "hidden", minHeight: "32px" }
+          : { resize: "vertical", minHeight: "32px" }
+      }
+      onFocus={onFocus}
+      onChange={(e) => {
+        onChange?.(e);
+        adjustHeight();
+      }}
+      onKeyDown={onKeyDown}
+      {...props}
+    />
   );
 }
 import { useUnsavedChangesWarning } from "@/lib/hooks/useHotkeys";
@@ -208,6 +268,7 @@ export default function QuotationEditor({
   const [includeCadInPdf, setIncludeCadInPdf] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(quotationId);
+  const { autoExpandDescription, setAutoExpandDescription } = useUI();
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
 
@@ -1039,36 +1100,24 @@ export default function QuotationEditor({
               >
                 <WhatsAppIcon size={13} /> WhatsApp
               </button>
-              <label
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  fontSize: 11,
-                  padding: "4px 8px",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  userSelect: "none",
-                  border: `1px solid ${includeCadInPdf ? "#86efac" : "#cbd5e1"}`,
-                  background: includeCadInPdf ? "#f0fdf4" : "#f8fafc",
-                  color: includeCadInPdf ? "#166534" : "#64748b",
-                  fontWeight: 600,
+              <button
+                type="button"
+                className={`vc-btn vc-btn-sm ${includeCadInPdf ? "vc-btn-active" : ""}`}
+                onClick={() => {
+                  const next = !includeCadInPdf;
+                  setIncludeCadInPdf(next);
+                  toast(next ? "2D CAD diagrams will be included in PDF" : "2D CAD diagrams excluded from PDF", "info");
                 }}
-                title={includeCadInPdf ? "2D CAD drawings included in PDF. Click to hide/exclude from PDF." : "CAD drawings hidden from PDF. Click to include."}
+                title={includeCadInPdf ? "2D CAD drawings included in PDF. Click to hide/exclude from PDF." : "CAD drawings excluded from PDF. Click to include."}
+                style={
+                  includeCadInPdf
+                    ? { borderColor: "var(--vc-accent, #c97a2b)", color: "var(--vc-accent, #c97a2b)", fontWeight: 600 }
+                    : undefined
+                }
               >
-                <input
-                  type="checkbox"
-                  checked={includeCadInPdf}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setIncludeCadInPdf(checked);
-                    toast(checked ? "2D CAD diagrams will be included in PDF" : "2D CAD diagrams excluded from PDF", "info");
-                  }}
-                  style={{ cursor: "pointer", margin: 0 }}
-                />
                 <Compass size={12} />
-                <span>{includeCadInPdf ? "CAD: On" : "CAD: Off"}</span>
-              </label>
+                <span>CAD: {includeCadInPdf ? "On" : "Off"}</span>
+              </button>
               <button
                 type="button"
                 className="vc-btn vc-btn-sm"
@@ -1273,6 +1322,26 @@ export default function QuotationEditor({
             <div style={{ flex: 1 }} />
             <button
               type="button"
+              className={`vc-btn vc-btn-sm ${autoExpandDescription ? "vc-btn-active" : ""}`}
+              style={{
+                fontSize: 11,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                marginRight: 6,
+                ...(autoExpandDescription ? { borderColor: "var(--vc-accent, #c97a2b)", color: "var(--vc-accent, #c97a2b)" } : {}),
+              }}
+              onClick={() => {
+                const next = !autoExpandDescription;
+                setAutoExpandDescription(next);
+                toast(next ? "Auto-expand item description enabled" : "Auto-expand disabled (fixed height)", "info");
+              }}
+              title="Toggle auto-expanding description boxes as you type (can also be changed in Display Settings)"
+            >
+              <ChevronsUpDown size={12} /> Auto-expand: {autoExpandDescription ? "On" : "Off"}
+            </button>
+            <button
+              type="button"
               className={`vc-btn vc-btn-sm ${showElevationPreview ? "vc-btn-primary" : ""}`}
               style={{ fontSize: 11, display: "inline-flex", alignItems: "center", gap: 4, marginRight: 6 }}
               onClick={() => setShowElevationPreview((prev) => !prev)}
@@ -1332,15 +1401,16 @@ export default function QuotationEditor({
                         />
                       </td>
                       <td>
-                        <textarea
+                        <AutoExpandingTextarea
                           className="vc-cell-input"
                           data-c="description"
                           value={row.description}
+                          autoExpand={autoExpandDescription}
                           onFocus={() => setFocusedMeasured(i)}
                           onChange={(e) => updateMeasured(i, "description", e.target.value)}
                           onKeyDown={(e) => onGridKeyDown(e, i, "description")}
                         />
-                       </td>
+                      </td>
                       <td>
                         <input
                           className="vc-cell-input vc-num"
