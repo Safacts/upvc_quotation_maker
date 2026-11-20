@@ -502,28 +502,62 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
       : [1, 1.5, 4.2, 1.3, 1.3, 1.1, 4.0, 1.3, 1.3, 2.0, 2.4];
     const totalW = weights.reduce((a, b) => a + b, 0);
     const colWidths = weights.map((w) => (w / totalW) * contentW);
-    const drawRow = (cells: string[], yy: number, opts: { bold?: boolean; bg?: any; size?: number } = {}) => {
+    const descColIdx = kprSimplified ? 1 : 2;
+
+    const calcMeasuredRow = (cells: string[]) => {
+      const raw = safe(cells[descColIdx]);
+      const rawLines = raw.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
+      const descCw = colWidths[descColIdx];
+      const wrapped: string[] = [];
+      for (const line of rawLines) {
+        const w = wrap(line, reg, 7.5, descCw - 8);
+        if (w.length) wrapped.push(...w);
+        else wrapped.push(line);
+      }
+      const lineCount = Math.max(1, wrapped.length);
+      const rowHeight = Math.max(16, lineCount * 9.5 + 6.5);
+      return { rowHeight, wrappedDescLines: wrapped };
+    };
+
+    const drawRow = (cells: string[], yy: number, opts: { bold?: boolean; bg?: any; size?: number; color?: any } = {}) => {
+      const { rowHeight, wrappedDescLines } = calcMeasuredRow(cells);
       let x = M;
-      if (opts.bg) page.drawRectangle({ x, y: yy - 16, width: contentW, height: 16, color: opts.bg });
+      if (opts.bg) page.drawRectangle({ x, y: yy - rowHeight, width: contentW, height: rowHeight, color: opts.bg });
       for (let i = 0; i < cells.length; i++) {
         const cw = colWidths[i];
         const font = opts.bold ? bold : reg;
         const size = opts.size ?? 7.5;
-        let str = safe(cells[i]);
-        // Clip if text exceeds cell width - 6
-        while (font.widthOfTextAtSize(str, size) > cw - 6 && str.length > 3) {
-          str = str.substring(0, str.length - 2) + ".";
-        }
-        // Right-align numeric columns (W, H, Units, SFT, Rate, Total)
-        const isNumeric = kprSimplified ? (i === 2 || i === 3 || i === 4 || i === 6 || i === 7 || i === 8) : (i === 3 || i === 4 || i === 5 || i === 7 || i === 8 || i === 9 || i === 10);
-        if (isNumeric) {
-          page.drawText(str, { x: x + cw - 4 - font.widthOfTextAtSize(str, size), y: yy - 11, size, font });
+        if (i === descColIdx) {
+          for (let l = 0; l < wrappedDescLines.length; l++) {
+            const lineStr = wrappedDescLines[l];
+            if (lineStr) {
+              page.drawText(lineStr, {
+                x: x + 4,
+                y: yy - 11 - l * 9.5,
+                size,
+                font,
+                color: opts.color ?? C.ink,
+              });
+            }
+          }
         } else {
-          page.drawText(str, { x: x + 4, y: yy - 11, size, font });
+          let str = safe(cells[i]).replace(/[\r\n]+/g, " ").trim();
+          // Clip if text exceeds cell width - 6
+          while (font.widthOfTextAtSize(str, size) > cw - 6 && str.length > 3) {
+            str = str.substring(0, str.length - 2) + ".";
+          }
+          // Right-align numeric columns (W, H, Units, SFT, Rate, Total)
+          const isNumeric = kprSimplified ? (i === 2 || i === 3 || i === 4 || i === 6 || i === 7 || i === 8) : (i === 3 || i === 4 || i === 5 || i === 7 || i === 8 || i === 9 || i === 10);
+          if (isNumeric) {
+            page.drawText(str, { x: x + cw - 4 - font.widthOfTextAtSize(str, size), y: yy - 11, size, font });
+          } else {
+            page.drawText(str, { x: x + 4, y: yy - 11, size, font });
+          }
         }
         x += cw;
       }
-      return yy - 16;
+      page.drawRectangle({ x: M, y: yy - rowHeight, width: contentW, height: rowHeight, borderColor: C.line, borderWidth: 0.5 });
+      return yy - rowHeight;
     };
     // Header row.
     page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
@@ -537,18 +571,6 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     // Data rows.
     for (let idx = 0; idx < data.measured.length; idx++) {
       const m = data.measured[idx];
-      if (y < 100) {
-        page = doc.addPage(A4);
-        y = H - M - 10;
-        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
-        let rhx = M;
-        for (let i = 0; i < headers.length; i++) {
-          page.drawText(safe(headers[i]), { x: rhx + 4, y: y - 11, size: 8, font: bold });
-          rhx += colWidths[i];
-        }
-        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
-        y -= 16;
-      }
       // Dart parity: sft = (w/304.8)*(h/304.8); totalSft = sft*units; total = totalSft*rate.
       const unitSqft = sqft(m.width, m.height);
       const totalSqft = measuredLineSqft({ width: m.width, height: m.height, units: m.units });
@@ -581,8 +603,20 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
           fmtMoney(lineTotal),
         ];
       }
+      const { rowHeight } = calcMeasuredRow(cells);
+      if (y - rowHeight < 100) {
+        page = doc.addPage(A4);
+        y = H - M - 10;
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
+        let rhx = M;
+        for (let i = 0; i < headers.length; i++) {
+          page.drawText(safe(headers[i]), { x: rhx + 4, y: y - 11, size: 8, font: bold });
+          rhx += colWidths[i];
+        }
+        page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
+        y -= 16;
+      }
       y = drawRow(cells, y);
-      page.drawRectangle({ x: M, y: y, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
     }
     y -= 6;
   }
@@ -604,7 +638,15 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
     y -= 16;
     for (let idx = 0; idx < data.unmeasured.length; idx++) {
       const u = data.unmeasured[idx];
-      if (y < 100) {
+      const descLines: string[] = [];
+      for (const line of safe(u.description).split("\n")) {
+        const w = wrap(line, reg, 8, colWidths[1] - 8);
+        if (w.length) descLines.push(...w);
+        else descLines.push(line);
+      }
+      const numLines = Math.max(1, descLines.length);
+      const rowHeight = Math.max(16, numLines * 10 + 6);
+      if (y - rowHeight < 100) {
         page = doc.addPage(A4);
         y = H - M - 10;
         page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, color: C.tableHead });
@@ -620,15 +662,21 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Uint8Ar
       let x = M;
       for (let i = 0; i < cells.length; i++) {
         const cw = colWidths[i];
-        if (i >= 2) {
+        if (i === 1) {
+          for (let l = 0; l < descLines.length; l++) {
+            if (descLines[l]) {
+              page.drawText(descLines[l], { x: x + 4, y: y - 11 - l * 10, size: 8 });
+            }
+          }
+        } else if (i >= 2) {
           page.drawText(safe(cells[i]), { x: x + cw - 4 - reg.widthOfTextAtSize(safe(cells[i]), 8), y: y - 11, size: 8 });
         } else {
           page.drawText(safe(cells[i]), { x: x + 4, y: y - 11, size: 8 });
         }
         x += cw;
       }
-      page.drawRectangle({ x: M, y: y - 16, width: contentW, height: 16, borderColor: C.line, borderWidth: 0.5 });
-      y -= 16;
+      page.drawRectangle({ x: M, y: y - rowHeight, width: contentW, height: rowHeight, borderColor: C.line, borderWidth: 0.5 });
+      y -= rowHeight;
     }
     y -= 6;
   }
@@ -803,7 +851,7 @@ export function drawWindowElevationCard(
   fonts: { reg: PDFFont; bold: PDFFont }
 ) {
   const { reg, bold } = fonts;
-  const desc = item.description || "";
+  const desc = safe(item.description || "").replace(/[\r\n]+/g, " ").trim();
   const lowerDesc = desc.toLowerCase();
 
   // Detect typology

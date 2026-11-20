@@ -25,11 +25,13 @@ export type ElementSize = "compact" | "comfortable" | "spacious";
 export interface UIPreferences {
   fontSize: FontSize;
   elementSize: ElementSize;
+  autoExpandDescription: boolean;
 }
 
 export interface UISettingsValue extends UIPreferences {
   setFontSize: (size: FontSize) => void;
   setElementSize: (size: ElementSize) => void;
+  setAutoExpandDescription: (enabled: boolean) => void;
   reset: () => void;
   /** Apply the current preferences onto a given DOM element (the .vc-root). */
   applyTo: (el: HTMLElement) => void;
@@ -38,6 +40,7 @@ export interface UISettingsValue extends UIPreferences {
 export const DEFAULT_UI: UIPreferences = {
   fontSize: "medium",
   elementSize: "comfortable",
+  autoExpandDescription: true,
 };
 
 const STORAGE_PREFIX = "vc:ui:";
@@ -120,6 +123,10 @@ function loadPrefs(clientId: string): UIPreferences {
           parsed.elementSize && parsed.elementSize in COMPACT
             ? parsed.elementSize
             : DEFAULT_UI.elementSize,
+        autoExpandDescription:
+          typeof parsed.autoExpandDescription === "boolean"
+            ? parsed.autoExpandDescription
+            : DEFAULT_UI.autoExpandDescription,
       };
     }
   } catch {
@@ -165,6 +172,7 @@ function applyVars(el: HTMLElement, prefs: UIPreferences): void {
   el.setAttribute("data-ui-active", "true");
   el.setAttribute("data-ui-font", prefs.fontSize);
   el.setAttribute("data-ui-size", prefs.elementSize);
+  el.setAttribute("data-ui-autoexpand", String(prefs.autoExpandDescription));
 }
 
 const UICtx = createContext<UISettingsValue | null>(null);
@@ -208,6 +216,17 @@ export function UIProvider({
     [clientId],
   );
 
+  const setAutoExpandDescription = useCallback(
+    (enabled: boolean) => {
+      setPrefs((prev) => {
+        const next = { ...prev, autoExpandDescription: enabled };
+        savePrefs(clientId, next);
+        return next;
+      });
+    },
+    [clientId],
+  );
+
   const reset = useCallback(() => {
     setPrefs({ ...DEFAULT_UI });
     savePrefs(clientId, DEFAULT_UI);
@@ -221,8 +240,15 @@ export function UIProvider({
   );
 
   const value = useMemo<UISettingsValue>(
-    () => ({ ...prefs, setFontSize, setElementSize, reset, applyTo }),
-    [prefs, setFontSize, setElementSize, reset, applyTo],
+    () => ({
+      ...prefs,
+      setFontSize,
+      setElementSize,
+      setAutoExpandDescription,
+      reset,
+      applyTo,
+    }),
+    [prefs, setFontSize, setElementSize, setAutoExpandDescription, reset, applyTo],
   );
 
   return <UICtx.Provider value={value}>{children}</UICtx.Provider>;
@@ -230,6 +256,15 @@ export function UIProvider({
 
 export function useUI(): UISettingsValue {
   const ctx = useContext(UICtx);
-  if (!ctx) throw new Error("useUI must be used inside <UIProvider>");
+  if (!ctx) {
+    return {
+      ...DEFAULT_UI,
+      setFontSize: () => {},
+      setElementSize: () => {},
+      setAutoExpandDescription: () => {},
+      reset: () => {},
+      applyTo: () => {},
+    };
+  }
   return ctx;
 }
