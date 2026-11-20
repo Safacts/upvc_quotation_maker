@@ -193,8 +193,10 @@ export function LivePreview({
                   <tr key={m.key} style={focusedIndex === i ? { backgroundColor: "#f7fafc" } : {}}>
                     <td>{i + 1}</td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{m.description || m.code || "Item"}</div>
-                      {m.glass && <div style={{ color: "#8a94a1" }}>{m.glass}</div>}
+                      <div style={{ fontWeight: 600, whiteSpace: "pre-line", wordBreak: "break-word" }}>
+                        {m.description || m.code || "Item"}
+                      </div>
+                      {m.glass && <div style={{ color: "#8a94a1", whiteSpace: "pre-line", wordBreak: "break-word" }}>{m.glass}</div>}
                     </td>
                     <td>
                       {m.width || 0} × {m.height || 0}
@@ -237,7 +239,7 @@ export function LivePreview({
                 {extras.map((u, i) => (
                   <tr key={u.key}>
                     <td>{i + 1}</td>
-                    <td>{u.description || "Item"}</td>
+                    <td style={{ whiteSpace: "pre-line", wordBreak: "break-word" }}>{u.description || "Item"}</td>
                     <td style={{ textAlign: "right" }}>{u.units || 1}</td>
                     <td style={{ textAlign: "right" }}>{formatAmount(u.rate)}</td>
                     <td style={{ textAlign: "right", fontWeight: 600 }}>

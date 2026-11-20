@@ -15,6 +15,7 @@ import ConsoleShell, { useConsoleAction } from "../app/[slug]/console/ConsoleShe
 import { UIProvider } from "../src/lib/hooks/useUI";
 import { DataGrid } from "../app/[slug]/console/_components/DataGrid";
 import { LivePreview } from "../app/[slug]/console/_components/LivePreview";
+import { UISettingsPanel } from "../app/[slug]/console/_components/UISettingsPanel";
 import { CONSOLE_KEYMAP, KEYMAP_GROUPS } from "../src/lib/hooks/useHotkeys";
 
 function ProbeScreen({ spies }: { spies: Record<string, () => void> }) {
@@ -313,9 +314,35 @@ describe("LivePreview", () => {
     render(<LivePreview header={HDR} measured={m} unmeasured={[]} totals={t} companyName="Co" />);
     await waitFor(() => { expect(screen.getByText("Sliding Window")).toBeTruthy(); expect(screen.getByText("Grand Total")).toBeTruthy(); });
   });
+  it("preserves multiline item description formatting with pre-line", async () => {
+    const m = [{ key: "m2", code: "W2", description: "Line 1\nLine 2\nLine 3", glass: "", width: "1000", height: "1000", units: "1", rate: "500" }];
+    const t = { totalMeasured: 500, totalUnmeasured: 0, subtotal: 500, transport: 0, discountAmount: 0, discountPercentage: 0, netTotal: 500, gstPercentage: 0, gstAmount: 0, grandTotal: 500, advancePaid: 0, balanceDue: 500, roundoff: 0, totalSqft: 10 };
+    const { container } = render(<LivePreview header={HDR} measured={m} unmeasured={[]} totals={t} companyName="Co" />);
+    await waitFor(() => {
+      const descDiv = container.querySelector("div[style*='white-space: pre-line'], div[style*='whiteSpace: pre-line']");
+      expect(descDiv).toBeTruthy();
+      expect(descDiv?.textContent).toContain("Line 1\nLine 2\nLine 3");
+    });
+  });
 });
 
-// 9. KEYMAP INTEGRITY
+// 9. UI SETTINGS PANEL
+describe("UISettingsPanel — autoExpandDescription", () => {
+  it("renders auto-expand item description toggle and allows turning off", async () => {
+    render(
+      <UIProvider clientId="testclient">
+        <UISettingsPanel />
+      </UIProvider>
+    );
+    fireEvent.click(screen.getByLabelText("Display settings"));
+    expect(screen.getByText("Auto-expand Item Description")).toBeTruthy();
+    const offBtn = screen.getByText("Off");
+    fireEvent.click(offBtn);
+    expect(document.querySelector(".vc-ui-panel")).toBeTruthy();
+  });
+});
+
+// 10. KEYMAP INTEGRITY
 describe("Keymap integrity", () => {
   it("all entries grouped, no reserved keys bound", () => {
     for (const k of CONSOLE_KEYMAP) expect(KEYMAP_GROUPS).toContain(k.group);
