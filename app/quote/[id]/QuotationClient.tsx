@@ -59,11 +59,18 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [viewMode, setViewMode] = useState<"both" | "doc" | "cad">("both");
+  const [cadEnabled, setCadEnabled] = useState(true);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
   const fetchData = useCallback(async (id: string) => {
     const url = new URL(window.location.href);
     const t = url.searchParams.get("token") || "";
+    const cadParam = url.searchParams.get("cad") ?? url.searchParams.get("include_cad");
+    const isCadOff = cadParam === "0" || cadParam === "false";
+    if (isCadOff) {
+      setCadEnabled(false);
+      setViewMode("doc");
+    }
     setToken(t);
     try {
       const res = await fetch(`/api/quotation/${id}?token=${t}`);
@@ -142,7 +149,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
     if (!quotation || downloading) return;
     setDownloading(true);
     setDownloadError("");
-    const cadParam = viewMode === "doc" ? "&cad=0" : "";
+    const cadParam = !cadEnabled || viewMode === "doc" ? "&cad=0" : "";
     const href = `/api/quotation/${quotation.id}/pdf?token=${encodeURIComponent(token)}${cadParam}`;
     const filename = `Quotation_${(quotation.quote_no || quotation.id).replace(/[^A-Za-z0-9._-]/g, "_")}.pdf`;
     try {
@@ -305,7 +312,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
           </section>
 
           {/* View Mode Bar */}
-          {items.length > 0 && (
+          {items.length > 0 && cadEnabled && (
             <div style={{ display: "flex", gap: "8px", marginBottom: "20px", background: "#f1f5f9", padding: "6px", borderRadius: "8px", width: "fit-content" }}>
               <button
                 type="button"
@@ -412,26 +419,28 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
                                   Glass: <em>{item.glass}</em>
                                 </div>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => setExpandedItem(isExpanded ? null : i)}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "var(--kpr-primary, #0b4b86)",
-                                  fontSize: "11px",
-                                  fontWeight: 600,
-                                  cursor: "pointer",
-                                  padding: "2px 0",
-                                  marginTop: "4px",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  textDecoration: "underline",
-                                }}
-                              >
-                                {isExpanded ? "Hide CAD Elevation ▲" : "View CAD Elevation ▼"}
-                              </button>
+                              {cadEnabled && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedItem(isExpanded ? null : i)}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--kpr-primary, #0b4b86)",
+                                    fontSize: "11px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    padding: "2px 0",
+                                    marginTop: "4px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    textDecoration: "underline",
+                                  }}
+                                >
+                                  {isExpanded ? "Hide CAD Elevation ▲" : "View CAD Elevation ▼"}
+                                </button>
+                              )}
                             </td>
                             <td className="col-center font-mono">
                               {item.width && item.height ? `${Math.round(item.width)} × ${Math.round(item.height)}` : "—"}
@@ -489,7 +498,7 @@ export default function QuotationClient({ params }: { params: Promise<{ id: stri
           )}
 
           {/* Dedicated 2D CAD Elevation Diagrams & Dimension Schedule */}
-          {items.length > 0 && (viewMode === "both" || viewMode === "cad") && (
+          {cadEnabled && items.length > 0 && (viewMode === "both" || viewMode === "cad") && (
             <section className="invoice-section cad-schedule-section" style={{ marginTop: "32px", paddingTop: "20px", borderTop: "2px dashed #cbd5e1" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
                 <h3 className="section-title" style={{ margin: 0 }}>
