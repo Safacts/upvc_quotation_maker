@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Settings, Type, Maximize2, RotateCcw, X, Rows3 } from "lucide-react";
+import { Settings, Type, Maximize2, RotateCcw, X, Rows3, Compass } from "lucide-react";
 import { useUI, type FontSize, type ElementSize } from "@/lib/hooks/useUI";
 
 /**
@@ -28,9 +28,11 @@ export function UISettingsPanel() {
     fontSize,
     elementSize,
     autoExpandDescription,
+    includeCadInPdf,
     setFontSize,
     setElementSize,
     setAutoExpandDescription,
+    setIncludeCadInPdf,
     reset,
   } = useUI();
   const [open, setOpen] = useState(false);
@@ -139,6 +141,32 @@ export function UISettingsPanel() {
               >
                 <span className="vc-ui-seg-label">Off</span>
                 <span className="vc-ui-seg-desc">Fixed height</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2D CAD Drawings in PDF & Share Link */}
+          <div className="vc-ui-group">
+            <div className="vc-ui-group-label">
+              <Compass size={12} />
+              2D CAD Elevation Diagrams
+            </div>
+            <div className="vc-ui-seg">
+              <button
+                type="button"
+                className={"vc-ui-seg-btn" + (includeCadInPdf ? " vc-ui-seg-active" : "")}
+                onClick={() => setIncludeCadInPdf(true)}
+              >
+                <span className="vc-ui-seg-label">On</span>
+                <span className="vc-ui-seg-desc">Included</span>
+              </button>
+              <button
+                type="button"
+                className={"vc-ui-seg-btn" + (!includeCadInPdf ? " vc-ui-seg-active" : "")}
+                onClick={() => setIncludeCadInPdf(false)}
+              >
+                <span className="vc-ui-seg-label">Off</span>
+                <span className="vc-ui-seg-desc">Excluded</span>
               </button>
             </div>
           </div>

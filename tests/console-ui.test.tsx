@@ -336,8 +336,9 @@ describe("UISettingsPanel — autoExpandDescription", () => {
     );
     fireEvent.click(screen.getByLabelText("Display settings"));
     expect(screen.getByText("Auto-expand Item Description")).toBeTruthy();
-    const offBtn = screen.getByText("Off");
-    fireEvent.click(offBtn);
+    expect(screen.getByText("2D CAD Elevation Diagrams")).toBeTruthy();
+    const offBtns = screen.getAllByText("Off");
+    fireEvent.click(offBtns[0]);
     expect(document.querySelector(".vc-ui-panel")).toBeTruthy();
   });
 });

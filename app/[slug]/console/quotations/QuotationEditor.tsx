@@ -265,10 +265,9 @@ export default function QuotationEditor({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [focusedMeasured, setFocusedMeasured] = useState(0);
   const [showElevationPreview, setShowElevationPreview] = useState(true);
-  const [includeCadInPdf, setIncludeCadInPdf] = useState(true);
+  const { autoExpandDescription, setAutoExpandDescription, includeCadInPdf, setIncludeCadInPdf } = useUI();
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(quotationId);
-  const { autoExpandDescription, setAutoExpandDescription } = useUI();
 
   const gridRef = useRef<HTMLTableSectionElement>(null);
 
@@ -845,7 +844,8 @@ export default function QuotationEditor({
         toast(data.error || "Failed to generate share link", "err");
         return;
       }
-      const shareUrl = `${window.location.origin}/quote/${savedId}?token=${data.token}`;
+      const cadParam = includeCadInPdf ? "" : "&cad=0";
+      const shareUrl = `${window.location.origin}/quote/${savedId}?token=${data.token}${cadParam}`;
       if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(shareUrl);
       }

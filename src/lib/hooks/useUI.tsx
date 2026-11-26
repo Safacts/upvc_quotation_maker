@@ -26,12 +26,14 @@ export interface UIPreferences {
   fontSize: FontSize;
   elementSize: ElementSize;
   autoExpandDescription: boolean;
+  includeCadInPdf: boolean;
 }
 
 export interface UISettingsValue extends UIPreferences {
   setFontSize: (size: FontSize) => void;
   setElementSize: (size: ElementSize) => void;
   setAutoExpandDescription: (enabled: boolean) => void;
+  setIncludeCadInPdf: (enabled: boolean) => void;
   reset: () => void;
   /** Apply the current preferences onto a given DOM element (the .vc-root). */
   applyTo: (el: HTMLElement) => void;
@@ -41,6 +43,7 @@ export const DEFAULT_UI: UIPreferences = {
   fontSize: "medium",
   elementSize: "comfortable",
   autoExpandDescription: true,
+  includeCadInPdf: true,
 };
 
 const STORAGE_PREFIX = "vc:ui:";
@@ -127,6 +130,10 @@ function loadPrefs(clientId: string): UIPreferences {
           typeof parsed.autoExpandDescription === "boolean"
             ? parsed.autoExpandDescription
             : DEFAULT_UI.autoExpandDescription,
+        includeCadInPdf:
+          typeof parsed.includeCadInPdf === "boolean"
+            ? parsed.includeCadInPdf
+            : DEFAULT_UI.includeCadInPdf,
       };
     }
   } catch {
@@ -227,6 +234,17 @@ export function UIProvider({
     [clientId],
   );
 
+  const setIncludeCadInPdf = useCallback(
+    (enabled: boolean) => {
+      setPrefs((prev) => {
+        const next = { ...prev, includeCadInPdf: enabled };
+        savePrefs(clientId, next);
+        return next;
+      });
+    },
+    [clientId],
+  );
+
   const reset = useCallback(() => {
     setPrefs({ ...DEFAULT_UI });
     savePrefs(clientId, DEFAULT_UI);
@@ -245,10 +263,11 @@ export function UIProvider({
       setFontSize,
       setElementSize,
       setAutoExpandDescription,
+      setIncludeCadInPdf,
       reset,
       applyTo,
     }),
-    [prefs, setFontSize, setElementSize, setAutoExpandDescription, reset, applyTo],
+    [prefs, setFontSize, setElementSize, setAutoExpandDescription, setIncludeCadInPdf, reset, applyTo],
   );
 
   return <UICtx.Provider value={value}>{children}</UICtx.Provider>;
@@ -262,6 +281,7 @@ export function useUI(): UISettingsValue {
       setFontSize: () => {},
       setElementSize: () => {},
       setAutoExpandDescription: () => {},
+      setIncludeCadInPdf: () => {},
       reset: () => {},
       applyTo: () => {},
     };
